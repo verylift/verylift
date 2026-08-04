@@ -1,6 +1,12 @@
 service: verylift
 image: verylift/verylift
 
+# Non-root on purpose: harden-vps.sh disables root SSH login (PermitRootLogin no)
+# on the target VPS, so Kamal must connect as the hardened admin user instead
+# of its default root@22.
+ssh:
+  user: <%= ENV.fetch("DEPLOY_SSH_USER") %>
+
 servers:
   web:
     hosts:
@@ -12,16 +18,22 @@ servers:
       tmpfs: "/tmp:size=64m,mode=1777"
       memory: "1g"
       cpus: "2"
-    volumes:
-      - verylift_staticfiles:/app/staticfiles
-      - verylift_media:/app/media
-  # Never registered with kamal-proxy (proxy: false) — exists purely as an exec
-  # target for migrate/collectstatic, running with the OWNER Postgres role so
-  # that credential never lands in the long-running web container's env.
+  # Never registered with kamal-proxy (proxy: false) — exists as an exec target
+  # for migrate/collectstatic, running with the OWNER Postgres role so that
+  # credential never lands in the long-running web container's env. Kamal boots
+  # every declared role as a real container regardless of proxy status (there's
+  # no boot-exempt role type), so `cmd: sleep infinity` keeps it inert — never
+  # runs gunicorn, opens no port — rather than idling on the app's default CMD
+  # with owner DB credentials in its env. It still runs continuously between
+  # deploys (Kamal's app:boot step keeps every declared role running, with no
+  # way to opt one out) — .kamal/hooks/pre-deploy boots it early so its env
+  # is staged before migrate/collectstatic run against it, not to make it
+  # ephemeral.
   release:
     hosts:
       - <%= ENV.fetch("DEPLOY_HOST") %>
     proxy: false
+    cmd: "sleep infinity"
     options:
       cap-drop: "ALL"
       security-opt: "no-new-privileges:true"
@@ -81,10 +93,15 @@ accessories:
       # and fix volume ownership (same reasoning as docker-compose.prod.yml).
 
 volumes:
-  # Shared between `web` (serves) and `release` (collectstatic writes) so
-  # what's collected is what's served, matching docker-compose.prod.yml's
-  # staticfiles named volume under read_only.
+  # Kamal's `volumes:` key is service-wide, not per-role (confirmed: `servers.<role>`
+  # has no `volumes` key), so both mounts land on every role including `release` —
+  # harmless there since `release` already carries the higher-trust owner DB
+  # credential. `staticfiles` is shared between `web` (serves) and `release`
+  # (collectstatic writes) so what's collected is what's served, matching
+  # docker-compose.prod.yml's staticfiles named volume under read_only. `media`
+  # is user-upload content `release` never touches, but can't be scoped out.
   - verylift_staticfiles:/app/staticfiles
+  - verylift_media:/app/media
 
 env:
   clear:

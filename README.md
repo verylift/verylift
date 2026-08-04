@@ -95,7 +95,7 @@ Prerequisites:
 
 One-time setup:
 ```bash
-cp .env.kamal.example .env.kamal   # fill in DEPLOY_HOST, DEPLOY_HOST_NAME, GHCR_USERNAME, ALLOWED_HOSTS
+cp .env.kamal.example .env.kamal   # fill in DEPLOY_HOST, DEPLOY_SSH_USER, DEPLOY_HOST_NAME, GHCR_USERNAME, ALLOWED_HOSTS
 set -a; source .env.kamal; set +a
 export BW_SESSION="$(bw unlock --raw)"
 kamal setup                        # first-time bootstrap: builds, pushes, boots everything
