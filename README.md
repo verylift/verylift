@@ -86,33 +86,33 @@ health-gated cutover, and a Postgres accessory alongside the app container.
 
 Prerequisites:
 - `gem install kamal` and Docker, on whatever machine you deploy from
-- the Bitwarden CLI (`bw`), with SSH access to the VPS
+- the Bitwarden CLI (`bw`)
 - a GHCR PAT and the app's other secrets stored as Bitwarden vault items
-  (`.kamal/secrets-common` and `.kamal/load-env.sh` are the source of truth
-  for exactly which ones)
+  (`.kamal/secrets-common` is the source of truth for exactly which ones)
+- an SSH config entry (`~/.ssh/config`, personal, never committed) that
+  resolves a `verylift-prod` host alias to the VPS's real address and
+  identity file:
+  ```
+  Host verylift-prod
+    HostName <the VPS's real IP or hostname>
+    IdentityFile <path to your admin SSH key>
+  ```
+  `config/deploy.yml` references this alias by name, not the real address —
+  that's the one piece of this deployment's config that's genuinely
+  sensitive and kept out of the (public) repo. Everything else Kamal needs
+  (the SSH user, the public hostname, the GHCR org) is already public
+  knowledge one way or another, so it's a plain literal in `config/deploy.yml`
+  rather than indirected through anything.
 - on the VPS itself: Docker, and 80/443 not published to the internet — this
   setup expects an inbound tunnel (e.g. Cloudflare Tunnel) forwarding to
   `localhost:80` in front of kamal-proxy, which binds loopback-only
 
-Deploy-time config comes entirely from Bitwarden — no local env file to copy
-or fill in. Two kinds of value, handled differently:
-- **Secrets** consumed by the running container (`SECRET_KEY`,
-  `DATABASE_URL`, etc.) are read directly by Kamal itself via
-  `.kamal/secrets-common`, which shells out to `bw get password <item>` —
-  nothing to export for these.
-- **`config/deploy.yml`'s own structure** (which host to SSH to, what
-  hostname kamal-proxy expects) is resolved via ERB from the real shell
-  environment at parse time, before secrets are loaded at all — Kamal has no
-  first-class Bitwarden integration for this part, only for secrets. Source
-  `.kamal/load-env.sh` before every `kamal` invocation to pull these from
-  Bitwarden instead of relying on manually-exported (and easily stale)
-  shell variables:
-  ```bash
-  export BW_SESSION="$(bw unlock --raw)"
-  source .kamal/load-env.sh
-  ```
-  See `.kamal/load-env.sh` and `.kamal/secrets-common` for the exact vault
-  items this deployment expects.
+The only thing to do before any `kamal` invocation is unlock Bitwarden, for
+the secrets `.kamal/secrets-common` resolves at parse time — nothing else to
+export or source:
+```bash
+export BW_SESSION="$(bw unlock --raw)"
+```
 
 One-time setup:
 ```bash

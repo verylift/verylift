@@ -1,24 +1,30 @@
 service: verylift
 image: verylift/verylift
 
-# Non-root on purpose: harden-vps.sh disables root SSH login (PermitRootLogin no)
-# on the target VPS, so Kamal must connect as the hardened admin user instead
-# of its default root@22.
+# Non-root on purpose: harden-vps.sh disables root SSH login (PermitRootLogin
+# no) on the target VPS. This must be a literal here, not left to a
+# ~/.ssh/config `User` directive on the "verylift-prod" alias below — Kamal's
+# ssh.user always resolves to an explicit value (defaults to "root" if unset)
+# and passes it straight to Net::SSH, which only consults ssh_config's `User`
+# line when no explicit user is given in code. A username isn't sensitive
+# the way the server's real IP is, so a literal here is fine.
 ssh:
-  user: <%= ENV.fetch("DEPLOY_SSH_USER") %>
-<% if ENV["DEPLOY_SSH_KEY"] && !ENV["DEPLOY_SSH_KEY"].empty? %>
-  # Optional, per-operator, and deliberately NOT sourced from Bitwarden like
-  # the other deploy values — which private key file to use depends on whose
-  # machine is running `kamal`, not on shared deploy config. Falls back to
-  # normal SSH identity resolution (agent + ~/.ssh/config) when unset.
-  keys:
-    - <%= ENV.fetch("DEPLOY_SSH_KEY") %>
-<% end %>
+  user: admin
 
 servers:
   web:
+    # "verylift-prod" is an SSH config Host alias (~/.ssh/config, personal,
+    # never committed) resolving to the VPS's real address and identity file.
+    # That's deliberate: the real SSH-reachable IP is the one thing in this
+    # deployment that stays out of the public repo, and SSH's own alias
+    # mechanism handles that indirection natively — no need to route it
+    # through Kamal-specific env vars. See the README for the ~/.ssh/config
+    # shape this expects. Everything else below (the public hostname, the
+    # GHCR org, ALLOWED_HOSTS) is already public knowledge — verylift.com is
+    # public DNS, verylift/verylift is already the literal image path in
+    # docker-compose.prod.yml — so there's no reason to hide those too.
     hosts:
-      - <%= ENV.fetch("DEPLOY_HOST") %>
+      - verylift-prod
     options:
       cap-drop: "ALL"
       security-opt: "no-new-privileges:true"
@@ -39,7 +45,7 @@ servers:
   # ephemeral.
   release:
     hosts:
-      - <%= ENV.fetch("DEPLOY_HOST") %>
+      - verylift-prod
     proxy: false
     cmd: "sleep infinity"
     options:
@@ -56,7 +62,7 @@ servers:
 proxy:
   app_port: 8000
   ssl: false                # Cloudflare Tunnel terminates TLS; kamal-proxy speaks plain HTTP
-  host: <%= ENV.fetch("DEPLOY_HOST_NAME") %>
+  host: verylift.com
   healthcheck:
     path: /healthz
     interval: 5
@@ -67,7 +73,7 @@ proxy:
 
 registry:
   server: ghcr.io
-  username: <%= ENV.fetch("GHCR_USERNAME") %>
+  username: verylift
   password:
     - KAMAL_REGISTRY_PASSWORD
 
@@ -79,7 +85,7 @@ builder:
 accessories:
   db:
     image: postgres:16-alpine
-    host: <%= ENV.fetch("DEPLOY_HOST") %>
+    host: verylift-prod
     env:
       clear:
         POSTGRES_DB: verylift
@@ -114,7 +120,7 @@ volumes:
 env:
   clear:
     DJANGO_SETTINGS_MODULE: root.settings_prod
-    ALLOWED_HOSTS: <%= ENV.fetch("ALLOWED_HOSTS") %>
+    ALLOWED_HOSTS: .verylift.com
     GUNICORN_WORKERS: "5"
     # Closed until this deployment is ready for real signups — not a secret,
     # just an operational policy toggle.
