@@ -6,6 +6,14 @@ image: verylift/verylift
 # of its default root@22.
 ssh:
   user: <%= ENV.fetch("DEPLOY_SSH_USER") %>
+<% if ENV["DEPLOY_SSH_KEY"] && !ENV["DEPLOY_SSH_KEY"].empty? %>
+  # Optional, per-operator, and deliberately NOT sourced from Bitwarden like
+  # the other deploy values — which private key file to use depends on whose
+  # machine is running `kamal`, not on shared deploy config. Falls back to
+  # normal SSH identity resolution (agent + ~/.ssh/config) when unset.
+  keys:
+    - <%= ENV.fetch("DEPLOY_SSH_KEY") %>
+<% end %>
 
 servers:
   web:
