@@ -1,0 +1,70 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - ".claude/**"
+      - "**.md"
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - ".claude/**"
+      - "**.md"
+  schedule:
+    # Weekly, Monday 06:00 UTC — catches CVEs published between merges.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pip-audit:
+    name: Dependency CVE scan (pip-audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install
+
+      # Export the full locked set (including the dev group — dev deps run in CI
+      # and on dev machines, so they are in scope) to a requirements file that
+      # pip-audit can read; pip-audit cannot parse uv.lock directly.
+      - name: Export locked dependencies
+        run: uv export --frozen --no-emit-project --output-file requirements.txt
+
+      # Fail on any known fixable vulnerability. Suppress false positives or
+      # unfixable findings by adding `--ignore-vuln <ID>` below, each with a
+      # comment stating the CVE ID, the reason, and a revisit date.
+      - name: Audit dependencies
+        run: uvx pip-audit --strict --disable-pip -r requirements.txt
+
+  image-scan:
+    name: Base image CVE scan (Trivy)
+    runs-on: ubuntu-latest
+    # A full `docker build` is the most expensive job here. Skip it on PRs —
+    # it still runs on pushes to main, the weekly schedule, and manual dispatch,
+    # so newly-published base-image CVEs are still caught before/after merge.
+    if: github.event_name != 'pull_request'
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build production image
+        run: docker build -t root:scan .
+
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: root:scan
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+          ignore-unfixed: true
+          scanners: vuln

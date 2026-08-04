@@ -1,0 +1,10 @@
+{% extends "base/base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Something Went Wrong" %} — very lift{% endblock %}
+
+{% block content %}
+{% trans "Something went wrong" as error_title %}
+{% trans "An unexpected error occurred. Please try again in a moment." as error_message %}
+{% include "components/_error_card.html" with error_code="500" error_title=error_title error_message=error_message %}
+{% endblock %}

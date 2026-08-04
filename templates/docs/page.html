@@ -1,0 +1,24 @@
+{% extends "base/app.html" %}
+{% load i18n %}
+
+{% block title %}{{ title }} — {% trans "User Guide" %} — very lift{% endblock %}
+
+{% block main %}
+    <div class="max-w-3xl mx-auto space-y-6">
+      <h1 class="text-lg font-semibold text-content-strong">{{ title }}</h1>
+
+      <nav class="flex flex-wrap gap-2 pb-4 border-b border-line-subtle">
+        {% for slug, page in nav_pages %}
+        {% with page_title=page.0 %}
+        <a href="{% if slug == 'index' %}{% url 'guide:index' %}{% else %}{% url 'guide:page' slug=slug %}{% endif %}"
+          class="px-3 py-1.5 rounded text-sm font-medium
+            {% if slug == active_slug %}bg-accent-subtle text-accent{% else %}text-content-body hover:bg-surface-hover{% endif %}">
+          {{ page_title }}
+        </a>
+        {% endwith %}
+        {% endfor %}
+      </nav>
+
+      <div class="docs-content text-sm text-content-body">{{ content_html }}</div>
+    </div>
+{% endblock %}

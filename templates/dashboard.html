@@ -1,0 +1,252 @@
+{% extends "base/app.html" %}
+{% load i18n static icons %}
+
+{% block title %}{% trans "Dashboard" %} — very lift{% endblock %}
+
+{% block main_class %} space-y-8{% endblock %}
+
+{% block main %}
+    {% if needs_liftosaur_key %}
+    <section class="bg-surface-sunken border border-line-subtle rounded p-4 flex items-center justify-between gap-4 flex-wrap">
+      <p class="text-sm text-content-body">
+        {% trans "Connect your Liftosaur API key to join challenges and track your lifts." %}
+      </p>
+      <a href="{% url 'accounts:settings' %}#liftosaur-section"
+        class="inline-flex items-center justify-center bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover whitespace-nowrap">
+        {% trans "Add API key" %}
+      </a>
+    </section>
+    {% endif %}
+
+    <section aria-label="{% trans 'Overview' %}">
+      <div class="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+        {% if request.user.avatar %}
+        <div class="relative rounded-lg shadow-sm border border-line-subtle overflow-hidden min-h-64">
+          <img src="{{ request.user.avatar.url }}" alt="{{ request.user.display_name|default:request.user.username }}"
+            class="absolute inset-0 w-full h-full object-cover">
+          <div class="absolute bottom-4 left-1/2 -translate-x-1/2 w-fit max-w-[90%] px-4 py-2 rounded-lg bg-black/40 backdrop-blur-sm text-center">
+            <h1 class="text-xl font-bold text-white truncate">{{ request.user.display_name|default:request.user.username }}</h1>
+          </div>
+        </div>
+        {% else %}
+        <div class="bg-surface-card rounded-lg shadow-sm border border-line-subtle p-6 flex flex-col items-center text-center gap-3">
+          {% include "components/_avatar.html" with avatar_user=request.user size_classes="w-20 h-20 text-3xl" %}
+          <div class="min-w-0">
+            <h1 class="text-xl font-bold text-content-strong truncate">{{ request.user.display_name|default:request.user.username }}</h1>
+            <p class="mt-1 text-xs text-content-muted">{% blocktrans with joined=request.user.date_joined|date:"M Y" %}Joined {{ joined }}{% endblocktrans %}</p>
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="bg-surface-card rounded-lg shadow-sm border border-line-subtle p-6">
+          <h2 class="text-xs font-medium text-content-muted uppercase tracking-wide">{% trans "Career stats" %}</h2>
+          <dl class="mt-3 grid grid-cols-2 gap-4">
+            <div class="bg-surface-sunken rounded p-4">
+              <dt class="text-xs font-medium text-content-muted uppercase tracking-wide">{% trans "Challenges" %}</dt>
+              <dd class="mt-1 text-2xl font-bold text-content-strong font-mono">{{ career.challenges_played }}</dd>
+            </div>
+            <div class="bg-surface-sunken rounded p-4">
+              <dt class="text-xs font-medium text-content-muted uppercase tracking-wide">{% trans "Wins" %}</dt>
+              <dd class="mt-1 text-2xl font-bold text-content-strong font-mono">{{ career.wins }}</dd>
+            </div>
+            <div class="bg-surface-sunken rounded p-4">
+              <dt class="text-xs font-medium text-content-muted uppercase tracking-wide">{% trans "Points / week" %}</dt>
+              <dd class="mt-1 text-2xl font-bold text-content-strong font-mono">{{ career.points_per_week|default_if_none:"—" }}</dd>
+            </div>
+            <div class="bg-surface-sunken rounded p-4">
+              <dt class="text-xs font-medium text-content-muted uppercase tracking-wide">{% trans "Avg points / challenge" %}</dt>
+              <dd class="mt-1 text-2xl font-bold text-content-strong font-mono">{{ career.avg_points|default_if_none:"—" }}</dd>
+            </div>
+          </dl>
+        </div>
+
+        {% include "components/_co_participants_card.html" with co_participants=co_participants class_extra="lg:col-span-2 xl:col-span-1" %}
+      </div>
+    </section>
+
+    <section aria-label="{% trans 'Notifications' %}">
+      <div class="bg-surface-card rounded-lg shadow-sm border border-line-subtle p-6">
+        {% include "notifications/_notification_list.html" %}
+      </div>
+    </section>
+
+    <section aria-label="{% trans 'Challenges' %}">
+      <div class="bg-surface-card rounded-lg shadow-sm border border-line-subtle p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-semibold text-content-strong">{% trans "Challenges" %}</h2>
+          {% if active_cards|length > 1 %}
+          <div class="hidden md:flex items-center gap-1">
+            <button type="button" id="potc-prev-btn" aria-label="{% trans 'Previous' %}"
+              class="p-1.5 rounded hover:bg-surface-hover text-content-muted hover:text-content-strong focus:outline-none focus:ring-2 focus:ring-accent">
+              {% icon "chevron-left" css_class="h-5 w-5" %}
+            </button>
+            <button type="button" id="potc-next-btn" aria-label="{% trans 'Next' %}"
+              class="p-1.5 rounded hover:bg-surface-hover text-content-muted hover:text-content-strong focus:outline-none focus:ring-2 focus:ring-accent">
+              {% icon "chevron-right" css_class="h-5 w-5" %}
+            </button>
+          </div>
+          {% endif %}
+        </div>
+
+        {% if active_cards %}
+        <div id="potc-carousel"
+          class="flex overflow-x-auto snap-x snap-mandatory gap-4 [touch-action:pan-x_pan-y]
+                 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          {% for card in active_cards %}
+          <div class="snap-start [scroll-snap-stop:always] shrink-0 basis-full" data-json-id="{{ card.script_id }}">
+            <div class="flex items-center justify-between gap-4 mb-2">
+              <a href="{% url 'challenges:detail' card.challenge.pk %}"
+                data-loading-message="{% trans 'Loading challenge…' %}"
+                class="text-sm font-medium text-content-strong hover:text-accent truncate">
+                {{ card.challenge.name }}
+              </a>
+              {% if card.needs_goal %}
+              <a href="{% url 'challenges:goal-setup' card.challenge.pk %}"
+                class="shrink-0 inline-flex items-center justify-center px-3 py-1 rounded font-sans text-xs font-medium bg-accent text-accent-on hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent">
+                {% trans "Set Goal" %}
+              </a>
+              {% endif %}
+            </div>
+            <div class="relative h-64">
+              <canvas id="potc-chart-{{ card.challenge.pk }}"></canvas>
+            </div>
+            {{ card.chart_data|json_script:card.script_id }}
+          </div>
+          {% endfor %}
+        </div>
+
+        {% if active_cards|length > 1 %}
+        <div id="potc-dots" class="flex justify-center gap-2 mt-3">
+          {% for card in active_cards %}
+          <button type="button" data-panel="{{ forloop.counter0 }}" aria-label="{{ card.challenge.name }}"
+            class="w-2 h-2 rounded-full {% if forloop.first %}bg-accent{% else %}bg-line-subtle{% endif %} transition-colors"></button>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="text-center py-4">
+          <p class="text-sm text-content-body">{% trans "No active challenges right now. Start one and invite your friends." %}</p>
+          <a href="{% url 'challenges:create' %}"
+            data-loading-message="{% trans 'Loading…' %}"
+            class="mt-4 inline-flex items-center justify-center px-5 py-2.5 rounded font-sans text-sm font-semibold bg-accent text-accent-on hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent">
+            {% trans "Start a challenge" %}
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </section>
+    {% if active_cards %}
+    <script src="{% static 'vendor/chart.js' %}"></script>
+    <script>
+      (function () {
+        const carousel = document.getElementById("potc-carousel");
+        if (!carousel) return;
+        const panels = Array.from(carousel.children);
+
+        panels.forEach(function (panel) {
+          const canvas = panel.querySelector("canvas");
+          const dataEl = document.getElementById(panel.dataset.jsonId);
+          const chartData = JSON.parse(dataEl.textContent);
+          new Chart(canvas, {
+            type: "line",
+            data: {
+              labels: chartData.labels,
+              datasets: chartData.datasets.map(function (ds) {
+                return { label: ds.label, data: ds.data, fill: false, tension: 0.1 };
+              }),
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                x: { title: { display: true, text: "{% trans 'Date' %}" } },
+                y: {
+                  beginAtZero: true,
+                  title: { display: true, text: "{% trans 'Cumulative Points' %}" },
+                },
+              },
+            },
+          });
+        });
+
+        let activeIndex = 0;
+        const dots = Array.from(document.querySelectorAll("#potc-dots button"));
+        const setActive = function (index) {
+          activeIndex = index;
+          dots.forEach(function (dot, i) {
+            dot.classList.toggle("bg-accent", i === index);
+            dot.classList.toggle("bg-line-subtle", i !== index);
+          });
+        };
+        carousel.addEventListener("scroll", function () {
+          const center = carousel.scrollLeft + carousel.clientWidth / 2;
+          let active = 0;
+          panels.forEach(function (panel, i) {
+            if (panel.offsetLeft <= center) active = i;
+          });
+          setActive(active);
+        });
+        dots.forEach(function (dot, i) {
+          dot.addEventListener("click", function () {
+            panels[i].scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+          });
+        });
+
+        const goTo = function (index) {
+          const clamped = Math.max(0, Math.min(panels.length - 1, index));
+          panels[clamped].scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+        };
+        const prevBtn = document.getElementById("potc-prev-btn");
+        const nextBtn = document.getElementById("potc-next-btn");
+        if (prevBtn) prevBtn.addEventListener("click", function () { goTo(activeIndex - 1); });
+        if (nextBtn) nextBtn.addEventListener("click", function () { goTo(activeIndex + 1); });
+      })();
+    </script>
+    {% endif %}
+
+    {% if completed_cards %}
+    <section aria-label="{% trans 'Completed challenges' %}">
+      <details class="group">
+        <summary class="cursor-pointer text-sm font-medium text-content-muted hover:text-content-body select-none">
+          {% trans "Completed challenges" %} ({{ completed_cards|length }})
+        </summary>
+        <ul class="mt-3 divide-y divide-line-subtle border border-line-subtle rounded bg-surface-card">
+          {% for card in completed_cards %}
+          <li>
+            <a href="{% url 'challenges:detail' card.challenge.pk %}"
+              data-loading-message="{% trans 'Loading challenge…' %}"
+              class="flex items-center justify-between gap-4 px-4 py-3 text-sm hover:bg-surface-hover">
+              <span class="font-medium text-content-body truncate">{{ card.challenge.name }}</span>
+              <span class="font-mono text-content-muted whitespace-nowrap">{% if card.rank %}#{{ card.rank }} · {% endif %}{{ card.total_points }} {% trans "pts" %}</span>
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+      </details>
+    </section>
+    {% endif %}
+
+    <section aria-label="{% trans 'First scored point vs latest' %}">
+      <div class="bg-surface-card rounded-lg shadow-sm border border-line-subtle p-6">
+        <h2 class="text-xs font-medium text-content-muted uppercase tracking-wide">{% trans "First scored point vs latest" %}</h2>
+        {% if career.lifts %}
+        <ul class="mt-3 divide-y divide-line-subtle">
+          {% for row in career.lifts %}
+          <li class="py-2 flex items-baseline justify-between gap-4">
+            <span class="text-sm font-medium text-content-strong">{{ row.lift }}</span>
+            <span class="text-sm font-mono text-content-body whitespace-nowrap">
+              {{ row.first_weight }} {{ row.unit }}
+              <span class="text-content-subtle">→</span>
+              <span class="font-bold text-content-strong">{{ row.latest_weight }} {{ row.unit }}</span>
+            </span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% elif career.has_history %}
+        <p class="mt-3 text-sm text-content-muted">{% trans "Once you score points, your first scored lift and your latest will be compared here." %}</p>
+        {% else %}
+        <p class="mt-3 text-sm text-content-muted">{% trans "Join a challenge and this will fill in with how far each lift has come since your first scored set." %}</p>
+        {% endif %}
+      </div>
+    </section>
+{% endblock %}

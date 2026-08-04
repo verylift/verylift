@@ -1,0 +1,72 @@
+{% load i18n humanize %}
+<section class="bg-surface-card border border-line-subtle rounded p-6">
+  <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "Invite Link" %}</h2>
+
+  {% if current_invite_link %}
+  <p class="text-xs text-content-muted mb-2">
+    {% blocktrans with when=current_invite_link.expires_at|timeuntil %}Expires in {{ when }}{% endblocktrans %}
+  </p>
+  <div class="flex flex-wrap gap-2 mb-4">
+    <input
+      type="text"
+      readonly
+      id="invite-link-url"
+      value="{{ request.scheme }}://{{ request.get_host }}{% url 'challenges:invite-link' current_invite_link.token %}"
+      class="flex-1 min-w-0 border border-line rounded px-3 py-2 text-sm bg-surface-sunken text-content-body"
+      onclick="this.select()">
+    <button
+      type="button"
+      data-copy-invite-link
+      class="border border-line-subtle text-content-body text-sm font-medium px-3 py-2 rounded hover:bg-surface-sunken whitespace-nowrap">
+      {% trans "Copy" %}
+    </button>
+  </div>
+  {% else %}
+  <p class="text-sm text-content-muted italic mb-4">{% trans "No active invite link. Generate one to invite people." %}</p>
+  {% endif %}
+
+  {% if challenge.creator_id == request.user.id %}
+  <form
+    method="post"
+    action="{% url 'challenges:regenerate-invite-link' challenge.pk %}"
+    hx-post="{% url 'challenges:regenerate-invite-link' challenge.pk %}"
+    hx-target="closest section"
+    hx-swap="outerHTML">
+    {% csrf_token %}
+    <button
+      type="submit"
+      class="bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
+      {% if current_invite_link %}{% trans "Generate new link" %}{% else %}{% trans "Generate invite link" %}{% endif %}
+    </button>
+  </form>
+  {% endif %}
+
+  {% if oob_messages %}{% include "components/_messages_oob.html" %}{% endif %}
+  <script>
+    (function () {
+      var section = document.currentScript.closest('section');
+      var button = section.querySelector('[data-copy-invite-link]');
+      if (!button) return;
+      button.addEventListener('click', function () {
+        var input = section.querySelector('#invite-link-url');
+        if (!input) return;
+        var restore = button.textContent;
+        var done = function () {
+          button.textContent = "{% trans 'Copied!' %}";
+          setTimeout(function () { button.textContent = restore; }, 1500);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(input.value).then(done, function () {
+            input.select();
+            document.execCommand('copy');
+            done();
+          });
+        } else {
+          input.select();
+          document.execCommand('copy');
+          done();
+        }
+      });
+    })();
+  </script>
+</section>

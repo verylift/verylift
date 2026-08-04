@@ -1,0 +1,14 @@
+{% load i18n icons %}
+{% for message in messages %}
+<div class="app-message max-w-xl mx-auto flex items-start gap-3 px-4 py-3 rounded text-sm font-medium
+  {% if message.tags == 'success' %}bg-success-light text-success-dark
+  {% elif message.tags == 'error' %}bg-danger-light text-danger-dark
+  {% elif message.tags == 'warning' %}bg-warning-light text-warning-dark
+  {% else %}bg-brand-100 text-brand-800
+  {% endif %}">
+  <span class="flex-1">{{ message }}</span>
+  <button type="button" class="app-message-dismiss flex-shrink-0 -m-1 p-1 rounded hover:bg-black/10" aria-label="{% trans 'Dismiss' %}">
+    {% icon "x" %}
+  </button>
+</div>
+{% endfor %}

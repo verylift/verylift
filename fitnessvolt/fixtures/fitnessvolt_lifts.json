@@ -1,0 +1,20 @@
+{
+  "aliases": [
+    {"from_slug": "squat", "to_name": "Back Squat"},
+    {"from_slug": "back_squat", "to_name": "Back Squat"},
+    {"from_slug": "front_squat", "to_name": "Front Squat"},
+    {"from_slug": "bench-press", "to_name": "Bench Press"},
+    {"from_slug": "bench_press", "to_name": "Bench Press"},
+    {"from_slug": "incline_bench_press", "to_name": "Incline Bench Press"},
+    {"from_slug": "deadlift", "to_name": "Deadlift"},
+    {"from_slug": "sumo_deadlift", "to_name": "Sumo Deadlift"},
+    {"from_slug": "overhead_press", "to_name": "Overhead Press"},
+    {"from_slug": "push_press", "to_name": "Push Press"},
+    {"from_slug": "snatch_press", "to_name": "Snatch Press"},
+    {"from_slug": "pendlay_row", "to_name": "Pendlay Row"},
+    {"from_slug": "power_clean", "to_name": "Power Clean"},
+    {"from_slug": "pullup", "to_name": "Pull-up"},
+    {"from_slug": "chinup", "to_name": "Chin-up"},
+    {"from_slug": "dip", "to_name": "Dip"}
+  ]
+}

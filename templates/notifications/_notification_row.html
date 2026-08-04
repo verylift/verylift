@@ -1,0 +1,22 @@
+<li id="notification-{{ row.notification.pk }}">
+  <button type="button"
+    hx-post="{% url 'notifications:read' row.notification.pk %}"
+    hx-target="closest li"
+    hx-swap="outerHTML"
+    class="block w-full text-left px-4 py-3 hover:bg-surface-hover
+      {% if not row.notification.is_read %}bg-accent-subtle{% endif %}">
+    <span class="flex items-center gap-2">
+      {% if not row.notification.is_read %}
+      <span class="inline-block w-2 h-2 rounded-full bg-accent shrink-0"></span>
+      {% endif %}
+      <span class="text-sm
+        {% if not row.notification.is_read %}font-semibold text-content-strong{% else %}text-content-body{% endif %}">
+        {{ row.text }}
+      </span>
+    </span>
+    <span class="block mt-1 text-xs text-content-subtle">
+      {{ row.notification.created_at|date:"M j, Y, g:i a" }}
+    </span>
+  </button>
+</li>
+{% if oob_messages %}{% include "components/_messages_oob.html" %}{% endif %}

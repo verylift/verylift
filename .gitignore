@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+.venv-docker/
+*.egg-info/
+dist/
+build/
+
+# Django
+*.sqlite3
+staticfiles/
+media/
+
+# Environment
+.env
+.env.authentik
+.env.pangolin
+
+# Coverage
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+
+# Node (Tailwind)
+node_modules/
+package-lock.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude/worktrees/
+.claude/local-docs/
+CLAUDE.local.md
+
+# Local supervisord staging (dev-only process management, not project source)
+.supervisor/
+.uat-server.log

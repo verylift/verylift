@@ -1,0 +1,12 @@
+{% comment %}
+Avatar circle. Usage: {% include "components/_avatar.html" with avatar_user=user size_classes="w-20 h-20 text-3xl" %}
+Renders the user's uploaded photo when set, falling back to an initials circle.
+{% endcomment %}
+{% if avatar_user.avatar %}
+<img src="{{ avatar_user.avatar.url }}" alt="{{ avatar_user.display_name|default:avatar_user.username }}"
+  class="inline-block {{ size_classes }} rounded-full object-cover shrink-0">
+{% else %}
+<span class="inline-flex items-center justify-center {{ size_classes }} rounded-full bg-accent text-accent-on font-bold shrink-0">
+  {{ avatar_user.display_name|default:avatar_user.username|slice:":2"|upper }}
+</span>
+{% endif %}

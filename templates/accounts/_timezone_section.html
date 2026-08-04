@@ -1,0 +1,56 @@
+{% load i18n %}
+<!-- Timezone section -->
+<section class="bg-surface-card border border-line-subtle rounded p-6 mb-6 max-w-lg">
+  <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "Timezone" %}</h2>
+  <form
+    method="post"
+    action="{% url 'accounts:settings' %}"
+    hx-post="{% url 'accounts:settings' %}"
+    hx-target="closest section"
+    hx-swap="outerHTML"
+    data-loading-message="{% trans 'Saving timezone…' %}">
+    {% csrf_token %}
+    <input type="hidden" name="form_name" value="timezone">
+
+    <div class="mb-4">
+      <label for="timezone-select" class="block text-sm font-medium text-content-body mb-2">{% trans "Preferred timezone" %}</label>
+      <select id="timezone-select" name="timezone" class="w-full border border-line-subtle rounded px-3 py-2 text-sm bg-surface-page text-content-body">
+        <option value="" {% if not user_timezone %}selected{% endif %}>{% trans "Automatic (browser timezone)" %}</option>
+        {% for region, names in timezone_groups %}
+        <optgroup label="{{ region }}">
+          {% for name in names %}
+          <option value="{{ name }}" {% if user_timezone == name %}selected{% endif %}>{{ name }}</option>
+          {% endfor %}
+        </optgroup>
+        {% endfor %}
+      </select>
+      <p class="mt-1 text-xs text-content-muted">
+        {% trans "Timestamps across the app are shown in this timezone. Automatic uses your browser's detected timezone:" %}
+        <span data-detected-timezone>?</span>
+      </p>
+    </div>
+
+    <button
+      type="submit"
+      class="bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
+      {% trans "Save Timezone" %}
+    </button>
+  </form>
+  <script>
+    // Behaviour lives inside this htmx swap target, not a page-level script,
+    // so it keeps working after the section is replaced outerHTML -- htmx
+    // re-executes inline <script> tags in swapped-in markup (see the avatar
+    // section for the same pattern), whereas a page-level getElementById
+    // binding would only ever run once, against the pre-swap DOM.
+    (function () {
+      var el = document.currentScript.parentElement.querySelector("[data-detected-timezone]");
+      if (!el) return;
+      try {
+        el.textContent = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      } catch (e) {
+        el.textContent = "?";
+      }
+    })();
+  </script>
+  {% if oob_messages %}{% include "components/_messages_oob.html" %}{% endif %}
+</section>

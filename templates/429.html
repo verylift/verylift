@@ -1,0 +1,10 @@
+{% extends "base/base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Too Many Requests" %} — very lift{% endblock %}
+
+{% block content %}
+{% trans "Too many attempts" as error_title %}
+{% trans "You've made too many requests in a short time. Please wait a minute and try again." as error_message %}
+{% include "components/_error_card.html" with error_code="429" error_title=error_title error_message=error_message %}
+{% endblock %}

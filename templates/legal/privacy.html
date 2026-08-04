@@ -1,0 +1,316 @@
+{% extends "base/base.html" %}
+
+{% block title %}Privacy Policy — very lift{% endblock %}
+
+{% block content %}
+<div class="min-h-full py-12 px-4">
+  <div class="max-w-3xl mx-auto space-y-8">
+
+    <div>
+      <a href="/" class="text-sm text-accent hover:underline">&larr; Back</a>
+    </div>
+
+    <header class="space-y-4">
+      <h1 class="text-2xl font-bold text-content-strong">Privacy Policy</h1>
+      <table class="text-sm text-content-body">
+        <tbody>
+          <tr>
+            <td class="pr-4 py-0.5 font-medium text-content-subtle">Operator</td>
+            <td class="py-0.5">very lift</td>
+          </tr>
+          <tr>
+            <td class="pr-4 py-0.5 font-medium text-content-subtle">Version</td>
+            <td class="py-0.5">2.0</td>
+          </tr>
+          <tr>
+            <td class="pr-4 py-0.5 font-medium text-content-subtle">Effective date</td>
+            <td class="py-0.5">2026-08-04</td>
+          </tr>
+          <tr>
+            <td class="pr-4 py-0.5 font-medium text-content-subtle">Last updated</td>
+            <td class="py-0.5">2026-08-04</td>
+          </tr>
+        </tbody>
+      </table>
+    </header>
+
+    <section class="bg-surface-card border border-line-subtle rounded p-5 space-y-2">
+      <h2 class="text-base font-semibold text-content-strong">Plain-language summary</h2>
+      <p class="text-sm text-content-body">
+        We store your account details, the Liftosaur API key you provide, and the workout
+        data it syncs from Liftosaur so we can compute your scores and run challenges. Your
+        display name, lift performance, and scores are visible to other users through
+        leaderboards and user pages. Your data is never sold, and there are no ads. Every
+        page load requests fonts from Google Fonts (see
+        <a href="#s6" class="text-accent hover:underline">Cookies &amp; tracking</a>); beyond
+        that, the only outbound requests today are to Liftosaur (using your key), our mail
+        relay when you request a password reset, and, if you sign in with SSO, our identity
+        provider. We don't run analytics yet, but plan to add privacy-conscious, first-party
+        usage analytics gated behind a consent banner and honoring the Global Privacy Control
+        signal &mdash; see section 6 for the commitments that will govern it. Our servers run
+        in Canada; our mail relay is in Switzerland, and Google Fonts may process data in the
+        US &mdash; see <a href="#s8" class="text-accent hover:underline">International data
+        transfers</a>. The only email the Service sends is a password-reset link you asked
+        for &mdash; no marketing emails.
+      </p>
+      <p class="text-sm italic text-content-subtle">
+        This is a plain-language summary for convenience only. The numbered sections below
+        are the actual policy.
+      </p>
+    </section>
+
+    <nav class="text-sm">
+      <h2 class="text-base font-semibold text-content-strong mb-2">Contents</h2>
+      <ol class="list-decimal list-inside space-y-1 text-accent">
+        <li><a href="#s1" class="hover:underline">Who we are</a></li>
+        <li><a href="#s2" class="hover:underline">Scope</a></li>
+        <li><a href="#s3" class="hover:underline">Information we collect</a></li>
+        <li><a href="#s4" class="hover:underline">How we use it</a></li>
+        <li><a href="#s5" class="hover:underline">Visibility to other users</a></li>
+        <li><a href="#s6" class="hover:underline">Cookies &amp; tracking</a></li>
+        <li><a href="#s7" class="hover:underline">Sharing</a></li>
+        <li><a href="#s8" class="hover:underline">International data transfers</a></li>
+        <li><a href="#s9" class="hover:underline">Retention &amp; deletion</a></li>
+        <li><a href="#s10" class="hover:underline">Your rights</a></li>
+        <li><a href="#s11" class="hover:underline">Security</a></li>
+        <li><a href="#s12" class="hover:underline">Minors</a></li>
+        <li><a href="#s13" class="hover:underline">Changes to this policy</a></li>
+        <li><a href="#s14" class="hover:underline">Contact</a></li>
+      </ol>
+    </nav>
+
+    <div class="space-y-8 text-sm text-content-body">
+
+      <section id="s1" class="space-y-2">
+        <h2 class="text-lg font-semibold text-content-strong">1. Who we are</h2>
+        <p>
+          very lift ("we", "us", or "our") operates the very lift fitness-challenge web
+          application. For the data described below, we are the party responsible for your
+          information (the data controller).
+        </p>
+      </section>
+
+      <section id="s2" class="space-y-2">
+        <h2 class="text-lg font-semibold text-content-strong">2. Scope</h2>
+        <p>
+          This policy covers only the very lift service. It does not cover Liftosaur
+          itself, which is an independent service with its own privacy policy, nor any
+          other third-party service you may use.
+        </p>
+      </section>
+
+      <section id="s3" class="space-y-2">
+        <h2 class="text-lg font-semibold text-content-strong">3. Information we collect</h2>
+        <p>The Service stores the following:</p>
+        <ul class="list-disc list-inside space-y-1">
+          <li>
+            <strong>Account information</strong> — your username, an optional email address
+            and display name, and your unit preference. The email address is optional: you
+            can supply one when you sign up or add or remove it later in Settings, and it is
+            used only to send you a password-reset link when you request one. An account with
+            no email address on file cannot use password reset. For accounts created through
+            single sign-on, an identifier linking you to our login provider is stored.
+            The Service also records how your account was created — invite link, direct
+            signup, single sign-on, or created by an admin — and, for a challenge you
+            joined via a shareable invite link, which link admitted you. Today, single
+            sign-on goes through an identity provider we control directly, not a third-party
+            social account. If that is ever configured to let you sign in via an external
+            social provider (e.g. Google or GitHub) instead, this policy will be updated to
+            disclose what that provider shares with us before it's enabled.
+          </li>
+          <li>
+            <strong>Your Liftosaur API key</strong> — the key you provide is stored in the
+            application's database so the server can fetch your Liftosaur data on your behalf.
+            See <a href="#s11" class="text-accent hover:underline">Security</a> for how this is
+            handled.
+          </li>
+          <li>
+            <strong>Synced fitness data</strong> — your lift history (including the lift,
+            weight, reps, dates, and equipment) fetched from Liftosaur, along with logs of
+            those sync operations.
+          </li>
+          <li>
+            <strong>Derived scoring data</strong> — the points and events the
+            Service computes from your lifts.
+          </li>
+          <li>
+            <strong>Challenge participation</strong> — the challenges you are invited to or
+            join, the goal chart you set for each one, and your join or leave status. If you
+            build a goal chart from published strength standards, the Service also records
+            alongside that chart the sex and the single bodyweight figure you entered at the
+            time, because the suggested targets were calculated from them. That is a one-time
+            record attached to that one goal: the Service does not track your bodyweight over
+            time, does not keep a bodyweight history, and does not store a bodyweight for
+            goals you set manually or from your lift history.
+          </li>
+          <li>
+            <strong>Server logs</strong> — routine technical logs generated when you use the
+            Service, used for debugging and keeping the service running.
+          </li>
+        </ul>
+        <p>
+          <strong>Sensitive information:</strong> the sex and bodyweight figure described
+          above under Challenge participation is health-adjacent information. We don't treat
+          it differently from your other fitness data, but we're calling it out explicitly
+          rather than claiming we collect no sensitive information, since that wouldn't be
+          accurate.
+        </p>
+      </section>
+
+      <section id="s4" class="space-y-2">
+        <h2 class="text-lg font-semibold text-content-strong">4. How we use it</h2>
+        <p>
+          Your information is used to run the Service: to compute your scores and
+          tiers, to build leaderboards, to run challenge mechanics, and to send you in-app
+          notifications. Notifications are shown inside the app only &mdash; the Service does
+          not send marketing or notification emails. The one exception is a single
+          transactional email, a password-reset link, sent only to the address on your
+          account and only when you ask for a reset.
+        </p>
+      </section>
+
+      <section id="s5" class="space-y-2">
+        <h2 class="text-lg font-semibold text-content-strong">5. Visibility to other users</h2>
+        <p>
+          very lift is a shared, multi-user service. Your display name, lift performance,
+          and scores are visible to other users through the leaderboards of the challenges
+          you are in. Joining a challenge shares your results with the other participants of
+          that challenge. Do not put information you want to keep private into your display
+          name or other visible fields.
+        </p>
+      </section>
+
+      <section id="s6" class="space-y-2">
+        <h2 class="text-lg font-semibold text-content-strong">6. Cookies &amp; tracking</h2>
+        <p><strong>Today:</strong> the Service uses only strictly-necessary cookies/storage,
+          described in full below. It does not run analytics or advertising of any kind, and
+          there is no cookie-consent banner yet because nothing beyond strictly-necessary
+          cookies is set.</p>
+        <ul class="list-disc list-inside space-y-1">
+          <li>A session cookie to keep you signed in.</li>
+          <li>A CSRF cookie to protect form submissions.</li>
+          <li>Your light/dark theme preference, stored in your browser's local storage.</li>
+        </ul>
+        <p>
+          Every page also loads webfonts (Inter and JetBrains Mono) directly from Google
+          Fonts (<code>fonts.googleapis.com</code>, <code>fonts.gstatic.com</code>), which
+          discloses your IP address and browser characteristics to Google as part of that
+          request. We plan to self-host these fonts to remove this dependency; until then,
+          it is the one third-party request every page load makes.
+        </p>
+        <p>
+          <strong>Planned:</strong> we intend to add first-party usage analytics (e.g. page
+          and feature engagement, session frequency, challenge lifecycle counts) to
+          understand how the Service is used. When we do, the following commitments will
+          govern it, and this section will be updated with the specifics:
+        </p>
+        <ul class="list-disc list-inside space-y-1">
+          <li>A consent banner will gate collection; declining disables tracking while the Service remains fully usable.</li>
+          <li>Data stays first-party — no analytics data will be sent to or processed by a third party.</li>
+          <li>Nothing is sold or shared with advertisers; there is no advertising on the Service.</li>
+          <li>Analytics infrastructure is self-hosted, on infrastructure we control.</li>
+          <li>The Service will honor the Global Privacy Control (GPC) signal: a browser sending it is treated as an automatic opt-out, with tracking skipped entirely and no consent banner shown.</li>
+        </ul>
+        <p>
+          There's no uniform standard for the older "Do Not Track" (DNT) browser header, so
+          like most services, we don't respond to it. Global Privacy Control (above) is its
+          practical, better-supported successor.
+        </p>
+      </section>
+
+      <section id="s7" class="space-y-2">
+        <h2 class="text-lg font-semibold text-content-strong">7. Sharing</h2>
+        <p>
+          Your data is not sold. There are no advertisements. The Service makes outbound
+          requests to Google Fonts on every page load (see
+          <a href="#s6" class="text-accent hover:underline">Cookies &amp; tracking</a>), and
+          to the Liftosaur API (using the API key you provide, to fetch your data), our mail
+          relay when you request a password reset, and, if you sign in with single sign-on,
+          our identity provider (login server). Sending a password-reset email discloses your
+          email address and username to that mail relay. We may disclose information if
+          required to do so by law.
+        </p>
+        <p>
+          <strong>Business transfers:</strong> if we ever sell, merge, or transfer the
+          Service to another party, your information may transfer as part of that, but it
+          would remain governed by a privacy policy at least as protective as this one, and
+          you'd be notified before it took effect.
+        </p>
+      </section>
+
+      <section id="s8" class="space-y-2">
+        <h2 class="text-lg font-semibold text-content-strong">8. International data transfers</h2>
+        <p>
+          The Service's servers run in Canada. Some requests the Service makes on your
+          behalf leave Canada: our mail relay (Migadu) is based in Switzerland, and Google
+          Fonts (see <a href="#s6" class="text-accent hover:underline">Cookies &amp;
+          tracking</a>) is served from Google's global infrastructure, likely including the
+          United States. Wherever you access the Service from, your information may be
+          processed in these locations as described above.
+        </p>
+      </section>
+
+      <section id="s9" class="space-y-2">
+        <h2 class="text-lg font-semibold text-content-strong">9. Retention &amp; deletion</h2>
+        <p>
+          Your data is kept while your account is active. You can ask us to deactivate or
+          delete your account and associated data. Deletion applies to what is stored in the
+          live application; we are not able to guarantee removal from any external service
+          you have separately connected, such as Liftosaur. The sex and bodyweight figure
+          recorded with a strength-standards goal chart (see
+          <a href="#s3" class="text-accent hover:underline">Information we collect</a>) is
+          kept for as long as that goal chart exists, since it is the record of how those
+          targets were calculated; it is removed when your account and its data are deleted.
+        </p>
+      </section>
+
+      <section id="s10" class="space-y-2">
+        <h2 class="text-lg font-semibold text-content-strong">10. Your rights</h2>
+        <p>
+          You can view and correct much of your account information directly in Settings. For
+          access to, export of, or deletion of your data beyond what Settings offers, contact
+          us.
+        </p>
+      </section>
+
+      <section id="s11" class="space-y-2">
+        <h2 class="text-lg font-semibold text-content-strong">11. Security</h2>
+        <p>
+          Passwords are stored using Django's password hashing and are never stored in plain
+          text. The Service is served over HTTPS. Be aware that your Liftosaur API key is
+          stored so the server can act on your behalf to fetch your data; treat the key as
+          sensitive and rotate it in Liftosaur if you believe it has been exposed.
+        </p>
+      </section>
+
+      <section id="s12" class="space-y-2">
+        <h2 class="text-lg font-semibold text-content-strong">12. Minors</h2>
+        <p>
+          The Service is not directed at, and is not intended for use by, anyone under 18 —
+          see the <a href="{% url 'terms' %}" class="text-accent hover:underline">Terms of
+          Service</a>. We do not knowingly collect information from anyone under 18. If you
+          believe we have, contact us and we will delete it.
+        </p>
+      </section>
+
+      <section id="s13" class="space-y-2">
+        <h2 class="text-lg font-semibold text-content-strong">13. Changes to this policy</h2>
+        <p>
+          We may update this policy; material changes will be reflected in the version and
+          dates shown above. Continued use after an update means you accept the revised
+          policy.
+        </p>
+      </section>
+
+      <section id="s14" class="space-y-2">
+        <h2 class="text-lg font-semibold text-content-strong">14. Contact</h2>
+        <p>
+          Questions about this policy or requests concerning your data can be directed to us at
+          <a href="mailto:admin@verylift.com" class="text-accent hover:underline">admin@verylift.com</a>.
+        </p>
+      </section>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

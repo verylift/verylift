@@ -1,0 +1,142 @@
+{% extends "base/app.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Challenges" %} — very lift{% endblock %}
+
+{% block main %}
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
+      <h1 class="text-2xl font-bold text-content-strong">{% trans "Challenges" %}</h1>
+      <a href="{% url 'challenges:create' %}"
+        class="inline-flex items-center justify-center bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
+        {% trans "Create Challenge" %}
+      </a>
+    </div>
+
+    <div class="flex justify-end mb-4">
+      {% if hide_completed %}
+      <a href="?" class="text-sm font-medium text-accent hover:text-accent">{% trans "Show completed" %}</a>
+      {% else %}
+      <a href="?hide_completed=1" class="text-sm font-medium text-accent hover:text-accent">{% trans "Hide completed" %}</a>
+      {% endif %}
+    </div>
+
+    {% if rows %}
+    {# Desktop / tablet: tabular layout (>= sm). Hidden on mobile — see mobile card list below. #}
+    <section class="hidden sm:block bg-surface-card border border-line-subtle rounded overflow-hidden">
+      <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-line-subtle text-left text-xs font-medium text-content-muted uppercase tracking-wide">
+            <th class="px-4 py-3">{% trans "Challenge" %}</th>
+            <th class="px-4 py-3">{% trans "Status" %}</th>
+            <th class="px-4 py-3">{% trans "Start" %}</th>
+            <th class="px-4 py-3">{% trans "End" %}</th>
+            <th class="px-4 py-3">{% trans "Leader" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr id="challenge-row-{{ row.challenge.pk }}" class="border-b border-line-subtle last:border-0">
+            <td class="px-4 py-3">
+              <a href="{% url 'challenges:detail' row.challenge.pk %}"
+                class="font-medium text-accent hover:text-accent"
+                data-loading-message="{% trans 'Loading challenge…' %}">{{ row.challenge.name }}</a>
+            </td>
+            <td class="px-4 py-3">
+              {% if row.challenge.status == "active" %}
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-success-light text-success-dark">{% trans "Active" %}</span>
+              {% elif row.challenge.status == "draft" %}
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-surface-sunken text-content-muted">{% trans "Draft" %}</span>
+              {% else %}
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-surface-sunken text-content-body">{% trans "Completed" %}</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-content-body">{{ row.challenge.start_date }}</td>
+            <td class="px-4 py-3 text-content-body">{{ row.challenge.end_date }}</td>
+            <td class="px-4 py-3 text-content-body">
+              {% if row.leader_name %}
+              {% blocktrans with name=row.leader_name points=row.leader_points %}{{ name }} <span class="text-content-subtle">·</span> <span class="font-mono">{{ points }}</span> pts{% endblocktrans %}
+              {% else %}
+              <span class="text-content-subtle">{% trans "No scores yet" %}</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </section>
+
+    {% comment %}
+      Mobile: stacked card list (< sm), so each challenge's dates and leader stay readable without
+      horizontal scroll. Capped at max-w-md so a narrow-but-not-phone-width desktop window (e.g. an
+      unmaximized or split-screen browser under the 640px breakpoint) doesn't stretch each card
+      edge-to-edge of a wide <main>.
+    {% endcomment %}
+    <div class="sm:hidden space-y-3 max-w-md mx-auto">
+      {% for row in rows %}
+      <div id="challenge-card-mobile-{{ row.challenge.pk }}"
+        class="bg-surface-card border border-line-subtle rounded p-4">
+        <div class="flex items-start justify-between gap-3">
+          <a href="{% url 'challenges:detail' row.challenge.pk %}"
+            class="font-medium text-accent hover:text-accent"
+            data-loading-message="{% trans 'Loading challenge…' %}">{{ row.challenge.name }}</a>
+          {% if row.challenge.status == "active" %}
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-success-light text-success-dark">{% trans "Active" %}</span>
+          {% elif row.challenge.status == "draft" %}
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-surface-sunken text-content-muted">{% trans "Draft" %}</span>
+          {% else %}
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-surface-sunken text-content-body">{% trans "Completed" %}</span>
+          {% endif %}
+        </div>
+        <dl class="mt-3 flex flex-wrap gap-x-6 gap-y-2">
+          <div>
+            <dt class="text-xs font-medium text-content-muted uppercase tracking-wide">{% trans "Start" %}</dt>
+            <dd class="text-sm text-content-body">{{ row.challenge.start_date }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs font-medium text-content-muted uppercase tracking-wide">{% trans "End" %}</dt>
+            <dd class="text-sm text-content-body">{{ row.challenge.end_date }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs font-medium text-content-muted uppercase tracking-wide">{% trans "Leader" %}</dt>
+            <dd class="text-sm text-content-body">
+              {% if row.leader_name %}
+              {% blocktrans with name=row.leader_name points=row.leader_points %}{{ name }} <span class="text-content-subtle">·</span> <span class="font-mono">{{ points }}</span> pts{% endblocktrans %}
+              {% else %}
+              <span class="text-content-subtle">{% trans "No scores yet" %}</span>
+              {% endif %}
+            </dd>
+          </div>
+        </dl>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <section class="bg-surface-card border border-line-subtle rounded p-8 text-center text-sm text-content-muted">
+      {% trans "No challenges to show." %}
+    </section>
+    {% endif %}
+
+    {% if page_obj.has_other_pages %}
+    <nav class="mt-6 flex items-center justify-between">
+      {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}{% if hide_completed %}&hide_completed=1{% endif %}"
+        class="text-sm font-medium text-accent hover:text-accent">← {% trans "Previous" %}</a>
+      {% else %}
+      <span class="text-sm font-medium text-content-subtle">← {% trans "Previous" %}</span>
+      {% endif %}
+
+      <span class="text-sm text-content-muted">
+        {% blocktrans with number=page_obj.number num_pages=page_obj.paginator.num_pages %}Page {{ number }} of {{ num_pages }}{% endblocktrans %}
+      </span>
+
+      {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}{% if hide_completed %}&hide_completed=1{% endif %}"
+        class="text-sm font-medium text-accent hover:text-accent">{% trans "Next" %} →</a>
+      {% else %}
+      <span class="text-sm font-medium text-content-subtle">{% trans "Next" %} →</span>
+      {% endif %}
+    </nav>
+    {% endif %}
+{% endblock %}

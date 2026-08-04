@@ -1,0 +1,65 @@
+{% extends "base/app.html" %}
+{% load static %}
+{% load humanize %}
+{% load i18n %}
+
+{% block title %}{% trans "Settings" %} — very lift{% endblock %}
+
+{% block main %}
+    <h1 class="text-2xl font-bold text-content-strong mb-8">{% trans "Settings" %}</h1>
+
+    {% include "accounts/_avatar_section.html" %}
+
+    {% include "accounts/_nickname_section.html" %}
+
+    {% include "accounts/_email_section.html" %}
+
+    <!-- Appearance section -->
+    <section class="bg-surface-card border border-line-subtle rounded p-6 mb-6 max-w-lg">
+      <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "Appearance" %}</h2>
+      <div class="space-y-2">
+        <label class="flex items-center gap-3 border border-line rounded px-4 py-3 cursor-pointer hover:bg-surface-hover">
+          <input type="radio" name="theme" value="system" class="theme-option-input accent-accent">
+          <span class="text-sm font-medium text-content-body">{% trans "System" %}</span>
+        </label>
+        <label class="flex items-center gap-3 border border-line rounded px-4 py-3 cursor-pointer hover:bg-surface-hover">
+          <input type="radio" name="theme" value="light" class="theme-option-input accent-accent">
+          <span class="text-sm font-medium text-content-body">{% trans "Light" %}</span>
+        </label>
+        <label class="flex items-center gap-3 border border-line rounded px-4 py-3 cursor-pointer hover:bg-surface-hover">
+          <input type="radio" name="theme" value="dark" class="theme-option-input accent-accent">
+          <span class="text-sm font-medium text-content-body">{% trans "Dark" %}</span>
+        </label>
+      </div>
+    </section>
+
+    {% include "accounts/_liftosaur_section.html" %}
+
+    {% include "accounts/_language_section.html" %}
+
+    {% include "accounts/_timezone_section.html" %}
+
+    {% include "accounts/_unit_preference_section.html" %}
+{% endblock %}
+
+{% block after_main %}
+<script>
+(function () {
+  // --- Appearance: system/light/dark (persisted in localStorage) ---
+  var themeInputs = document.querySelectorAll('.theme-option-input');
+  if (themeInputs.length) {
+    var current;
+    try { current = localStorage.getItem('pp-theme'); } catch (e) { current = null; }
+    if (current !== 'light' && current !== 'dark') current = 'system';
+    themeInputs.forEach(function (input) {
+      input.checked = input.value === current;
+      input.addEventListener('change', function () {
+        if (!input.checked) return;
+        try { localStorage.setItem('pp-theme', input.value); } catch (e) {}
+        if (window.ppApplyTheme) window.ppApplyTheme();
+      });
+    });
+  }
+})();
+</script>
+{% endblock %}

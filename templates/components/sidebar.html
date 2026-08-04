@@ -1,0 +1,163 @@
+{% load static i18n icons %}
+<!-- Mobile top bar: hamburger trigger + brand mark. Hidden at md+ where the sidebar is always visible. -->
+<div class="md:hidden flex items-center justify-between px-4 py-3 bg-surface-card border-b border-line-subtle">
+  <div class="flex items-center gap-2 min-w-0 flex-1">
+    <a href="{% url 'challenges:dashboard' %}" aria-label="{% trans 'very lift, go to dashboard' %}" class="flex-shrink-0">
+      <img src="{% static 'logo.svg' %}" alt="" class="w-8 h-8 rounded-md" width="32" height="32">
+    </a>
+    <span class="text-content-strong font-bold text-lg tracking-tight truncate min-w-0">{{ mobile_header_title|default:"very lift" }}</span>
+  </div>
+  <button type="button" id="sidebar-toggle-btn" aria-label="{% trans 'Open navigation menu' %}" aria-expanded="false" aria-controls="app-sidebar"
+    class="flex items-center justify-center w-11 h-11 -mr-2 rounded text-content-body hover:bg-surface-hover flex-shrink-0">
+    {% icon "menu" css_class="h-6 w-6" %}
+  </button>
+</div>
+
+<!-- Backdrop for the mobile drawer. -->
+<div id="sidebar-backdrop" class="hidden md:hidden fixed inset-0 bg-black/40 z-40"></div>
+
+<nav id="app-sidebar"
+  class="hidden md:flex md:flex-col fixed md:static inset-y-0 left-0 z-50 w-72 md:w-64 min-h-dvh bg-surface-card border-r border-line-subtle px-4 py-6 space-y-1 overflow-y-auto">
+  <div class="mb-6 px-2 flex items-center justify-between gap-2">
+    <div class="flex items-center gap-2">
+      <a href="{% url 'challenges:dashboard' %}" aria-label="{% trans 'very lift, go to dashboard' %}">
+        <img src="{% static 'logo.svg' %}" alt="" class="w-8 h-8 rounded-md" width="32" height="32">
+      </a>
+      <span class="text-content-strong font-bold text-lg tracking-tight">very lift</span>
+    </div>
+    <button type="button" id="sidebar-close-btn" aria-label="{% trans 'Close navigation menu' %}"
+      class="md:hidden flex items-center justify-center w-9 h-9 rounded text-content-muted hover:bg-surface-hover">
+      {% icon "x" css_class="h-5 w-5" %}
+    </button>
+  </div>
+
+  {% with request.resolver_match.url_name as url_name %}
+
+  <a href="{% url 'challenges:dashboard' %}"
+    class="flex items-center justify-between gap-3 px-3 py-3 md:py-2 rounded text-sm font-medium
+      {% if url_name == 'dashboard' %}bg-accent-subtle text-accent{% else %}text-content-body hover:bg-surface-hover{% endif %}">
+    <span>{% trans "Dashboard" %}</span>
+    {% if unread_notification_count %}
+    <span class="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-accent text-accent-on text-xs font-semibold font-mono">
+      {{ unread_notification_count }}
+    </span>
+    {% endif %}
+  </a>
+
+  <a href="{% url 'challenges:find' %}"
+    class="flex items-center gap-3 px-3 py-3 md:py-2 rounded text-sm font-medium
+      {% if url_name == 'find' %}bg-accent-subtle text-accent{% else %}text-content-body hover:bg-surface-hover{% endif %}">
+    {% trans "Challenges" %}
+  </a>
+
+  <div class="flex-1"></div>
+
+  <div class="pt-3 mt-3 pb-[env(safe-area-inset-bottom)] border-t border-line-subtle relative" id="user-menu-root">
+    <!-- User popover (hidden by default, opens upward) -->
+    <div id="user-menu-popover"
+      class="hidden absolute bottom-full left-0 right-0 mb-1 bg-surface-card border border-line-subtle rounded shadow-lg overflow-hidden z-50">
+      <a href="{% url 'accounts:settings' %}"
+        class="flex items-center gap-3 px-3 py-3 md:py-2 text-sm font-medium
+          {% if url_name == 'settings' %}bg-accent-subtle text-accent{% else %}text-content-body hover:bg-surface-hover{% endif %}">
+        {% trans "Settings" %}
+      </a>
+      <a href="{% url 'guide:index' %}"
+        class="flex items-center gap-3 px-3 py-3 md:py-2 text-sm font-medium
+          {% if request.resolver_match.namespace == 'guide' %}bg-accent-subtle text-accent{% else %}text-content-body hover:bg-surface-hover{% endif %}">
+        {% trans "User Guide" %}
+      </a>
+      <a href="{% url 'terms' %}"
+        class="flex items-center gap-3 px-3 py-3 md:py-2 text-sm font-medium text-content-body hover:bg-surface-hover">
+        {% trans "Terms & Privacy" %}
+      </a>
+      {% if request.user.is_staff %}
+      <a href="{% url 'admin:index' %}"
+        class="flex items-center gap-3 px-3 py-3 md:py-2 text-xs font-medium uppercase tracking-wide text-content-muted hover:bg-surface-hover hover:text-content-body">
+        {% trans "Admin" %}
+      </a>
+      {% endif %}
+    </div>
+
+    <!-- Bottom user row -->
+    <div class="flex items-center gap-2">
+      <!-- Avatar + name trigger -->
+      <button id="user-menu-btn" type="button"
+        class="flex items-center gap-2 flex-1 min-w-0 px-2 py-3 md:py-2 rounded hover:bg-surface-hover text-left">
+        <!-- Avatar -->
+        {% include "components/_avatar.html" with avatar_user=request.user size_classes="w-7 h-7 text-xs" %}
+        <!-- Name -->
+        <span class="flex-1 min-w-0 text-sm font-semibold text-content-strong truncate">
+          {{ request.user.display_name|default:request.user.username }}
+        </span>
+      </button>
+
+      <!-- Logout icon -->
+      {% if request.user.oidc_sub %}
+      <form method="post" action="{% url 'oidc_logout' %}">
+        {% csrf_token %}
+        <button type="submit" title="{% trans 'Logout' %}"
+          class="flex-shrink-0 flex items-center justify-center w-11 h-11 md:w-auto md:h-auto md:p-2 rounded text-content-muted hover:bg-surface-hover hover:text-content-body">
+          {% icon "log-out" %}
+        </button>
+      </form>
+      {% else %}
+      <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit" title="{% trans 'Logout' %}"
+          class="flex-shrink-0 flex items-center justify-center w-11 h-11 md:w-auto md:h-auto md:p-2 rounded text-content-muted hover:bg-surface-hover hover:text-content-body">
+          {% icon "log-out" %}
+        </button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var btn = document.getElementById('user-menu-btn');
+      var popover = document.getElementById('user-menu-popover');
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        popover.classList.toggle('hidden');
+      });
+      document.addEventListener('click', function () {
+        popover.classList.add('hidden');
+      });
+    })();
+  </script>
+
+  {% endwith %}
+</nav>
+
+<script>
+  (function () {
+    var toggleBtn = document.getElementById('sidebar-toggle-btn');
+    var closeBtn = document.getElementById('sidebar-close-btn');
+    var sidebar = document.getElementById('app-sidebar');
+    var backdrop = document.getElementById('sidebar-backdrop');
+    if (!toggleBtn || !sidebar || !backdrop) return;
+
+    function openSidebar() {
+      sidebar.classList.remove('hidden');
+      sidebar.classList.add('flex', 'flex-col');
+      backdrop.classList.remove('hidden');
+      toggleBtn.setAttribute('aria-expanded', 'true');
+    }
+
+    function closeSidebar() {
+      sidebar.classList.add('hidden');
+      sidebar.classList.remove('flex', 'flex-col');
+      backdrop.classList.add('hidden');
+      toggleBtn.setAttribute('aria-expanded', 'false');
+    }
+
+    toggleBtn.addEventListener('click', openSidebar);
+    if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
+    backdrop.addEventListener('click', closeSidebar);
+
+    // Collapse the mobile drawer automatically if the viewport grows to desktop width.
+    window.addEventListener('resize', function () {
+      if (window.innerWidth >= 768) closeSidebar();
+    });
+  })();
+</script>

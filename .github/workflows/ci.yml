@@ -1,0 +1,146 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - ".claude/**"
+      - "**.md"
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - ".claude/**"
+      - "**.md"
+
+# Cancel superseded runs: pushing new commits to a PR (or main) cancels the
+# in-flight run for the same ref instead of letting stale runs burn minutes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Run ruff lint
+        run: uv run ruff check .
+
+      - name: Run ruff format check
+        run: uv run ruff format --check .
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: verylift_test
+          POSTGRES_USER: verylift
+          POSTGRES_PASSWORD: verylift
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      SECRET_KEY: ci-test-secret-key-not-for-production
+      # Throwaway Fernet key; CI needs a deterministic value and the data it
+      # protects is disposable. Not a repo secret, same posture as SECRET_KEY.
+      FIELD_ENCRYPTION_KEYS: jqYD4XF_xHNlD6704PvRDVc0zN84H6XCHSw_leZxIZs=
+      DEBUG: "False"
+      ALLOWED_HOSTS: localhost
+      DATABASE_URL: postgres://verylift:verylift@localhost:5432/verylift_test
+      OIDC_CLIENT_ID: ""
+      OIDC_CLIENT_SECRET: ""
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Check for missing migrations
+        run: uv run python manage.py makemigrations --check --dry-run
+
+      - name: Run tests with coverage
+        run: uv run pytest -n auto --cov=. --cov-report=xml --cov-fail-under=95
+
+  deploy-check:
+    name: Deployment Checks
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: verylift_test
+          POSTGRES_USER: verylift
+          POSTGRES_PASSWORD: verylift
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DJANGO_SETTINGS_MODULE: root.settings_prod
+      SECRET_KEY: ${{ secrets.CI_DEPLOY_SECRET_KEY || 'ci-deploy-check-secret-key-0123456789abcdefghijklmnopqrstuvwxyz' }}
+      # Throwaway Fernet key, see the test job above.
+      FIELD_ENCRYPTION_KEYS: ${{ secrets.CI_DEPLOY_FIELD_ENCRYPTION_KEYS || 'hJKUH7NuHo3cStn4UCZdI3oVOiCOyrfuiGEIUYycp4Y=' }}
+      DEBUG: "False"
+      ALLOWED_HOSTS: ${{ vars.CI_DEPLOY_ALLOWED_HOSTS || 'localhost' }}
+      DATABASE_URL: postgres://verylift:verylift@localhost:5432/verylift_test
+      OIDC_CLIENT_ID: ""
+      OIDC_CLIENT_SECRET: ""
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Run Django deployment checks
+        run: uv run python manage.py check --deploy --fail-level WARNING
+
+      - name: Apply migrations against a clean database
+        run: uv run python manage.py migrate --noinput
+
+      - name: Verify no migrations remain unapplied
+        run: uv run python manage.py migrate --check

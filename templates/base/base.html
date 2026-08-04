@@ -1,0 +1,105 @@
+{% load static i18n %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>{% block title %}very lift{% endblock %}</title>
+  <script>
+    // Apply the saved theme before paint to avoid a flash. "system" (and the
+    // absence of a saved choice, i.e. a new user) follows the OS preference via
+    // prefers-color-scheme rather than defaulting to light.
+    (function () {
+      function prefersDark() {
+        try {
+          return (
+            window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches
+          );
+        } catch (e) {
+          return false;
+        }
+      }
+      function isDark(theme) {
+        if (theme === "dark") return true;
+        if (theme === "light") return false;
+        return prefersDark();
+      }
+      function applyTheme() {
+        var t;
+        try {
+          t = localStorage.getItem("pp-theme");
+        } catch (e) {
+          t = null;
+        }
+        if (isDark(t)) {
+          document.documentElement.setAttribute("data-theme", "dark");
+        } else {
+          document.documentElement.removeAttribute("data-theme");
+        }
+      }
+      window.ppApplyTheme = applyTheme;
+      applyTheme();
+      try {
+        var mq = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)");
+        if (mq && mq.addEventListener) {
+          mq.addEventListener("change", function () {
+            var t;
+            try {
+              t = localStorage.getItem("pp-theme");
+            } catch (e) {
+              t = null;
+            }
+            if (!t || t === "system") applyTheme();
+          });
+        }
+      } catch (e) {}
+    })();
+  </script>
+  {% include "components/_timezone_detect_script.html" %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+  <link rel="icon" type="image/svg+xml" href="{% static 'logo.svg' %}">
+  <link rel="stylesheet" href="{% static 'css/output.css' %}">
+  <script defer src="{% static 'vendor/htmx.min.js' %}"></script>
+</head>
+<body class="h-full bg-surface text-content-body font-sans" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+  <div id="app-messages" class="fixed top-16 md:top-0 inset-x-0 z-40 space-y-1 p-4">
+    {% include "components/_messages.html" %}
+  </div>
+  <script>
+    // Wire dismiss + auto-dismiss for message elements. Idempotent (dataset guard)
+    // so it can re-run after every htmx swap that replaces #app-messages content.
+    (function () {
+      var AUTO_DISMISS_MS = 4000;
+      function wireMessages() {
+        document.querySelectorAll('#app-messages .app-message').forEach(function (el) {
+          if (el.dataset.wired) return;
+          el.dataset.wired = '1';
+          function dismiss() { el.remove(); }
+          var dismissBtn = el.querySelector('.app-message-dismiss');
+          if (dismissBtn) dismissBtn.addEventListener('click', dismiss);
+          setTimeout(dismiss, AUTO_DISMISS_MS);
+        });
+      }
+      wireMessages();
+      document.body.addEventListener('htmx:afterSwap', wireMessages);
+
+      // Drive the TASK-141 loading overlay from htmx requests when it exists.
+      // Guarded so htmx conversions work standalone before TASK-141 lands.
+      document.body.addEventListener('htmx:beforeRequest', function (e) {
+        if (!window.ppLoading) return;
+        var el = e.target.closest('[data-loading-message]');
+        if (el) window.ppLoading.show(el.getAttribute('data-loading-message'));
+      });
+      document.body.addEventListener('htmx:afterRequest', function () {
+        if (window.ppLoading) window.ppLoading.hide();
+      });
+    })();
+  </script>
+  {% include "components/loading_overlay.html" %}
+  {% block content %}{% endblock %}
+</body>
+</html>

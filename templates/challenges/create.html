@@ -1,0 +1,182 @@
+{% extends "base/wizard.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Create Challenge" %} — very lift{% endblock %}
+
+{% block wizard_body %}
+    <div class="mb-6">
+      <p class="text-sm text-content-muted mb-2">
+        {% blocktrans %}Step {{ step_number }} of {{ total_steps }}{% endblocktrans %}
+      </p>
+      <div class="h-1.5 w-full bg-surface-sunken rounded-full overflow-hidden">
+        <div class="h-full bg-accent" style="width: {{ progress_percent }}%"></div>
+      </div>
+    </div>
+
+    {% if form.non_field_errors %}
+    <div class="mb-4 px-4 py-3 rounded bg-danger-light text-danger-dark text-sm font-medium">
+      {% for error in form.non_field_errors %}
+        {{ error }}
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if step == "name" %}
+    <h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "Name your challenge" %}</h1>
+    <p class="text-sm text-content-muted mb-6">{% trans "Pick something your group will recognize." %}</p>
+    <form method="post" class="bg-surface-card border border-line-subtle rounded p-6">
+      {% csrf_token %}
+      <div class="mb-6">
+        <label for="id_name" class="block text-sm font-medium text-content-body mb-1">
+          {% trans "Challenge Name" %}
+        </label>
+        {{ form.name }}
+        {% if form.name.errors %}
+        <p class="mt-1 text-xs text-danger">{{ form.name.errors|join:", " }}</p>
+        {% endif %}
+      </div>
+      <div class="flex items-center gap-4">
+        <button type="submit" class="bg-accent text-accent-on text-sm font-medium px-6 py-2 rounded hover:bg-accent-hover">
+          {% trans "Continue" %}
+        </button>
+        <a href="{% url 'challenges:create' %}?cancel=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "Cancel" %}</a>
+      </div>
+    </form>
+
+    {% elif step == "dates" %}
+    <h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "When does it run?" %}</h1>
+    <p class="text-sm text-content-muted mb-6">
+      {% trans "Scoring can apply retroactively from the start date — a participant's existing Liftosaur history on or after that date counts once they join." %}
+    </p>
+    <form method="post" class="bg-surface-card border border-line-subtle rounded p-6">
+      {% csrf_token %}
+      <div class="mb-4">
+        <label for="id_start_date" class="block text-sm font-medium text-content-body mb-1">
+          {% trans "Start Date" %}
+        </label>
+        {{ form.start_date }}
+        {% if form.start_date.errors %}
+        <p class="mt-1 text-xs text-danger">{{ form.start_date.errors|join:", " }}</p>
+        {% endif %}
+      </div>
+      <div class="mb-6">
+        <label for="id_end_date" class="block text-sm font-medium text-content-body mb-1">
+          {% trans "End Date" %}
+        </label>
+        {{ form.end_date }}
+        {% if form.end_date.errors %}
+        <p class="mt-1 text-xs text-danger">{{ form.end_date.errors|join:", " }}</p>
+        {% endif %}
+      </div>
+      <div class="flex items-center gap-4">
+        <a href="{% url 'challenges:create' %}?back=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "Back" %}</a>
+        <button type="submit" class="bg-accent text-accent-on text-sm font-medium px-6 py-2 rounded hover:bg-accent-hover">
+          {% trans "Continue" %}
+        </button>
+        <a href="{% url 'challenges:create' %}?cancel=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "Cancel" %}</a>
+      </div>
+    </form>
+
+    {% elif step == "lifts" %}
+    <h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "Choose your lifts" %}</h1>
+    <p class="text-sm text-content-muted mb-6">
+      {% trans "This lift list applies to every participant for the whole challenge — each person's goal chart will cover exactly these lifts." %}
+    </p>
+    <form method="post" class="bg-surface-card border border-line-subtle rounded p-6">
+      {% csrf_token %}
+      <div class="mb-4 flex items-center gap-2">
+        <input
+          type="search"
+          data-lift-search
+          placeholder="{% trans 'Search lifts…' %}"
+          class="flex-1 bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent">
+        <button type="button" data-clear-lifts class="text-sm text-content-muted hover:text-content-strong whitespace-nowrap px-2">
+          {% trans "Clear all" %}
+        </button>
+      </div>
+
+      <div class="mb-2" data-lift-group>
+        <h2 class="text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">{% trans "Popular" %}</h2>
+        {# CLASSIC_LIFT_NAMES is a fixed 14-item list (challenges/lift_presets.py), so unlike #}
+        {# "All lifts" below, this box doesn't need its own scroll cap. #}
+        <div class="space-y-1 border border-line-subtle rounded px-3 py-2">
+          {% for checkbox in form.lifts %}
+          {% if checkbox.choice_label in form.classic_lift_names %}
+          <label class="flex items-center gap-2 text-sm text-content-body cursor-pointer" data-lift-row data-lift-name="{{ checkbox.choice_label|lower }}">
+            {{ checkbox.tag }}
+            {{ checkbox.choice_label }}
+          </label>
+          {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="mb-4" data-lift-group>
+        <h2 class="text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1 mt-3">{% trans "All lifts" %}</h2>
+        <div class="space-y-1 max-h-64 overflow-y-auto border border-line-subtle rounded px-3 py-2">
+          {% for checkbox in form.lifts %}
+          {% if checkbox.choice_label not in form.classic_lift_names %}
+          <label class="flex items-center gap-2 text-sm text-content-body cursor-pointer" data-lift-row data-lift-name="{{ checkbox.choice_label|lower }}">
+            {{ checkbox.tag }}
+            {{ checkbox.choice_label }}
+          </label>
+          {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+      {% if form.lifts.errors %}
+      <p class="mt-1 mb-4 text-xs text-danger">{{ form.lifts.errors|join:", " }}</p>
+      {% endif %}
+
+      <div class="flex items-center gap-4">
+        <a href="{% url 'challenges:create' %}?back=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "Back" %}</a>
+        <button type="submit" class="bg-accent text-accent-on text-sm font-medium px-6 py-2 rounded hover:bg-accent-hover">
+          {% trans "Create Challenge" %}
+        </button>
+        <a href="{% url 'challenges:create' %}?cancel=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "Cancel" %}</a>
+      </div>
+    </form>
+    {% endif %}
+{% endblock %}
+
+{% block after_main %}
+{% if step == "lifts" %}
+<script>
+  // Client-side substring search over the two lift groups (~139 rows total, so
+  // no server round-trip needed). Hides a group entirely when every row in it
+  // is filtered out, so an empty "Popular"/"All lifts" heading never floats
+  // above nothing.
+  (function () {
+    const input = document.querySelector("[data-lift-search]");
+    if (!input) return;
+    const groups = document.querySelectorAll("[data-lift-group]");
+    input.addEventListener("input", function () {
+      const query = input.value.trim().toLowerCase();
+      groups.forEach(function (group) {
+        let anyVisible = false;
+        group.querySelectorAll("[data-lift-row]").forEach(function (row) {
+          const match = !query || row.getAttribute("data-lift-name").includes(query);
+          row.classList.toggle("hidden", !match);
+          if (match) anyVisible = true;
+        });
+        group.classList.toggle("hidden", !anyVisible);
+      });
+    });
+  })();
+
+  // Clear all lift checkboxes in one click -- unchecks every row regardless
+  // of the current search filter, since the search only toggles visibility.
+  (function () {
+    const button = document.querySelector("[data-clear-lifts]");
+    if (!button) return;
+    button.addEventListener("click", function () {
+      document.querySelectorAll("[data-lift-row] input[type=checkbox]").forEach(
+        function (checkbox) {
+          checkbox.checked = false;
+        }
+      );
+    });
+  })();
+</script>
+{% endif %}
+{% endblock %}

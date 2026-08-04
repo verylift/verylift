@@ -1,0 +1,30 @@
+<script>
+  // Report the browser's IANA timezone to the server as a cookie, read by
+  // accounts.middleware.UserTimezoneMiddleware. On a first visit the
+  // middleware has already detoured this browser through
+  // accounts/timezone_detect.html so the cookie exists before the real page
+  // renders (TASK-273 R1: redirect-after-detection, no UTC flash). This copy
+  // in the app shell keeps the cookie fresh and follows a travelling user.
+  // Silently no-ops where Intl is unavailable, landing on the UTC fallback
+  // rather than erroring (AC#3).
+  (function () {
+    try {
+      var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (tz) {
+        document.cookie =
+          "pp_timezone=" + encodeURIComponent(tz) +
+          "; path=/; max-age=31536000; samesite=lax";
+      }
+    } catch (e) {}
+    // Drop the one-shot ?tzdetect=1 loop-breaker from the address bar so it
+    // is never bookmarked or shared.
+    try {
+      if (window.history && history.replaceState &&
+          /[?&]tzdetect=1(&|$)/.test(location.search)) {
+        var cleaned = location.search
+          .replace(/([?&])tzdetect=1(&|$)/, "$1").replace(/[?&]$/, "");
+        history.replaceState(null, "", location.pathname + cleaned + location.hash);
+      }
+    } catch (e) {}
+  })();
+</script>

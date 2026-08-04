@@ -1,0 +1,88 @@
+{% extends "base/base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Sign In" %} — very lift{% endblock %}
+
+{% block content %}
+<div class="min-h-full flex items-center justify-center py-12 px-4">
+  <div class="w-full max-w-sm">
+    <div class="mb-8 text-center">
+      <span class="text-accent font-bold text-2xl">very lift</span>
+    </div>
+
+    <section class="bg-surface-card border border-line-subtle rounded p-6">
+      <h1 class="text-lg font-semibold text-content-strong mb-4">{% trans "Sign in" %}</h1>
+
+      {% if form.errors %}
+      <div class="mb-4 px-4 py-3 rounded bg-danger-light text-danger-dark text-sm">
+        {% trans "Invalid username or password." %}
+      </div>
+      {% endif %}
+
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}">
+
+        <div class="mb-4">
+          <label for="id_username" class="block text-sm font-medium text-content-body mb-1">{% trans "Username" %}</label>
+          <input
+            type="text"
+            id="id_username"
+            name="username"
+            autofocus
+            autocomplete="username"
+            class="w-full border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent"
+          >
+        </div>
+
+        <div class="mb-2">
+          <label for="id_password" class="block text-sm font-medium text-content-body mb-1">{% trans "Password" %}</label>
+          <input
+            type="password"
+            id="id_password"
+            name="password"
+            autocomplete="current-password"
+            class="w-full border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent"
+          >
+        </div>
+
+        {# No OIDC_ONLY_LOGIN guard needed: in that mode LocalLoginView.dispatch #}
+        {# redirects before this template is ever rendered. #}
+        <p class="mb-6 text-right">
+          <a href="{% url 'accounts:password-reset' %}" class="text-xs text-accent hover:underline">{% trans "Forgot your password?" %}</a>
+        </p>
+
+        <button
+          type="submit"
+          class="w-full bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
+          {% trans "Sign in" %}
+        </button>
+      </form>
+
+      {% if oidc_configured %}
+      <div class="mt-6 flex items-center gap-3">
+        <div class="flex-1 border-t border-line-subtle"></div>
+        <span class="text-xs text-content-subtle">{% trans "or" %}</span>
+        <div class="flex-1 border-t border-line-subtle"></div>
+      </div>
+      <a
+        href="{% url 'oidc_authentication_init' %}"
+        class="mt-4 flex w-full items-center justify-center gap-2 border border-line rounded px-4 py-2 text-sm font-medium text-content-body hover:bg-surface-hover">
+        {% blocktrans %}Sign in with {{ oidc_provider_name }}{% endblocktrans %}
+      </a>
+      {% endif %}
+
+      <p class="mt-6 text-center text-sm text-content-subtle">
+        {% trans "Don't have an account?" %}
+        <a href="{% url 'accounts:register' %}" class="text-accent hover:underline">{% trans "Create one" %}</a>
+      </p>
+
+      <p class="mt-4 text-center text-xs text-content-subtle">
+        <a href="{% url 'terms' %}" class="hover:underline">{% trans "Terms" %}</a>
+        &middot;
+        <a href="{% url 'privacy' %}" class="hover:underline">{% trans "Privacy" %}</a>
+      </p>
+    </section>
+  </div>
+</div>
+{% endblock %}

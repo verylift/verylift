@@ -1,0 +1,93 @@
+{% load i18n %}
+{% comment %}
+Read-only co-participant chart (TASK-252). Swapped into
+#co-participant-chart on detail.html via HTMX, or rendered standalone at
+challenges:participant-chart for a deep link (standalone=True from
+participant_chart.html — see 4.2). Deliberately has no id="tab-*" anywhere:
+a second tab-switcher on this page would collide with detail.html's
+showPersonalTab() getElementById lookups (D7).
+{% endcomment %}
+{% if chart %}
+<section class="bg-surface-card border border-line-subtle rounded p-6">
+  <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
+    <div>
+      <h2 class="text-lg font-semibold text-content-strong">{{ chart.subject_name }} — {{ chart.goal_name }}</h2>
+      <p class="text-xs text-content-muted mt-1">
+        {% blocktrans with date=chart.locked_at|date:"M j, Y" %}Locked {{ date }}{% endblocktrans %}
+        · {{ chart.provenance.method_label }}
+      </p>
+    </div>
+    <div class="flex items-center gap-3">
+      <p class="text-sm font-semibold text-accent font-mono">{% blocktrans with points=chart.total_points %}{{ points }} pts{% endblocktrans %}</p>
+      {% if not standalone %}
+      <button type="button" onclick="document.getElementById('co-participant-chart').innerHTML=''"
+              class="text-sm text-content-muted hover:text-content-strong">{% trans "Close" %}</button>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if chart.provenance.is_standards %}
+  <div class="mb-3">
+    {% include "challenges/_fitnessvolt_attribution.html" with force_fitnessvolt_attribution=True snapshot_version=chart.provenance.snapshot_version %}
+  </div>
+  {% elif chart.provenance.history_sentence %}
+  <p class="text-xs text-content-muted mb-3">{{ chart.provenance.history_sentence }}</p>
+  {% endif %}
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+    {% for row in chart.point_rows %}
+    <div class="border border-line-subtle rounded p-4">
+      <h3 class="text-sm font-semibold text-content-strong mb-2">{{ row.lift }}</h3>
+      {% if row.points_earned > 0 %}
+      <p class="text-2xl font-bold text-accent font-mono">{% blocktrans with points=row.points_earned %}{{ points }} pts{% endblocktrans %}</p>
+      <p class="text-sm text-content-body mt-1">
+        <span class="font-mono">{{ row.weight }}</span>{% if row.weight != "BW" %} {{ chart.display_unit }}{% endif %} × <span class="font-mono">{{ row.reps }}</span> {% trans "reps" %} ({{ row.date }})
+      </p>
+      {% else %}
+      <p class="text-sm text-content-muted italic">{% trans "No points yet" %}</p>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="overflow-auto max-h-[70vh] snap-y snap-mandatory scroll-pt-[37px]">
+    <table class="text-sm text-left w-full border-separate border-spacing-0">
+      <thead>
+        <tr class="text-content-muted">
+          <th class="py-2 pr-4 font-medium whitespace-nowrap sticky top-0 left-0 z-30 bg-surface-card border-r border-b border-line-subtle">{% trans "Lift" %}</th>
+          {% for reps in chart.rep_columns %}
+          <th class="py-2 px-3 font-medium text-right font-mono sticky top-0 z-20 bg-surface-card border-b border-line-subtle">{{ reps }}RM</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in chart.standards_rows %}
+        <tr class="text-content-body snap-start snap-always">
+          <td class="py-2 pr-4 font-medium text-content-strong whitespace-nowrap sticky left-0 z-10 bg-surface-card border-r border-b border-line-subtle">
+            {{ row.lift }}{% if row.is_bodyweight_added %} <span class="text-content-muted font-normal">({% trans "BW" %})</span>{% endif %}
+          </td>
+          {% for cell in row.cells %}
+          <td class="py-2 px-3 text-right font-mono border-b border-line-subtle {% if cell.is_current_best %}bg-accent-subtle font-semibold text-accent{% endif %}">
+            {{ cell.weight }}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="text-xs text-content-muted mt-2">
+    {% blocktrans with unit=chart.display_unit %}Thresholds shown in {{ unit }}{% endblocktrans %}. {% trans "Highlighted cell = the target this lifter's best set satisfied." %}
+  </p>
+</section>
+{% else %}
+<section class="bg-surface-card border border-line-subtle rounded p-6">
+  <div class="flex items-center justify-between gap-3">
+    <p class="text-sm text-content-muted italic">{% trans "This participant hasn't set their goal yet." %}</p>
+    {% if not standalone %}
+    <button type="button" onclick="document.getElementById('co-participant-chart').innerHTML=''"
+            class="text-sm text-content-muted hover:text-content-strong">{% trans "Close" %}</button>
+    {% endif %}
+  </div>
+</section>
+{% endif %}

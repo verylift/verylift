@@ -1,0 +1,10 @@
+{% extends "base/base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Access Denied" %} — very lift{% endblock %}
+
+{% block content %}
+{% trans "Access denied" as error_title %}
+{% trans "You don't have permission to view this page." as error_message %}
+{% include "components/_error_card.html" with error_code="403" error_title=error_title error_message=error_message %}
+{% endblock %}

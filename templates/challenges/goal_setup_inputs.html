@@ -1,0 +1,150 @@
+{% extends "base/wizard.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Set Your Goal" %} — very lift{% endblock %}
+
+{% block wizard_body %}
+    <h1 class="text-2xl font-bold text-content-strong mb-1">
+      {% if method == "standards" %}{% trans "A few details for your standards" %}{% else %}{% trans "A couple of quick details" %}{% endif %}
+    </h1>
+    <p class="text-sm text-content-muted mb-6">
+      {% trans "This is used to compute the numbers below and is kept with this chart as a record of how its targets were calculated — it is not tracked over time or used anywhere else." %}
+    </p>
+
+    {% if form.non_field_errors %}
+    <div class="mb-4 px-4 py-3 rounded bg-danger-light text-danger-dark text-sm font-medium">
+      {% for error in form.non_field_errors %}
+        {{ error }}
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" action="{% url 'challenges:goal-setup' challenge.pk %}" class="bg-surface-card border border-line-subtle rounded p-6">
+      {% csrf_token %}
+      <input type="hidden" name="wizard_step" value="{{ step }}">
+
+      {% if form.needs_bodyweight %}
+      <div class="mb-4">
+        <label for="id_bodyweight" class="block text-sm font-medium text-content-body mb-1">
+          {% trans "Bodyweight" %}
+        </label>
+        <div class="flex items-center gap-2">
+          <input type="number" id="id_bodyweight" name="bodyweight" step="0.01" min="0"
+                 value="{{ form.bodyweight.value|default:'' }}"
+                 placeholder="{% trans 'e.g. 80' %}"
+                 class="flex-1 bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent">
+          <span class="text-sm text-content-muted">{{ form.unit }}</span>
+        </div>
+        <p class="mt-1 text-xs text-content-muted">
+          {% blocktrans with unit=form.unit %}In {{ unit }}, matching your settings.{% endblocktrans %}
+          {% if method == "history" %}
+          {% trans "Needed only to estimate targets for your bodyweight-added lifts (Pull-up, Chin-up, Dip) — Liftosaur records just the added weight for these, so your bodyweight fills in the rest of the load." %}
+          {% else %}
+          {% trans "Needed to look up the right FitnessVolt weight class for your standards." %}
+          {% endif %}
+        </p>
+        {% if form.bodyweight.errors %}
+        <p class="mt-1 text-xs text-danger">{{ form.bodyweight.errors|join:", " }}</p>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {% if form.is_history %}
+      <div class="mb-4">
+        <label for="id_uplift_percent" class="block text-sm font-medium text-content-body mb-1">
+          {% trans "Stretch above your recent best" %}
+        </label>
+        <div class="flex items-center gap-2">
+          <input type="number" id="id_uplift_percent" name="uplift_percent" step="0.1"
+                 value="{{ form.uplift_percent.value|default:'' }}"
+                 class="w-24 bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent">
+          <span class="text-sm text-content-muted">%</span>
+        </div>
+        <p class="mt-1 text-xs text-content-muted">
+          {% trans "Each target is your best recent lift for that rep range, stretched by this percentage." %}
+        </p>
+        {% if form.uplift_percent.errors %}
+        <p class="mt-1 text-xs text-danger">{{ form.uplift_percent.errors|join:", " }}</p>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {% if form.needs_rounding %}
+      <div class="mb-4">
+        <label for="id_rounding_increment" class="block text-sm font-medium text-content-body mb-1">
+          {% trans "Round targets to nearest" %}
+        </label>
+        <select id="id_rounding_increment" name="rounding_increment"
+                class="w-full bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent">
+          {% for value, label in form.rounding_choices %}
+          <option value="{{ value }}" {% if form.rounding_increment.value == value or not form.rounding_increment.value and value == form.default_rounding %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <p class="mt-1 text-xs text-content-muted">
+          {% trans "Suggested targets are rounded to this increment so they're actual loadable numbers, not raw calculated decimals." %}
+        </p>
+        {% if form.rounding_increment.errors %}
+        <p class="mt-1 text-xs text-danger">{{ form.rounding_increment.errors|join:", " }}</p>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {% if form.is_standards %}
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-content-body mb-2">{% trans "Sex" %}</label>
+        <div class="flex gap-4">
+          {% for value, label in form.sex_choices %}
+          <label class="flex items-center gap-2 text-sm">
+            <input type="radio" name="sex" value="{{ value }}" {% if form.sex.value == value %}checked{% endif %}> {{ label }}
+          </label>
+          {% endfor %}
+        </div>
+        {% if form.sex.errors %}
+        <p class="mt-1 text-xs text-danger">{{ form.sex.errors|join:", " }}</p>
+        {% endif %}
+      </div>
+
+      <div class="mb-4">
+        <label for="id_population" class="block text-sm font-medium text-content-body mb-1">{% trans "Population" %}</label>
+        <select id="id_population" name="population"
+                class="w-full bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent">
+          <option value="">{% trans "Select…" %}</option>
+          {% for value, label in form.population_choices %}
+          <option value="{{ value }}" {% if form.population.value == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        {% if form.population.errors %}
+        <p class="mt-1 text-xs text-danger">{{ form.population.errors|join:", " }}</p>
+        {% endif %}
+      </div>
+
+      <div class="mb-4">
+        <label for="id_tier" class="block text-sm font-medium text-content-body mb-1">{% trans "Tier" %}</label>
+        <select id="id_tier" name="tier"
+                class="w-full bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent">
+          <option value="">{% trans "Select…" %}</option>
+          {% for tier in form.tier_choices %}
+          <option value="{{ tier }}" {% if form.tier.value == tier %}selected{% endif %}>{{ tier }}</option>
+          {% endfor %}
+        </select>
+        {% if form.tier.errors %}
+        <p class="mt-1 text-xs text-danger">{{ form.tier.errors|join:", " }}</p>
+        {% endif %}
+      </div>
+
+      <div class="mb-4">
+        {% include "challenges/_fitnessvolt_attribution.html" with force_fitnessvolt_attribution=True %}
+      </div>
+      {% endif %}
+
+      <div class="flex items-center gap-4">
+        <a href="{% url 'challenges:goal-setup' challenge.pk %}?back=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "Back" %}</a>
+        <button type="submit" class="bg-accent text-accent-on text-sm font-medium px-6 py-2 rounded hover:bg-accent-hover">
+          {% trans "Continue" %}
+        </button>
+        <a href="{% url 'challenges:goal-setup' challenge.pk %}?cancel=1"
+           onclick="return confirm('{% trans "Cancel and discard everything entered so far?" %}')"
+           class="text-sm text-content-muted hover:text-content-strong">{% trans "Cancel" %}</a>
+      </div>
+    </form>
+{% endblock %}

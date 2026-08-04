@@ -1,0 +1,17 @@
+{% load i18n %}
+{% comment %}
+FitnessVolt attribution (doc-1 §1) — a licensing obligation whenever a
+FitnessVolt-sourced number is rendered. Every challenge is CUSTOM now
+(TASK-248), so this is always explicitly forced via
+force_fitnessvolt_attribution by the caller, never inferred from the
+challenge itself: the goal-setup wizard's standards method (per-participant)
+and the detail page for a participant whose CustomGoal.source_method is
+"standards".
+{% endcomment %}
+{% if force_fitnessvolt_attribution %}
+<p class="text-xs text-content-muted">
+  {% trans "Standards data powered by" %}
+  <a href="https://fitnessvolt.com/strength-standards/" target="_blank" rel="noopener noreferrer" class="underline hover:text-content-body">{% trans "FitnessVolt Strength Standards" %}</a>{% if snapshot_version %}
+  {% blocktrans with version=snapshot_version %}(data snapshot {{ version }}){% endblocktrans %}{% endif %}.
+</p>
+{% endif %}

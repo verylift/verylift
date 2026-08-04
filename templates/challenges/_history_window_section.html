@@ -1,0 +1,69 @@
+{% load i18n icons %}
+<section class="bg-surface-card border border-line-subtle rounded p-6" data-history-window-section>
+  <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "Point-Eligible Window" %}</h2>
+  {% if history_window_editing %}
+  <form
+    method="post"
+    action="{% url 'challenges:history-window' challenge.pk %}"
+    hx-post="{% url 'challenges:history-window' challenge.pk %}"
+    hx-target="closest [data-history-window-section]"
+    hx-swap="outerHTML"
+    data-loading-message="{% trans 'Saving…' %}">
+    {% csrf_token %}
+    <div class="space-y-2 mb-4">
+      {% for value, label in history_window_form.fields.history_window.choices %}
+      <label class="flex items-start gap-2 text-sm text-content-body cursor-pointer border border-line-subtle rounded px-3 py-2">
+        <input
+          type="radio"
+          name="history_window"
+          value="{{ value }}"
+          class="mt-0.5"
+          {% if history_window_form.history_window.value == value %}checked{% endif %}>
+        <span>{{ label }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    {% if history_window_form.history_window.errors %}
+    <p class="text-danger text-sm mb-4">{{ history_window_form.history_window.errors.0 }}</p>
+    {% endif %}
+    <div class="flex items-center gap-3">
+      <button
+        type="submit"
+        class="bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
+        {% trans "Save" %}
+      </button>
+      <button
+        type="button"
+        hx-get="{% url 'challenges:history-window' challenge.pk %}"
+        hx-target="closest [data-history-window-section]"
+        hx-swap="outerHTML"
+        class="text-content-muted text-sm font-medium px-3 py-2 rounded hover:bg-surface-sunken">
+        {% trans "Cancel" %}
+      </button>
+    </div>
+  </form>
+  {% else %}
+  <div class="flex items-center gap-2">
+    <span class="text-content-body text-sm">
+      {% if challenge.history_window == "from_start" %}
+      {% trans "From challenge start" %}
+      {% else %}
+      {% trans "From join date" %}
+      {% endif %}
+    </span>
+    <button
+      type="button"
+      hx-get="{% url 'challenges:history-window' challenge.pk %}?edit=1"
+      hx-target="closest [data-history-window-section]"
+      hx-swap="outerHTML"
+      class="flex items-center justify-center h-7 w-7 rounded text-content-muted hover:text-content-strong hover:bg-surface-sunken"
+      aria-label="{% trans 'Edit point-eligible window' %}">
+      {% icon "pencil" %}
+    </button>
+  </div>
+  <p class="mt-1 text-xs text-content-muted">
+    {% trans "From join date counts each participant's lifts from when they joined. From challenge start counts everyone's lifts back to the start date — useful to admit a late joiner fairly." %}
+  </p>
+  {% endif %}
+  {% if oob_messages %}{% include "components/_messages_oob.html" %}{% endif %}
+</section>

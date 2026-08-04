@@ -1,0 +1,29 @@
+{% extends "base/app.html" %}
+{% load i18n %}
+
+{% block title %}{{ confirm_title }} — very lift{% endblock %}
+
+{% block main %}
+    <h1 class="text-2xl font-bold text-content-strong mb-8">{{ confirm_title }}</h1>
+
+    <section class="bg-surface-card border border-line-subtle rounded p-6 max-w-lg">
+      <p class="text-sm text-content-body mb-2">
+        {% blocktrans with verb=confirm_verb name=challenge.name suffix=confirm_prompt_suffix %}Are you sure you want to {{ verb }} <strong>{{ name }}</strong>{{ suffix }}?{% endblocktrans %}
+      </p>
+      <p class="text-sm text-content-muted mb-6">
+        {{ confirm_detail }}
+      </p>
+
+      <form method="post" action="{{ confirm_action_url }}">
+        {% csrf_token %}
+        <div class="flex items-center gap-4">
+          <button
+            type="submit"
+            class="bg-danger text-white text-sm font-medium px-6 py-2 rounded hover:bg-danger-dark">
+            {{ confirm_submit_label }}
+          </button>
+          <a href="{{ confirm_cancel_url }}" class="text-sm text-content-muted hover:text-content-strong">{{ confirm_cancel_label }}</a>
+        </div>
+      </form>
+    </section>
+{% endblock %}

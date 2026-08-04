@@ -1,0 +1,87 @@
+{% extends "base/base.html" %}
+{% load i18n %}
+
+{% block title %}very lift — {% trans "Challenge your friends" %}{% endblock %}
+
+{% block content %}
+<div class="min-h-full flex flex-col">
+  <header class="py-6 px-4 text-center">
+    <span class="text-accent font-bold text-2xl">very lift</span>
+  </header>
+
+  <main class="flex-1">
+    <section class="max-w-3xl mx-auto px-4 py-12 text-center">
+      <h1 class="text-4xl sm:text-5xl font-extrabold text-content-strong tracking-tight">
+        {% trans "Challenge your friends. Score fairly." %}
+      </h1>
+      <p class="mt-6 text-lg text-content-body max-w-2xl mx-auto">
+        {% blocktrans %}
+        A strength-challenge platform for friend groups. Connects to your Liftosaur
+        workout log and automatically scores your lifts against the goal chart you
+        set for yourself — so everyone tracks progress against their own targets
+        without double-entering data.
+        {% endblocktrans %}
+      </p>
+      <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+        <a
+          href="{% url 'accounts:register' %}"
+          class="w-full sm:w-auto bg-accent text-accent-on text-sm font-medium px-6 py-3 rounded hover:bg-accent-hover">
+          {% trans "Get Started" %}
+        </a>
+        <a
+          href="{% url 'accounts:login' %}"
+          class="w-full sm:w-auto border border-line text-content-body text-sm font-medium px-6 py-3 rounded hover:bg-surface-hover">
+          {% trans "Log in" %}
+        </a>
+      </div>
+    </section>
+
+    <section class="max-w-4xl mx-auto px-4 pb-12">
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div class="bg-surface-card border border-line-subtle rounded p-6">
+          <h2 class="text-lg font-semibold text-content-strong">{% trans "Challenges" %}</h2>
+          <p class="mt-2 text-sm text-content-body">
+            {% blocktrans %}
+            Create a time-boxed challenge, invite friends, and pick the lifts
+            everyone competes on.
+            {% endblocktrans %}
+          </p>
+        </div>
+        <div class="bg-surface-card border border-line-subtle rounded p-6">
+          <h2 class="text-lg font-semibold text-content-strong">{% trans "Automatic scoring" %}</h2>
+          <p class="mt-2 text-sm text-content-body">
+            {% blocktrans %}
+            Syncs lift data from Liftosaur and awards points when you hit the
+            rep-max targets on your own goal chart.
+            {% endblocktrans %}
+          </p>
+        </div>
+        <div class="bg-surface-card border border-line-subtle rounded p-6">
+          <h2 class="text-lg font-semibold text-content-strong">{% trans "Fair by design" %}</h2>
+          <p class="mt-2 text-sm text-content-body">
+            {% blocktrans %}
+            Each participant sets their own targets when they join, so points
+            always measure progress against your own chart, not someone else's.
+            {% endblocktrans %}
+          </p>
+        </div>
+        <div class="bg-surface-card border border-line-subtle rounded p-6">
+          <h2 class="text-lg font-semibold text-content-strong">{% trans "Live leaderboard" %}</h2>
+          <p class="mt-2 text-sm text-content-body">
+            {% blocktrans %}
+            A points chart, personal performance cards, and gap-to-next-point hints
+            keep everyone tracking their standing per lift.
+            {% endblocktrans %}
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="py-6 px-4 text-center text-xs text-content-subtle">
+    <a href="{% url 'terms' %}" class="text-accent hover:underline">{% trans "Terms" %}</a>
+    &middot;
+    <a href="{% url 'privacy' %}" class="text-accent hover:underline">{% trans "Privacy" %}</a>
+  </footer>
+</div>
+{% endblock %}

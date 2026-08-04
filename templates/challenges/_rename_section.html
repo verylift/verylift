@@ -1,0 +1,49 @@
+{% load i18n icons %}
+<section class="bg-surface-card border border-line-subtle rounded p-6">
+  <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "Challenge Name" %}</h2>
+  {% if rename_editing %}
+  <form
+    method="post"
+    action="{% url 'challenges:rename' challenge.pk %}"
+    hx-post="{% url 'challenges:rename' challenge.pk %}"
+    hx-target="closest section"
+    hx-swap="outerHTML"
+    class="flex items-start gap-2"
+    data-loading-message="{% trans 'Saving name…' %}">
+    {% csrf_token %}
+    <div class="flex-1">
+      {{ rename_form.name }}
+      {% if rename_form.name.errors %}
+      <p class="text-danger text-sm mt-1">{{ rename_form.name.errors.0 }}</p>
+      {% endif %}
+    </div>
+    <button
+      type="submit"
+      class="bg-accent text-accent-on text-sm font-medium px-3 py-2 rounded hover:bg-accent-hover">
+      {% trans "Save" %}
+    </button>
+    <button
+      type="button"
+      hx-get="{% url 'challenges:rename' challenge.pk %}"
+      hx-target="closest section"
+      hx-swap="outerHTML"
+      class="text-content-muted text-sm font-medium px-3 py-2 rounded hover:bg-surface-sunken">
+      {% trans "Cancel" %}
+    </button>
+  </form>
+  {% else %}
+  <div class="flex items-center gap-2">
+    <span class="text-content-body text-sm">{{ challenge.name }}</span>
+    <button
+      type="button"
+      hx-get="{% url 'challenges:rename' challenge.pk %}?edit=1"
+      hx-target="closest section"
+      hx-swap="outerHTML"
+      class="flex items-center justify-center h-7 w-7 rounded text-content-muted hover:text-content-strong hover:bg-surface-sunken"
+      aria-label="{% trans 'Edit challenge name' %}">
+      {% icon "pencil" %}
+    </button>
+  </div>
+  {% endif %}
+  {% if oob_messages %}{% include "components/_messages_oob.html" %}{% endif %}
+</section>

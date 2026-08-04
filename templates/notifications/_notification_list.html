@@ -1,0 +1,40 @@
+{% load i18n %}
+<div id="notifications-list-container" class="space-y-4">
+  <div class="flex items-center justify-between">
+    <h2 class="text-lg font-semibold text-content-strong">{% trans "Notifications" %}</h2>
+    <div class="flex items-center gap-3">
+      {% if unread_notification_count %}
+      <button type="button"
+        hx-post="{% url 'notifications:read-all' %}{% if show_read %}?show_read=1{% endif %}"
+        hx-target="#notifications-list-container"
+        hx-swap="outerHTML"
+        class="text-sm font-medium text-accent hover:text-accent">
+        {% trans "Mark all as read" %}
+      </button>
+      {% endif %}
+      {% if has_notifications %}
+      <button type="button"
+        hx-get="{% url 'notifications:section' %}?show_read={% if show_read %}0{% else %}1{% endif %}"
+        hx-target="#notifications-list-container"
+        hx-swap="outerHTML"
+        class="text-sm font-medium text-content-muted hover:text-content-strong">
+        {% if show_read %}{% trans "Hide read" %}{% else %}{% trans "Show read" %}{% endif %}
+      </button>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if rows %}
+  <ul id="notifications-list"
+    class="max-h-96 overflow-y-auto divide-y divide-line-subtle">
+    {% for row in rows %}
+    {% include "notifications/_notification_row.html" %}
+    {% endfor %}
+  </ul>
+  {% elif has_notifications %}
+  <p class="text-sm text-content-muted">{% trans "You're all caught up." %}</p>
+  {% else %}
+  <p class="text-sm text-content-muted">{% trans "You have no notifications." %}</p>
+  {% endif %}
+</div>
+{% if oob_messages %}{% include "components/_messages_oob.html" %}{% endif %}

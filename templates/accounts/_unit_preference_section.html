@@ -1,0 +1,35 @@
+{% load i18n %}
+<!-- Unit preference section -->
+<section class="bg-surface-card border border-line-subtle rounded p-6 mb-6 max-w-lg">
+  <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "Units" %}</h2>
+  <form
+    method="post"
+    action="{% url 'accounts:settings' %}"
+    hx-post="{% url 'accounts:settings' %}"
+    hx-target="closest section"
+    hx-swap="outerHTML"
+    data-loading-message="{% trans 'Saving unit preference…' %}">
+    {% csrf_token %}
+    <input type="hidden" name="form_name" value="unit_preference">
+
+    <div class="mb-4">
+      <label class="block text-sm font-medium text-content-body mb-2">{% trans "Preferred unit" %}</label>
+      <div class="flex gap-4">
+        <label class="flex items-center gap-2 text-sm">
+          <input type="radio" name="unit_preference" value="kg" {% if unit_preference != 'lb' %}checked{% endif %}> {% trans "Kilograms (kg)" %}
+        </label>
+        <label class="flex items-center gap-2 text-sm">
+          <input type="radio" name="unit_preference" value="lb" {% if unit_preference == 'lb' %}checked{% endif %}> {% trans "Pounds (lb)" %}
+        </label>
+      </div>
+      <p class="mt-1 text-xs text-content-muted">{% trans "Weights across the app are shown in this unit. Stored values are unchanged." %}</p>
+    </div>
+
+    <button
+      type="submit"
+      class="bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
+      {% trans "Save Unit" %}
+    </button>
+  </form>
+  {% if oob_messages %}{% include "components/_messages_oob.html" %}{% endif %}
+</section>

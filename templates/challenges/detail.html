@@ -1,0 +1,420 @@
+{% extends "base/app.html" %}
+{% load static %}
+{% load humanize %}
+{% load i18n %}
+
+{% block title %}{{ challenge.name }} — very lift{% endblock %}
+
+{% block main %}
+    <header class="mb-8">
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <h1 class="text-2xl font-bold text-content-strong">{{ challenge.name }}</h1>
+        {% if challenge.status == "draft" %}
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-surface-sunken text-content-body">{% trans "Draft" %}</span>
+        {% elif challenge.status == "active" %}
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-success-light text-success-dark">{% trans "Active" %}</span>
+        {% elif challenge.status == "cancelled" %}
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-surface-sunken text-content-body">{% trans "Cancelled" %}</span>
+        {% else %}
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-surface-sunken text-content-body">{% trans "Completed" %}</span>
+        {% endif %}
+      </div>
+
+      <dl class="mt-4 flex flex-wrap gap-6 sm:gap-8">
+        <div>
+          <dt class="text-xs font-medium text-content-muted uppercase tracking-wide">{% trans "Start" %}</dt>
+          <dd class="text-sm font-semibold text-content-strong">{{ challenge.start_date }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs font-medium text-content-muted uppercase tracking-wide">{% trans "End" %}</dt>
+          <dd class="text-sm font-semibold text-content-strong">{{ challenge.end_date }}</dd>
+        </div>
+        <div>
+          {% trans "Not set" as not_set %}
+          <dt class="text-xs font-medium text-content-muted uppercase tracking-wide">{% trans "Your Goal" %}</dt>
+          <dd class="text-sm font-semibold text-accent">
+            {{ participant.custom_goal.name|default:not_set }}
+            {% if participant.custom_goal %}
+            <span class="ml-2 text-xs text-content-muted font-normal">{% blocktrans with date=participant.custom_goal.created_at|date:"M j, Y" %}Locked {{ date }}{% endblocktrans %}</span>
+            {% endif %}
+          </dd>
+        </div>
+      </dl>
+
+      {% if participant.custom_goal.source_method == "standards" %}
+      <div class="mt-3">
+        {% include "challenges/_fitnessvolt_attribution.html" with force_fitnessvolt_attribution=True snapshot_version=participant.custom_goal.source_detail.snapshot_version %}
+      </div>
+      {% endif %}
+    </header>
+
+    <section class="bg-surface-card border border-line-subtle rounded p-6 mb-6">
+      <div class="flex items-baseline justify-between mb-4 gap-2 flex-wrap">
+        <h2 class="text-lg font-semibold text-content-strong">{% trans "Leaderboard" %}</h2>
+        {% if last_synced_at %}
+        <span class="text-xs text-content-muted">{% blocktrans with when=last_synced_at|naturaltime %}Last synced {{ when }}{% endblocktrans %}</span>
+        {% endif %}
+      </div>
+      {% if leaderboard %}
+      <div class="overflow-x-auto">
+        <table class="text-sm text-left w-full">
+          <thead>
+            <tr class="text-content-muted border-b border-line-subtle">
+              <th class="py-2 pr-4 font-medium">{% trans "Rank" %}</th>
+              <th class="py-2 pr-4 font-medium">{% trans "Participant" %}</th>
+              <th class="py-2 pr-4 font-medium text-right">{% trans "Points" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in leaderboard %}
+            <tr class="border-b border-line-subtle {% if row.is_self %}bg-accent-subtle font-semibold text-content-strong{% else %}text-content-body{% endif %}">
+              <td class="py-2 pr-4 font-mono">#{{ row.rank }}</td>
+              <td class="py-2 pr-4">
+                {% if row.chart_url %}
+                <a href="{{ row.chart_url }}" hx-get="{{ row.chart_url }}"
+                   hx-target="#co-participant-chart" hx-swap="innerHTML"
+                   data-loading-message="{% trans 'Loading challenge…' %}"
+                   class="underline decoration-dotted hover:text-content-strong">{{ row.name }}</a>
+                {% else %}
+                {{ row.name }}
+                {% endif %}
+                {% if row.is_self %} <span class="text-xs text-accent">({% trans "you" %})</span>{% endif %}
+              </td>
+              <td class="py-2 pr-4 text-right font-mono">{{ row.total_points }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-sm text-content-muted italic">{% trans "No scores yet." %}</p>
+      {% endif %}
+    </section>
+
+    <div id="co-participant-chart" class="mb-6"></div>
+
+    {% if personal_data %}
+    {% for card in personal_data.summary_cards %}
+    {% if card.endgame_suggestion %}
+    <section class="border-2 border-accent bg-accent-subtle rounded p-6 mb-6">
+      <span class="inline-block text-xs font-medium px-2 py-0.5 mb-2 rounded bg-accent text-accent-on">{% trans "Final stretch" %}</span>
+      <p class="text-sm text-content-body">
+        {% if card.endgame_suggestion == "next_point" %}
+        {% blocktrans with gap=card.next_point_weight_gap unit=personal_data.display_unit lift=card.lift %}<span class="font-mono">{{ gap }}</span> {{ unit }} away from your next point on {{ lift }}.{% endblocktrans %}
+        {% elif card.endgame_suggestion_via == "both" %}
+        {% blocktrans with gap=card.weight_gap unit=personal_data.display_unit lift=card.lift %}<span class="font-mono">{{ gap }}</span> {{ unit }} away from your first point on {{ lift }}, or{% endblocktrans %}
+        <span class="font-mono">{{ card.reps_gap }}</span>
+        {% blocktrans count counter=card.reps_gap %}more rep at this weight.{% plural %}more reps at this weight.{% endblocktrans %}
+        {% elif card.endgame_suggestion_via == "reps" %}
+        <span class="font-mono">{{ card.reps_gap }}</span>
+        {% blocktrans count counter=card.reps_gap with lift=card.lift %}more rep at this weight would earn your first point on {{ lift }}.{% plural %}more reps at this weight would earn your first point on {{ lift }}.{% endblocktrans %}
+        {% else %}
+        {% blocktrans with gap=card.weight_gap unit=personal_data.display_unit lift=card.lift %}<span class="font-mono">{{ gap }}</span> {{ unit }} away from your first point on {{ lift }}.{% endblocktrans %}
+        {% endif %}
+      </p>
+    </section>
+    {% endif %}
+    {% endfor %}
+    {% endif %}
+
+    <div class="mb-6">
+      <div id="insights-carousel"
+           class="flex items-stretch overflow-x-auto overflow-y-hidden snap-x snap-mandatory gap-4
+                  [touch-action:pan-x_pan-y]
+                  md:flex-col md:overflow-visible md:gap-6
+                  [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        {# scroll-snap-stop:always is deliberately absent from these three panels: #}
+        {# TASK-221 (#234) added it so a fast flick pages one panel at a time, but #}
+        {# TASK-237 removed it as an UNVERIFIED candidate mitigation for the first #}
+        {# vertical swipe after a panel switch being swallowed on mobile. Restore it #}
+        {# on all three sections if TASK-237 concludes snapping wasn't the cause. #}
+        <section class="snap-start shrink-0 basis-full md:basis-auto md:shrink
+                        h-[22rem] md:h-auto overflow-hidden
+                        bg-surface-card border border-line-subtle rounded p-6">
+          <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "Points Over Time" %}</h2>
+          <div class="relative h-64 md:h-80">
+            <canvas id="points-over-time-chart"></canvas>
+          </div>
+        </section>
+
+        <section class="snap-start shrink-0 basis-full md:basis-auto md:shrink
+                        h-[22rem] md:h-auto overflow-hidden
+                        bg-surface-card border border-line-subtle rounded p-6">
+          <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "Points by Lift" %}</h2>
+          <div class="h-64 md:h-auto overflow-y-auto md:overflow-visible overflow-x-hidden
+                      [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <div class="relative" id="points-by-lift-chart-wrapper">
+              <canvas id="points-by-lift-chart"></canvas>
+            </div>
+          </div>
+        </section>
+
+        <section class="snap-start shrink-0 basis-full md:basis-auto md:shrink
+                        h-[22rem] md:h-auto overflow-hidden
+                        bg-surface-card border border-line-subtle rounded p-6">
+          <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "Recent Activity" %}</h2>
+          {% if recent_activity %}
+          <div class="h-64 md:h-auto overflow-y-auto overflow-x-auto
+                      [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <table class="text-sm text-left w-full">
+              <thead>
+                <tr class="text-content-muted border-b border-line-subtle">
+                  <th class="py-1.5 pr-4 font-medium">{% trans "Lifter" %}</th>
+                  <th class="py-1.5 pr-4 font-medium">{% trans "Lift" %}</th>
+                  <th class="py-1.5 pr-4 font-medium text-right">{% trans "Points" %}</th>
+                  <th class="py-1.5 pr-4 font-medium text-right">{% trans "Date" %}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in recent_activity %}
+                <tr class="border-b border-line-subtle text-content-body">
+                  <td class="py-1.5 pr-4">{{ row.name }}</td>
+                  <td class="py-1.5 pr-4">{{ row.lift }}</td>
+                  <td class="py-1.5 pr-4 text-right font-mono">{{ row.points_earned }}</td>
+                  <td class="py-1.5 pr-4 text-right whitespace-nowrap">{{ row.date|date:"M j" }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <p class="text-sm text-content-muted italic">{% trans "No scoring activity yet." %}</p>
+          {% endif %}
+        </section>
+      </div>
+
+      <div id="insights-dots" class="flex justify-center gap-2 mt-3 md:hidden">
+        <button type="button" data-panel="0" aria-label="{% trans 'Points Over Time' %}"
+                class="w-2 h-2 rounded-full bg-accent transition-colors"></button>
+        <button type="button" data-panel="1" aria-label="{% trans 'Points by Lift' %}"
+                class="w-2 h-2 rounded-full bg-line-subtle transition-colors"></button>
+        <button type="button" data-panel="2" aria-label="{% trans 'Recent Activity' %}"
+                class="w-2 h-2 rounded-full bg-line-subtle transition-colors"></button>
+      </div>
+    </div>
+    {{ chart_data|json_script:"chart-data" }}
+    {{ by_lift_data|json_script:"by-lift-data" }}
+    <script src="{% static 'vendor/chart.js' %}"></script>
+    <script>
+      (function () {
+        const chartData = JSON.parse(document.getElementById("chart-data").textContent);
+        new Chart(document.getElementById("points-over-time-chart"), {
+          type: "line",
+          data: {
+            labels: chartData.labels,
+            datasets: chartData.datasets.map(function (ds) {
+              return { label: ds.label, data: ds.data, fill: false, tension: 0.1 };
+            }),
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: { title: { display: true, text: "{% trans 'Date' %}" } },
+              y: {
+                beginAtZero: true,
+                title: { display: true, text: "{% trans 'Cumulative Points' %}" },
+              },
+            },
+          },
+        });
+
+        const byLiftData = JSON.parse(document.getElementById("by-lift-data").textContent);
+        // Lifts run down the y-axis rather than along the x-axis so every lift
+        // name is fully readable instead of being squeezed/rotated to fit —
+        // the chart's own height grows with the number of lifts (scrolling
+        // inside its fixed-height mobile card if needed) rather than shrinking
+        // each row to fit a fixed height.
+        const byLiftWrapper = document.getElementById("points-by-lift-chart-wrapper");
+        const byLiftRowHeight = 42;
+        const byLiftMinHeight = 256;
+        byLiftWrapper.style.height =
+          Math.max(byLiftMinHeight, byLiftData.labels.length * byLiftRowHeight) + "px";
+
+        new Chart(document.getElementById("points-by-lift-chart"), {
+          type: "bar",
+          data: {
+            labels: byLiftData.labels,
+            datasets: byLiftData.datasets.map(function (ds) {
+              return { label: ds.label, data: ds.data };
+            }),
+          },
+          options: {
+            indexAxis: "y",
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: { padding: { left: 0 } },
+            scales: {
+              x: {
+                beginAtZero: true,
+                title: { display: true, text: "{% trans 'Points Earned' %}" },
+              },
+              // No y-axis title: the lift names are the categories themselves,
+              // and the card is already headed "Points by Lift" -- a rotated
+              // "Lift" axis label added a redundant chunk of width on top of
+              // the tick labels, which matters on a narrow phone screen.
+              y: { title: { display: false } },
+            },
+          },
+        });
+
+        const carousel = document.getElementById("insights-carousel");
+        const dots = Array.from(document.querySelectorAll("#insights-dots button"));
+        if (carousel && dots.length) {
+          const panels = Array.from(carousel.children);
+          // Panels share a fixed height (see the h-[22rem] class on each <section>),
+          // so unlike an auto-height carousel there's nothing to resize here — swiping
+          // never changes the row's height or reflows the page underneath it.
+          const setActive = function (index) {
+            dots.forEach(function (dot, i) {
+              dot.classList.toggle("bg-accent", i === index);
+              dot.classList.toggle("bg-line-subtle", i !== index);
+            });
+          };
+          carousel.addEventListener("scroll", function () {
+            const center = carousel.scrollLeft + carousel.clientWidth / 2;
+            let active = 0;
+            panels.forEach(function (panel, i) {
+              if (panel.offsetLeft <= center) active = i;
+            });
+            setActive(active);
+          });
+          dots.forEach(function (dot, i) {
+            dot.addEventListener("click", function () {
+              // inline: "start" rather than "center" because the panels are
+              // snap-start. Animating to a centred offset lands on a position
+              // that isn't a snap point, so the browser then runs a *second*
+              // snap animation to re-align -- two chained scroll animations per
+              // dot click for the same final resting position.
+              panels[i].scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+            });
+          });
+        }
+      })();
+    </script>
+
+    {% if personal_data %}
+    <section class="bg-surface-card border border-line-subtle rounded p-6 mb-6">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <h2 class="text-lg font-semibold text-content-strong">{% trans "Your Performance" %}</h2>
+        <div class="inline-flex rounded border border-line-subtle overflow-hidden text-sm">
+          <button type="button" id="tab-summary-btn"
+                  class="px-4 py-2 font-medium bg-accent text-accent-on"
+                  onclick="showPersonalTab('summary')">{% trans "Summary" %}</button>
+          <button type="button" id="tab-standards-btn"
+                  class="px-4 py-2 font-medium bg-surface-card text-content-body"
+                  onclick="showPersonalTab('standards')">{% trans "Standards" %}</button>
+        </div>
+      </div>
+
+      <div id="tab-summary">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {% for card in personal_data.summary_cards %}
+          <div class="{% if card.close_to_goal %}border-2 border-warning-light{% else %}border border-line-subtle{% endif %} rounded p-4">
+            <h3 class="text-sm font-semibold text-content-strong mb-2">{{ card.lift }}</h3>
+            {% if card.state == "scored" %}
+            <p class="text-2xl font-bold text-accent font-mono">{% blocktrans with points=card.points_earned %}{{ points }} pts{% endblocktrans %}</p>
+            <p class="text-sm text-content-body mt-1">
+              <span class="font-mono">{{ card.weight }}</span>{% if card.weight != "BW" %} {{ personal_data.display_unit }}{% endif %} × <span class="font-mono">{{ card.reps }}</span> {% trans "reps" %} ({{ card.date }})
+            </p>
+            <p class="text-xs text-content-muted mt-1">{{ card.tier_satisfied }}</p>
+            {% elif card.state == "no_points" %}
+            {% if card.close_to_goal %}
+            <span class="inline-block text-xs font-medium px-2 py-0.5 mb-2 rounded bg-warning-light text-warning-dark">{% trans "Close to goal" %}</span>
+            {% endif %}
+            <p class="text-sm text-content-body">
+              {% blocktrans with weight=card.best_weight reps=card.best_reps date=card.best_date %}Best logged: <span class="font-mono">{{ weight }}</span>{% endblocktrans %}{% if card.best_weight != "BW" %} {{ personal_data.display_unit }}{% endif %} × <span class="font-mono">{{ card.best_reps }}</span> {% blocktrans with date=card.best_date %}reps ({{ date }}){% endblocktrans %}
+            </p>
+            {% if card.weight_gap is not None %}
+            <p class="text-xs text-content-muted mt-1">
+              {% blocktrans with gap=card.weight_gap unit=personal_data.display_unit %}To reach your first point: add <span class="font-mono">{{ gap }}</span> {{ unit }}{% endblocktrans %}{% if card.reps_gap is not None %}, {% blocktrans count counter=card.reps_gap %}or do <span class="font-mono">{{ counter }}</span> more rep{% plural %}or do <span class="font-mono">{{ counter }}</span> more reps{% endblocktrans %}{% endif %}.
+            </p>
+            {% endif %}
+            {% elif card.state == "no_data_before_window" %}
+            <p class="text-sm text-content-body">
+              {% blocktrans with date=card.window_start_date|date:"M j, Y" %}No data since your challenge window opened on <span class="font-mono">{{ date }}</span>.{% endblocktrans %}
+            </p>
+            <p class="text-xs text-content-muted mt-1">{% trans "You've logged this lift before, but not since then. Log a new set to get started." %}</p>
+            {% else %}
+            <p class="text-sm text-content-muted italic">{% trans "No data yet" %}</p>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div id="tab-standards" class="hidden">
+        <div class="overflow-auto max-h-[70vh] snap-y snap-mandatory scroll-pt-[37px]">
+          <table class="text-sm text-left w-full border-separate border-spacing-0">
+            <thead>
+              <tr class="text-content-muted">
+                <th class="py-2 pr-4 font-medium whitespace-nowrap sticky top-0 left-0 z-30 bg-surface-card border-r border-b border-line-subtle">{% trans "Lift" %}</th>
+                {% for reps in personal_data.rep_columns %}
+                <th class="py-2 px-3 font-medium text-right font-mono sticky top-0 z-20 bg-surface-card border-b border-line-subtle">{{ reps }}RM</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in personal_data.standards_rows %}
+              <tr class="text-content-body snap-start snap-always">
+                <td class="py-2 pr-4 font-medium text-content-strong whitespace-nowrap sticky left-0 z-10 bg-surface-card border-r border-b border-line-subtle">
+                  {{ row.lift }}{% if row.is_bodyweight_added %} <span class="text-content-muted font-normal">({% trans "BW" %})</span>{% endif %}
+                </td>
+                {% for cell in row.cells %}
+                <td class="py-2 px-3 text-right font-mono border-b border-line-subtle {% if cell.is_current_best %}bg-accent-subtle font-semibold text-accent{% endif %}">
+                  {{ cell.weight }}
+                </td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="text-xs text-content-muted mt-2">{% blocktrans with unit=personal_data.display_unit %}Thresholds shown in {{ unit }}{% endblocktrans %} {% trans "for your custom goal." %}</p>
+      </div>
+    </section>
+    <script>
+      function showPersonalTab(tab) {
+        const summary = document.getElementById("tab-summary");
+        const standards = document.getElementById("tab-standards");
+        const summaryBtn = document.getElementById("tab-summary-btn");
+        const standardsBtn = document.getElementById("tab-standards-btn");
+        const active = "bg-accent text-accent-on";
+        const inactive = "bg-surface-card text-content-body";
+        if (tab === "standards") {
+          summary.classList.add("hidden");
+          standards.classList.remove("hidden");
+          standardsBtn.className = "px-4 py-2 font-medium " + active;
+          summaryBtn.className = "px-4 py-2 font-medium " + inactive;
+        } else {
+          standards.classList.add("hidden");
+          summary.classList.remove("hidden");
+          summaryBtn.className = "px-4 py-2 font-medium " + active;
+          standardsBtn.className = "px-4 py-2 font-medium " + inactive;
+        }
+      }
+    </script>
+    {% endif %}
+
+    <section class="bg-surface-card border border-line-subtle rounded p-6 mb-6">
+      <div class="flex flex-col items-start gap-3">
+        {% if challenge.creator_id == request.user.id or request.user.is_staff %}
+        <a
+          href="{% url 'challenges:settings' challenge.pk %}"
+          class="border border-line-subtle text-content-body text-sm font-medium px-4 py-2 rounded hover:bg-surface-sunken">
+          {% trans "Manage Challenge" %}
+        </a>
+        {% endif %}
+        {% if challenge.status != "completed" and not participant.is_bailed %}
+        <a
+          href="{% url 'challenges:bail' challenge.pk %}"
+          class="border border-danger text-danger text-sm font-medium px-4 py-2 rounded hover:bg-danger-light">
+          {% trans "Leave Challenge" %}
+        </a>
+        {% endif %}
+      </div>
+      <p class="text-sm text-content-muted mt-3">
+        {% blocktrans with owner=challenge.creator.display_name|default:challenge.creator.username %}Owner: {{ owner }}{% endblocktrans %}
+      </p>
+    </section>
+{% endblock %}

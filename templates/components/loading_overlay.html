@@ -1,0 +1,70 @@
+{% load i18n %}
+{% comment %}
+Global loading overlay (TASK-141). Hidden until window.ppLoading.show(msg) is
+called; window.ppLoading.hide() dismisses it.
+
+Driven from two places:
+  - HTMX requests, via the htmx:beforeRequest/afterRequest wiring in base.html
+    (fires for any element carrying data-loading-message).
+  - Plain (non-HTMX) PRG interactions, via the delegated submit/click listeners
+    below — needed because htmx events never fire for plain <form> POSTs or
+    <a href> navigations (e.g. goal setup, challenge-detail links).
+
+A pageshow listener force-hides on bfcache restore so the Back button never
+leaves a stuck overlay after a full-page navigation.
+{% endcomment %}
+<div id="loading-overlay"
+  class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+  role="status" aria-live="polite" aria-busy="true">
+  <div class="flex flex-col items-center gap-4 rounded-lg bg-surface-card px-8 py-6 shadow-md">
+    <div class="h-8 w-8 animate-spin rounded-full border-4 border-line-subtle border-t-accent"></div>
+    <p id="loading-overlay-message" class="text-sm font-medium text-content-strong"></p>
+  </div>
+</div>
+<script>
+  (function () {
+    var overlay = document.getElementById("loading-overlay");
+    var messageEl = document.getElementById("loading-overlay-message");
+
+    window.ppLoading = {
+      show: function (msg) {
+        if (messageEl) messageEl.textContent = msg || "{% trans 'Working…' %}";
+        if (overlay) overlay.classList.remove("hidden");
+      },
+      hide: function () {
+        if (overlay) overlay.classList.add("hidden");
+      },
+    };
+
+    // Plain (non-HTMX) interactions. HTMX forms/buttons are handled by the
+    // htmx:beforeRequest wiring in base.html; skip them here to avoid a
+    // double show that the htmx:afterRequest hide could then race.
+    function isHtmx(el) {
+      return !!el.closest(
+        "[hx-get],[hx-post],[hx-put],[hx-patch],[hx-delete]"
+      );
+    }
+
+    document.addEventListener("submit", function (e) {
+      if (e.defaultPrevented) return;
+      var form = e.target.closest("form[data-loading-message]");
+      if (!form || isHtmx(form)) return;
+      window.ppLoading.show(form.getAttribute("data-loading-message"));
+    });
+
+    document.addEventListener("click", function (e) {
+      if (e.defaultPrevented || e.button !== 0) return;
+      if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+      var link = e.target.closest("a[data-loading-message]");
+      if (!link || isHtmx(link)) return;
+      if (link.target || link.hasAttribute("download")) return;
+      window.ppLoading.show(link.getAttribute("data-loading-message"));
+    });
+
+    // bfcache Back-button restore: force-hide so a page navigated away from
+    // (with the overlay up) never comes back showing it.
+    window.addEventListener("pageshow", function () {
+      window.ppLoading.hide();
+    });
+  })();
+</script>

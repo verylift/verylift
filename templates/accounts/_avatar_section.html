@@ -1,0 +1,412 @@
+{% load i18n %}
+<!-- Avatar section -->
+<section class="bg-surface-card border border-line-subtle rounded p-6 mb-6 max-w-lg">
+  <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "Profile Photo" %}</h2>
+  <div class="flex items-center gap-4 mb-4">
+    {% include "components/_avatar.html" with avatar_user=user size_classes="w-16 h-16 text-xl" %}
+  </div>
+  {% if avatar_error %}
+  <p class="mb-4 text-sm text-danger">{{ avatar_error }}</p>
+  {% endif %}
+  <form
+    method="post"
+    action="{% url 'accounts:settings' %}"
+    hx-post="{% url 'accounts:settings' %}"
+    hx-target="closest section"
+    hx-swap="outerHTML"
+    hx-encoding="multipart/form-data"
+    enctype="multipart/form-data"
+    data-loading-message="{% trans 'Uploading photo…' %}">
+    {% csrf_token %}
+    <input type="hidden" name="form_name" value="avatar">
+    {% comment %}
+      Two mutually exclusive states. #avatar-picker is the plain no-JS form and
+      what renders on first paint; the crop script swaps to #avatar-cropper once
+      a file is chosen. The file input stays a real named input either way, so
+      an inert script degrades to today's straight upload.
+    {% endcomment %}
+    <div id="avatar-picker">
+      <div class="mb-4">
+        <input
+          type="file"
+          id="avatar"
+          name="avatar"
+          accept="image/*"
+          class="w-full text-sm text-content-body">
+      </div>
+      <div class="flex items-center gap-3">
+        <button
+          type="submit"
+          class="bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
+          {% trans "Upload Photo" %}
+        </button>
+        {% if user.avatar %}
+        <button
+          type="submit"
+          name="clear_avatar"
+          value="true"
+          class="text-sm font-medium text-content-muted hover:text-content-body">
+          {% trans "Remove photo" %}
+        </button>
+        {% endif %}
+      </div>
+    </div>
+    <div id="avatar-cropper" class="hidden">
+      <div
+        id="avatar-crop-stage"
+        class="relative w-64 h-64 mx-auto overflow-hidden bg-surface-sunken select-none cursor-move"
+        style="touch-action: none;">
+        <canvas id="avatar-crop-canvas" width="256" height="256" class="block w-full h-full"></canvas>
+        {% comment %}
+          The dimmed surround is a 9999px ring on an inscribed circle, clipped
+          by the stage's overflow-hidden. Must stay pointer-events-none or it
+          swallows the drag gestures.
+        {% endcomment %}
+        <div
+          class="pointer-events-none absolute inset-0 rounded-full ring-[9999px] ring-black/50 border border-line-subtle"
+          aria-hidden="true"></div>
+      </div>
+      <input
+        type="range"
+        id="avatar-crop-zoom"
+        min="1"
+        max="4"
+        step="0.01"
+        value="1"
+        class="w-64 mx-auto block mt-4 accent-accent"
+        aria-label="{% trans 'Zoom' %}">
+      <p class="mt-3 text-sm text-content-muted text-center">
+        {% trans "Drag to reposition, scroll or pinch to zoom." %}
+      </p>
+      <p class="mt-1 text-xs text-content-subtle text-center">
+        {% trans "Your photo also appears as a wide banner on your dashboard." %}
+      </p>
+      <p id="avatar-crop-error" class="hidden mt-3 text-sm text-danger"></p>
+      <div class="flex items-center gap-3 mt-4">
+        {% comment %}
+          Both type="button": a bare <button> defaults to submit and would post
+          the uncropped original.
+        {% endcomment %}
+        <button
+          type="button"
+          id="avatar-crop-confirm"
+          class="bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
+          {% trans "Set profile photo" %}
+        </button>
+        <button
+          type="button"
+          id="avatar-crop-cancel"
+          class="text-sm font-medium text-content-muted hover:text-content-body">
+          {% trans "Cancel" %}
+        </button>
+      </div>
+    </div>
+  </form>
+  <script>
+    // Avatar crop wizard (TASK-261). Progressive enhancement over the plain
+    // file input above: picking a file rasterises it into a canvas the user can
+    // pan/zoom under a circular mask, and confirming uploads a 1024x1024 JPEG
+    // in place of the original. The server re-encodes it to AVIF.
+    //
+    // This <section> is an htmx swap target, so htmx re-executes this script on
+    // every avatar POST. It therefore binds ONLY to elements inside the freshly
+    // inserted section -- no document-level listeners, which would otherwise
+    // accumulate one duplicate copy per upload.
+    (function () {
+      var input = document.getElementById("avatar");
+      if (!input) return;
+      // Old browsers keep the plain upload behaviour rather than a half-wizard.
+      if (
+        !window.HTMLCanvasElement ||
+        typeof DataTransfer === "undefined" ||
+        typeof HTMLFormElement.prototype.requestSubmit !== "function"
+      ) {
+        return;
+      }
+
+      var form = input.form;
+      var picker = document.getElementById("avatar-picker");
+      var cropper = document.getElementById("avatar-cropper");
+      var stage = document.getElementById("avatar-crop-stage");
+      var canvas = document.getElementById("avatar-crop-canvas");
+      var zoom = document.getElementById("avatar-crop-zoom");
+      var confirmBtn = document.getElementById("avatar-crop-confirm");
+      var cancelBtn = document.getElementById("avatar-crop-cancel");
+      var errorEl = document.getElementById("avatar-crop-error");
+      if (!form || !picker || !cropper || !stage || !canvas) return;
+
+      var STAGE = canvas.width;
+      var EXPORT = 1024;
+      var MAX_ZOOM = 4;
+      var ctx = canvas.getContext("2d");
+
+      var img = null;
+      var scale = 1;
+      var minScale = 1;
+      var offsetX = 0;
+      var offsetY = 0;
+      var pointers = new Map();
+
+      function imgWidth() {
+        return img.naturalWidth || img.width;
+      }
+
+      function imgHeight() {
+        return img.naturalHeight || img.height;
+      }
+
+      function showError(message) {
+        errorEl.textContent = message;
+        errorEl.classList.remove("hidden");
+      }
+
+      function clearError() {
+        errorEl.textContent = "";
+        errorEl.classList.add("hidden");
+      }
+
+      // Keep the drawn image covering the whole stage so the circle never
+      // shows a letterboxed edge.
+      function clampOffsets() {
+        var drawnW = imgWidth() * scale;
+        var drawnH = imgHeight() * scale;
+        offsetX = Math.min(0, Math.max(STAGE - drawnW, offsetX));
+        offsetY = Math.min(0, Math.max(STAGE - drawnH, offsetY));
+      }
+
+      function fit() {
+        minScale = Math.max(STAGE / imgWidth(), STAGE / imgHeight());
+        scale = minScale;
+        offsetX = (STAGE - imgWidth() * scale) / 2;
+        offsetY = (STAGE - imgHeight() * scale) / 2;
+        clampOffsets();
+        zoom.value = 1;
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, STAGE, STAGE);
+        ctx.drawImage(img, offsetX, offsetY, imgWidth() * scale, imgHeight() * scale);
+      }
+
+      // Zoom about a fixed point in stage coordinates, so the image pixel under
+      // the cursor / pinch midpoint stays put.
+      function zoomAt(x, y, factor) {
+        var next = Math.min(minScale * MAX_ZOOM, Math.max(minScale, scale * factor));
+        if (next === scale) return;
+        var applied = next / scale;
+        offsetX = x - (x - offsetX) * applied;
+        offsetY = y - (y - offsetY) * applied;
+        scale = next;
+        clampOffsets();
+        zoom.value = scale / minScale;
+      }
+
+      // The canvas is 256 backing pixels stretched over its CSS box, so pointer
+      // deltas have to be converted into canvas units before they move offsets.
+      function stageRatio() {
+        var rect = stage.getBoundingClientRect();
+        return rect.width ? STAGE / rect.width : 1;
+      }
+
+      function stagePoint(clientX, clientY) {
+        var rect = stage.getBoundingClientRect();
+        var ratio = stageRatio();
+        return { x: (clientX - rect.left) * ratio, y: (clientY - rect.top) * ratio };
+      }
+
+      function midpoint(a, b) {
+        return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      }
+
+      function distance(a, b) {
+        return Math.hypot(a.x - b.x, a.y - b.y);
+      }
+
+      function activePointers() {
+        return Array.from(pointers.values());
+      }
+
+      stage.addEventListener("pointerdown", function (e) {
+        if (!img) return;
+        stage.setPointerCapture(e.pointerId);
+        pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        e.preventDefault();
+      });
+
+      stage.addEventListener("pointermove", function (e) {
+        if (!img || !pointers.has(e.pointerId)) return;
+        e.preventDefault();
+        var previous = activePointers();
+        pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        var current = activePointers();
+
+        if (current.length === 1) {
+          var ratio = stageRatio();
+          offsetX += (current[0].x - previous[0].x) * ratio;
+          offsetY += (current[0].y - previous[0].y) * ratio;
+          clampOffsets();
+        } else if (current.length === 2) {
+          var wasApart = distance(previous[0], previous[1]);
+          var isApart = distance(current[0], current[1]);
+          var before = midpoint(previous[0], previous[1]);
+          var after = midpoint(current[0], current[1]);
+          var anchor = stagePoint(after.x, after.y);
+          var pan = stageRatio();
+          offsetX += (after.x - before.x) * pan;
+          offsetY += (after.y - before.y) * pan;
+          if (wasApart > 0) zoomAt(anchor.x, anchor.y, isApart / wasApart);
+          clampOffsets();
+        } else {
+          return;
+        }
+        draw();
+      });
+
+      function endPointer(e) {
+        if (!pointers.has(e.pointerId)) return;
+        pointers.delete(e.pointerId);
+        if (stage.hasPointerCapture(e.pointerId)) {
+          stage.releasePointerCapture(e.pointerId);
+        }
+      }
+
+      stage.addEventListener("pointerup", endPointer);
+      stage.addEventListener("pointercancel", endPointer);
+
+      // { passive: false } or the preventDefault that stops the page zooming
+      // is ignored.
+      stage.addEventListener(
+        "wheel",
+        function (e) {
+          if (!img) return;
+          e.preventDefault();
+          var point = stagePoint(e.clientX, e.clientY);
+          zoomAt(point.x, point.y, e.deltaY < 0 ? 1.1 : 1 / 1.1);
+          draw();
+        },
+        { passive: false }
+      );
+
+      zoom.addEventListener("input", function () {
+        if (!img) return;
+        var target = minScale * parseFloat(zoom.value);
+        zoomAt(STAGE / 2, STAGE / 2, target / scale);
+        draw();
+      });
+
+      function showCropper() {
+        picker.classList.add("hidden");
+        cropper.classList.remove("hidden");
+      }
+
+      function showPicker() {
+        cropper.classList.add("hidden");
+        picker.classList.remove("hidden");
+      }
+
+      function releaseImage() {
+        if (img && typeof img.close === "function") img.close();
+        img = null;
+        pointers.clear();
+      }
+
+      function onLoaded(loaded) {
+        img = loaded;
+        fit();
+        draw();
+        clearError();
+        confirmBtn.disabled = false;
+        showCropper();
+      }
+
+      function loadViaElement(file) {
+        var url = URL.createObjectURL(file);
+        var el = new Image();
+        el.onload = function () {
+          URL.revokeObjectURL(url);
+          onLoaded(el);
+        };
+        el.onerror = function () {
+          URL.revokeObjectURL(url);
+          showError("{% trans 'That file could not be read as an image.' %}");
+        };
+        el.src = url;
+      }
+
+      // imageOrientation is not optional: without it, EXIF-rotated phone photos
+      // load sideways and crop sideways.
+      function loadFile(file) {
+        if (typeof createImageBitmap !== "function") {
+          loadViaElement(file);
+          return;
+        }
+        try {
+          createImageBitmap(file, { imageOrientation: "from-image" }).then(
+            onLoaded,
+            function () {
+              loadViaElement(file);
+            }
+          );
+        } catch (err) {
+          loadViaElement(file);
+        }
+      }
+
+      input.addEventListener("change", function () {
+        if (!input.files || input.files.length === 0) return;
+        releaseImage();
+        loadFile(input.files[0]);
+      });
+
+      cancelBtn.addEventListener("click", function () {
+        // Clearing the input matters: a stale original left staged here would
+        // be posted by a later Upload Photo or Remove photo click.
+        input.value = "";
+        releaseImage();
+        clearError();
+        confirmBtn.disabled = false;
+        showPicker();
+      });
+
+      confirmBtn.addEventListener("click", function () {
+        if (!img) return;
+        confirmBtn.disabled = true;
+        // Redraw from the source image at export scale rather than upscaling
+        // the 256px preview, which would ship a visibly soft avatar.
+        var out = document.createElement("canvas");
+        out.width = EXPORT;
+        out.height = EXPORT;
+        var ratio = EXPORT / STAGE;
+        out
+          .getContext("2d")
+          .drawImage(
+            img,
+            offsetX * ratio,
+            offsetY * ratio,
+            imgWidth() * scale * ratio,
+            imgHeight() * scale * ratio
+          );
+        out.toBlob(
+          function (blob) {
+            if (!blob) {
+              confirmBtn.disabled = false;
+              showError("{% trans 'That file could not be read as an image.' %}");
+              return;
+            }
+            var transfer = new DataTransfer();
+            transfer.items.add(
+              new File([blob], "avatar.jpg", { type: "image/jpeg" })
+            );
+            input.files = transfer.files;
+            // requestSubmit, not submit: it fires a cancelable submit event so
+            // htmx intercepts it, and falls back to a plain POST without htmx.
+            form.requestSubmit();
+          },
+          "image/jpeg",
+          0.92
+        );
+      });
+    })();
+  </script>
+  {% if oob_messages %}{% include "components/_messages_oob.html" %}{% endif %}
+</section>

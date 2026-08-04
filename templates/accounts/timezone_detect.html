@@ -1,0 +1,16 @@
+{% load i18n %}<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="robots" content="noindex">
+  <title>{% trans "One moment…" %}</title>
+  {% include "components/_timezone_detect_script.html" %}
+  <script>
+    (function () { window.location.replace("{{ next_url|escapejs }}"); })();
+  </script>
+  <noscript><meta http-equiv="refresh" content="0;url={{ next_url }}"></noscript>
+</head>
+<body>
+  <p><a href="{{ next_url }}">{% trans "Continue" %}</a></p>
+</body>
+</html>

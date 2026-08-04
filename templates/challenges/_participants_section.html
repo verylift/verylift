@@ -1,0 +1,69 @@
+{% load i18n %}
+<section class="bg-surface-card border border-line-subtle rounded p-6 mb-6">
+  <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "Participants" %}</h2>
+
+  {% if participant_rows %}
+  <ul class="divide-y divide-line-subtle mb-6">
+    {% for row in participant_rows %}
+    <li class="flex items-center justify-between gap-3 py-2">
+      <span class="text-sm text-content-body">{{ row.name }}</span>
+      <div class="flex items-center gap-3">
+        {% if not is_locked and row.can_become_owner or not is_locked and row.can_remove %}
+        <details class="relative" data-row-menu>
+          <summary
+            class="flex items-center justify-center h-7 w-7 rounded cursor-pointer text-content-muted hover:text-content-strong hover:bg-surface-sunken list-none marker:hidden [&::-webkit-details-marker]:hidden"
+            aria-haspopup="menu"
+            aria-label="{% blocktrans with name=row.name %}Actions for {{ name }}{% endblocktrans %}">
+            <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+              <path d="M10 6a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm0 5.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm0 5.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
+            </svg>
+          </summary>
+          <div
+            class="absolute right-0 mt-1 min-w-[9rem] z-10 bg-surface-card border border-line-subtle rounded shadow py-1 text-sm"
+            role="menu">
+            {% if not is_locked and row.can_become_owner %}
+            <a href="{% url 'challenges:transfer' challenge.pk row.user_id %}"
+               role="menuitem"
+               class="block px-3 py-2 text-content-body hover:bg-surface-sunken hover:text-content-strong">
+              {% trans "Make owner" %}
+            </a>
+            {% endif %}
+            {% if row.can_remove and not is_locked %}
+            <a href="{% url 'challenges:remove' challenge.pk row.pk %}"
+               role="menuitem"
+               class="block px-3 py-2 text-danger hover:bg-surface-sunken">
+              {% trans "Remove" %}
+            </a>
+            {% endif %}
+          </div>
+        </details>
+        {% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="text-sm text-content-muted italic mb-6">{% trans "No participants yet." %}</p>
+  {% endif %}
+
+  {% if oob_messages %}{% include "components/_messages_oob.html" %}{% endif %}
+  <script>
+    (function () {
+      if (window.__ppRowMenuWired) return;
+      window.__ppRowMenuWired = true;
+      document.addEventListener('click', function (e) {
+        document.querySelectorAll('details[data-row-menu][open]').forEach(function (d) {
+          if (!d.contains(e.target)) d.removeAttribute('open');
+        });
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        document.querySelectorAll('details[data-row-menu][open]').forEach(function (d) {
+          d.removeAttribute('open');
+          var s = d.querySelector('summary');
+          if (s) s.focus();
+        });
+      });
+    })();
+  </script>
+</section>

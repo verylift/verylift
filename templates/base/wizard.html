@@ -1,0 +1,17 @@
+{% extends "base/app.html" %}
+
+{% comment %}
+Shared shell for the multi-step flows (create-challenge, goal-setup). Centers
+the step content inside <main> on wide viewports while still filling the width
+on mobile -- `mx-auto` is a no-op once the viewport is narrower than the max
+width, so there is no breakpoint prefix and no separate mobile rule.
+
+Fill {% block wizard_body %}. Override {% block wizard_width %} for a step that
+needs a wider column than the default (the goal chart's rep grid does).
+{% endcomment %}
+
+{% block main %}
+<div class="w-full mx-auto {% block wizard_width %}max-w-lg{% endblock %}" data-wizard-shell>
+  {% block wizard_body %}{% endblock %}
+</div>
+{% endblock %}

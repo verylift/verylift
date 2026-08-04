@@ -1,0 +1,25 @@
+# Local development infrastructure. Only Postgres runs in Docker; the Django app
+# runs natively on the host (`just serve` / `uv run python manage.py runserver`)
+# against this database bound to 127.0.0.1:5432. The loopback bind keeps the dev
+# DB reachable by native tooling on this host while making it unreachable from the
+# LAN. Production is defined separately in docker-compose.prod.yml and still runs
+# the app in a container.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: verylift
+      POSTGRES_USER: verylift
+      POSTGRES_PASSWORD: verylift
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U verylift"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

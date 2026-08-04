@@ -1,0 +1,141 @@
+{% extends "base/base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Create Account" %} — very lift{% endblock %}
+
+{% block content %}
+<div class="min-h-full flex items-center justify-center py-12 px-4">
+  <div class="w-full max-w-sm">
+    <div class="mb-8 text-center">
+      <span class="text-accent font-bold text-2xl">very lift</span>
+    </div>
+
+    {% if registration_closed %}
+    <section class="bg-surface-card border border-line-subtle rounded p-6 text-center">
+      <h1 class="text-lg font-semibold text-content-strong mb-2">{% trans "Registration is currently closed" %}</h1>
+      <p class="text-sm text-content-subtle">{% trans "New account creation isn't available right now. If you believe you should have access, contact the site administrator." %}</p>
+
+      <p class="mt-6 text-center text-sm text-content-subtle">
+        {% trans "Already have an account?" %}
+        <a href="{% url 'accounts:login' %}" class="text-accent hover:underline">{% trans "Sign in" %}</a>
+      </p>
+    </section>
+    {% else %}
+    <section class="bg-surface-card border border-line-subtle rounded p-6">
+      <h1 class="text-lg font-semibold text-content-strong mb-4">{% trans "Create your account" %}</h1>
+
+      {% if invite_challenge %}
+      <p class="mb-4 -mt-2 text-sm text-content-body bg-surface-sunken border border-line-subtle rounded px-3 py-2">
+        {% blocktrans with name=invite_challenge.name %}You've been invited to <strong>{{ name }}</strong>. Create an account to join.{% endblocktrans %}
+      </p>
+      {% endif %}
+
+      <form method="post">
+        {% csrf_token %}
+
+        <div class="mb-4">
+          <label for="id_username" class="block text-sm font-medium text-content-body mb-1">{% trans "Username" %}</label>
+          <input
+            type="text"
+            id="id_username"
+            name="username"
+            value="{{ values.username }}"
+            autofocus
+            autocomplete="username"
+            class="w-full border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent"
+          >
+          {% if errors.username %}<p class="mt-1 text-xs text-danger-dark">{{ errors.username }}</p>{% endif %}
+        </div>
+
+        <div class="mb-4">
+          <label for="id_email" class="block text-sm font-medium text-content-body mb-1">{% trans "Email address" %} <span class="font-normal text-content-subtle">({% trans "optional" %})</span></label>
+          <input
+            type="email"
+            id="id_email"
+            name="email"
+            value="{{ values.email }}"
+            autocomplete="email"
+            class="w-full border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent"
+          >
+          <p class="mt-1 text-xs text-content-subtle">{% trans "Only used to reset your password if you forget it. Without one, there's no way to recover your account." %}</p>
+          {% if errors.email %}<p class="mt-1 text-xs text-danger-dark">{{ errors.email }}</p>{% endif %}
+        </div>
+
+        <div class="mb-4">
+          <label for="id_password" class="block text-sm font-medium text-content-body mb-1">{% trans "Password" %}</label>
+          <input
+            type="password"
+            id="id_password"
+            name="password"
+            autocomplete="new-password"
+            class="w-full border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent"
+          >
+          {% if errors.password %}<p class="mt-1 text-xs text-danger-dark">{{ errors.password }}</p>{% endif %}
+        </div>
+
+        <div class="mb-4">
+          <label for="id_password_confirm" class="block text-sm font-medium text-content-body mb-1">{% trans "Confirm password" %}</label>
+          <input
+            type="password"
+            id="id_password_confirm"
+            name="password_confirm"
+            autocomplete="new-password"
+            class="w-full border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent"
+          >
+        </div>
+
+        <div class="mb-6">
+          <label for="id_liftosaur_api_key" class="block text-sm font-medium text-content-body mb-1">{% trans "Liftosaur API key" %} <span class="font-normal text-content-subtle">({% trans "optional" %})</span></label>
+          <input
+            type="text"
+            id="id_liftosaur_api_key"
+            name="liftosaur_api_key"
+            autocomplete="off"
+            class="w-full border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent"
+          >
+          <p class="mt-1 text-xs text-content-subtle">{% trans "Skip this for now if you'd rather look around first — you can add it anytime from Settings, and you'll only need it when you join a challenge." %}</p>
+          {% if errors.liftosaur_api_key %}<p class="mt-1 text-xs text-danger-dark">{{ errors.liftosaur_api_key }}</p>{% endif %}
+        </div>
+
+        <div class="mb-6">
+          <label for="id_accept_terms" class="flex items-start gap-2 text-sm text-content-body">
+            <input
+              type="checkbox"
+              id="id_accept_terms"
+              name="accept_terms"
+              {% if values.accept_terms %}checked{% endif %}
+              required
+              class="mt-0.5"
+            >
+            <span>
+              {% blocktrans %}I agree to the{% endblocktrans %}
+              <a href="{% url 'terms' %}" target="_blank" class="text-accent hover:underline">{% trans "Terms of Service" %}</a>
+              {% trans "and" %}
+              <a href="{% url 'privacy' %}" target="_blank" class="text-accent hover:underline">{% trans "Privacy Policy" %}</a>.
+            </span>
+          </label>
+          {% if errors.accept_terms %}<p class="mt-1 text-xs text-danger-dark">{{ errors.accept_terms }}</p>{% endif %}
+        </div>
+
+        <button
+          type="submit"
+          class="w-full bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
+          {% trans "Create account" %}
+        </button>
+      </form>
+
+      <p class="mt-6 text-center text-sm text-content-subtle">
+        {% trans "Already have an account?" %}
+        <a href="{% url 'accounts:login' %}" class="text-accent hover:underline">{% trans "Sign in" %}</a>
+      </p>
+
+      <p class="mt-4 text-center text-xs text-content-subtle">
+        <a href="{% url 'terms' %}" class="hover:underline">{% trans "Terms" %}</a>
+        &middot;
+        <a href="{% url 'privacy' %}" class="hover:underline">{% trans "Privacy" %}</a>
+      </p>
+    </section>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

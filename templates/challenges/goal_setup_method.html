@@ -1,0 +1,63 @@
+{% extends "base/wizard.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Set Your Goal" %} — very lift{% endblock %}
+
+{% block wizard_body %}
+    <h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "How do you want to set your goal?" %}</h1>
+    <p class="text-sm text-content-muted mb-2">
+      {% trans "Pick how you want to build your chart for this challenge." %}
+    </p>
+    <p class="text-sm font-medium text-warning mb-6">
+      {% trans "This chart is locked once you confirm it — there's no editing after you join. If a goal turns out wrong, the only fix is starting a new challenge." %}
+    </p>
+
+    {% if form.non_field_errors %}
+    <div class="mb-4 px-4 py-3 rounded bg-danger-light text-danger-dark text-sm font-medium">
+      {% for error in form.non_field_errors %}
+        {{ error }}
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" action="{% url 'challenges:goal-setup' challenge.pk %}" class="bg-surface-card border border-line-subtle rounded p-6">
+      {% csrf_token %}
+      <input type="hidden" name="wizard_step" value="{{ step }}">
+      <div class="mb-6 space-y-2">
+        {% if standards_available %}
+        <label class="flex items-start gap-2 text-sm text-content-body cursor-pointer border border-line-subtle rounded px-3 py-2">
+          <input type="radio" name="method" value="standards" class="mt-0.5"
+                 {% if form.method.value == "standards" or not form.method.value %}checked{% endif %}>
+          <span>
+            <span class="block font-medium">{% trans "Strength standards" %}</span>
+            <small class="block text-xs text-content-muted">{% trans "Pull published strength-standard numbers and use them as your targets." %}</small>
+          </span>
+        </label>
+        {% endif %}
+        <label class="flex items-start gap-2 text-sm text-content-body cursor-pointer border border-line-subtle rounded px-3 py-2">
+          <input type="radio" name="method" value="history" class="mt-0.5"
+                 {% if form.method.value == "history" or not form.method.value and not standards_available %}checked{% endif %}>
+          <span>
+            <span class="block font-medium">{% trans "Suggested from my history" %}</span>
+            <small class="block text-xs text-content-muted">{% trans "Propose targets based on your recent Liftosaur lift history, with a bit of stretch built in." %}</small>
+          </span>
+        </label>
+        <label class="flex items-start gap-2 text-sm text-content-body cursor-pointer border border-line-subtle rounded px-3 py-2">
+          <input type="radio" name="method" value="custom" class="mt-0.5"
+                 {% if form.method.value == "custom" %}checked{% endif %}>
+          <span>
+            <span class="block font-medium">{% trans "Fully custom" %}</span>
+            <small class="block text-xs text-content-muted">{% trans "Type in your own target for each lift, from scratch." %}</small>
+          </span>
+        </label>
+      </div>
+      {% if form.method.errors %}
+      <p class="mt-1 mb-4 text-xs text-danger">{{ form.method.errors|join:", " }}</p>
+      {% endif %}
+      <div class="flex items-center gap-4">
+        <button type="submit" class="bg-accent text-accent-on text-sm font-medium px-6 py-2 rounded hover:bg-accent-hover">
+          {% trans "Continue" %}
+        </button>
+      </div>
+    </form>
+{% endblock %}

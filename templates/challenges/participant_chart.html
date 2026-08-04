@@ -1,0 +1,13 @@
+{% extends "base/app.html" %}
+{% load i18n %}
+
+{% block title %}{{ chart.subject_name }} — {{ challenge.name }} — very lift{% endblock %}
+
+{% block main %}
+    <header class="mb-8">
+      <a href="{% url 'challenges:detail' challenge.pk %}"
+        class="text-sm font-medium text-accent hover:text-accent mb-2 inline-block"
+        data-loading-message="{% trans 'Loading challenge…' %}">← {% trans "Back to challenge" %}</a>
+    </header>
+    {% include "challenges/_participant_chart.html" with standalone=True %}
+{% endblock %}
