@@ -126,12 +126,11 @@ just release            # auto-suggests a YYYY.MM.PATCH version; builds + pushes
 just deploy 2026.8.0     # pulls that exact image, migrates, zero-downtime cutover
 ```
 
-`migrate` and `collectstatic` run automatically via the `pre-deploy` hook, as
-the Postgres owner role. `seed_all` is not part of the automatic deploy path —
-run it on demand when needed:
-```bash
-kamal app exec --roles=release "python manage.py seed_all"
-```
+`migrate`, `collectstatic`, and `seed_all` all run automatically via the
+`pre-deploy` hook, as the Postgres owner role — reference-data fixtures
+(Liftosaur lifts/aliases, FitnessVolt lift aliases) ship inside the image, so
+without reseeding every deploy the DB silently drifts from what the newly
+deployed code expects.
 
 ### docker-compose.prod.yml (self-hosters)
 

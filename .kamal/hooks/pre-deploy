@@ -48,3 +48,13 @@ kamal app exec "${destination_flag[@]}" --roles=release --version="${KAMAL_VERSI
 echo ">> Collecting static files (version ${KAMAL_VERSION})..."
 kamal app exec "${destination_flag[@]}" --roles=release --version="${KAMAL_VERSION}" \
   "python manage.py collectstatic --noinput"
+
+# The corrected fixtures (Liftosaur lifts/aliases, FitnessVolt lift aliases)
+# ship inside the image, so without reseeding every deploy the DB silently
+# drifts from what the newly-deployed code actually expects -- e.g. a renamed
+# alias in this release stops matching and scoring goes quiet with no error.
+# seed_all's sub-commands are idempotent upserts, so this is safe to run on
+# every deploy regardless of whether the fixtures actually changed.
+echo ">> Seeding reference data (version ${KAMAL_VERSION})..."
+kamal app exec "${destination_flag[@]}" --roles=release --version="${KAMAL_VERSION}" \
+  "python manage.py seed_all"
