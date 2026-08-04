@@ -131,6 +131,10 @@ env:
     - DATABASE_URL          # scoped verylift_app role; host is "verylift-db"
     - OIDC_CLIENT_SECRET
     - EMAIL_HOST_PASSWORD
+    # Not a credential, but its entire security value is being unguessable —
+    # a public-repo literal (like ALLOWED_HOSTS/REGISTRATION_OPEN above)
+    # would defeat that, so it's treated as a secret rather than env.clear.
+    - ADMIN_URL_PATH
 
 logging:
   options:
