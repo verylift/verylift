@@ -34,9 +34,12 @@ def test_healthz_returns_503_when_db_unreachable(client):
     assert body["database"] == "down"
 
 
-def test_healthz_hidden_from_non_loopback(client):
+@pytest.mark.django_db
+def test_healthz_reachable_from_non_loopback(client):
+    # Under Kamal, kamal-proxy reaches this endpoint from its own container IP,
+    # never loopback — the check must still succeed.
     response = client.get("/healthz", REMOTE_ADDR="203.0.113.7")
-    assert response.status_code == 404
+    assert response.status_code == 200
 
 
 @pytest.mark.django_db

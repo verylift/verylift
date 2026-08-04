@@ -1,0 +1,105 @@
+service: verylift
+image: verylift/verylift
+
+servers:
+  web:
+    hosts:
+      - <%= ENV.fetch("DEPLOY_HOST") %>
+    options:
+      cap-drop: "ALL"
+      security-opt: "no-new-privileges:true"
+      read-only: true
+      tmpfs: "/tmp:size=64m,mode=1777"
+      memory: "1g"
+      cpus: "2"
+    volumes:
+      - verylift_staticfiles:/app/staticfiles
+      - verylift_media:/app/media
+  # Never registered with kamal-proxy (proxy: false) — exists purely as an exec
+  # target for migrate/collectstatic, running with the OWNER Postgres role so
+  # that credential never lands in the long-running web container's env.
+  release:
+    hosts:
+      - <%= ENV.fetch("DEPLOY_HOST") %>
+    proxy: false
+    options:
+      cap-drop: "ALL"
+      security-opt: "no-new-privileges:true"
+      read-only: true
+      tmpfs: "/tmp:size=64m,mode=1777"
+      memory: "1g"
+      cpus: "2"
+    env:
+      secret:
+        - DATABASE_URL:OWNER_DATABASE_URL   # overrides the app-role URL below
+
+proxy:
+  app_port: 8000
+  ssl: false                # Cloudflare Tunnel terminates TLS; kamal-proxy speaks plain HTTP
+  host: <%= ENV.fetch("DEPLOY_HOST_NAME") %>
+  healthcheck:
+    path: /healthz
+    interval: 5
+    timeout: 5
+  run:
+    bind_ips:
+      - 127.0.0.1            # loopback-only; cloudflared is the only forwarder
+
+registry:
+  server: ghcr.io
+  username: <%= ENV.fetch("GHCR_USERNAME") %>
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+builder:
+  arch: amd64                # target VPS arch
+
+# Reached over Kamal's private Docker network as host "verylift-db"
+# (<service>-<accessory-key>) — no host port publish needed or added.
+accessories:
+  db:
+    image: postgres:16-alpine
+    host: <%= ENV.fetch("DEPLOY_HOST") %>
+    env:
+      clear:
+        POSTGRES_DB: verylift
+        POSTGRES_USER: verylift
+        POSTGRES_APP_USER: verylift_app
+      secret:
+        - POSTGRES_PASSWORD
+        - POSTGRES_APP_PASSWORD
+    directories:
+      - data:/var/lib/postgresql/data
+    files:
+      - scripts/db/init-app-role.sh:/docker-entrypoint-initdb.d/init-app-role.sh
+    options:
+      security-opt: "no-new-privileges:true"
+      memory: "512m"
+      cpus: "1"
+      # Not cap-drop: ALL — postgres's entrypoint starts as root and needs
+      # SETUID/SETGID/CHOWN/DAC_OVERRIDE/FOWNER to drop to the postgres user
+      # and fix volume ownership (same reasoning as docker-compose.prod.yml).
+
+volumes:
+  # Shared between `web` (serves) and `release` (collectstatic writes) so
+  # what's collected is what's served, matching docker-compose.prod.yml's
+  # staticfiles named volume under read_only.
+  - verylift_staticfiles:/app/staticfiles
+
+env:
+  clear:
+    DJANGO_SETTINGS_MODULE: root.settings_prod
+    ALLOWED_HOSTS: <%= ENV.fetch("ALLOWED_HOSTS") %>
+    GUNICORN_WORKERS: "5"
+  secret:
+    - SECRET_KEY
+    - FIELD_ENCRYPTION_KEYS
+    - DATABASE_URL          # scoped verylift_app role; host is "verylift-db"
+    - OIDC_CLIENT_SECRET
+    - EMAIL_HOST_PASSWORD
+
+logging:
+  options:
+    max-size: "10m"
+
+hooks_path: .kamal/hooks

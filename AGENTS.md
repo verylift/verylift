@@ -31,10 +31,18 @@ just ci
 
 ## Release process
 
-To cut a release, run `just release vX.Y.Z`. Do not hand-tag or hand-stamp
-the changelog — always use `just release`, or the release-notes step has no
-`## <version>` section to read. This only stamps `CHANGELOG.md` and pushes a
-tag — nothing automated builds or deploys from it.
+Versions are date-based (`YYYY.MM.PATCH`, e.g. `2026.8.0`), not semver — no `v`
+prefix, and PATCH is a plain incrementing counter that resets each month, not
+itself date-derived.
+
+To cut a release, run `just release` (auto-suggests the next `YYYY.MM.PATCH`
+and asks for confirmation) or `just release YYYY.MM.PATCH` with an explicit
+version. Do not hand-tag or hand-stamp the changelog — always use
+`just release`, or the release-notes step has no `## <version>` section to
+read. This stamps `CHANGELOG.md`, builds the production image, and pushes both
+the image (to `ghcr.io`) and the git tag — it does not deploy. Run
+`just deploy YYYY.MM.PATCH` separately to pull that image and cut over on the
+VPS via Kamal (see the README's Deployment section).
 
 ### Changelog requirement
 

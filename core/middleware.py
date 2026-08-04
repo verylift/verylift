@@ -2,9 +2,16 @@
 
 Serves ``GET /healthz`` for orchestration liveness/readiness probes. Implemented
 as middleware rather than a URL-routed view so it runs *before* SecurityMiddleware:
-in production ``SECURE_SSL_REDIRECT`` would otherwise 301 a plain-HTTP loopback
-probe, and the loopback host is intentionally absent from ``ALLOWED_HOSTS``. Short
--circuiting here sidesteps both without weakening either setting for real traffic.
+in production ``SECURE_SSL_REDIRECT`` would otherwise 301 a plain-HTTP probe, and
+the probing host is intentionally absent from ``ALLOWED_HOSTS``. Short-circuiting
+here sidesteps both without weakening either setting for real traffic.
+
+Unauthenticated and reachable from any address: under Kamal, kamal-proxy is a
+separate container reaching this endpoint over Kamal's private Docker network,
+so ``REMOTE_ADDR`` is never loopback there. The app container has no
+host-published port at all (only kamal-proxy does), so exposure is already
+bounded by network topology, not by a check here. The response body carries
+nothing sensitive.
 """
 
 import logging
@@ -15,12 +22,6 @@ from django.http import JsonResponse
 logger = logging.getLogger(__name__)
 
 _HEALTH_PATH = "/healthz"
-
-# Loopback only. gunicorn is not behind a reverse proxy in production, so any
-# non-loopback REMOTE_ADDR is an external probe and gets a 404 (endpoint hidden).
-# REVISIT if a reverse proxy is added: REMOTE_ADDR would then be the proxy's
-# address and this check would need X-Forwarded-For handling instead.
-_LOOPBACK_ADDRS = frozenset({"127.0.0.1", "::1"})
 
 
 class HealthCheckMiddleware:
@@ -33,9 +34,6 @@ class HealthCheckMiddleware:
         return self.get_response(request)
 
     def _healthz(self, request):
-        if request.META.get("REMOTE_ADDR") not in _LOOPBACK_ADDRS:
-            return JsonResponse({"status": "not_found"}, status=404)
-
         try:
             with connection.cursor() as cursor:
                 cursor.execute("SELECT 1")

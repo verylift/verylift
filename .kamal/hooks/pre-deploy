@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Runs on the deploying machine, after build+push, before the web role boots
+# the new version. Uses the `release` role so migrations run as the OWNER
+# Postgres role, never the scoped app role `web` runs with.
+set -euo pipefail
+
+echo ">> Running migrations as owner role (version ${KAMAL_VERSION})..."
+kamal app exec --roles=release --version="${KAMAL_VERSION}" \
+  "python manage.py migrate --noinput"
+
+echo ">> Collecting static files (version ${KAMAL_VERSION})..."
+kamal app exec --roles=release --version="${KAMAL_VERSION}" \
+  "python manage.py collectstatic --noinput"

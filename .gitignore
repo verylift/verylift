@@ -17,6 +17,7 @@ media/
 .env
 .env.authentik
 .env.pangolin
+.env.kamal
 
 # Coverage
 .coverage
