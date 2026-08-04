@@ -87,14 +87,15 @@ health-gated cutover, and a Postgres accessory alongside the app container.
 Prerequisites:
 - `gem install kamal` and Docker, on whatever machine you deploy from
 - the Bitwarden CLI (`bw`), with SSH access to the VPS
-- a GHCR PAT and the app's other secrets stored as Bitwarden vault items (see
-  the list below)
+- a GHCR PAT and the app's other secrets stored as Bitwarden vault items
+  (`.kamal/secrets-common` and `.kamal/load-env.sh` are the source of truth
+  for exactly which ones)
 - on the VPS itself: Docker, and 80/443 not published to the internet — this
   setup expects an inbound tunnel (e.g. Cloudflare Tunnel) forwarding to
   `localhost:80` in front of kamal-proxy, which binds loopback-only
 
-Deploy-time config lives entirely in the "very lift" Bitwarden folder — no
-local env file to copy or fill in. Two kinds of value, handled differently:
+Deploy-time config comes entirely from Bitwarden — no local env file to copy
+or fill in. Two kinds of value, handled differently:
 - **Secrets** consumed by the running container (`SECRET_KEY`,
   `DATABASE_URL`, etc.) are read directly by Kamal itself via
   `.kamal/secrets-common`, which shells out to `bw get password <item>` —
@@ -110,6 +111,8 @@ local env file to copy or fill in. Two kinds of value, handled differently:
   export BW_SESSION="$(bw unlock --raw)"
   source .kamal/load-env.sh
   ```
+  See `.kamal/load-env.sh` and `.kamal/secrets-common` for the exact vault
+  items this deployment expects.
 
 One-time setup:
 ```bash
@@ -129,11 +132,6 @@ run it on demand when needed:
 ```bash
 kamal app exec --roles=release "python manage.py seed_all"
 ```
-
-Bitwarden vault items required, all in the "very lift" folder:
-- `verylift-ghcr` (login) — `username`/`password` are the GHCR PAT's owner and the PAT itself
-- `verylift-deploy-config` (secure note, 4 custom fields) — `deploy_host`, `deploy_ssh_user`, `deploy_host_name`, `allowed_hosts` (this one supports a leading-dot wildcard, e.g. `.verylift.com`, to match every subdomain — `deploy_host_name` does not, since kamal-proxy's Host-header routing has no wildcard support and needs the exact hostname(s) currently routed through the tunnel)
-- `verylift-secret-key`, `verylift-field-encryption-keys`, `verylift-postgres-password`, `verylift-postgres-app-password`, `verylift-oidc-client-secret`, `verylift-email-host-password` (password-type, one value each)
 
 ### docker-compose.prod.yml (self-hosters)
 
