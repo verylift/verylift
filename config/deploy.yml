@@ -108,6 +108,9 @@ env:
     DJANGO_SETTINGS_MODULE: root.settings_prod
     ALLOWED_HOSTS: <%= ENV.fetch("ALLOWED_HOSTS") %>
     GUNICORN_WORKERS: "5"
+    # Closed until this deployment is ready for real signups — not a secret,
+    # just an operational policy toggle.
+    REGISTRATION_OPEN: "False"
   secret:
     - SECRET_KEY
     - FIELD_ENCRYPTION_KEYS
