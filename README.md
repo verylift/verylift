@@ -93,12 +93,27 @@ Prerequisites:
   setup expects an inbound tunnel (e.g. Cloudflare Tunnel) forwarding to
   `localhost:80` in front of kamal-proxy, which binds loopback-only
 
+Deploy-time config lives entirely in the "very lift" Bitwarden folder — no
+local env file to copy or fill in. Two kinds of value, handled differently:
+- **Secrets** consumed by the running container (`SECRET_KEY`,
+  `DATABASE_URL`, etc.) are read directly by Kamal itself via
+  `.kamal/secrets-common`, which shells out to `bw get password <item>` —
+  nothing to export for these.
+- **`config/deploy.yml`'s own structure** (which host to SSH to, what
+  hostname kamal-proxy expects) is resolved via ERB from the real shell
+  environment at parse time, before secrets are loaded at all — Kamal has no
+  first-class Bitwarden integration for this part, only for secrets. Source
+  `.kamal/load-env.sh` before every `kamal` invocation to pull these from
+  Bitwarden instead of relying on manually-exported (and easily stale)
+  shell variables:
+  ```bash
+  export BW_SESSION="$(bw unlock --raw)"
+  source .kamal/load-env.sh
+  ```
+
 One-time setup:
 ```bash
-cp .env.kamal.example .env.kamal   # fill in DEPLOY_HOST, DEPLOY_SSH_USER, DEPLOY_HOST_NAME, GHCR_USERNAME, ALLOWED_HOSTS
-set -a; source .env.kamal; set +a
-export BW_SESSION="$(bw unlock --raw)"
-kamal setup                        # first-time bootstrap: builds, pushes, boots everything
+kamal setup   # first-time bootstrap: builds, pushes, boots everything
 ```
 
 Thereafter, cutting and shipping a release are two separate steps on purpose —
@@ -115,10 +130,10 @@ run it on demand when needed:
 kamal app exec --roles=release "python manage.py seed_all"
 ```
 
-Bitwarden vault items required (password-type, one value each):
-`verylift-ghcr-pat`, `verylift-secret-key`, `verylift-field-encryption-keys`,
-`verylift-oidc-client-secret`, `verylift-email-host-password`,
-`verylift-postgres-password`, `verylift-postgres-app-password`.
+Bitwarden vault items required, all in the "very lift" folder:
+- `verylift-ghcr` (login) — `username`/`password` are the GHCR PAT's owner and the PAT itself
+- `verylift-deploy-config` (secure note, 4 custom fields) — `deploy_host`, `deploy_ssh_user`, `deploy_host_name`, `allowed_hosts` (this one supports a leading-dot wildcard, e.g. `.verylift.com`, to match every subdomain — `deploy_host_name` does not, since kamal-proxy's Host-header routing has no wildcard support and needs the exact hostname(s) currently routed through the tunnel)
+- `verylift-secret-key`, `verylift-field-encryption-keys`, `verylift-postgres-password`, `verylift-postgres-app-password`, `verylift-oidc-client-secret`, `verylift-email-host-password` (password-type, one value each)
 
 ### docker-compose.prod.yml (self-hosters)
 

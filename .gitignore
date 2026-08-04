@@ -17,7 +17,6 @@ media/
 .env
 .env.authentik
 .env.pangolin
-.env.kamal
 config/deploy.local.yml
 
 # Coverage
