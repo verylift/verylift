@@ -124,6 +124,11 @@ env:
     GUNICORN_WORKERS: "5"
     # Not a secret, just an operational policy toggle.
     REGISTRATION_OPEN: "True"
+    # Rollout gate for FitnessVolt strength standards (see root/settings.py) —
+    # after deploying with this on, run `refresh_fitnessvolt_cache` once to
+    # warm the first snapshot; that command isn't part of the automatic
+    # pre-deploy seeding since it hits the live FitnessVolt API.
+    FITNESSVOLT_ENABLED: "True"
   secret:
     - SECRET_KEY
     - FIELD_ENCRYPTION_KEYS
