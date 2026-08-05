@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 2026.8.3 — 2026-08-05
+
+### Changed
+- FitnessVolt strength standards are now enabled (requires a one-time `refresh_fitnessvolt_cache` run to populate the first snapshot).
+
 ## 2026.8.2 — 2026-08-04
 
 ### Fixed
