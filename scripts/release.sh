@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
-# Cut a release end to end: validate, collect changelog, stamp the heading,
-# commit, tag, and push. Publishing/deploying from that tag is a separate,
-# deployment-specific concern — see the README's Deployment section.
+# Cut a release end to end: validate (or auto-suggest) a version, collect
+# changelog, stamp the heading, build + push the production image via Kamal,
+# commit, tag, and push. Building is no longer a separate, deployment-specific
+# concern — it happens here so the pushed image matches the tagged commit
+# exactly; `just deploy` only pulls and cuts over. Requires `kamal` (and
+# Docker) available on whatever machine runs this script.
 #
-# Usage: scripts/release.sh vX.Y.Z
+# Usage: scripts/release.sh [YYYY.MM.PATCH]
+# Omit the version to get an auto-suggested one based on today's date and the
+# highest existing patch already tagged this month.
 #
 # Fails fast (before any mutation) if:
-#   - the version is not vX.Y.Z
+#   - the version is not YYYY.MM.PATCH
 #   - you are not on main
 #   - the working tree is dirty
 #   - the tag already exists locally or on origin
@@ -22,12 +27,27 @@ die() {
 }
 
 ver="${1:-}"
-[ -n "$ver" ] || die "usage: just release vX.Y.Z"
+
+if [ -z "$ver" ]; then
+    git fetch --tags "$REMOTE" >/dev/null 2>&1 || true
+    year="$(date +%Y)"
+    month=$((10#$(date +%m)))   # strip any leading zero; portable (no GNU date -%-m)
+    prefix="${year}.${month}."
+    last_patch="$(git tag -l "${prefix}*" | sed -E "s/^${prefix}//" | sort -n | tail -1)"
+    patch=$(( ${last_patch:-0} + $([ -n "$last_patch" ] && echo 1 || echo 0) ))
+    suggested="${prefix}${patch}"
+    printf 'No version given. Suggested version: %s\n' "$suggested"
+    read -r -p "Use this version? [Y/n] " confirm
+    case "$confirm" in
+        [nN]*) die "aborted — pass an explicit version: just release YYYY.MM.PATCH" ;;
+        *) ver="$suggested" ;;
+    esac
+fi
 
 # --- Preconditions (all checked before we mutate anything) ---
 
-echo "$ver" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$' \
-    || die "version must look like vX.Y.Z (got '$ver')"
+echo "$ver" | grep -qE '^[0-9]{4}\.[0-9]{1,2}\.[0-9]+$' \
+    || die "version must look like YYYY.MM.PATCH (got '$ver')"
 
 [ -f "$CHANGELOG" ] || die "$CHANGELOG not found (run from the repo root)"
 
@@ -64,11 +84,15 @@ echo ">> Stamping CHANGELOG: ## Unreleased -> ## $ver — $today"
 # the stamped version heading so future releases collect cleanly.
 sed -i "s/^## Unreleased\$/## Unreleased\n\n## $ver — $today/" "$CHANGELOG"
 
-# --- Commit, tag, push ---
+# --- Commit, tag, build + push image, push ---
 
 git add "$CHANGELOG"
 ALLOW_RELEASE_COMMIT=1 git commit -m "chore(release): $ver"
 git tag "$ver"
+
+echo ">> Building and pushing production image (version $ver)..."
+kamal build push --version="$ver"
+
 echo ">> Pushing main + tag $ver to $REMOTE..."
 git push "$REMOTE" HEAD "$ver"
 

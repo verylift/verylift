@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# Runs on the deploying machine, after build+push, before the web role boots
+# the new version. Uses the `release` role so migrations run as the OWNER
+# Postgres role, never the scoped app role `web` runs with.
+set -euo pipefail
+
+# Kamal sets KAMAL_DESTINATION for hooks when the parent command used -d, but
+# does NOT propagate it to subprocesses automatically — without re-passing it
+# here, these `kamal` calls silently fall back to the destination-less
+# (production) config, targeting the wrong image/env entirely under any -d run.
+destination_flag=()
+if [ -n "${KAMAL_DESTINATION:-}" ]; then
+  destination_flag=(-d "${KAMAL_DESTINATION}")
+fi
+
+# The shared "kamal" Docker network, the `db` accessory, and the `release`
+# role's env file are all normally created/staged as later steps of the
+# regular deploy flow (proxy:boot, accessory:boot, app:boot) — all of which
+# run AFTER pre-deploy hooks. Since this hook needs all three to exist before
+# it can run migrations, stand them up explicitly first. Each call is
+# idempotent, so this is a no-op on every deploy after the first.
+echo ">> Ensuring the kamal Docker network exists..."
+kamal server exec "${destination_flag[@]}" "docker network create kamal || true"
+
+echo ">> Ensuring the db accessory is running..."
+kamal accessory boot "${destination_flag[@]}" db
+
+# `kamal app exec` never uploads a role's env file itself — it only reads one
+# already staged on the server, which normally happens the first time a role
+# is booted (`kamal app boot`). Since `release` is exec-only and never boots
+# through the normal deploy flow, nothing stages its env before this hook runs.
+# Boot it explicitly first: this both stages the env and starts the (inert,
+# `cmd: sleep infinity`) container so `app.status` reports "running" and
+# passes Kamal's readiness check trivially.
+#
+# Note this container stays running afterward regardless: Kamal's own
+# app:boot step (which runs right after this hook) boots every declared role,
+# release included, with no way to opt a role out — so there is no way to
+# make this genuinely exec-only/ephemeral. Stopping it here would only be
+# undone seconds later when app:boot reboots it anyway.
+echo ">> Booting release role (version ${KAMAL_VERSION})..."
+kamal app boot "${destination_flag[@]}" --roles=release --version="${KAMAL_VERSION}"
+
+echo ">> Running migrations as owner role (version ${KAMAL_VERSION})..."
+kamal app exec "${destination_flag[@]}" --roles=release --version="${KAMAL_VERSION}" \
+  "python manage.py migrate --noinput"
+
+echo ">> Collecting static files (version ${KAMAL_VERSION})..."
+kamal app exec "${destination_flag[@]}" --roles=release --version="${KAMAL_VERSION}" \
+  "python manage.py collectstatic --noinput"
+
+# The corrected fixtures (Liftosaur lifts/aliases, FitnessVolt lift aliases)
+# ship inside the image, so without reseeding every deploy the DB silently
+# drifts from what the newly-deployed code actually expects -- e.g. a renamed
+# alias in this release stops matching and scoring goes quiet with no error.
+# seed_all's sub-commands are idempotent upserts, so this is safe to run on
+# every deploy regardless of whether the fixtures actually changed.
+echo ">> Seeding reference data (version ${KAMAL_VERSION})..."
+kamal app exec "${destination_flag[@]}" --roles=release --version="${KAMAL_VERSION}" \
+  "python manage.py seed_all"

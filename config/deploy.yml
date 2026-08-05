@@ -1,0 +1,142 @@
+service: verylift
+image: verylift/verylift
+
+# Non-root on purpose: harden-vps.sh disables root SSH login (PermitRootLogin
+# no) on the target VPS. This must be a literal here, not left to a
+# ~/.ssh/config `User` directive on the "verylift-prod" alias below — Kamal's
+# ssh.user always resolves to an explicit value (defaults to "root" if unset)
+# and passes it straight to Net::SSH, which only consults ssh_config's `User`
+# line when no explicit user is given in code. A username isn't sensitive
+# the way the server's real IP is, so a literal here is fine.
+ssh:
+  user: admin
+
+servers:
+  web:
+    # "verylift-prod" is an SSH config Host alias (~/.ssh/config, personal,
+    # never committed) resolving to the VPS's real address and identity file.
+    # That's deliberate: the real SSH-reachable IP is the one thing in this
+    # deployment that stays out of the public repo, and SSH's own alias
+    # mechanism handles that indirection natively — no need to route it
+    # through Kamal-specific env vars. See the README for the ~/.ssh/config
+    # shape this expects. Everything else below (the public hostname, the
+    # GHCR org, ALLOWED_HOSTS) is already public knowledge — verylift.com is
+    # public DNS, verylift/verylift is already the literal image path in
+    # docker-compose.prod.yml — so there's no reason to hide those too.
+    hosts:
+      - verylift-prod
+    options:
+      cap-drop: "ALL"
+      security-opt: "no-new-privileges:true"
+      read-only: true
+      tmpfs: "/tmp:size=64m,mode=1777"
+      memory: "1g"
+      cpus: "2"
+  # Never registered with kamal-proxy (proxy: false) — exists as an exec target
+  # for migrate/collectstatic, running with the OWNER Postgres role so that
+  # credential never lands in the long-running web container's env. Kamal boots
+  # every declared role as a real container regardless of proxy status (there's
+  # no boot-exempt role type), so `cmd: sleep infinity` keeps it inert — never
+  # runs gunicorn, opens no port — rather than idling on the app's default CMD
+  # with owner DB credentials in its env. It still runs continuously between
+  # deploys (Kamal's app:boot step keeps every declared role running, with no
+  # way to opt one out) — .kamal/hooks/pre-deploy boots it early so its env
+  # is staged before migrate/collectstatic run against it, not to make it
+  # ephemeral.
+  release:
+    hosts:
+      - verylift-prod
+    proxy: false
+    cmd: "sleep infinity"
+    options:
+      cap-drop: "ALL"
+      security-opt: "no-new-privileges:true"
+      read-only: true
+      tmpfs: "/tmp:size=64m,mode=1777"
+      memory: "1g"
+      cpus: "2"
+    env:
+      secret:
+        - DATABASE_URL:OWNER_DATABASE_URL   # overrides the app-role URL below
+
+proxy:
+  app_port: 8000
+  ssl: false                # Cloudflare Tunnel terminates TLS; kamal-proxy speaks plain HTTP
+  host: verylift.com
+  healthcheck:
+    path: /healthz
+    interval: 5
+    timeout: 5
+  run:
+    bind_ips:
+      - 127.0.0.1            # loopback-only; cloudflared is the only forwarder
+
+registry:
+  server: ghcr.io
+  username: verylift
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+builder:
+  arch: amd64                # target VPS arch
+
+# Reached over Kamal's private Docker network as host "verylift-db"
+# (<service>-<accessory-key>) — no host port publish needed or added.
+accessories:
+  db:
+    image: postgres:16-alpine
+    host: verylift-prod
+    env:
+      clear:
+        POSTGRES_DB: verylift
+        POSTGRES_USER: verylift
+        POSTGRES_APP_USER: verylift_app
+      secret:
+        - POSTGRES_PASSWORD
+        - POSTGRES_APP_PASSWORD
+    directories:
+      - data:/var/lib/postgresql/data
+    files:
+      - scripts/db/init-app-role.sh:/docker-entrypoint-initdb.d/init-app-role.sh
+    options:
+      security-opt: "no-new-privileges:true"
+      memory: "512m"
+      cpus: "1"
+      # Not cap-drop: ALL — postgres's entrypoint starts as root and needs
+      # SETUID/SETGID/CHOWN/DAC_OVERRIDE/FOWNER to drop to the postgres user
+      # and fix volume ownership (same reasoning as docker-compose.prod.yml).
+
+volumes:
+  # Kamal's `volumes:` key is service-wide, not per-role (confirmed: `servers.<role>`
+  # has no `volumes` key), so both mounts land on every role including `release` —
+  # harmless there since `release` already carries the higher-trust owner DB
+  # credential. `staticfiles` is shared between `web` (serves) and `release`
+  # (collectstatic writes) so what's collected is what's served, matching
+  # docker-compose.prod.yml's staticfiles named volume under read_only. `media`
+  # is user-upload content `release` never touches, but can't be scoped out.
+  - verylift_staticfiles:/app/staticfiles
+  - verylift_media:/app/media
+
+env:
+  clear:
+    DJANGO_SETTINGS_MODULE: root.settings_prod
+    ALLOWED_HOSTS: .verylift.com
+    GUNICORN_WORKERS: "5"
+    # Not a secret, just an operational policy toggle.
+    REGISTRATION_OPEN: "True"
+  secret:
+    - SECRET_KEY
+    - FIELD_ENCRYPTION_KEYS
+    - DATABASE_URL          # scoped verylift_app role; host is "verylift-db"
+    - OIDC_CLIENT_SECRET
+    - EMAIL_HOST_PASSWORD
+    # Not a credential, but its entire security value is being unguessable —
+    # a public-repo literal (like ALLOWED_HOSTS/REGISTRATION_OPEN above)
+    # would defeat that, so it's treated as a secret rather than env.clear.
+    - ADMIN_URL_PATH
+
+logging:
+  options:
+    max-size: "10m"
+
+hooks_path: .kamal/hooks

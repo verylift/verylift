@@ -75,18 +75,76 @@ just fix         # auto-fix lint/format issues
 
 ## Deployment
 
-Releases are published as Docker images to `ghcr.io/verylift/verylift`. How you run
-that image in production is up to you — use Docker Compose, Kamal, Swarm, or
-whatever fits your infrastructure.
+Releases are published as Docker images to `ghcr.io/verylift/verylift`. Two
+supported paths, depending on who's deploying:
+
+### Kamal (this repo's maintainers)
+
+`config/deploy.yml` and `.kamal/` drive a single-VPS deploy via
+[Kamal](https://kamal-deploy.org): kamal-proxy in front for zero-downtime,
+health-gated cutover, and a Postgres accessory alongside the app container.
+
+Prerequisites:
+- `gem install kamal` and Docker, on whatever machine you deploy from
+- the Bitwarden CLI (`bw`)
+- a GHCR PAT and the app's other secrets stored as Bitwarden vault items
+  (`.kamal/secrets-common` is the source of truth for exactly which ones)
+- an SSH config entry (`~/.ssh/config`, personal, never committed) that
+  resolves a `verylift-prod` host alias to the VPS's real address and
+  identity file:
+  ```
+  Host verylift-prod
+    HostName <the VPS's real IP or hostname>
+    IdentityFile <path to your admin SSH key>
+  ```
+  `config/deploy.yml` references this alias by name, not the real address —
+  that's the one piece of this deployment's config that's genuinely
+  sensitive and kept out of the (public) repo. Everything else Kamal needs
+  (the SSH user, the public hostname, the GHCR org) is already public
+  knowledge one way or another, so it's a plain literal in `config/deploy.yml`
+  rather than indirected through anything.
+- on the VPS itself: Docker, and 80/443 not published to the internet — this
+  setup expects an inbound tunnel (e.g. Cloudflare Tunnel) forwarding to
+  `localhost:80` in front of kamal-proxy, which binds loopback-only
+
+The only thing to do before any `kamal` invocation is unlock Bitwarden, for
+the secrets `.kamal/secrets-common` resolves at parse time — nothing else to
+export or source:
+```bash
+export BW_SESSION="$(bw unlock --raw)"
+```
+
+One-time setup:
+```bash
+kamal setup   # first-time bootstrap: builds, pushes, boots everything
+```
+
+Thereafter, cutting and shipping a release are two separate steps on purpose —
+tagging a release never automatically deploys it:
+```bash
+just release            # auto-suggests a YYYY.MM.PATCH version; builds + pushes the image, stamps CHANGELOG.md, tags
+just deploy 2026.8.0     # pulls that exact image, migrates, zero-downtime cutover
+```
+
+`migrate`, `collectstatic`, and `seed_all` all run automatically via the
+`pre-deploy` hook, as the Postgres owner role — reference-data fixtures
+(Liftosaur lifts/aliases, FitnessVolt lift aliases) ship inside the image, so
+without reseeding every deploy the DB silently drifts from what the newly
+deployed code expects.
+
+### docker-compose.prod.yml (self-hosters)
 
 `docker-compose.prod.yml` is provided as a working reference, not a prescription:
 Postgres alongside the app, network isolation, dropped capabilities, a read-only
 root filesystem, and resource limits, with the reasoning for each choice inline
 in its comments. Feel free to deviate from it.
 
+### Database
+
 If a host can't run Postgres, `DATABASE_URL` is optional — leaving it unset falls
 back to a local SQLite file (`db.sqlite3`) instead of failing to start. Set
-`DATABASE_URL` to opt back into Postgres.
+`DATABASE_URL` to opt back into Postgres. This applies to both deployment paths
+above.
 
 ## Security
 
@@ -106,12 +164,16 @@ for your own project.
 ## Cutting a release
 
 ```bash
-just release v1.2.3  # extracts changelog, stamps CHANGELOG.md, tags, pushes
+just release            # extracts changelog, stamps CHANGELOG.md, tags, builds + pushes the image, pushes
 ```
 
-This stamps `CHANGELOG.md` and creates a git tag — nothing automated builds or
-publishes an image from it. Building and deploying is up to you (see
-Deployment above).
+Versions are `YYYY.MM.PATCH` (e.g. `2026.8.0`) — omit the argument to get an
+auto-suggested one based on today's date, or pass one explicitly (e.g.
+`just release 2026.8.1`). Unlike before, this now also builds and pushes the
+production image via `kamal build push`, so `kamal` and Docker must be
+available on whatever machine cuts the release. It still doesn't deploy
+anything — run `just deploy <version>` as the follow-on step (see Deployment
+above).
 
 ## License
 

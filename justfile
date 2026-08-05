@@ -39,9 +39,16 @@ audit:
 changelog:
     ./scripts/extract_changelog.sh
 
-# Cut a release end to end: validate, collect changelog, stamp the heading, commit, tag, and push (e.g. just release v1.2.3)
-release ver:
+# Cut a release end to end: validate (or suggest) a version, collect changelog,
+# stamp the heading, build + push the production image, commit, tag, and push.
+# Omit ver to get an auto-suggested YYYY.MM.PATCH based on today's date.
+release ver="":
     ./scripts/release.sh {{ver}}
+
+# Deploy an already-released version via Kamal: pulls the pre-built image
+# (no rebuild), runs migrate/collectstatic, zero-downtime cutover
+deploy ver:
+    kamal deploy --skip-push --version="{{ver}}"
 
 # Run a given django management command
 manage command +args="":

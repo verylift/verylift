@@ -17,6 +17,7 @@ media/
 .env
 .env.authentik
 .env.pangolin
+config/deploy.local.yml
 
 # Coverage
 .coverage
