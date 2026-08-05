@@ -7,6 +7,7 @@ an encrypted value. System checks run before migrate, runserver and
 collectstatic, so a bad key fails loudly at deploy time instead.
 """
 
+from django.conf import settings
 from django.core import checks
 from django.core.exceptions import ImproperlyConfigured
 
@@ -28,6 +29,30 @@ def check_field_encryption_keys(app_configs, **kwargs):
                     "keys kept for decryption."
                 ),
                 id="core.E001",
+            )
+        ]
+    return []
+
+
+@checks.register(checks.Tags.security)
+def check_admin_url_path(app_configs, **kwargs):
+    # root/urls.py does path(settings.ADMIN_URL_PATH, admin.site.urls) -- an
+    # empty string registers the admin urlconf at the site root, shadowing
+    # every other URL. env.bool-style "unset falls back to a safe default"
+    # doesn't apply here: ADMIN_URL_PATH already has a Python-level default
+    # ("the-rack/"), so reaching this check with a falsy value means something
+    # upstream (e.g. a secrets store) explicitly supplied an empty string,
+    # which is exactly what needs to fail loudly rather than deploy.
+    if not settings.ADMIN_URL_PATH:
+        return [
+            checks.Error(
+                "ADMIN_URL_PATH is empty, which serves the Django admin at the "
+                "site root instead of a vanity path.",
+                hint=(
+                    "Set ADMIN_URL_PATH to a non-guessable path ending in '/' "
+                    "(e.g. 'the-rack/')."
+                ),
+                id="core.E002",
             )
         ]
     return []
