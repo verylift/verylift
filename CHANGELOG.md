@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 2026.8.2 — 2026-08-04
+
+### Fixed
+- Production images no longer ship the local `.kamal/` and `config/` directories, which were never needed at runtime.
+
 ## 2026.8.1 — 2026-08-04
 
 ### Added
