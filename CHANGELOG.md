@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 2026.8.1 — 2026-08-04
+
+### Added
+- `just release` now also creates a GitHub Release from the version's changelog section.
+
+### Fixed
+- Pushed production images now show up under this repo's GitHub Packages tab instead of only the org's general package listing.
+
 ## 2026.8.0 — 2026-08-04
 
 ### Added
