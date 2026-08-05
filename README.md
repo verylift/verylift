@@ -164,16 +164,16 @@ for your own project.
 ## Cutting a release
 
 ```bash
-just release            # extracts changelog, stamps CHANGELOG.md, tags, builds + pushes the image, pushes
+just release            # extracts changelog, stamps CHANGELOG.md, tags, builds + pushes the image, pushes, creates a GitHub Release
 ```
 
 Versions are `YYYY.MM.PATCH` (e.g. `2026.8.0`) — omit the argument to get an
 auto-suggested one based on today's date, or pass one explicitly (e.g.
-`just release 2026.8.1`). Unlike before, this now also builds and pushes the
-production image via `kamal build push`, so `kamal` and Docker must be
-available on whatever machine cuts the release. It still doesn't deploy
-anything — run `just deploy <version>` as the follow-on step (see Deployment
-above).
+`just release 2026.8.1`). This also builds and pushes the production image
+via `kamal build push` and creates a GitHub Release from that version's
+changelog section, so `kamal`, Docker, and the `gh` CLI must be available on
+whatever machine cuts the release. It still doesn't deploy anything — run
+`just deploy <version>` as the follow-on step (see Deployment above).
 
 ## License
 

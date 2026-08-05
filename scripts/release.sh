@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # Cut a release end to end: validate (or auto-suggest) a version, collect
 # changelog, stamp the heading, build + push the production image via Kamal,
-# commit, tag, and push. Building is no longer a separate, deployment-specific
-# concern — it happens here so the pushed image matches the tagged commit
-# exactly; `just deploy` only pulls and cuts over. Requires `kamal` (and
-# Docker) available on whatever machine runs this script.
+# commit, tag, push, and create a GitHub Release from that tag's changelog
+# section. Building is no longer a separate, deployment-specific concern —
+# it happens here so the pushed image matches the tagged commit exactly;
+# `just deploy` only pulls and cuts over. Requires `kamal` (and Docker) and
+# the `gh` CLI (already a dependency via extract_changelog.sh) available on
+# whatever machine runs this script.
 #
 # Usage: scripts/release.sh [YYYY.MM.PATCH]
 # Omit the version to get an auto-suggested one based on today's date and the
@@ -95,5 +97,18 @@ kamal build push --version="$ver"
 
 echo ">> Pushing main + tag $ver to $REMOTE..."
 git push "$REMOTE" HEAD "$ver"
+
+# --- Create a GitHub Release from this version's changelog section ---
+
+echo ">> Creating GitHub Release $ver..."
+# Matches the heading this script itself just stamped ("## $ver — $today"),
+# anchored so a version that happens to be a prefix of another (unlikely
+# under YYYY.MM.PATCH, but cheap to guard) can't match the wrong section.
+release_notes="$(awk -v heading="## $ver " '
+    index($0, heading) == 1 { grab=1; next }
+    grab && /^## / { exit }
+    grab { print }
+' "$CHANGELOG")"
+gh release create "$ver" --title "$ver" --notes "$release_notes"
 
 echo ">> Released $ver."

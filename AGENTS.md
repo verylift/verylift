@@ -39,8 +39,9 @@ To cut a release, run `just release` (auto-suggests the next `YYYY.MM.PATCH`
 and asks for confirmation) or `just release YYYY.MM.PATCH` with an explicit
 version. Do not hand-tag or hand-stamp the changelog — always use
 `just release`, or the release-notes step has no `## <version>` section to
-read. This stamps `CHANGELOG.md`, builds the production image, and pushes both
-the image (to `ghcr.io`) and the git tag — it does not deploy. Run
+read. This stamps `CHANGELOG.md`, builds the production image, pushes both
+the image (to `ghcr.io`) and the git tag, and creates a GitHub Release from
+that version's changelog section — it does not deploy. Run
 `just deploy YYYY.MM.PATCH` separately to pull that image and cut over on the
 VPS via Kamal (see the README's Deployment section).
 
