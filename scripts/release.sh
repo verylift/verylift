@@ -66,6 +66,15 @@ if git ls-remote --exit-code --tags "$REMOTE" "$ver" >/dev/null 2>&1; then
     die "tag $ver already exists on $REMOTE"
 fi
 
+# .kamal/secrets-common shells out to `bw get password ...` for every secret,
+# which needs an unlocked vault session. Unlock up front, before any mutation,
+# so the master-password prompt happens here instead of getting buried under
+# `kamal build push`'s Docker build output later on.
+if [ -z "${BW_SESSION:-}" ]; then
+    echo ">> Unlocking Bitwarden vault..."
+    export BW_SESSION="$(bw unlock --raw)"
+fi
+
 # --- Collect merged-PR changelog bullets into ## Unreleased ---
 
 echo ">> Collecting changelog entries from merged PRs..."
