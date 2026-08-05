@@ -15,6 +15,7 @@ from challenges.tests.factories import (
     CustomGoalTargetFactory,
     make_custom_challenge,
 )
+from liftosaur.tests.factories import LiftHistoryFactory
 from scoring.tests.factories import PointEarnEventFactory
 
 pytestmark = pytest.mark.django_db
@@ -140,6 +141,32 @@ def test_close_to_goal_gap_fraction_is_computed_pre_snap_in_kg(
     assert card["gap_fraction"] == Decimal("4.80") / Decimal("102.30")
     assert card["gap_fraction"] <= CLOSE_TO_GOAL_GAP_FRACTION
     assert card["close_to_goal"] is True
+
+
+def test_gap_card_ignores_zero_rep_sets(user, challenge, participant):
+    # A 0-rep LiftHistory row (e.g. a failed/logged-but-not-completed set
+    # synced from Liftosaur) can't clear any 1-10RM threshold and must not be
+    # considered a candidate set. Regression for the production 500 where
+    # threshold_at(min(0, 10)) raised KeyError: 0 against the 1-10 keyed
+    # targets table.
+    LiftHistoryFactory(
+        user=user,
+        lift=LIFT,
+        performed_at=timezone.now().date(),
+        weight_kg=Decimal("40.00"),
+        reps=0,
+    )
+    LiftHistoryFactory(
+        user=user,
+        lift=LIFT,
+        performed_at=timezone.now().date(),
+        weight_kg=Decimal("50.00"),
+        reps=5,
+    )
+    data = build_personal_data(user, challenge, participant)
+    card = next(c for c in data["summary_cards"] if c["lift"] == LIFT)
+    assert card["state"] == "no_points"
+    assert card["best_reps"] == 5
 
 
 def test_scored_card_shows_goal_name_not_sentinel(user, challenge, participant):

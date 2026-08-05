@@ -464,6 +464,7 @@ def _first_point_gap(
     sets = [
         (Decimal(load), int(reps), performed_at)
         for load, reps, performed_at in candidate_sets
+        if int(reps) > 0
     ]
     if not sets:
         return None, None, None, None, None, None
