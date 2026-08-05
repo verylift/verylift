@@ -22,6 +22,11 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Final image: no uv, python invoked directly via the venv on PATH.
 FROM python:3.12-slim
 
+# The standard OCI label GHCR uses to link a pushed image to its source repo —
+# without it, `docker push`/`kamal build push` still succeeds and the image is
+# pullable, but it never shows up on the repo's own Packages tab.
+LABEL org.opencontainers.image.source="https://github.com/verylift/verylift"
+
 RUN groupadd --system --gid 999 nonroot \
  && useradd --system --gid 999 --uid 999 --create-home nonroot
 
