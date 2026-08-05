@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 2026.8.4 — 2026-08-05
+
+### Fixed
+- Challenge detail page no longer 500s for participants with a 0-rep set logged against a lift in their goal
+
 ## 2026.8.3 — 2026-08-05
 
 ### Changed
