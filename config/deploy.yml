@@ -129,6 +129,10 @@ env:
     # warm the first snapshot; that command isn't part of the automatic
     # pre-deploy seeding since it hits the live FitnessVolt API.
     FITNESSVOLT_ENABLED: "True"
+    # Operational tuning, not a secret. Overrides the 10-minute code default in
+    # root/settings.py — prod syncs are cheap enough that a 1-minute floor is
+    # fine, and it keeps a participant's numbers current during a live session.
+    LIFTOSAUR_SYNC_COOLDOWN_MINUTES: "1"
   secret:
     - SECRET_KEY
     - FIELD_ENCRYPTION_KEYS
