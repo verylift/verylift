@@ -1,9 +1,9 @@
 """Production settings for very lift.
 
 Imports the base settings and overrides only what differs in production. The app
-runs behind Pangolin (external tunnel / reverse proxy on a VPS) which terminates
-TLS and forwards the X-Forwarded-Proto header, so Django must trust that header
-to know the original request was HTTPS.
+runs behind a reverse proxy or tunnel that terminates TLS and forwards the
+X-Forwarded-Proto header, so Django must trust that header to know the original
+request was HTTPS.
 
 Activate with: DJANGO_SETTINGS_MODULE=root.settings_prod
 """
