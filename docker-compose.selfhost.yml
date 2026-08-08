@@ -13,12 +13,47 @@
 #
 # Postgres is available as an opt-in `postgres` profile (the `db` and
 # `app-admin` services below) for larger or multi-user deployments. See
-# docs/portainer-deployment.md for the full walkthrough of both paths,
-# Portainer-flavored but applicable to any docker-compose host.
+# docs/self-hosting.md for the full step-by-step walkthrough of both paths
+# (including Portainer-specific notes).
 services:
   app:
     image: ghcr.io/verylift/verylift:latest
-    command: gunicorn root.wsgi:application -c gunicorn.conf.py
+    # On the SQLite path this container sets itself up on every boot — migrate,
+    # collectstatic, and seed_all all run before gunicorn starts, so "start the
+    # container" is genuinely the whole install. All three are idempotent, so
+    # re-running them on every restart is safe (it's what the Kamal pre-deploy
+    # hook does on every deploy too); the cost is a few seconds of boot time.
+    #
+    # This deliberately does NOT happen when DATABASE_URL points at Postgres.
+    # There, `app` connects as a scoped role with no DDL rights on purpose, so
+    # migrate would fail — the owner-role `app-admin` service runs them instead
+    # (see the `postgres` profile below and docs/self-hosting.md). The case
+    # covers an unset DATABASE_URL too, since the environment block below
+    # defaults it to SQLite.
+    #
+    # `$$` escapes compose's own interpolation so the shell expands
+    # DATABASE_URL at runtime; `exec` hands PID 1 to gunicorn so it still
+    # receives Docker's stop signals.
+    command:
+      - /bin/sh
+      - -c
+      - |
+        set -e
+        case "$${DATABASE_URL:-}" in
+          postgres*|postgis*)
+            echo ">> Postgres detected — skipping automatic setup."
+            echo ">> Run migrate/collectstatic/seed_all via the app-admin service."
+            ;;
+          *)
+            echo ">> SQLite detected — applying migrations..."
+            python manage.py migrate --noinput
+            echo ">> Collecting static files..."
+            python manage.py collectstatic --noinput
+            echo ">> Seeding reference data..."
+            python manage.py seed_all
+            ;;
+        esac
+        exec gunicorn root.wsgi:application -c gunicorn.conf.py
     ports:
       - "8000:8000"
     networks:
@@ -79,7 +114,7 @@ services:
     # slim image; python always is) and exits non-zero on any status other than
     # 200, so Docker marks the container unhealthy when the app cannot serve or
     # reach the DB. Note this only proves the DB is *reachable* — see
-    # docs/portainer-deployment.md for why that's not the same as "migrated".
+    # docs/self-hosting.md for why that's not the same as "migrated".
     healthcheck:
       test:
         [
@@ -89,7 +124,11 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 20s
+      # Generous because first boot runs migrate + collectstatic + seed_all
+      # (see `command:` above) before gunicorn binds — on a slow NAS/SBC that
+      # can take a couple of minutes. Failures inside start_period don't count
+      # toward `retries`, so this only delays the first *real* health verdict.
+      start_period: 180s
     restart: unless-stopped
 
   # --- Everything below is the opt-in Postgres path: `--profile postgres` ---

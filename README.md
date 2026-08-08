@@ -142,16 +142,18 @@ in its comments. Feel free to deviate from it.
 It starts a single `app` service by default, running against a local SQLite
 file on a named volume — no other containers, no required config beyond
 `SECRET_KEY`/`FIELD_ENCRYPTION_KEYS`/`ALLOWED_HOSTS` (see `example.env`).
-That's the right choice for a single user or a small friend group. Postgres
-is available as an opt-in `postgres` profile (`docker compose --profile
-postgres up -d`) for larger or multi-user deployments — see
-[Database](#database) below for the tradeoff.
+That's the right choice for a single user or a small friend group. On this
+path the container also runs `migrate`/`collectstatic`/`seed_all` itself on
+every boot, so starting it is the whole install.
 
-Unlike the Kamal path above, nothing runs `migrate`/`collectstatic`/`seed_all`
-for you automatically — see [Deploying with Portainer](docs/portainer-deployment.md)
-for the one-time setup step this requires (the guide is written for Portainer
-specifically, since that's the most common GUI stack manager for this file, but
-the same steps apply to any `docker-compose.selfhost.yml`-based deploy).
+Postgres is available as an opt-in `postgres` profile (`docker compose
+--profile postgres up -d`) for larger or multi-user deployments — see
+[Database](#database) below for the tradeoff. The automatic setup deliberately
+does *not* run there, since `app` connects as a scoped role without DDL
+rights; the owner-role `app-admin` service runs them instead.
+
+**[Self-hosting guide →](docs/self-hosting.md)** — step-by-step, assumes no
+Python or Django knowledge, with Portainer-specific notes.
 
 ### Database
 

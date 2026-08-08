@@ -1,0 +1,264 @@
+# Self-hosting very lift
+
+A step-by-step guide to running very lift on your own machine — a home
+server, a NAS, or a small VPS. It assumes you can start a Docker container
+and edit a text field. It does **not** assume you know Python, Django, or
+Postgres.
+
+There's a [Portainer](#portainer-notes) section near the bottom if that's how
+you manage containers, but every step below works from a plain terminal too.
+
+> This repo's maintainers deploy a different way (Kamal — see the README's
+> [Deployment](../README.md#deployment) section). That path is for people with
+> SSH access to a VPS and a Bitwarden vault. You almost certainly want this
+> page instead.
+
+## Before you start
+
+You need two things:
+
+1. **Docker** (with `docker compose`). Anything that runs containers works —
+   Docker Desktop, a NAS package, Portainer, plain Linux Docker.
+2. **A way to serve the app over HTTPS.** This is a real requirement, not a
+   nice-to-have: very lift refuses to work over plain `http://`. It redirects
+   every request to `https://` and marks its login cookies HTTPS-only, so
+   browsing directly to `http://192.168.1.50:8000` will fail to load and you
+   won't be able to log in. Put one of these in front of it:
+   - a tunnel like [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
+     or [Pangolin](https://github.com/fosrl/pangolin) (easiest — no ports to
+     open, TLS handled for you), or
+   - a reverse proxy that terminates TLS, like
+     [Caddy](https://caddyserver.com/) (automatic certificates) or Nginx
+     Proxy Manager.
+
+   Whatever you choose, point it at the app's port `8000` and make sure it
+   forwards the `X-Forwarded-Proto` header — both of the above do this by
+   default.
+
+Budget about five minutes.
+
+## Step 1 — Generate your two keys
+
+very lift needs two secrets. Don't invent them by hand; generate them with
+the commands below. These use the app's own Docker image, so **you don't need
+Python installed** — Docker is enough.
+
+Generate `SECRET_KEY`:
+
+```bash
+docker run --rm ghcr.io/verylift/verylift:latest \
+  python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+Generate `FIELD_ENCRYPTION_KEYS`:
+
+```bash
+docker run --rm ghcr.io/verylift/verylift:latest \
+  python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+Each prints one line. Copy both somewhere safe for the next step.
+
+> **Keep `FIELD_ENCRYPTION_KEYS` backed up.** It encrypts everyone's stored
+> Liftosaur API key. If you lose it, those keys are gone permanently and every
+> user has to re-enter theirs. Losing `SECRET_KEY` is milder — it just logs
+> everyone out.
+
+## Step 2 — Create your configuration
+
+Download [`docker-compose.selfhost.yml`](../docker-compose.selfhost.yml) from
+this repo, and create a file named `.env` next to it:
+
+```
+SECRET_KEY=<the first key you generated>
+FIELD_ENCRYPTION_KEYS=<the second key you generated>
+ALLOWED_HOSTS=verylift.example.com
+```
+
+`ALLOWED_HOSTS` is the hostname you'll actually type into your browser — the
+public name your tunnel or reverse proxy serves, not the container's internal
+address. Separate multiple names with commas. Getting this wrong gives you a
+`400 Bad Request` page mentioning `DisallowedHost`.
+
+That's the whole required configuration. There is no database to set up — the
+app stores its data in a SQLite file on a Docker volume, which is fine for a
+single user or a group of friends. (If you'd rather run Postgres, see
+[Advanced: using Postgres](#advanced-using-postgres) at the bottom.)
+
+Everything else is optional. [`example.env`](../example.env) documents every
+available setting — email, single sign-on, and various tuning knobs — with
+comments explaining what each one does.
+
+## Step 3 — Start it
+
+```bash
+docker compose -f docker-compose.selfhost.yml up -d
+```
+
+That's it. The container sets itself up on first boot: it creates the
+database tables, collects its static files, and loads the reference data it
+needs. Watch it happen with:
+
+```bash
+docker compose -f docker-compose.selfhost.yml logs -f app
+```
+
+You'll see `applying migrations`, `collecting static files`, and `seeding
+reference data` scroll past, then gunicorn starting up. First boot takes
+longer than later ones — a minute or two on a slow NAS is normal.
+
+This setup step re-runs on every restart, which is intentional and safe: it's
+how the app applies new database changes after you update the image. You never
+need to run migration commands by hand on this path.
+
+## Step 4 — Create your account
+
+Open your site in a browser and register through the normal sign-up page.
+That gives you a regular user account — enough to create challenges, join
+them, and connect Liftosaur.
+
+If you also want access to the Django admin panel (for managing other users,
+or poking at data directly), promote yourself to an administrator:
+
+```bash
+docker compose -f docker-compose.selfhost.yml exec app \
+  python manage.py createsuperuser
+```
+
+Use the **same username** you just registered with to upgrade that account,
+or a new one to create a separate admin login. The admin panel lives at
+`/the-rack/` by default — a deliberately non-obvious path, since `/admin/` is
+the first thing automated scanners try. Change it with `ADMIN_URL_PATH` in
+your `.env` if you like.
+
+## Updating to a new version
+
+```bash
+docker compose -f docker-compose.selfhost.yml pull
+docker compose -f docker-compose.selfhost.yml up -d
+```
+
+Database changes in the new version are applied automatically as the
+container restarts. Your data lives on Docker volumes and survives updates.
+
+## Portainer notes
+
+Everything above applies; only the mechanics differ.
+
+- **Creating the stack:** *Stacks → Add stack*, then either paste the
+  contents of `docker-compose.selfhost.yml` into the web editor, or use the
+  *Repository* option pointing at this repo with
+  `docker-compose.selfhost.yml` as the compose path.
+- **Configuration:** use the **Environment variables** panel below the editor
+  instead of creating a `.env` file by hand. Add `SECRET_KEY`,
+  `FIELD_ENCRYPTION_KEYS`, and `ALLOWED_HOSTS` there. Portainer writes them
+  into a `.env` file beside the stack for you, which is exactly what the
+  compose file expects.
+- **Running the `createsuperuser` command from Step 4:** open *Containers*,
+  click the `app` container, and use the **Console** button (`>_`) to get a
+  shell inside it. Then run
+  `python manage.py createsuperuser`.
+- **Watching first boot:** the container's **Logs** view shows the same setup
+  output described in Step 3.
+- **Updating:** *Stacks → your stack → Update the stack*, with
+  *Re-pull image* enabled.
+
+## Troubleshooting
+
+**The page won't load, or redirects to an address that fails.**
+You're reaching it over plain HTTP. See
+[Before you start](#before-you-start) — very lift requires HTTPS in front of
+it. This is the most common setup problem.
+
+**`400 Bad Request` mentioning `DisallowedHost`.**
+The hostname in your browser isn't listed in `ALLOWED_HOSTS`. Add it and
+restart the stack.
+
+**The container starts then immediately stops, over and over.**
+Check the logs (`docker compose -f docker-compose.selfhost.yml logs app`). An
+`ImproperlyConfigured` error means `SECRET_KEY` or `FIELD_ENCRYPTION_KEYS` is
+missing or empty — revisit Steps 1 and 2.
+
+**Pages load but show a server error.**
+Check the logs first. If you're using Postgres rather than the default
+SQLite, the most likely cause is that migrations haven't been run — the
+automatic setup in Step 3 deliberately doesn't run on the Postgres path (see
+below).
+
+**Password reset emails never arrive.**
+Expected until you configure email. With no `EMAIL_HOST` set, reset links are
+printed to the container's log instead of being sent — the flow still works,
+but only someone with log access can complete it. See `example.env` for SMTP
+settings.
+
+**Occasional "database is locked" errors.**
+A known limitation of the SQLite default under concurrent use, tracked in
+[#16](https://github.com/verylift/verylift/issues/16). Switching to Postgres
+(below) avoids it.
+
+## Advanced: using Postgres
+
+SQLite is the default because it needs no setup and comfortably handles a
+single user or small group. Postgres is worth the extra steps if you have
+more users, want stronger concurrent-write behavior, or already run a
+Postgres instance.
+
+The compose file ships a bundled Postgres behind an opt-in profile. Because
+the app connects with a deliberately restricted database account that isn't
+allowed to change the database structure, the automatic setup from Step 3
+does **not** run on this path — a separate `app-admin` service handles it
+with the necessary privileges.
+
+1. Add these to your `.env`, alongside the keys from Step 1:
+
+   ```
+   POSTGRES_PASSWORD=<a strong password>
+   POSTGRES_APP_PASSWORD=<a different strong password>
+   DATABASE_URL=postgres://verylift_app:<POSTGRES_APP_PASSWORD>@db:5432/verylift
+   ```
+
+   Substitute your actual `POSTGRES_APP_PASSWORD` value into `DATABASE_URL`.
+   Setting `DATABASE_URL` is what switches the app off SQLite.
+
+2. Start the database, wait for it to become healthy, then the app:
+
+   ```bash
+   docker compose -f docker-compose.selfhost.yml --profile postgres up -d db
+   docker compose -f docker-compose.selfhost.yml --profile postgres up -d app
+   ```
+
+3. Run the setup steps that the app no longer does for itself:
+
+   ```bash
+   docker compose -f docker-compose.selfhost.yml --profile postgres run --rm app-admin \
+     python manage.py migrate --noinput
+   docker compose -f docker-compose.selfhost.yml --profile postgres run --rm app-admin \
+     python manage.py collectstatic --noinput
+   docker compose -f docker-compose.selfhost.yml --profile postgres run --rm app-admin \
+     python manage.py seed_all
+   ```
+
+   **Repeat this step after every image update**, since it's what applies new
+   database changes on the Postgres path.
+
+### Reusing an existing Postgres volume
+
+The restricted application account is created automatically the first time a
+Postgres data volume is initialized. If you're pointing this at a volume that
+already existed, create it manually once:
+
+```bash
+docker compose -f docker-compose.selfhost.yml --profile postgres exec db \
+  /docker-entrypoint-initdb.d/init-app-role.sh
+```
+
+Without it, the app can't connect at all.
+
+## A note on health checks
+
+The container reports itself healthy once the app can reach its database. On
+the Postgres path that's a weaker signal than it sounds: the app can be
+"healthy" while still missing its database tables, because nothing has run
+migrations yet. If Docker says healthy but every page errors, run the Step 3
+commands from the Postgres section above. On the default SQLite path this
+can't happen, since setup runs automatically before the app starts serving.
