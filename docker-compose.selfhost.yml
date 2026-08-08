@@ -1,40 +1,16 @@
-# Self-hosting reference, not what this repo's maintainers run in production
-# (that's Kamal — see config/deploy.yml and the README's Deployment section).
-# Feel free to deviate from it.
+# Self-hosting reference — not what this repo's maintainers run in production
+# (that's Kamal; see config/deploy.yml). One service storing data in SQLite,
+# needing no configuration beyond SECRET_KEY, FIELD_ENCRYPTION_KEYS, and
+# ALLOWED_HOSTS in a .env file beside this one.
 #
-# Deliberately one service: the app container sets itself up and serves
-# traffic, so "start the container" is the entire install. It stores data in a
-# SQLite file on the `data` volume, which needs no configuration and suits a
-# single user or a small friend group. Note it does NOT enable SQLite's WAL
-# mode, so concurrent writes from multiple gunicorn workers can occasionally
-# hit "database is locked" under real concurrent load (tracked in
-# https://github.com/verylift/verylift/issues/16).
-#
-# To use Postgres instead, point DATABASE_URL at your own instance — there is
-# no bundled database here on purpose. docs/self-hosting.md has a drop-in
-# service definition if you'd rather run one alongside this. Either way the
-# app migrates itself on boot, so it connects with an account allowed to
-# change the schema; Kamal instead splits owner and app roles
-# (config/deploy.yml), which is the model to copy if you want that separation.
-#
-# Required config is SECRET_KEY, FIELD_ENCRYPTION_KEYS, and ALLOWED_HOSTS in
-# a .env file beside this one. See example.env for those and every optional
-# setting, and docs/self-hosting.md for the step-by-step walkthrough
-# (including Portainer-specific notes).
+# Setup walkthrough: docs/self-hosting.md. Every setting: example.env.
 services:
   app:
     image: ghcr.io/verylift/verylift:latest
-    # The container installs and upgrades itself on every boot: migrate,
-    # collectstatic, and seed_all all run before gunicorn starts. All three are
-    # idempotent, so re-running them each restart is safe (it's what the Kamal
-    # pre-deploy hook does on every deploy too); the cost is a few seconds of
-    # boot time, and the benefit is that pulling a new image applies its own
-    # schema changes with no extra step.
-    #
-    # `set -e` means a failed migration stops the container rather than letting
-    # gunicorn serve a half-migrated database; `restart: unless-stopped` then
-    # retries, which is also what rides out a database that is still starting.
-    # `exec` hands PID 1 to gunicorn so it still receives Docker's stop signals.
+    # Installs and upgrades itself on every boot; all three commands are
+    # idempotent. `set -e` stops the container on a failed migration rather
+    # than serving a half-migrated database, and `exec` gives gunicorn PID 1
+    # so it still receives Docker's stop signals.
     command:
       - /bin/sh
       - -c
@@ -50,18 +26,13 @@ services:
         exec gunicorn root.wsgi:application -c gunicorn.conf.py
     ports:
       - "8000:8000"
-    # Gunicorn binds unprivileged :8000 and the image already runs as non-root
-    # (uid 999), so no capabilities are needed — drop them all with no add-backs.
+    # Gunicorn binds unprivileged :8000 as uid 999, so no capabilities needed.
     cap_drop:
       - ALL
     security_opt:
       - "no-new-privileges:true"
-    # Read-only root filesystem: a compromised process cannot tamper with the
-    # app code or drop persistent files. The only runtime write paths are mounted
-    # writable explicitly: /tmp (gunicorn worker heartbeat files) via tmpfs, and
-    # the three named volumes below (named volumes stay writable under
-    # read_only). Precompiled bytecode (UV_COMPILE_BYTECODE=1) means no runtime
-    # __pycache__ writes are needed.
+    # Every runtime write path is mounted explicitly below; named volumes stay
+    # writable under read_only.
     read_only: true
     tmpfs:
       - "/tmp:size=64m,mode=1777"
@@ -69,14 +40,10 @@ services:
       - .env
     environment:
       DJANGO_SETTINGS_MODULE: root.settings_prod
-      # Defaults to the SQLite file on the `data` volume below. Set DATABASE_URL
-      # in .env to point at a Postgres instance instead.
+      # Set DATABASE_URL in .env to use Postgres instead.
       DATABASE_URL: ${DATABASE_URL:-sqlite:////app/data/db.sqlite3}
-      # Pin the gunicorn worker count. gunicorn.conf.py otherwise sizes workers
-      # from multiprocessing.cpu_count(), which reports the host's core count and
-      # ignores the compose cpus limit below — on a many-core homelab host that
-      # would spawn far more workers than the CPU limit can serve. 5 matches the
-      # documented 2-core formula (2*2+1).
+      # Pinned because gunicorn.conf.py otherwise sizes workers from the host's
+      # core count, ignoring the cpus limit below. 5 is the 2-core formula.
       GUNICORN_WORKERS: "5"
     deploy:
       resources:
@@ -85,19 +52,10 @@ services:
           memory: 1G
     volumes:
       - staticfiles:/app/staticfiles
-      # User uploads (profile avatars). Distinct from staticfiles: this is
-      # runtime-written user content, not collectstatic output, but it needs
-      # the same treatment — read_only above means /app/media itself isn't
-      # writable without an explicit volume.
-      - media:/app/media
-      # Default SQLite database file + its journal sidecar files. Unused (but
-      # harmless to leave mounted) when DATABASE_URL points at Postgres.
-      - data:/app/data
-    # Probes the loopback /healthz endpoint, which checks DB connectivity.
-    # Uses python urllib rather than curl/wget — neither ships in the slim
-    # image, and adding one would mean an apt layer for something Python
-    # already does. urlopen raises on any non-2xx status and on a refused
-    # connection, so no explicit status comparison is needed.
+      - media:/app/media # user uploads (avatars)
+      - data:/app/data # SQLite database file
+    # python rather than curl/wget, neither of which ships in the slim image.
+    # urlopen raises on non-2xx and on a refused connection.
     healthcheck:
       test:
         [
@@ -109,10 +67,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      # Generous because first boot runs migrate + collectstatic + seed_all
-      # (see `command:` above) before gunicorn binds — on a slow NAS/SBC that
-      # can take a couple of minutes. Failures inside start_period don't count
-      # toward `retries`, so this only delays the first *real* health verdict.
+      # First boot migrates and seeds before gunicorn binds.
       start_period: 180s
     restart: unless-stopped
 
