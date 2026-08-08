@@ -2,6 +2,12 @@
 # (that's Kamal — see config/deploy.yml and the README's Deployment section).
 # Feel free to deviate from it.
 #
+# Deliberately monolithic: one `app` container that sets itself up and serves
+# traffic, so "start the container" is the entire install. There is no
+# separate admin/migration service to discover or invoke — see
+# docs/self-hosting.md for the step-by-step walkthrough (including
+# Portainer-specific notes).
+#
 # `app` is the only service `docker compose up` starts by default, and it
 # needs zero required config beyond SECRET_KEY/FIELD_ENCRYPTION_KEYS/
 # ALLOWED_HOSTS (see example.env) — it runs against a SQLite file on the
@@ -11,48 +17,40 @@
 # under real concurrent load (tracked in
 # https://github.com/verylift/verylift/issues/16).
 #
-# Postgres is available as an opt-in `postgres` profile (the `db` and
-# `app-admin` services below) for larger or multi-user deployments. See
-# docs/self-hosting.md for the full step-by-step walkthrough of both paths
-# (including Portainer-specific notes).
+# Postgres is available as an opt-in `postgres` profile (the `db` service
+# below) for larger or multi-user deployments. Unlike the Kamal setup, `app`
+# connects to it with the owning role rather than a scoped DML-only one:
+# running migrations from the app container is what removes the second
+# service, and that requires schema-change rights. The tradeoff is deliberate
+# — a compromised app here could alter the schema, not just the rows. Kamal
+# keeps the privilege split (config/deploy.yml's `release` role); if you want
+# it too, model yours on that instead of this file.
 services:
   app:
     image: ghcr.io/verylift/verylift:latest
-    # On the SQLite path this container sets itself up on every boot — migrate,
-    # collectstatic, and seed_all all run before gunicorn starts, so "start the
-    # container" is genuinely the whole install. All three are idempotent, so
-    # re-running them on every restart is safe (it's what the Kamal pre-deploy
-    # hook does on every deploy too); the cost is a few seconds of boot time.
+    # The container installs and upgrades itself on every boot: migrate,
+    # collectstatic, and seed_all all run before gunicorn starts, on SQLite and
+    # Postgres alike. All three are idempotent, so re-running them each restart
+    # is safe (it's what the Kamal pre-deploy hook does on every deploy too);
+    # the cost is a few seconds of boot time, and the benefit is that pulling a
+    # new image applies its own schema changes with no extra step.
     #
-    # This deliberately does NOT happen when DATABASE_URL points at Postgres.
-    # There, `app` connects as a scoped role with no DDL rights on purpose, so
-    # migrate would fail — the owner-role `app-admin` service runs them instead
-    # (see the `postgres` profile below and docs/self-hosting.md). The case
-    # covers an unset DATABASE_URL too, since the environment block below
-    # defaults it to SQLite.
-    #
-    # `$$` escapes compose's own interpolation so the shell expands
-    # DATABASE_URL at runtime; `exec` hands PID 1 to gunicorn so it still
-    # receives Docker's stop signals.
+    # `set -e` means a failed migration stops the container rather than letting
+    # gunicorn serve a half-migrated database; `restart: unless-stopped` then
+    # retries, which is also what rides out a database that is still starting.
+    # `exec` hands PID 1 to gunicorn so it still receives Docker's stop signals.
     command:
       - /bin/sh
       - -c
       - |
         set -e
-        case "$${DATABASE_URL:-}" in
-          postgres*|postgis*)
-            echo ">> Postgres detected — skipping automatic setup."
-            echo ">> Run migrate/collectstatic/seed_all via the app-admin service."
-            ;;
-          *)
-            echo ">> SQLite detected — applying migrations..."
-            python manage.py migrate --noinput
-            echo ">> Collecting static files..."
-            python manage.py collectstatic --noinput
-            echo ">> Seeding reference data..."
-            python manage.py seed_all
-            ;;
-        esac
+        echo ">> Applying database migrations..."
+        python manage.py migrate --noinput
+        echo ">> Collecting static files..."
+        python manage.py collectstatic --noinput
+        echo ">> Seeding reference data..."
+        python manage.py seed_all
+        echo ">> Setup complete, starting gunicorn."
         exec gunicorn root.wsgi:application -c gunicorn.conf.py
     ports:
       - "8000:8000"
@@ -80,9 +78,9 @@ services:
       DJANGO_SETTINGS_MODULE: root.settings_prod
       # Defaults to the SQLite file on the `data` volume below — no other
       # containers required. Set DATABASE_URL yourself in .env to use Postgres
-      # instead: either an external instance, or the bundled `db` service
-      # below via `--profile postgres` (point it at the scoped app role, e.g.
-      # postgres://verylift_app:<POSTGRES_APP_PASSWORD>@db:5432/verylift).
+      # instead: either an external instance, or the bundled `db` service below
+      # via `--profile postgres`, e.g.
+      # postgres://verylift:<POSTGRES_PASSWORD>@db:5432/verylift
       DATABASE_URL: ${DATABASE_URL:-sqlite:////app/data/db.sqlite3}
       # Pin the gunicorn worker count. gunicorn.conf.py otherwise sizes workers
       # from multiprocessing.cpu_count(), which reports the host's core count and
@@ -105,16 +103,19 @@ services:
       # Default SQLite database file + its journal/WAL sidecar files. Unused
       # (but harmless to leave mounted) when DATABASE_URL points at Postgres.
       - data:/app/data
-    # No depends_on: db here — db is opt-in (see the `postgres` profile below)
-    # and app must be able to start against SQLite with no other services
-    # running at all.
-    #
+    # `required: false` is what lets one definition serve both paths: on the
+    # default SQLite path `db` isn't started at all and this is a no-op, while
+    # under `--profile postgres` it holds `app` until the database is accepting
+    # connections, so the migration step above doesn't race it.
+    depends_on:
+      db:
+        condition: service_healthy
+        required: false
     # Liveness/readiness probe hits the loopback /healthz endpoint, which checks
     # DB connectivity. Uses python urllib (curl/wget are not guaranteed in the
     # slim image; python always is) and exits non-zero on any status other than
     # 200, so Docker marks the container unhealthy when the app cannot serve or
-    # reach the DB. Note this only proves the DB is *reachable* — see
-    # docs/self-hosting.md for why that's not the same as "migrated".
+    # reach the DB.
     healthcheck:
       test:
         [
@@ -131,35 +132,27 @@ services:
       start_period: 180s
     restart: unless-stopped
 
-  # --- Everything below is the opt-in Postgres path: `--profile postgres` ---
-  # Not started by a plain `docker compose up`. Start db first, wait for it to
-  # report healthy, then start (or restart) app with DATABASE_URL set:
-  #   docker compose --profile postgres up -d db
-  #   docker compose --profile postgres up -d app
+  # --- Opt-in Postgres, for larger or multi-user installs: --profile postgres
+  # Not started by a plain `docker compose up`. Set DATABASE_URL in .env to the
+  # owner-role URL shown above, then:
+  #   docker compose -f docker-compose.selfhost.yml --profile postgres up -d
+  # `app` waits for this to be healthy and migrates itself, same as on SQLite.
   db:
     image: postgres:16-alpine
     profiles: ["postgres"]
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-verylift}
       POSTGRES_USER: ${POSTGRES_USER:-verylift}
-      # No `:?required` here (unlike POSTGRES_APP_PASSWORD below) — this file
-      # must stay parseable with zero Postgres config set at all, since `db`
-      # is optional and docker compose interpolates every service's
-      # environment up front regardless of which profile is active. The
-      # official postgres image itself refuses to start with an empty
-      # password, so an unset value still fails loudly — just at container
-      # start, once you've actually opted into this profile, not at parse time.
+      # No `:?required` here: this file must stay parseable with zero Postgres
+      # config set at all, since `db` is optional and docker compose
+      # interpolates every service's environment up front regardless of which
+      # profile is active. The official postgres image itself refuses to start
+      # with an empty password, so an unset value still fails loudly — just at
+      # container start, once you've actually opted into this profile, rather
+      # than at parse time on the SQLite path where it's irrelevant.
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
-      # Consumed by scripts/db/init-app-role.sh to provision the scoped app role.
-      POSTGRES_APP_USER: ${POSTGRES_APP_USER:-verylift_app}
-      POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:-}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # Fresh volumes: the entrypoint runs init-app-role.sh automatically at
-      # initdb. Existing volumes: the mount makes the script reachable via
-      # `docker compose -f docker-compose.selfhost.yml exec db
-      # /docker-entrypoint-initdb.d/init-app-role.sh`. Read-only.
-      - ./scripts/db:/docker-entrypoint-initdb.d:ro
     networks:
       - backend
     deploy:
@@ -170,8 +163,7 @@ services:
     # Free hardening for the db. NOT cap_drop: ALL — the official Postgres
     # entrypoint starts as root and needs SETUID/SETGID/CHOWN/DAC_OVERRIDE/FOWNER
     # to drop to the postgres user and fix volume ownership; a trimmed cap set is
-    # fragile across image updates and outside this task's scope (AC #3 targets
-    # the app container).
+    # fragile across image updates.
     security_opt:
       - "no-new-privileges:true"
     healthcheck:
@@ -180,44 +172,6 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
-
-  # Admin one-off service: same image as `app`, but connects as the OWNER role
-  # so it can run DDL (migrate) and fixture loading (seed_all). Invoke it with
-  # `docker compose --profile postgres run --rm app-admin ...`. Never started
-  # by `up` — it is not a long-running container, only run-and-exit. On
-  # `backend` only: it needs the db but no outbound egress (migrate/seed touch
-  # no external services).
-  app-admin:
-    image: ghcr.io/verylift/verylift:latest
-    profiles: ["postgres"]
-    networks:
-      - backend
-    cap_drop:
-      - ALL
-    security_opt:
-      - "no-new-privileges:true"
-    read_only: true
-    tmpfs:
-      - "/tmp:size=64m,mode=1777"
-    env_file:
-      - .env
-    environment:
-      DJANGO_SETTINGS_MODULE: root.settings_prod
-      # Owner-role connection: full DDL for migrations and setval for fixtures.
-      DATABASE_URL: postgres://${POSTGRES_USER:-verylift}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-verylift}
-    # Short-lived migrate/seed one-offs, but still bounded so a runaway can't
-    # starve the host. Mirrors `app`'s limits.
-    deploy:
-      resources:
-        limits:
-          cpus: "2.0"
-          memory: 1G
-    volumes:
-      - staticfiles:/app/staticfiles
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: "no"
 
 volumes:
   data:

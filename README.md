@@ -148,9 +148,10 @@ every boot, so starting it is the whole install.
 
 Postgres is available as an opt-in `postgres` profile (`docker compose
 --profile postgres up -d`) for larger or multi-user deployments — see
-[Database](#database) below for the tradeoff. The automatic setup deliberately
-does *not* run there, since `app` connects as a scoped role without DDL
-rights; the owner-role `app-admin` service runs them instead.
+[Database](#database) below for the tradeoff. The container is monolithic on
+both paths: it migrates and seeds itself either way, so there's no separate
+admin service. That means it connects to Postgres as the owning role rather
+than a scoped one; Kamal keeps the privilege split via its `release` role.
 
 **[Self-hosting guide →](docs/self-hosting.md)** — step-by-step, assumes no
 Python or Django knowledge, with Portainer-specific notes.

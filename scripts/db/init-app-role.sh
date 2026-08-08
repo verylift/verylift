@@ -1,15 +1,19 @@
 #!/bin/sh
 # Provision the least-privilege application database role.
 #
+# Used by the Kamal deployment only (config/deploy.yml mounts it into the `db`
+# accessory). docker-compose.selfhost.yml deliberately does not: that setup is
+# monolithic and its app container runs its own migrations, so it connects as
+# the owner role and has no scoped role to provision.
+#
 # Two invocation paths, both idempotent and safe to re-run:
 #   1. Fresh installs: bind-mounted into /docker-entrypoint-initdb.d and run
 #      automatically by the postgres image entrypoint the first time the data
 #      volume is initialized.
 #   2. Existing volumes: run manually against a running db container, e.g.
-#      `docker compose -f docker-compose.selfhost.yml --profile postgres exec db
-#      /docker-entrypoint-initdb.d/init-app-role.sh`. initdb.d scripts do NOT
-#      run on an already-initialized volume, so this is the path for an
-#      existing prod database.
+#      `kamal accessory exec db /docker-entrypoint-initdb.d/init-app-role.sh`.
+#      initdb.d scripts do NOT run on an already-initialized volume, so this is
+#      the path for an existing prod database.
 #
 # It creates/updates a scoped role (LOGIN, no SUPERUSER/CREATEDB/CREATEROLE)
 # that the app container connects as at runtime. The role can perform DML on

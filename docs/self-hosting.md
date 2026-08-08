@@ -109,7 +109,8 @@ longer than later ones — a minute or two on a slow NAS is normal.
 
 This setup step re-runs on every restart, which is intentional and safe: it's
 how the app applies new database changes after you update the image. You never
-need to run migration commands by hand on this path.
+need to run migration commands by hand — that's true whether you stay on
+SQLite or switch to Postgres later.
 
 ## Step 4 — Create your account
 
@@ -180,10 +181,9 @@ Check the logs (`docker compose -f docker-compose.selfhost.yml logs app`). An
 missing or empty — revisit Steps 1 and 2.
 
 **Pages load but show a server error.**
-Check the logs first. If you're using Postgres rather than the default
-SQLite, the most likely cause is that migrations haven't been run — the
-automatic setup in Step 3 deliberately doesn't run on the Postgres path (see
-below).
+Check the container's logs — the cause is almost always printed there. If the
+setup output from Step 3 didn't complete, the container stops rather than
+serving a half-configured database, so look for an error in that section.
 
 **Password reset emails never arrive.**
 Expected until you configure email. With no `EMAIL_HOST` set, reset links are
@@ -203,62 +203,33 @@ single user or small group. Postgres is worth the extra steps if you have
 more users, want stronger concurrent-write behavior, or already run a
 Postgres instance.
 
-The compose file ships a bundled Postgres behind an opt-in profile. Because
-the app connects with a deliberately restricted database account that isn't
-allowed to change the database structure, the automatic setup from Step 3
-does **not** run on this path — a separate `app-admin` service handles it
-with the necessary privileges.
+The compose file ships a bundled Postgres behind an opt-in profile. Only two
+things change; the app still sets itself up on boot exactly as in Step 3.
 
 1. Add these to your `.env`, alongside the keys from Step 1:
 
    ```
    POSTGRES_PASSWORD=<a strong password>
-   POSTGRES_APP_PASSWORD=<a different strong password>
-   DATABASE_URL=postgres://verylift_app:<POSTGRES_APP_PASSWORD>@db:5432/verylift
+   DATABASE_URL=postgres://verylift:<POSTGRES_PASSWORD>@db:5432/verylift
    ```
 
-   Substitute your actual `POSTGRES_APP_PASSWORD` value into `DATABASE_URL`.
+   Substitute your actual password into `DATABASE_URL` — both lines need it.
    Setting `DATABASE_URL` is what switches the app off SQLite.
 
-2. Start the database, wait for it to become healthy, then the app:
+2. Start everything with the profile enabled:
 
    ```bash
-   docker compose -f docker-compose.selfhost.yml --profile postgres up -d db
-   docker compose -f docker-compose.selfhost.yml --profile postgres up -d app
+   docker compose -f docker-compose.selfhost.yml --profile postgres up -d
    ```
 
-3. Run the setup steps that the app no longer does for itself:
+The app waits for the database to accept connections, then migrates and seeds
+it the same way it does on SQLite. Updating works exactly as described in
+[Updating to a new version](#updating-to-a-new-version) — just remember to
+keep `--profile postgres` on the commands, or Docker will stop your database.
 
-   ```bash
-   docker compose -f docker-compose.selfhost.yml --profile postgres run --rm app-admin \
-     python manage.py migrate --noinput
-   docker compose -f docker-compose.selfhost.yml --profile postgres run --rm app-admin \
-     python manage.py collectstatic --noinput
-   docker compose -f docker-compose.selfhost.yml --profile postgres run --rm app-admin \
-     python manage.py seed_all
-   ```
-
-   **Repeat this step after every image update**, since it's what applies new
-   database changes on the Postgres path.
-
-### Reusing an existing Postgres volume
-
-The restricted application account is created automatically the first time a
-Postgres data volume is initialized. If you're pointing this at a volume that
-already existed, create it manually once:
-
-```bash
-docker compose -f docker-compose.selfhost.yml --profile postgres exec db \
-  /docker-entrypoint-initdb.d/init-app-role.sh
-```
-
-Without it, the app can't connect at all.
-
-## A note on health checks
-
-The container reports itself healthy once the app can reach its database. On
-the Postgres path that's a weaker signal than it sounds: the app can be
-"healthy" while still missing its database tables, because nothing has run
-migrations yet. If Docker says healthy but every page errors, run the Step 3
-commands from the Postgres section above. On the default SQLite path this
-can't happen, since setup runs automatically before the app starts serving.
+Because the app performs its own migrations, it connects with the database's
+owning account rather than a restricted one. That's the tradeoff for having a
+single container do everything: a compromised app could alter the database
+structure, not just its contents. If you'd rather keep those privileges
+separated, `config/deploy.yml` in this repo shows how the maintainers' own
+deployment splits them.
