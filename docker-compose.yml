@@ -2,8 +2,8 @@
 # runs natively on the host (`just serve` / `uv run python manage.py runserver`)
 # against this database bound to 127.0.0.1:5432. The loopback bind keeps the dev
 # DB reachable by native tooling on this host while making it unreachable from the
-# LAN. Production is defined separately in docker-compose.prod.yml and still runs
-# the app in a container.
+# LAN. Self-hosted deployment is defined separately in docker-compose.selfhost.yml
+# and still runs the app in a container.
 services:
   db:
     image: postgres:16-alpine

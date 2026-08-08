@@ -6,7 +6,7 @@
 #      automatically by the postgres image entrypoint the first time the data
 #      volume is initialized.
 #   2. Existing volumes: run manually against a running db container, e.g.
-#      `docker compose -f docker-compose.prod.yml exec db
+#      `docker compose -f docker-compose.selfhost.yml --profile postgres exec db
 #      /docker-entrypoint-initdb.d/init-app-role.sh`. initdb.d scripts do NOT
 #      run on an already-initialized volume, so this is the path for an
 #      existing prod database.

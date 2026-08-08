@@ -1,0 +1,200 @@
+# Self-hosting reference, not what this repo's maintainers run in production
+# (that's Kamal — see config/deploy.yml and the README's Deployment section).
+# Feel free to deviate from it.
+#
+# `app` is the only service `docker compose up` starts by default, and it
+# needs zero required config beyond SECRET_KEY/FIELD_ENCRYPTION_KEYS/
+# ALLOWED_HOSTS (see example.env) — it runs against a SQLite file on the
+# `data` volume below. That's the right choice for a single user or a small
+# friend group; it does NOT enable SQLite's WAL mode, so concurrent writes
+# from multiple gunicorn workers can occasionally hit "database is locked"
+# under real concurrent load (tracked in
+# https://github.com/verylift/verylift/issues/16).
+#
+# Postgres is available as an opt-in `postgres` profile (the `db` and
+# `app-admin` services below) for larger or multi-user deployments. See
+# docs/portainer-deployment.md for the full walkthrough of both paths,
+# Portainer-flavored but applicable to any docker-compose host.
+services:
+  app:
+    image: ghcr.io/verylift/verylift:latest
+    command: gunicorn root.wsgi:application -c gunicorn.conf.py
+    ports:
+      - "8000:8000"
+    networks:
+      - frontend
+      - backend
+    # Gunicorn binds unprivileged :8000 and the image already runs as non-root
+    # (uid 999), so no capabilities are needed — drop them all with no add-backs.
+    cap_drop:
+      - ALL
+    security_opt:
+      - "no-new-privileges:true"
+    # Read-only root filesystem: a compromised process cannot tamper with the
+    # app code or drop persistent files. The only runtime write paths are mounted
+    # writable explicitly: /tmp (gunicorn worker heartbeat files) via tmpfs,
+    # /app/staticfiles and /app/data via their named volumes (named volumes
+    # stay writable under read_only). Precompiled bytecode
+    # (UV_COMPILE_BYTECODE=1) means no runtime __pycache__ writes are needed.
+    read_only: true
+    tmpfs:
+      - "/tmp:size=64m,mode=1777"
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: root.settings_prod
+      # Defaults to the SQLite file on the `data` volume below — no other
+      # containers required. Set DATABASE_URL yourself in .env to use Postgres
+      # instead: either an external instance, or the bundled `db` service
+      # below via `--profile postgres` (point it at the scoped app role, e.g.
+      # postgres://verylift_app:<POSTGRES_APP_PASSWORD>@db:5432/verylift).
+      DATABASE_URL: ${DATABASE_URL:-sqlite:////app/data/db.sqlite3}
+      # Pin the gunicorn worker count. gunicorn.conf.py otherwise sizes workers
+      # from multiprocessing.cpu_count(), which reports the host's core count and
+      # ignores the compose cpus limit below — on a many-core homelab host that
+      # would spawn far more workers than the CPU limit can serve. 5 matches the
+      # documented 2-core formula (2*2+1).
+      GUNICORN_WORKERS: "5"
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+    volumes:
+      - staticfiles:/app/staticfiles
+      # User uploads (profile avatars). Distinct from staticfiles: this is
+      # runtime-written user content, not collectstatic output, but it needs
+      # the same treatment — read_only above means /app/media itself isn't
+      # writable without an explicit volume.
+      - media:/app/media
+      # Default SQLite database file + its journal/WAL sidecar files. Unused
+      # (but harmless to leave mounted) when DATABASE_URL points at Postgres.
+      - data:/app/data
+    # No depends_on: db here — db is opt-in (see the `postgres` profile below)
+    # and app must be able to start against SQLite with no other services
+    # running at all.
+    #
+    # Liveness/readiness probe hits the loopback /healthz endpoint, which checks
+    # DB connectivity. Uses python urllib (curl/wget are not guaranteed in the
+    # slim image; python always is) and exits non-zero on any status other than
+    # 200, so Docker marks the container unhealthy when the app cannot serve or
+    # reach the DB. Note this only proves the DB is *reachable* — see
+    # docs/portainer-deployment.md for why that's not the same as "migrated".
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import sys,urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=5).status==200 else 1)\"",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+  # --- Everything below is the opt-in Postgres path: `--profile postgres` ---
+  # Not started by a plain `docker compose up`. Start db first, wait for it to
+  # report healthy, then start (or restart) app with DATABASE_URL set:
+  #   docker compose --profile postgres up -d db
+  #   docker compose --profile postgres up -d app
+  db:
+    image: postgres:16-alpine
+    profiles: ["postgres"]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-verylift}
+      POSTGRES_USER: ${POSTGRES_USER:-verylift}
+      # No `:?required` here (unlike POSTGRES_APP_PASSWORD below) — this file
+      # must stay parseable with zero Postgres config set at all, since `db`
+      # is optional and docker compose interpolates every service's
+      # environment up front regardless of which profile is active. The
+      # official postgres image itself refuses to start with an empty
+      # password, so an unset value still fails loudly — just at container
+      # start, once you've actually opted into this profile, not at parse time.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+      # Consumed by scripts/db/init-app-role.sh to provision the scoped app role.
+      POSTGRES_APP_USER: ${POSTGRES_APP_USER:-verylift_app}
+      POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:-}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Fresh volumes: the entrypoint runs init-app-role.sh automatically at
+      # initdb. Existing volumes: the mount makes the script reachable via
+      # `docker compose -f docker-compose.selfhost.yml exec db
+      # /docker-entrypoint-initdb.d/init-app-role.sh`. Read-only.
+      - ./scripts/db:/docker-entrypoint-initdb.d:ro
+    networks:
+      - backend
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+    # Free hardening for the db. NOT cap_drop: ALL — the official Postgres
+    # entrypoint starts as root and needs SETUID/SETGID/CHOWN/DAC_OVERRIDE/FOWNER
+    # to drop to the postgres user and fix volume ownership; a trimmed cap set is
+    # fragile across image updates and outside this task's scope (AC #3 targets
+    # the app container).
+    security_opt:
+      - "no-new-privileges:true"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-verylift}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Admin one-off service: same image as `app`, but connects as the OWNER role
+  # so it can run DDL (migrate) and fixture loading (seed_all). Invoke it with
+  # `docker compose --profile postgres run --rm app-admin ...`. Never started
+  # by `up` — it is not a long-running container, only run-and-exit. On
+  # `backend` only: it needs the db but no outbound egress (migrate/seed touch
+  # no external services).
+  app-admin:
+    image: ghcr.io/verylift/verylift:latest
+    profiles: ["postgres"]
+    networks:
+      - backend
+    cap_drop:
+      - ALL
+    security_opt:
+      - "no-new-privileges:true"
+    read_only: true
+    tmpfs:
+      - "/tmp:size=64m,mode=1777"
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: root.settings_prod
+      # Owner-role connection: full DDL for migrations and setval for fixtures.
+      DATABASE_URL: postgres://${POSTGRES_USER:-verylift}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-verylift}
+    # Short-lived migrate/seed one-offs, but still bounded so a runaway can't
+    # starve the host. Mirrors `app`'s limits.
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+    volumes:
+      - staticfiles:/app/staticfiles
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+volumes:
+  data:
+  staticfiles:
+  media:
+  postgres_data:
+
+networks:
+  # Internal-only network for db<->app traffic. `internal: true` means Docker
+  # attaches no gateway, so it is unreachable from the host and from containers
+  # not explicitly joined to it — a compromised app cannot pivot to other
+  # services on the host via this network, and the db is reachable only here.
+  # Harmless to declare when the `postgres` profile isn't in use — an unused
+  # Docker network costs nothing at rest.
+  backend:
+    internal: true
+  # Regular bridge network providing outbound egress (Liftosaur, the OIDC provider) and
+  # backing the app's published 8000 port for the Pangolin tunnel client.
+  frontend: {}

@@ -22,7 +22,7 @@ servers:
     # shape this expects. Everything else below (the public hostname, the
     # GHCR org, ALLOWED_HOSTS) is already public knowledge — verylift.com is
     # public DNS, verylift/verylift is already the literal image path in
-    # docker-compose.prod.yml — so there's no reason to hide those too.
+    # docker-compose.selfhost.yml — so there's no reason to hide those too.
     hosts:
       - verylift-prod
     options:
@@ -104,7 +104,7 @@ accessories:
       cpus: "1"
       # Not cap-drop: ALL — postgres's entrypoint starts as root and needs
       # SETUID/SETGID/CHOWN/DAC_OVERRIDE/FOWNER to drop to the postgres user
-      # and fix volume ownership (same reasoning as docker-compose.prod.yml).
+      # and fix volume ownership (same reasoning as docker-compose.selfhost.yml).
 
 volumes:
   # Kamal's `volumes:` key is service-wide, not per-role (confirmed: `servers.<role>`
@@ -112,7 +112,7 @@ volumes:
   # harmless there since `release` already carries the higher-trust owner DB
   # credential. `staticfiles` is shared between `web` (serves) and `release`
   # (collectstatic writes) so what's collected is what's served, matching
-  # docker-compose.prod.yml's staticfiles named volume under read_only. `media`
+  # docker-compose.selfhost.yml's staticfiles named volume under read_only. `media`
   # is user-upload content `release` never touches, but can't be scoped out.
   - verylift_staticfiles:/app/staticfiles
   - verylift_media:/app/media

@@ -132,25 +132,39 @@ just deploy 2026.8.0     # pulls that exact image, migrates, zero-downtime cutov
 without reseeding every deploy the DB silently drifts from what the newly
 deployed code expects.
 
-### docker-compose.prod.yml (self-hosters)
+### docker-compose.selfhost.yml (self-hosters)
 
-`docker-compose.prod.yml` is provided as a working reference, not a prescription:
-Postgres alongside the app, network isolation, dropped capabilities, a read-only
-root filesystem, and resource limits, with the reasoning for each choice inline
+`docker-compose.selfhost.yml` is provided as a working reference, not a
+prescription: network isolation, dropped capabilities, a read-only root
+filesystem, and resource limits, with the reasoning for each choice inline
 in its comments. Feel free to deviate from it.
+
+It starts a single `app` service by default, running against a local SQLite
+file on a named volume — no other containers, no required config beyond
+`SECRET_KEY`/`FIELD_ENCRYPTION_KEYS`/`ALLOWED_HOSTS` (see `example.env`).
+That's the right choice for a single user or a small friend group. Postgres
+is available as an opt-in `postgres` profile (`docker compose --profile
+postgres up -d`) for larger or multi-user deployments — see
+[Database](#database) below for the tradeoff.
 
 Unlike the Kamal path above, nothing runs `migrate`/`collectstatic`/`seed_all`
 for you automatically — see [Deploying with Portainer](docs/portainer-deployment.md)
 for the one-time setup step this requires (the guide is written for Portainer
 specifically, since that's the most common GUI stack manager for this file, but
-the same step applies to any `docker-compose.prod.yml`-based deploy).
+the same steps apply to any `docker-compose.selfhost.yml`-based deploy).
 
 ### Database
 
-If a host can't run Postgres, `DATABASE_URL` is optional — leaving it unset falls
-back to a local SQLite file (`db.sqlite3`) instead of failing to start. Set
-`DATABASE_URL` to opt back into Postgres. This applies to both deployment paths
-above.
+`DATABASE_URL` is optional — leaving it unset falls back to a local SQLite
+file (`db.sqlite3`) instead of failing to start. This is the default for
+`docker-compose.selfhost.yml`'s `app` service (see above) and is fine for a
+single user or a small friend group, with one caveat: SQLite's WAL mode
+isn't enabled, so concurrent writes from multiple gunicorn workers can
+occasionally hit "database is locked" under real concurrent load (tracked in
+[#16](https://github.com/verylift/verylift/issues/16)). Set `DATABASE_URL` to opt into Postgres instead — either
+an external instance, or the bundled `db` service via the `postgres` compose
+profile. This applies to both deployment paths above; Kamal's `config/deploy.yml`
+always uses the bundled Postgres accessory rather than SQLite.
 
 ## Security
 

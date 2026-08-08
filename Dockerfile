@@ -33,10 +33,11 @@ RUN groupadd --system --gid 999 nonroot \
 COPY --from=builder --chown=nonroot:nonroot /opt/venv /opt/venv
 COPY --from=builder --chown=nonroot:nonroot /app /app
 
-# Ensure STATIC_ROOT/MEDIA_ROOT exist and are writable by nonroot so their
-# named volumes inherit nonroot ownership (collectstatic and user uploads).
-RUN mkdir -p /app/staticfiles /app/media \
- && chown nonroot:nonroot /app/staticfiles /app/media
+# Ensure STATIC_ROOT/MEDIA_ROOT/data dirs exist and are writable by nonroot so
+# their named volumes inherit nonroot ownership (collectstatic, user uploads,
+# and the default SQLite database file for self-hosters not running Postgres).
+RUN mkdir -p /app/staticfiles /app/media /app/data \
+ && chown nonroot:nonroot /app/staticfiles /app/media /app/data
 
 ENV PATH="/opt/venv/bin:$PATH"
 
