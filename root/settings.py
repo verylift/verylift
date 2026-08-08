@@ -128,7 +128,7 @@ CACHES = {
 RATELIMIT_USE_CACHE = "ratelimit"
 
 # Auth-endpoint throttling (TASK-153). Rates use django-ratelimit's
-# "<count>/<period>" syntax (s/m/h/d). Behind the Pangolin proxy the real client
+# "<count>/<period>" syntax (s/m/h/d). Behind a reverse proxy the real client
 # IP is read from X-Forwarded-For (see accounts.ratelimit.client_ip). Tune these
 # per environment via the matching env vars.
 RATELIMIT_LOGIN_IP = env("RATELIMIT_LOGIN_IP", default="10/m")

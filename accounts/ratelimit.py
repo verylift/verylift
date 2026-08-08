@@ -4,10 +4,10 @@ Throttling is layered on with django-ratelimit. The pieces here are kept in one
 module so the policy (which key, which rate, how a block is surfaced) is easy to
 read and tune:
 
-- ``client_ip`` derives the real client IP behind the Pangolin reverse proxy by
-  trusting the *last* hop of ``X-Forwarded-For`` — the entry the proxy appends
-  from its own observed connection, which a client cannot spoof — falling back
-  to ``REMOTE_ADDR`` when the header is absent (e.g. direct requests in
+- ``client_ip`` derives the real client IP behind a reverse proxy by trusting
+  the *last* hop of ``X-Forwarded-For`` — the entry the proxy appends from its
+  own observed connection, which a client cannot spoof — falling back to
+  ``REMOTE_ADDR`` when the header is absent (e.g. direct requests in
   development and tests).
 - The ``*_rate`` callables resolve the configured rate string at request time so
   the thresholds stay env-tunable (see settings) and overridable in tests.
@@ -31,13 +31,17 @@ _JSON_VIEW_NAMES = frozenset({"accounts:validate_liftosaur_key"})
 def client_ip(group, request):
     """Return the requesting client's IP, honouring X-Forwarded-For.
 
-    Behind the production reverse proxy ``REMOTE_ADDR`` is the proxy itself, so
-    per-IP limits would be shared across every user. Pangolin (Traefik-based)
+    Behind a reverse proxy ``REMOTE_ADDR`` is the proxy itself, so per-IP limits
+    would be shared across every user. A proxy following the usual convention
     *appends* the client IP it observes as the right-most ``X-Forwarded-For``
     entry, leaving any client-supplied hops to its left. Trusting the last hop
-    therefore uses the outermost proxy's own observation and ignores anything an
+    therefore uses the nearest proxy's own observation and ignores anything an
     attacker could pre-set to rotate rate-limit buckets. Falls back to
     ``REMOTE_ADDR`` when the header is absent.
+
+    This assumes a single proxy in front. Chain two (say a tunnel plus a local
+    reverse proxy) and the last hop is the inner proxy's address rather than the
+    client's, putting every user behind it in one bucket again.
     """
     forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
     if forwarded:
