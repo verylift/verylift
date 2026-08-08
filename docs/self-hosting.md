@@ -15,27 +15,30 @@ you manage containers, but every step below works from a plain terminal too.
 
 ## Before you start
 
-You need two things:
-
-1. **Docker** (with `docker compose`). Anything that runs containers works —
-   Docker Desktop, a NAS package, Portainer, plain Linux Docker.
-2. **A way to serve the app over HTTPS.** This is a real requirement, not a
-   nice-to-have: very lift refuses to work over plain `http://`. It redirects
-   every request to `https://` and marks its login cookies HTTPS-only, so
-   browsing directly to `http://192.168.1.50:8000` will fail to load and you
-   won't be able to log in. Put one of these in front of it:
-   - a tunnel like [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
-     or [Pangolin](https://github.com/fosrl/pangolin) (easiest — no ports to
-     open, TLS handled for you), or
-   - a reverse proxy that terminates TLS, like
-     [Caddy](https://caddyserver.com/) (automatic certificates) or Nginx
-     Proxy Manager.
-
-   Whatever you choose, point it at the app's port `8000` and make sure it
-   forwards the `X-Forwarded-Proto` header — both of the above do this by
-   default.
+**Docker**, with `docker compose`. Anything that runs containers works —
+Docker Desktop, a NAS package, Portainer, plain Linux Docker. That's it.
 
 Budget about five minutes.
+
+Decide one thing up front, because it changes a setting in Step 2: **will you
+reach this over `https://` or plain `http://`?**
+
+- **Over HTTPS** — because you're putting it on the internet, or you already
+  run a reverse proxy. This is the default and needs no extra setting. Point
+  your tunnel or proxy at the container's port `8000`, and make sure it
+  forwards the `X-Forwarded-Proto` header (essentially all of them do).
+  [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
+  and [Pangolin](https://github.com/fosrl/pangolin) need no open ports;
+  [Caddy](https://caddyserver.com/) and Nginx Proxy Manager handle
+  certificates for you.
+- **Over plain HTTP on your home network** — you'll browse to something like
+  `http://192.168.1.50:8000` and no certificates are involved. Set
+  `HTTPS_ENABLED=False` in Step 2. Without it the app redirects you to an
+  `https://` address nothing is serving and refuses to send its login cookie,
+  so nothing works.
+
+If you're exposing this to the internet, use HTTPS. Over plain HTTP, anyone
+on the same network can read the traffic, passwords included.
 
 ## Step 1 — Generate your two keys
 
@@ -73,6 +76,13 @@ this repo, and create a file named `.env` next to it:
 SECRET_KEY=<the first key you generated>
 FIELD_ENCRYPTION_KEYS=<the second key you generated>
 ALLOWED_HOSTS=verylift.example.com
+```
+
+If you decided on **plain HTTP** in [Before you start](#before-you-start),
+add one more line:
+
+```
+HTTPS_ENABLED=False
 ```
 
 `ALLOWED_HOSTS` is the hostname you'll actually type into your browser — the
@@ -166,10 +176,12 @@ Everything above applies; only the mechanics differ.
 
 ## Troubleshooting
 
-**The page won't load, or redirects to an address that fails.**
-You're reaching it over plain HTTP. See
-[Before you start](#before-you-start) — very lift requires HTTPS in front of
-it. This is the most common setup problem.
+**The page redirects to an `https://` address that won't load, or you can log
+in but get bounced straight back to the login page.**
+You're browsing over plain HTTP without telling the app. Add
+`HTTPS_ENABLED=False` to your `.env` and restart. If your browser keeps
+redirecting even after that, it cached the old instruction — clear the site's
+data for that hostname, or try a private window to confirm.
 
 **`400 Bad Request` mentioning `DisallowedHost`.**
 The hostname in your browser isn't listed in `ALLOWED_HOSTS`. Add it and

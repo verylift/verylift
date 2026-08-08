@@ -21,8 +21,28 @@ DEBUG = False
 # re-execute root.settings, so these must be recomputed here to reflect
 # a freshly monkeypatched env var.
 ALLOWED_HOSTS = env("ALLOWED_HOSTS")
+
+# Whether this deployment is reachable over HTTPS. True by default: anything
+# on the public internet should be, and the maintainers' own deployment sits
+# behind a TLS-terminating tunnel.
+#
+# Self-hosters running on a trusted LAN with no TLS in front should set
+# HTTPS_ENABLED=False. Leaving it on there makes the app unusable rather than
+# merely strict -- every request is redirected to an https:// URL nothing is
+# serving, and the session cookie is withheld over plain HTTP, so login
+# cannot complete. Turning it off disables the redirect, the Secure cookie
+# flag, and HSTS, and matches CSRF origins on http:// instead.
+#
+# This is a real reduction in protection: traffic (including passwords) is
+# then readable by anything on the same network. Only set it False when you
+# trust that network, never on an internet-facing install.
+HTTPS_ENABLED = env.bool("HTTPS_ENABLED", default=True)
+
+_origin_scheme = "https" if HTTPS_ENABLED else "http"
 CSRF_TRUSTED_ORIGINS = [
-    f"https://*{host}" if host.startswith(".") else f"https://{host}"
+    f"{_origin_scheme}://*{host}"
+    if host.startswith(".")
+    else f"{_origin_scheme}://{host}"
     for host in ALLOWED_HOSTS
 ]
 
@@ -30,16 +50,19 @@ CSRF_TRUSTED_ORIGINS = [
 # above) -- both dev and prod need it, see the comment there.
 
 # Cookies only travel over HTTPS.
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = HTTPS_ENABLED
+CSRF_COOKIE_SECURE = HTTPS_ENABLED
 
 # Redirect any plain-HTTP request that still reaches the app to HTTPS.
-SECURE_SSL_REDIRECT = True
+SECURE_SSL_REDIRECT = HTTPS_ENABLED
 
-# HSTS: tell browsers to only ever use HTTPS for this host.
-SECURE_HSTS_SECONDS = 31536000
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
+# HSTS: tell browsers to only ever use HTTPS for this host. Must be 0 when
+# HTTPS is off -- a browser that saw a non-zero max-age once will refuse
+# plain HTTP to that host for that long afterwards, which would outlive the
+# setting change and look like the app breaking for no reason.
+SECURE_HSTS_SECONDS = 31536000 if HTTPS_ENABLED else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = HTTPS_ENABLED
+SECURE_HSTS_PRELOAD = HTTPS_ENABLED
 
 # Defense-in-depth headers.
 SECURE_CONTENT_TYPE_NOSNIFF = True
