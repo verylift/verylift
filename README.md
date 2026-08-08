@@ -139,6 +139,12 @@ Postgres alongside the app, network isolation, dropped capabilities, a read-only
 root filesystem, and resource limits, with the reasoning for each choice inline
 in its comments. Feel free to deviate from it.
 
+Unlike the Kamal path above, nothing runs `migrate`/`collectstatic`/`seed_all`
+for you automatically — see [Deploying with Portainer](docs/portainer-deployment.md)
+for the one-time setup step this requires (the guide is written for Portainer
+specifically, since that's the most common GUI stack manager for this file, but
+the same step applies to any `docker-compose.prod.yml`-based deploy).
+
 ### Database
 
 If a host can't run Postgres, `DATABASE_URL` is optional — leaving it unset falls
