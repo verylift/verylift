@@ -135,23 +135,22 @@ deployed code expects.
 ### docker-compose.selfhost.yml (self-hosters)
 
 `docker-compose.selfhost.yml` is provided as a working reference, not a
-prescription: network isolation, dropped capabilities, a read-only root
-filesystem, and resource limits, with the reasoning for each choice inline
-in its comments. Feel free to deviate from it.
+prescription: dropped capabilities, a read-only root filesystem, and resource
+limits, with the reasoning for each choice inline in its comments. Feel free
+to deviate from it.
 
-It starts a single `app` service by default, running against a local SQLite
-file on a named volume — no other containers, no required config beyond
-`SECRET_KEY`/`FIELD_ENCRYPTION_KEYS`/`ALLOWED_HOSTS` (see `example.env`).
-That's the right choice for a single user or a small friend group. On this
-path the container also runs `migrate`/`collectstatic`/`seed_all` itself on
-every boot, so starting it is the whole install.
+It is a single `app` service with no bundled database, running against a
+local SQLite file on a named volume — no other containers, no required config
+beyond `SECRET_KEY`/`FIELD_ENCRYPTION_KEYS`/`ALLOWED_HOSTS` (see
+`example.env`). The container runs `migrate`/`collectstatic`/`seed_all`
+itself on every boot, so starting it is the whole install, and pulling a new
+image applies its own schema changes.
 
-Postgres is available as an opt-in `postgres` profile (`docker compose
---profile postgres up -d`) for larger or multi-user deployments — see
-[Database](#database) below for the tradeoff. The container is monolithic on
-both paths: it migrates and seeds itself either way, so there's no separate
-admin service. That means it connects to Postgres as the owning role rather
-than a scoped one; Kamal keeps the privilege split via its `release` role.
+For larger or multi-user deployments, point `DATABASE_URL` at a Postgres
+instance — see [Database](#database) below for the tradeoff, and the guide
+for a drop-in `db` service if you don't already run one. The app migrates
+itself either way, so it connects with an account that can change the schema;
+Kamal keeps a privilege split via its separate `release` role.
 
 **[Self-hosting guide →](docs/self-hosting.md)** — step-by-step, assumes no
 Python or Django knowledge, with Portainer-specific notes.
@@ -164,10 +163,10 @@ file (`db.sqlite3`) instead of failing to start. This is the default for
 single user or a small friend group, with one caveat: SQLite's WAL mode
 isn't enabled, so concurrent writes from multiple gunicorn workers can
 occasionally hit "database is locked" under real concurrent load (tracked in
-[#16](https://github.com/verylift/verylift/issues/16)). Set `DATABASE_URL` to opt into Postgres instead — either
-an external instance, or the bundled `db` service via the `postgres` compose
-profile. This applies to both deployment paths above; Kamal's `config/deploy.yml`
-always uses the bundled Postgres accessory rather than SQLite.
+[#16](https://github.com/verylift/verylift/issues/16)). Set `DATABASE_URL` to
+opt into Postgres instead. This applies to both deployment paths above;
+Kamal's `config/deploy.yml` always uses its Postgres accessory rather than
+SQLite.
 
 ## Security
 

@@ -2,38 +2,34 @@
 # (that's Kamal — see config/deploy.yml and the README's Deployment section).
 # Feel free to deviate from it.
 #
-# Deliberately monolithic: one `app` container that sets itself up and serves
-# traffic, so "start the container" is the entire install. There is no
-# separate admin/migration service to discover or invoke — see
-# docs/self-hosting.md for the step-by-step walkthrough (including
-# Portainer-specific notes).
-#
-# `app` is the only service `docker compose up` starts by default, and it
-# needs zero required config beyond SECRET_KEY/FIELD_ENCRYPTION_KEYS/
-# ALLOWED_HOSTS (see example.env) — it runs against a SQLite file on the
-# `data` volume below. That's the right choice for a single user or a small
-# friend group; it does NOT enable SQLite's WAL mode, so concurrent writes
-# from multiple gunicorn workers can occasionally hit "database is locked"
-# under real concurrent load (tracked in
+# Deliberately one service: the app container sets itself up and serves
+# traffic, so "start the container" is the entire install. It stores data in a
+# SQLite file on the `data` volume, which needs no configuration and suits a
+# single user or a small friend group. Note it does NOT enable SQLite's WAL
+# mode, so concurrent writes from multiple gunicorn workers can occasionally
+# hit "database is locked" under real concurrent load (tracked in
 # https://github.com/verylift/verylift/issues/16).
 #
-# Postgres is available as an opt-in `postgres` profile (the `db` service
-# below) for larger or multi-user deployments. Unlike the Kamal setup, `app`
-# connects to it with the owning role rather than a scoped DML-only one:
-# running migrations from the app container is what removes the second
-# service, and that requires schema-change rights. The tradeoff is deliberate
-# — a compromised app here could alter the schema, not just the rows. Kamal
-# keeps the privilege split (config/deploy.yml's `release` role); if you want
-# it too, model yours on that instead of this file.
+# To use Postgres instead, point DATABASE_URL at your own instance — there is
+# no bundled database here on purpose. docs/self-hosting.md has a drop-in
+# service definition if you'd rather run one alongside this. Either way the
+# app migrates itself on boot, so it connects with an account allowed to
+# change the schema; Kamal instead splits owner and app roles
+# (config/deploy.yml), which is the model to copy if you want that separation.
+#
+# Required config is SECRET_KEY, FIELD_ENCRYPTION_KEYS, and ALLOWED_HOSTS in
+# a .env file beside this one. See example.env for those and every optional
+# setting, and docs/self-hosting.md for the step-by-step walkthrough
+# (including Portainer-specific notes).
 services:
   app:
     image: ghcr.io/verylift/verylift:latest
     # The container installs and upgrades itself on every boot: migrate,
-    # collectstatic, and seed_all all run before gunicorn starts, on SQLite and
-    # Postgres alike. All three are idempotent, so re-running them each restart
-    # is safe (it's what the Kamal pre-deploy hook does on every deploy too);
-    # the cost is a few seconds of boot time, and the benefit is that pulling a
-    # new image applies its own schema changes with no extra step.
+    # collectstatic, and seed_all all run before gunicorn starts. All three are
+    # idempotent, so re-running them each restart is safe (it's what the Kamal
+    # pre-deploy hook does on every deploy too); the cost is a few seconds of
+    # boot time, and the benefit is that pulling a new image applies its own
+    # schema changes with no extra step.
     #
     # `set -e` means a failed migration stops the container rather than letting
     # gunicorn serve a half-migrated database; `restart: unless-stopped` then
@@ -54,9 +50,6 @@ services:
         exec gunicorn root.wsgi:application -c gunicorn.conf.py
     ports:
       - "8000:8000"
-    networks:
-      - frontend
-      - backend
     # Gunicorn binds unprivileged :8000 and the image already runs as non-root
     # (uid 999), so no capabilities are needed — drop them all with no add-backs.
     cap_drop:
@@ -65,10 +58,10 @@ services:
       - "no-new-privileges:true"
     # Read-only root filesystem: a compromised process cannot tamper with the
     # app code or drop persistent files. The only runtime write paths are mounted
-    # writable explicitly: /tmp (gunicorn worker heartbeat files) via tmpfs,
-    # /app/staticfiles and /app/data via their named volumes (named volumes
-    # stay writable under read_only). Precompiled bytecode
-    # (UV_COMPILE_BYTECODE=1) means no runtime __pycache__ writes are needed.
+    # writable explicitly: /tmp (gunicorn worker heartbeat files) via tmpfs, and
+    # the three named volumes below (named volumes stay writable under
+    # read_only). Precompiled bytecode (UV_COMPILE_BYTECODE=1) means no runtime
+    # __pycache__ writes are needed.
     read_only: true
     tmpfs:
       - "/tmp:size=64m,mode=1777"
@@ -76,11 +69,8 @@ services:
       - .env
     environment:
       DJANGO_SETTINGS_MODULE: root.settings_prod
-      # Defaults to the SQLite file on the `data` volume below — no other
-      # containers required. Set DATABASE_URL yourself in .env to use Postgres
-      # instead: either an external instance, or the bundled `db` service below
-      # via `--profile postgres`, e.g.
-      # postgres://verylift:<POSTGRES_PASSWORD>@db:5432/verylift
+      # Defaults to the SQLite file on the `data` volume below. Set DATABASE_URL
+      # in .env to point at a Postgres instance instead.
       DATABASE_URL: ${DATABASE_URL:-sqlite:////app/data/db.sqlite3}
       # Pin the gunicorn worker count. gunicorn.conf.py otherwise sizes workers
       # from multiprocessing.cpu_count(), which reports the host's core count and
@@ -100,27 +90,21 @@ services:
       # the same treatment — read_only above means /app/media itself isn't
       # writable without an explicit volume.
       - media:/app/media
-      # Default SQLite database file + its journal/WAL sidecar files. Unused
-      # (but harmless to leave mounted) when DATABASE_URL points at Postgres.
+      # Default SQLite database file + its journal sidecar files. Unused (but
+      # harmless to leave mounted) when DATABASE_URL points at Postgres.
       - data:/app/data
-    # `required: false` is what lets one definition serve both paths: on the
-    # default SQLite path `db` isn't started at all and this is a no-op, while
-    # under `--profile postgres` it holds `app` until the database is accepting
-    # connections, so the migration step above doesn't race it.
-    depends_on:
-      db:
-        condition: service_healthy
-        required: false
-    # Liveness/readiness probe hits the loopback /healthz endpoint, which checks
-    # DB connectivity. Uses python urllib (curl/wget are not guaranteed in the
-    # slim image; python always is) and exits non-zero on any status other than
-    # 200, so Docker marks the container unhealthy when the app cannot serve or
-    # reach the DB.
+    # Probes the loopback /healthz endpoint, which checks DB connectivity.
+    # Uses python urllib rather than curl/wget — neither ships in the slim
+    # image, and adding one would mean an apt layer for something Python
+    # already does. urlopen raises on any non-2xx status and on a refused
+    # connection, so no explicit status comparison is needed.
     healthcheck:
       test:
         [
-          "CMD-SHELL",
-          "python -c \"import sys,urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=5).status==200 else 1)\"",
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=5).read()",
         ]
       interval: 30s
       timeout: 10s
@@ -132,62 +116,7 @@ services:
       start_period: 180s
     restart: unless-stopped
 
-  # --- Opt-in Postgres, for larger or multi-user installs: --profile postgres
-  # Not started by a plain `docker compose up`. Set DATABASE_URL in .env to the
-  # owner-role URL shown above, then:
-  #   docker compose -f docker-compose.selfhost.yml --profile postgres up -d
-  # `app` waits for this to be healthy and migrates itself, same as on SQLite.
-  db:
-    image: postgres:16-alpine
-    profiles: ["postgres"]
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-verylift}
-      POSTGRES_USER: ${POSTGRES_USER:-verylift}
-      # No `:?required` here: this file must stay parseable with zero Postgres
-      # config set at all, since `db` is optional and docker compose
-      # interpolates every service's environment up front regardless of which
-      # profile is active. The official postgres image itself refuses to start
-      # with an empty password, so an unset value still fails loudly — just at
-      # container start, once you've actually opted into this profile, rather
-      # than at parse time on the SQLite path where it's irrelevant.
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - backend
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 512M
-    # Free hardening for the db. NOT cap_drop: ALL — the official Postgres
-    # entrypoint starts as root and needs SETUID/SETGID/CHOWN/DAC_OVERRIDE/FOWNER
-    # to drop to the postgres user and fix volume ownership; a trimmed cap set is
-    # fragile across image updates.
-    security_opt:
-      - "no-new-privileges:true"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-verylift}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
 volumes:
   data:
   staticfiles:
   media:
-  postgres_data:
-
-networks:
-  # Internal-only network for db<->app traffic. `internal: true` means Docker
-  # attaches no gateway, so it is unreachable from the host and from containers
-  # not explicitly joined to it — a compromised app cannot pivot to other
-  # services on the host via this network, and the db is reachable only here.
-  # Harmless to declare when the `postgres` profile isn't in use — an unused
-  # Docker network costs nothing at rest.
-  backend:
-    internal: true
-  # Regular bridge network providing outbound egress (Liftosaur, the OIDC provider) and
-  # backing the app's published 8000 port for the Pangolin tunnel client.
-  frontend: {}

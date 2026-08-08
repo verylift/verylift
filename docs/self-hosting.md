@@ -203,33 +203,58 @@ single user or small group. Postgres is worth the extra steps if you have
 more users, want stronger concurrent-write behavior, or already run a
 Postgres instance.
 
-The compose file ships a bundled Postgres behind an opt-in profile. Only two
-things change; the app still sets itself up on boot exactly as in Step 3.
+The compose file doesn't bundle a database — it stays a single service on
+purpose. Switching is one line: point `DATABASE_URL` at a Postgres instance
+in your `.env`, alongside the keys from Step 1.
 
-1. Add these to your `.env`, alongside the keys from Step 1:
+```
+DATABASE_URL=postgres://user:password@hostname:5432/verylift
+```
 
-   ```
-   POSTGRES_PASSWORD=<a strong password>
-   DATABASE_URL=postgres://verylift:<POSTGRES_PASSWORD>@db:5432/verylift
-   ```
+Restart the stack and you're done. The app creates its own tables and seeds
+its reference data on boot exactly as it does on SQLite — there are no extra
+setup commands, and updates keep working as described in
+[Updating to a new version](#updating-to-a-new-version).
 
-   Substitute your actual password into `DATABASE_URL` — both lines need it.
-   Setting `DATABASE_URL` is what switches the app off SQLite.
-
-2. Start everything with the profile enabled:
-
-   ```bash
-   docker compose -f docker-compose.selfhost.yml --profile postgres up -d
-   ```
-
-The app waits for the database to accept connections, then migrates and seeds
-it the same way it does on SQLite. Updating works exactly as described in
-[Updating to a new version](#updating-to-a-new-version) — just remember to
-keep `--profile postgres` on the commands, or Docker will stop your database.
-
-Because the app performs its own migrations, it connects with the database's
-owning account rather than a restricted one. That's the tradeoff for having a
-single container do everything: a compromised app could alter the database
+Because the app performs its own migrations, the account in that URL needs
+permission to create and alter tables. That's the tradeoff for a single
+container doing everything: a compromised app could change the database
 structure, not just its contents. If you'd rather keep those privileges
 separated, `config/deploy.yml` in this repo shows how the maintainers' own
-deployment splits them.
+deployment splits them across two roles.
+
+### Running Postgres alongside it
+
+Already have Postgres somewhere? Use it — nothing more to do. If not, add a
+service to your compose file:
+
+```yaml
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: verylift
+      POSTGRES_USER: verylift
+      POSTGRES_PASSWORD: <a strong password>
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U verylift"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Wait for the database before the app tries to migrate against it.
+  app:
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+```
+
+Then set `DATABASE_URL=postgres://verylift:<the password>@db:5432/verylift`
+and bring the stack up as usual. `db` is the hostname because that's the
+service name — Docker resolves it on the network Compose creates for you.
