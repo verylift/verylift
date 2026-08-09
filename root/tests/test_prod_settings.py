@@ -63,6 +63,10 @@ class TestProdSettingsValues:
         reloaded = importlib.reload(prod)
         assert reloaded.CSRF_TRUSTED_ORIGINS == ["https://*.domain.ca"]
 
+    def test_https_enabled_by_default(self, prod_settings):
+        """Omitting HTTPS_ENABLED must keep the hardened behaviour."""
+        assert prod_settings.HTTPS_ENABLED is True
+
     def test_whitenoise_middleware_after_security(self, prod_settings):
         mw = prod_settings.MIDDLEWARE
         # HealthCheckMiddleware runs first (before SSL redirect / host checks),
@@ -81,6 +85,67 @@ class TestProdSettingsValues:
             prod_settings.STORAGES["staticfiles"]["BACKEND"]
             == "whitenoise.storage.CompressedManifestStaticFilesStorage"
         )
+
+
+class TestHttpsDisabled:
+    """HTTPS_ENABLED=False is the LAN self-hosting path (docs/self-hosting.md).
+
+    Every setting that would make plain HTTP unusable has to relax together --
+    leaving any one of them on still breaks the deployment, which is exactly
+    the failure this option exists to avoid.
+    """
+
+    @pytest.fixture
+    def lan_settings(self, monkeypatch):
+        monkeypatch.setenv(
+            "SECRET_KEY",
+            "superduperultrasecretkeysuperduperultrasecretkeyok",
+        )
+        monkeypatch.setenv("ALLOWED_HOSTS", "verylift.local")
+        monkeypatch.setenv(
+            "DATABASE_URL", "postgres://verylift:verylift@db:5432/verylift"
+        )
+        monkeypatch.setenv("HTTPS_ENABLED", "False")
+        import root.settings_prod as prod
+
+        return importlib.reload(prod)
+
+    def test_no_ssl_redirect(self, lan_settings):
+        """The redirect is what makes the app unreachable over plain HTTP."""
+        assert lan_settings.SECURE_SSL_REDIRECT is False
+
+    def test_cookies_not_secure_only(self, lan_settings):
+        """Secure cookies are withheld over HTTP, so login could not complete."""
+        assert lan_settings.SESSION_COOKIE_SECURE is False
+        assert lan_settings.CSRF_COOKIE_SECURE is False
+
+    def test_hsts_fully_disabled(self, lan_settings):
+        """A non-zero max-age would outlive this setting in every browser."""
+        assert lan_settings.SECURE_HSTS_SECONDS == 0
+        assert lan_settings.SECURE_HSTS_INCLUDE_SUBDOMAINS is False
+        assert lan_settings.SECURE_HSTS_PRELOAD is False
+
+    def test_csrf_origins_use_http(self, lan_settings):
+        assert lan_settings.CSRF_TRUSTED_ORIGINS == ["http://verylift.local"]
+
+    def test_csrf_origins_use_http_for_wildcard_hosts(self, monkeypatch):
+        monkeypatch.setenv(
+            "SECRET_KEY",
+            "superduperultrasecretkeysuperduperultrasecretkeyok",
+        )
+        monkeypatch.setenv("ALLOWED_HOSTS", ".home.lan")
+        monkeypatch.setenv(
+            "DATABASE_URL", "postgres://verylift:verylift@db:5432/verylift"
+        )
+        monkeypatch.setenv("HTTPS_ENABLED", "False")
+        import root.settings_prod as prod
+
+        assert importlib.reload(prod).CSRF_TRUSTED_ORIGINS == ["http://*.home.lan"]
+
+    def test_debug_still_forced_off(self, lan_settings):
+        """Relaxing transport security must not relax anything else."""
+        assert lan_settings.DEBUG is False
+        assert lan_settings.SECURE_CONTENT_TYPE_NOSNIFF is True
 
 
 class TestCollectstaticManifest:

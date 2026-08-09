@@ -21,7 +21,7 @@ def protected_media_view(request, path, document_root=None):
     ``root/settings.py``, whose "small self-hosted app at low scale"
     premise this preserves. The usual alternative, handing the file off to a
     reverse proxy via ``X-Accel-Redirect``, has nothing to hand off *to* in this
-    deployment: ``docker-compose.prod.yml`` runs gunicorn directly with the
+    deployment: ``docker-compose.selfhost.yml`` runs gunicorn directly with the
     media volume inside the app container, and the external tunnel client in
     front of it cannot read that volume. All this adds is an ``is_authenticated``
     check that ``AuthenticationMiddleware`` has already computed.

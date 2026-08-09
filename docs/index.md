@@ -20,6 +20,11 @@ wondering about right now.
 - **[Units & added-weight lifts](bodyweight-and-units.md)** — kg or lb, and
   how added-weight lifts like pull-ups are shown.
 
+Running your own copy rather than using someone else's?
+
+- **[Self-hosting very lift](self-hosting.md)** — step-by-step setup on your
+  own server or NAS. No Python or Django knowledge needed.
+
 ## A quick overview
 
 When you join a challenge you build your own goal chart — pull published

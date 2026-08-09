@@ -1,0 +1,83 @@
+# Self-hosting reference — not what this repo's maintainers run in production
+# (that's Kamal; see config/deploy.yml). One service storing data in SQLite,
+# needing no configuration beyond SECRET_KEY, FIELD_ENCRYPTION_KEYS, and
+# ALLOWED_HOSTS in a .env file beside this one.
+#
+# Setup walkthrough: docs/self-hosting.md. Every setting: example.env.
+services:
+  app:
+    image: ghcr.io/verylift/verylift:latest
+    # Installs and upgrades itself on every boot; every step here is
+    # idempotent. `set -e` stops the container on a failed migration rather
+    # than serving a half-migrated database, and `exec` gives gunicorn PID 1
+    # so it still receives Docker's stop signals.
+    command:
+      - /bin/sh
+      - -c
+      - |
+        set -e
+        echo ">> Applying database migrations..."
+        python manage.py migrate --noinput
+        echo ">> Collecting static files..."
+        python manage.py collectstatic --noinput
+        echo ">> Seeding reference data..."
+        python manage.py seed_all
+        if [ "$$FITNESSVOLT_ENABLED" != "False" ]; then
+          echo ">> Warming FitnessVolt strength standards cache..."
+          python manage.py refresh_fitnessvolt_cache || true
+        fi
+        echo ">> Setup complete, starting gunicorn."
+        exec gunicorn root.wsgi:application -c gunicorn.conf.py
+    ports:
+      - "8000:8000"
+    # Gunicorn binds unprivileged :8000 as uid 999, so no capabilities needed.
+    cap_drop:
+      - ALL
+    security_opt:
+      - "no-new-privileges:true"
+    # Every runtime write path is mounted explicitly below; named volumes stay
+    # writable under read_only.
+    read_only: true
+    tmpfs:
+      - "/tmp:size=64m,mode=1777"
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: root.settings_prod
+      # Set DATABASE_URL in .env to use Postgres instead.
+      DATABASE_URL: ${DATABASE_URL:-sqlite:////app/data/db.sqlite3}
+      # Pinned because gunicorn.conf.py otherwise sizes workers from the host's
+      # core count, ignoring the cpus limit below. 5 is the 2-core formula.
+      GUNICORN_WORKERS: "5"
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+    volumes:
+      - staticfiles:/app/staticfiles
+      - media:/app/media # user uploads (avatars)
+      - data:/app/data # SQLite database file
+    # python rather than curl/wget, neither of which ships in the slim image.
+    # urlopen raises on non-2xx and on a refused connection.
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=5).read()",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      # First boot migrates, seeds, and pulls the FitnessVolt strength-standards
+      # snapshot over the network before gunicorn binds — give that room to run
+      # slow (or retry through a flaky connection) without tripping the healthcheck.
+      start_period: 300s
+    restart: unless-stopped
+
+volumes:
+  data:
+  staticfiles:
+  media:

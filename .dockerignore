@@ -6,8 +6,7 @@
 CHANGELOG.md
 Dockerfile
 
-docker-compose.prod.yml
-docker-compose.yml
+docker-compose*
 
 # Kamal-only, never needed inside the running container
 .kamal

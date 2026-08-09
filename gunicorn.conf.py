@@ -19,7 +19,7 @@ timeout = 60
 
 # Disable gunicorn's control socket. It defaults to writing a unix socket under
 # $HOME/.gunicorn, which fails on the read-only root filesystem the container
-# runs with (see docker-compose.prod.yml). We manage the process via Docker, not
+# runs with (see docker-compose.selfhost.yml). We manage the process via Docker, not
 # the `gunicorn ctl` CLI, so the control interface is unused — disabling it drops
 # a write path and an attack surface rather than mounting a tmpfs to support it.
 control_socket_disable = True
