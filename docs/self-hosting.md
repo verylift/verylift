@@ -127,8 +127,10 @@ quicker: migrations and seeding become no-ops, and the FitnessVolt pull skips
 straight past the expensive part once it's already cached. The FitnessVolt
 pull is also best-effort: a failed or slow connection to FitnessVolt logs a
 warning and moves on rather than blocking startup, so a fully offline LAN
-still boots fine — it just won't have that goal-setup method available. Set
-`FITNESSVOLT_ENABLED=False` in your `.env` to skip the pull entirely.
+still boots fine — it just won't have that goal-setup method available.
+`FITNESSVOLT_ENABLED=False` in your `.env` does the same thing on purpose:
+it skips the pull and removes "standards" from the goal-setup picker
+entirely, rather than leaving the method there with no data behind it.
 
 This setup step re-runs on every restart, which is intentional and safe: it's
 how the app applies new database changes after you update the image. You never
