@@ -142,9 +142,7 @@
         <button type="submit" class="bg-accent text-accent-on text-sm font-medium px-6 py-2 rounded hover:bg-accent-hover">
           {% trans "Continue" %}
         </button>
-        <a href="{% url 'challenges:goal-setup' challenge.pk %}?cancel=1"
-           onclick="return confirm('{% trans "Cancel and discard everything entered so far?" %}')"
-           class="text-sm text-content-muted hover:text-content-strong">{% trans "Cancel" %}</a>
+        {% include "challenges/_wizard_cancel_actions.html" %}
       </div>
     </form>
 {% endblock %}

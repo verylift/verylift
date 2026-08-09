@@ -80,4 +80,9 @@ urlpatterns = [
         views.cancel_challenge_view,
         name="cancel",
     ),
+    path(
+        "challenges/<uuid:pk>/delete-draft/",
+        views.delete_draft_challenge_view,
+        name="delete-draft",
+    ),
 ]

@@ -32,6 +32,7 @@
             <th class="px-4 py-3">{% trans "Start" %}</th>
             <th class="px-4 py-3">{% trans "End" %}</th>
             <th class="px-4 py-3">{% trans "Leader" %}</th>
+            <th class="px-4 py-3"><span class="sr-only">{% trans "Actions" %}</span></th>
           </tr>
         </thead>
         <tbody>
@@ -58,6 +59,19 @@
               {% blocktrans with name=row.leader_name points=row.leader_points %}{{ name }} <span class="text-content-subtle">·</span> <span class="font-mono">{{ points }}</span> pts{% endblocktrans %}
               {% else %}
               <span class="text-content-subtle">{% trans "No scores yet" %}</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-right">
+              {% if row.challenge.status == "draft" and row.challenge.creator_id == request.user.id %}
+              <button
+                type="button"
+                hx-post="{% url 'challenges:delete-draft' row.challenge.pk %}"
+                hx-target="#challenge-row-{{ row.challenge.pk }}"
+                hx-swap="outerHTML"
+                hx-confirm="{% trans 'Delete this draft challenge? This cannot be undone.' %}"
+                class="text-sm font-medium text-danger hover:text-danger-dark">
+                {% trans "Delete Draft" %}
+              </button>
               {% endif %}
             </td>
           </tr>
@@ -109,6 +123,19 @@
             </dd>
           </div>
         </dl>
+        {% if row.challenge.status == "draft" and row.challenge.creator_id == request.user.id %}
+        <div class="mt-3 text-right">
+          <button
+            type="button"
+            hx-post="{% url 'challenges:delete-draft' row.challenge.pk %}"
+            hx-target="#challenge-card-mobile-{{ row.challenge.pk }}"
+            hx-swap="outerHTML"
+            hx-confirm="{% trans 'Delete this draft challenge? This cannot be undone.' %}"
+            class="text-sm font-medium text-danger hover:text-danger-dark">
+            {% trans "Delete Draft" %}
+          </button>
+        </div>
+        {% endif %}
       </div>
       {% endfor %}
     </div>
