@@ -7,7 +7,7 @@
 services:
   app:
     image: ghcr.io/verylift/verylift:latest
-    # Installs and upgrades itself on every boot; all three commands are
+    # Installs and upgrades itself on every boot; every step here is
     # idempotent. `set -e` stops the container on a failed migration rather
     # than serving a half-migrated database, and `exec` gives gunicorn PID 1
     # so it still receives Docker's stop signals.
@@ -22,6 +22,10 @@ services:
         python manage.py collectstatic --noinput
         echo ">> Seeding reference data..."
         python manage.py seed_all
+        if [ "$$FITNESSVOLT_ENABLED" != "False" ]; then
+          echo ">> Warming FitnessVolt strength standards cache..."
+          python manage.py refresh_fitnessvolt_cache || true
+        fi
         echo ">> Setup complete, starting gunicorn."
         exec gunicorn root.wsgi:application -c gunicorn.conf.py
     ports:
@@ -67,8 +71,10 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      # First boot migrates and seeds before gunicorn binds.
-      start_period: 180s
+      # First boot migrates, seeds, and pulls the FitnessVolt strength-standards
+      # snapshot over the network before gunicorn binds — give that room to run
+      # slow (or retry through a flaky connection) without tripping the healthcheck.
+      start_period: 300s
     restart: unless-stopped
 
 volumes:

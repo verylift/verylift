@@ -108,16 +108,22 @@ docker compose -f docker-compose.selfhost.yml up -d
 ```
 
 That's it. The container sets itself up on first boot: it creates the
-database tables, collects its static files, and loads the reference data it
-needs. Watch it happen with:
+database tables, collects its static files, loads the reference data it
+needs, and pulls the FitnessVolt strength-standards data it needs for the
+"standards" goal-setup method. Watch it happen with:
 
 ```bash
 docker compose -f docker-compose.selfhost.yml logs -f app
 ```
 
-You'll see `applying migrations`, `collecting static files`, and `seeding
-reference data` scroll past, then gunicorn starting up. First boot takes
-longer than later ones — a minute or two on a slow NAS is normal.
+You'll see `applying migrations`, `collecting static files`, `seeding
+reference data`, and `warming FitnessVolt strength standards cache` scroll
+past, then gunicorn starting up. First boot takes longer than later ones — the
+FitnessVolt pull alone can take a couple of minutes, so budget five or so on a
+slow NAS. That pull is best-effort: a failed or slow connection to FitnessVolt
+logs a warning and moves on rather than blocking startup, so a fully offline
+LAN still boots fine — it just won't have that goal-setup method available.
+Set `FITNESSVOLT_ENABLED=False` in your `.env` to skip the pull entirely.
 
 This setup step re-runs on every restart, which is intentional and safe: it's
 how the app applies new database changes after you update the image. You never
