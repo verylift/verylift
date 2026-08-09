@@ -91,7 +91,8 @@ public name your tunnel or reverse proxy serves, not the container's internal
 address. Separate multiple names with commas; `localhost` is included above so
 you can reach the container directly at `http://localhost:8000` for a quick
 sanity check before your tunnel or reverse proxy is wired up. Getting this
-wrong gives you a `400 Bad Request` page mentioning `DisallowedHost`.
+wrong gives you a `500 Internal Server Error` with `DisallowedHost` in the
+container's logs — see [Troubleshooting](#troubleshooting).
 
 That's the whole required configuration. There is no database to set up — the
 app stores its data in a SQLite file on a Docker volume, which is fine for a
@@ -200,9 +201,11 @@ You're browsing over plain HTTP without telling the app. Add
 redirecting even after that, it cached the old instruction — clear the site's
 data for that hostname, or try a private window to confirm.
 
-**`400 Bad Request` mentioning `DisallowedHost`.**
-The hostname in your browser isn't listed in `ALLOWED_HOSTS`. Add it and
-restart the stack.
+**A `500 Internal Server Error`, with `DisallowedHost` in the logs.**
+The hostname in your browser isn't listed in `ALLOWED_HOSTS`. Check the logs
+(`docker compose -f docker-compose.selfhost.yml logs app`) for a line like
+`Invalid HTTP_HOST header: '<hostname>'. You may need to add '<hostname>' to
+ALLOWED_HOSTS.` — add that hostname and restart the stack.
 
 **The container starts then immediately stops, over and over.**
 Check the logs (`docker compose -f docker-compose.selfhost.yml logs app`). An
