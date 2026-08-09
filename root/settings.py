@@ -111,6 +111,49 @@ DATABASES = {
     "default": env.db("DATABASE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
 }
 
+# SQLite runs in rollback-journal mode by default, which takes a database-wide
+# lock for every write. Gunicorn runs several worker processes against the same
+# file (see gunicorn.conf.py), so two participants syncing at the same moment
+# could hit "database is locked". WAL lets one writer proceed alongside readers,
+# which is what makes the multi-worker default workable (issue #16).
+#
+# Alongside WAL:
+# - busy_timeout makes a worker that still collides on the WAL write lock wait
+#   and retry for 5s instead of failing immediately.
+# - synchronous=NORMAL is the recommended pairing with WAL: durable against
+#   process crashes, and only at risk of losing the most recent commits on an
+#   OS/power failure, in exchange for not fsyncing every transaction.
+# - transaction_mode=IMMEDIATE takes the write lock when the transaction opens
+#   rather than on its first write, so concurrent writers queue on busy_timeout
+#   instead of deadlocking on a read-to-write upgrade that SQLite cannot retry.
+#
+# These are ignored by every other backend, so this is scoped to SQLite only —
+# the Postgres path (DATABASE_URL set) is unchanged.
+#
+# SQLITE_WAL=False returns to SQLite's default rollback-journal mode, for
+# operators whose storage doesn't suit WAL — its shared-memory index needs real
+# mmap support, which some network filesystems (NFS, SMB, certain container
+# volume drivers) don't provide, and there WAL fails to open the database at all
+# rather than merely running slower. Journal mode is a persistent property of the
+# database file, so an existing WAL database has to be converted back on the way
+# down; the PRAGMA below does that on the first connection after the flip.
+# synchronous drops to FULL alongside it, because NORMAL is only corruption-safe
+# under WAL — in rollback-journal mode it can leave the file damaged after a
+# power loss, not just short a few commits.
+SQLITE_WAL = env.bool("SQLITE_WAL", default=True)
+
+if DATABASES["default"]["ENGINE"] == "django.db.backends.sqlite3":
+    DATABASES["default"].setdefault("OPTIONS", {}).update(
+        {
+            "init_command": (
+                f"PRAGMA journal_mode={'WAL' if SQLITE_WAL else 'DELETE'};"
+                f"PRAGMA synchronous={'NORMAL' if SQLITE_WAL else 'FULL'};"
+                "PRAGMA busy_timeout=5000;"
+            ),
+            "transaction_mode": "IMMEDIATE",
+        }
+    )
+
 # django-ratelimit stores request counters in a cache. Production runs multiple
 # gunicorn workers, so a per-process LocMem cache would let each worker keep its
 # own count and multiply the effective limit by the worker count. A Postgres

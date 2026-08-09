@@ -227,16 +227,28 @@ but only someone with log access can complete it. See `example.env` for SMTP
 settings.
 
 **Occasional "database is locked" errors.**
-A known limitation of the SQLite default under concurrent use, tracked in
-[#16](https://github.com/verylift/verylift/issues/16). Switching to Postgres
-(below) avoids it.
+Shouldn't happen: the SQLite database runs in WAL mode, where one writer works
+alongside readers and a writer that does collide waits up to 5 seconds rather
+than failing. If you see it anyway, check whether `SQLITE_WAL=False` is set in
+your `.env` — that turns WAL off. Under genuinely heavy concurrent use,
+switching to Postgres (below) is the next step.
+
+**The app can't open the database at all** (errors mentioning `disk I/O` or
+`unable to open database file`) **and your data volume lives on a network
+share.**
+WAL needs working shared memory (mmap) on the filesystem holding the database,
+which NFS and SMB shares typically don't provide. Set `SQLITE_WAL=False` in
+your `.env` and restart; the app converts the database back to the older
+rollback-journal mode on the next start. Concurrent writes are then slower, so
+prefer local storage or Postgres if you can.
 
 ## Advanced: using Postgres
 
 SQLite is the default because it needs no setup and comfortably handles a
-single user or small group. Postgres is worth the extra steps if you have
-more users, want stronger concurrent-write behavior, or already run a
-Postgres instance.
+single user or small group — it runs in WAL mode, so the app's several worker
+processes can write to it without queueing behind each other. Postgres is
+worth the extra steps if you have more users, want stronger concurrent-write
+behavior, or already run a Postgres instance.
 
 The compose file doesn't bundle a database — it stays a single service on
 purpose. Switching is one line: point `DATABASE_URL` at a Postgres instance

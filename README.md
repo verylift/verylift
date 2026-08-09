@@ -160,11 +160,13 @@ Python or Django knowledge, with Portainer-specific notes.
 `DATABASE_URL` is optional — leaving it unset falls back to a local SQLite
 file (`db.sqlite3`) instead of failing to start. This is the default for
 `docker-compose.selfhost.yml`'s `app` service (see above) and is fine for a
-single user or a small friend group, with one caveat: SQLite's WAL mode
-isn't enabled, so concurrent writes from multiple gunicorn workers can
-occasionally hit "database is locked" under real concurrent load (tracked in
-[#16](https://github.com/verylift/verylift/issues/16)). Set `DATABASE_URL` to
-opt into Postgres instead. This applies to both deployment paths above;
+single user or a small friend group. The SQLite connection runs in WAL mode
+with a 5s busy timeout, so one writer works alongside concurrent readers and
+the gunicorn workers share the file without tripping "database is locked".
+Set `SQLITE_WAL=False` to fall back to rollback-journal mode if your storage
+can't support WAL (it needs working mmap, which some network filesystems
+lack). Set `DATABASE_URL` to opt into Postgres instead. This applies to both
+deployment paths above;
 Kamal's `config/deploy.yml` always uses its Postgres accessory rather than
 SQLite.
 
