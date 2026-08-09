@@ -75,7 +75,7 @@ this repo, and create a file named `.env` next to it:
 ```
 SECRET_KEY=<the first key you generated>
 FIELD_ENCRYPTION_KEYS=<the second key you generated>
-ALLOWED_HOSTS=verylift.example.com
+ALLOWED_HOSTS=verylift.example.com,localhost
 ```
 
 If you decided on **plain HTTP** in [Before you start](#before-you-start),
@@ -87,8 +87,10 @@ HTTPS_ENABLED=False
 
 `ALLOWED_HOSTS` is the hostname you'll actually type into your browser — the
 public name your tunnel or reverse proxy serves, not the container's internal
-address. Separate multiple names with commas. Getting this wrong gives you a
-`400 Bad Request` page mentioning `DisallowedHost`.
+address. Separate multiple names with commas; `localhost` is included above so
+you can reach the container directly at `http://localhost:8000` for a quick
+sanity check before your tunnel or reverse proxy is wired up. Getting this
+wrong gives you a `400 Bad Request` page mentioning `DisallowedHost`.
 
 That's the whole required configuration. There is no database to set up — the
 app stores its data in a SQLite file on a Docker volume, which is fine for a
