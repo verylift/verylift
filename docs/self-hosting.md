@@ -177,9 +177,11 @@ Everything above applies; only the mechanics differ.
   `docker-compose.selfhost.yml` as the compose path.
 - **Configuration:** use the **Environment variables** panel below the editor
   instead of creating a `.env` file by hand. Add `SECRET_KEY`,
-  `FIELD_ENCRYPTION_KEYS`, and `ALLOWED_HOSTS` there. Portainer writes them
-  into a `.env` file beside the stack for you, which is exactly what the
-  compose file expects.
+  `FIELD_ENCRYPTION_KEYS`, and `ALLOWED_HOSTS` there — plus `HTTPS_ENABLED`
+  set to `False` if you're on plain HTTP, per
+  [Before you start](#before-you-start). Portainer writes them into a `.env`
+  file beside the stack for you, which is exactly what the compose file
+  expects.
 - **Running the `createsuperuser` command from Step 4:** open *Containers*,
   click the `app` container, and use the **Console** button (`>_`) to get a
   shell inside it. Then run
@@ -208,9 +210,12 @@ Check the logs (`docker compose -f docker-compose.selfhost.yml logs app`). An
 missing or empty — revisit Steps 1 and 2.
 
 **Pages load but show a server error.**
-Check the container's logs — the cause is almost always printed there. If the
-setup output from Step 3 didn't complete, the container stops rather than
-serving a half-configured database, so look for an error in that section.
+Check the container's logs — the cause is almost always printed there. If
+migrations, static-file collection, or seeding from Step 3 didn't complete,
+the container stops rather than serving a half-configured database, so look
+for an error in that section. The FitnessVolt warm-up is the one exception —
+it's best-effort and never stops the container, so a stuck or failed pull
+there isn't why pages are erroring.
 
 **Password reset emails never arrive.**
 Expected until you configure email. With no `EMAIL_HOST` set, reset links are
@@ -253,7 +258,11 @@ deployment splits them across two roles.
 ### Running Postgres alongside it
 
 Already have Postgres somewhere? Use it — nothing more to do. If not, add a
-service to your compose file:
+new `db` service below your existing `app` service in
+`docker-compose.selfhost.yml` — `db` and `postgres_data` are new, but `app`
+and `volumes` already exist in your file, so add the two lines shown for each
+into what's already there rather than pasting a second copy of either
+section:
 
 ```yaml
 services:
@@ -272,13 +281,15 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # Wait for the database before the app tries to migrate against it.
   app:
+    # Add just this to the app service that's already there — wait for the
+    # database before the app tries to migrate against it.
     depends_on:
       db:
         condition: service_healthy
 
 volumes:
+  # Add just this line inside the volumes section that's already there.
   postgres_data:
 ```
 
