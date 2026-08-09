@@ -209,12 +209,12 @@ LIFTOSAUR_API_TIMEOUT = env.int("LIFTOSAUR_API_TIMEOUT", default=10)
 # Cooldown (minutes) between automatic Liftosaur syncs for a given user+challenge.
 LIFTOSAUR_SYNC_COOLDOWN_MINUTES = env.int("LIFTOSAUR_SYNC_COOLDOWN_MINUTES", default=10)
 
-# FitnessVolt strength standards (TASK-104). Disabled by default as a rollout
-# gate: the FitnessVolt options never appear in the challenge-creation
-# picker while off. Enabling for the first time: set FITNESSVOLT_ENABLED=True,
-# run `manage.py refresh_fitnessvolt_cache` once to warm the first snapshot,
-# and only then do the populations become selectable.
-FITNESSVOLT_ENABLED = env.bool("FITNESSVOLT_ENABLED", default=False)
+# FitnessVolt strength standards (TASK-104). Enabled by default; the
+# FitnessVolt options still never appear in the challenge-creation picker
+# until `manage.py refresh_fitnessvolt_cache` has been run once to warm the
+# first snapshot -- set FITNESSVOLT_ENABLED=False to keep the picker from
+# offering it at all instead.
+FITNESSVOLT_ENABLED = env.bool("FITNESSVOLT_ENABLED", default=True)
 FITNESSVOLT_API_BASE = env("FITNESSVOLT_API_BASE", default="https://fitnessvolt.com")
 # Per-request timeout (seconds) for outbound FitnessVolt API calls.
 FITNESSVOLT_API_TIMEOUT = env.int("FITNESSVOLT_API_TIMEOUT", default=10)
