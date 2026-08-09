@@ -18,7 +18,8 @@ you manage containers, but every step below works from a plain terminal too.
 **Docker**, with `docker compose`. Anything that runs containers works —
 Docker Desktop, a NAS package, Portainer, plain Linux Docker. That's it.
 
-Budget about five minutes.
+Budget about five minutes of hands-on work, plus up to five more waiting for
+the container's first boot on older or slower hardware (Step 3 explains why).
 
 Decide one thing up front, because it changes a setting in Step 2: **will you
 reach this over `https://` or plain `http://`?**
@@ -118,12 +119,16 @@ docker compose -f docker-compose.selfhost.yml logs -f app
 
 You'll see `applying migrations`, `collecting static files`, `seeding
 reference data`, and `warming FitnessVolt strength standards cache` scroll
-past, then gunicorn starting up. First boot takes longer than later ones — the
-FitnessVolt pull alone can take a couple of minutes, so budget five or so on a
-slow NAS. That pull is best-effort: a failed or slow connection to FitnessVolt
-logs a warning and moves on rather than blocking startup, so a fully offline
-LAN still boots fine — it just won't have that goal-setup method available.
-Set `FITNESSVOLT_ENABLED=False` in your `.env` to skip the pull entirely.
+past, then gunicorn starting up. First boot takes longer than later ones —
+budget up to five minutes on older or slower hardware (a well-worn NAS, say)
+once you add up pulling the image itself, migrations and static-file
+collection on a slower CPU, and the FitnessVolt pull. Later restarts are much
+quicker: migrations and seeding become no-ops, and the FitnessVolt pull skips
+straight past the expensive part once it's already cached. The FitnessVolt
+pull is also best-effort: a failed or slow connection to FitnessVolt logs a
+warning and moves on rather than blocking startup, so a fully offline LAN
+still boots fine — it just won't have that goal-setup method available. Set
+`FITNESSVOLT_ENABLED=False` in your `.env` to skip the pull entirely.
 
 This setup step re-runs on every restart, which is intentional and safe: it's
 how the app applies new database changes after you update the image. You never
