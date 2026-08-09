@@ -891,6 +891,11 @@ class TestAvatarForm:
         response = authed_client.get(url)
         assert "Profile Photo" in response.content.decode()
 
+    def test_avatar_section_save_button_says_save_photo(self, authed_client, user, db):
+        url = reverse("accounts:settings")
+        response = authed_client.get(url)
+        assert "Save Photo" in response.content.decode()
+
 
 class TestAvatarCropWizardMarkup:
     """The crop step is client-side, so what CI can enforce is the markup
