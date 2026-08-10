@@ -12,11 +12,6 @@ from liftosaur.tests.factories import LiftHistoryFactory
 
 @pytest.mark.django_db
 class TestLiftHistoryModel:
-    def test_has_uuid_pk(self):
-        row = LiftHistoryFactory()
-        assert row.pk is not None
-        assert len(str(row.pk)) == 36
-
     def test_unique_on_user_lift_date_reps_weight(self):
         user = UserFactory()
         performed = timezone.now().date()

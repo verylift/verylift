@@ -32,7 +32,6 @@ from challenges.services import (
     _weight_display,
 )
 from challenges.tests.factories import (
-    ChallengeFactory,
     ChallengeLiftFactory,
     ChallengeParticipantFactory,
     CustomGoalFactory,
@@ -1499,7 +1498,15 @@ class TestNextPointGap:
 
 
 class TestFlagEndgameSuggestion:
-    """Unit coverage for endgame-suggestion qualification, window gate, and cap."""
+    """Unit coverage for endgame-suggestion qualification, window gate, and cap.
+
+    Builds unsaved ``Challenge`` instances rather than going through the
+    factory: ``_flag_endgame_suggestion`` only reads ``status`` and
+    ``end_date`` off the challenge, so persisting one (plus the creator the
+    factory drags along) buys nothing but round-trips. Matches
+    :class:`TestFlagCloseToGoal`, which works on hand-built cards for the
+    same reason.
+    """
 
     @pytest.fixture(autouse=True)
     def _pin_thresholds(self, settings):
@@ -1508,12 +1515,12 @@ class TestFlagEndgameSuggestion:
         settings.CHALLENGES_ENDGAME_REPS_GAP = ENDGAME_REPS_GAP
 
     def _in_window(self):
-        return ChallengeFactory(
+        return Challenge(
             status=Challenge.Status.ACTIVE,
             end_date=date.today() + timedelta(days=3),
         )
 
-    def test_scored_lift_qualifies_inside_window(self, db):
+    def test_scored_lift_qualifies_inside_window(self):
         card = _endgame_scored_card(
             "Squat",
             next_point_gap_fraction=Decimal("0.03"),
@@ -1522,19 +1529,19 @@ class TestFlagEndgameSuggestion:
         _flag_endgame_suggestion([card], self._in_window())
         assert card["endgame_suggestion"] == "next_point"
 
-    def test_unscored_lift_qualifies_weight_path(self, db):
+    def test_unscored_lift_qualifies_weight_path(self):
         card = _close_card("Squat", gap_fraction=Decimal("0.03"))
         _flag_endgame_suggestion([card], self._in_window())
         assert card["endgame_suggestion"] == "first_point"
         assert card["endgame_suggestion_via"] == "weight"
 
-    def test_unscored_lift_qualifies_reps_only_path(self, db):
+    def test_unscored_lift_qualifies_reps_only_path(self):
         card = _close_card("Squat", gap_fraction=Decimal("0.40"), reps_gap=2)
         _flag_endgame_suggestion([card], self._in_window())
         assert card["endgame_suggestion"] == "first_point"
         assert card["endgame_suggestion_via"] == "reps"
 
-    def test_unscored_lift_qualifies_both_paths(self, db):
+    def test_unscored_lift_qualifies_both_paths(self):
         # gap_fraction under the weight threshold AND reps_gap under the reps
         # threshold: both distances should be recorded, not collapsed to weight.
         card = _close_card("Squat", gap_fraction=Decimal("0.03"), reps_gap=1)
@@ -1542,8 +1549,8 @@ class TestFlagEndgameSuggestion:
         assert card["endgame_suggestion"] == "first_point"
         assert card["endgame_suggestion_via"] == "both"
 
-    def test_nothing_flagged_outside_window(self, db):
-        challenge = ChallengeFactory(
+    def test_nothing_flagged_outside_window(self):
+        challenge = Challenge(
             status=Challenge.Status.ACTIVE,
             end_date=date.today() + timedelta(days=40),
         )
@@ -1551,12 +1558,12 @@ class TestFlagEndgameSuggestion:
         _flag_endgame_suggestion([card], challenge)
         assert "endgame_suggestion" not in card
 
-    def test_nothing_flagged_when_gap_fails_both_thresholds(self, db):
+    def test_nothing_flagged_when_gap_fails_both_thresholds(self):
         card = _close_card("Squat", gap_fraction=Decimal("0.40"), reps_gap=5)
         _flag_endgame_suggestion([card], self._in_window())
         assert "endgame_suggestion" not in card
 
-    def test_smallest_gap_wins_across_scored_and_unscored(self, db):
+    def test_smallest_gap_wins_across_scored_and_unscored(self):
         scored = _endgame_scored_card(
             "Bench Press",
             next_point_gap_fraction=Decimal("0.04"),
@@ -1567,7 +1574,7 @@ class TestFlagEndgameSuggestion:
         assert unscored["endgame_suggestion"] == "first_point"
         assert "endgame_suggestion" not in scored
 
-    def test_no_data_before_window_never_qualifies(self, db):
+    def test_no_data_before_window_never_qualifies(self):
         card = _close_card(
             "Squat",
             state="no_data_before_window",
@@ -1577,7 +1584,7 @@ class TestFlagEndgameSuggestion:
         _flag_endgame_suggestion([card], self._in_window())
         assert "endgame_suggestion" not in card
 
-    def test_scored_at_max_tier_never_qualifies(self, db):
+    def test_scored_at_max_tier_never_qualifies(self):
         # points_earned == 10 leaves next_point_gap_fraction None (AC #7).
         card = _endgame_scored_card(
             "Squat", points_earned=10, next_point_gap_fraction=None
@@ -1585,8 +1592,8 @@ class TestFlagEndgameSuggestion:
         _flag_endgame_suggestion([card], self._in_window())
         assert "endgame_suggestion" not in card
 
-    def test_terminal_challenge_inside_window_never_flags(self, db):
-        challenge = ChallengeFactory(
+    def test_terminal_challenge_inside_window_never_flags(self):
+        challenge = Challenge(
             status=Challenge.Status.CANCELLED,
             end_date=date.today() + timedelta(days=3),
         )

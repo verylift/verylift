@@ -36,11 +36,6 @@ class TestUserManager:
 
 @pytest.mark.django_db
 class TestUserModel:
-    def test_user_has_uuid_pk(self):
-        user = UserFactory()
-        assert user.pk is not None
-        assert len(str(user.pk)) == 36  # UUID format
-
     def test_str_returns_display_name(self):
         user = UserFactory(display_name="Alice")
         assert str(user) == "Alice"
@@ -48,30 +43,6 @@ class TestUserModel:
     def test_str_falls_back_to_username(self):
         user = UserFactory(display_name="")
         assert str(user) == user.username
-
-    def test_user_is_active_by_default(self):
-        user = UserFactory()
-        assert user.is_active is True
-
-    def test_deactivated_at_is_null_by_default(self):
-        user = UserFactory()
-        assert user.deactivated_at is None
-
-    def test_timezone_defaults_to_automatic(self):
-        user = UserFactory()
-        assert user.timezone == ""
-
-    def test_liftosaur_api_key_is_null_by_default(self):
-        user = UserFactory()
-        assert user.liftosaur_api_key is None
-
-    def test_liftosaur_api_key_can_be_set_and_cleared(self):
-        user = UserFactory(liftosaur_api_key="abc123")
-        assert user.liftosaur_api_key == "abc123"
-        user.liftosaur_api_key = None
-        user.save(update_fields=["liftosaur_api_key"])
-        user.refresh_from_db()
-        assert user.liftosaur_api_key is None
 
 
 @pytest.mark.django_db

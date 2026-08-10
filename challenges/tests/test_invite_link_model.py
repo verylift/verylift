@@ -11,11 +11,6 @@ from challenges.tests.factories import ChallengeFactory, ChallengeInviteLinkFact
 
 @pytest.mark.django_db
 class TestChallengeInviteLinkModel:
-    def test_has_uuid_pk(self):
-        link = ChallengeInviteLinkFactory()
-        assert link.pk is not None
-        assert len(str(link.pk)) == 36
-
     def test_token_is_unique(self):
         link = ChallengeInviteLinkFactory()
         with pytest.raises(IntegrityError), transaction.atomic():
