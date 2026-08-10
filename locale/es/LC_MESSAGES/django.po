@@ -792,8 +792,8 @@ msgid "Uploading photo…"
 msgstr "Subiendo foto…"
 
 #: templates/accounts/_avatar_section.html:41
-msgid "Upload Photo"
-msgstr "Subir foto"
+msgid "Save Photo"
+msgstr "Guardar foto"
 
 #: templates/accounts/_avatar_section.html:49
 msgid "Remove photo"

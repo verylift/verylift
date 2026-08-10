@@ -38,7 +38,7 @@
         <button
           type="submit"
           class="bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
-          {% trans "Upload Photo" %}
+          {% trans "Save Photo" %}
         </button>
         {% if user.avatar %}
         <button
@@ -360,7 +360,7 @@
 
       cancelBtn.addEventListener("click", function () {
         // Clearing the input matters: a stale original left staged here would
-        // be posted by a later Upload Photo or Remove photo click.
+        // be posted by a later Save Photo or Remove photo click.
         input.value = "";
         releaseImage();
         clearError();
