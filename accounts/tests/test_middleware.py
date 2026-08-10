@@ -95,7 +95,9 @@ class TestLocaleMiddlewareIntegration:
         client.force_login(user)
         response = client.get(reverse("accounts:settings"))
         assert response.status_code == 200
-        assert "Settings" in response.content.decode()
+        # Header rather than a page string: any untranslated word satisfies
+        # "English rendered", so it proves nothing about the negotiation.
+        assert response["Content-Language"] == "en"
 
     def test_anonymous_accept_language_header_renders_spanish_login(self):
         client = Client()

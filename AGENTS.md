@@ -29,6 +29,28 @@ just ci
 
 `just ci` runs lint + format check + tests — exactly what CI checks. If it fails locally, CI will fail. Fix all issues before committing. Use `just fix` to auto-resolve ruff errors.
 
+## Testing standards
+
+- Tests go in `<app>/tests/test_<thing>.py`, using the factory_boy factories in `<app>/tests/factories.py`.
+- Integration tests use real Postgres — no mocked DB. HTTP calls to external services (Liftosaur, FitnessVolt) must be mocked.
+- Coverage must stay >=95%; `just test` enforces it.
+
+### Every test must be able to fail for a reason worth knowing about
+
+Coverage is a floor, not a goal. A test that cannot fail except by someone deliberately editing the thing it restates is worse than no test: it costs a CI cycle forever, and when it does break the "fix" is to update the assertion. Before writing one, ask what bug it would catch. If the answer is "someone changed this exact line on purpose", don't write it.
+
+**Do not write these:**
+
+- **Copy assertions.** `assert "Save Photo" in response.content.decode()` — the string *is* the template. Asserting an error message appears when a form is invalid is fine; that tests the error path. Asserting a heading or button label exists is not.
+- **Framework tests.** Django is already tested. No asserting that a field default is its declared default, that a UUID pk is 36 characters, that a `TextChoices` contains what it declares, or that a `JSONField` round-trips a dict.
+- **Tautologies.** `ChallengeFactory(status=ACTIVE)` then `assert challenge.status == ACTIVE` re-derives the setup. If the assertion restates a kwarg you just passed, there is no test here.
+- **Mock theatre.** If everything meaningful is mocked and the only assertion is `assert_called_once`, the test verifies your mock setup. Assert on the output the code produced, or the URL/payload it actually built.
+- **Redundant duplicates.** Several tests over one code branch with trivially different inputs — collapse into a single `parametrize`.
+
+**Also watch the cost of a real test.** Don't take the `db` fixture, log a client in, or render a full page to check something that needs none of it. A pure function that reads two attributes off a model takes an unsaved instance, not a factory that writes it plus its FKs to Postgres.
+
+**When deleting a low-value test, check what it covered.** Some trivial-looking tests are the only thing exercising a one-line `__str__` or property. Keep one, collapse the rest — don't drop coverage of a real code path in the name of cleanup.
+
 ## Release process
 
 Versions are date-based (`YYYY.MM.PATCH`, e.g. `2026.8.0`), not semver — no `v`
