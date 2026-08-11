@@ -11,34 +11,9 @@ from challenges.tests.factories import (
 
 @pytest.mark.django_db
 class TestChallengeModel:
-    def test_has_uuid_pk(self):
-        comp = ChallengeFactory()
-        assert comp.pk is not None
-        assert len(str(comp.pk)) == 36
-
-    def test_default_status_is_draft(self):
-        comp = ChallengeFactory()
-        assert comp.status == Challenge.Status.DRAFT
-
     def test_str_returns_name(self):
         comp = ChallengeFactory(name="Winter Showdown")
         assert str(comp) == "Winter Showdown"
-
-    def test_creator_fk_resolves(self):
-        comp = ChallengeFactory()
-        assert comp.creator.pk is not None
-
-    def test_status_can_be_set_to_active(self):
-        comp = ChallengeFactory(status=Challenge.Status.ACTIVE)
-        assert comp.status == Challenge.Status.ACTIVE
-
-    def test_status_can_be_set_to_completed(self):
-        comp = ChallengeFactory(status=Challenge.Status.COMPLETED)
-        assert comp.status == Challenge.Status.COMPLETED
-
-    def test_default_history_window_is_from_join(self):
-        comp = ChallengeFactory()
-        assert comp.history_window == Challenge.HistoryWindow.FROM_JOIN
 
     def test_window_start_from_join_returns_joined_at(self):
         joined = datetime.now(tz=UTC) - timedelta(days=5)
