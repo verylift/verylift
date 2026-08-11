@@ -7,6 +7,8 @@
 services:
   app:
     image: ghcr.io/verylift/verylift:latest
+    # easily identify the container to avoid random namings
+    container_name: verylift
     # Installs and upgrades itself on every boot; every step here is
     # idempotent. `set -e` stops the container on a failed migration rather
     # than serving a half-migrated database, and `exec` gives gunicorn PID 1
@@ -76,8 +78,16 @@ services:
       # slow (or retry through a flaky connection) without tripping the healthcheck.
       start_period: 300s
     restart: unless-stopped
-
+    # Remove # to enable custom networking (in case you run these through Proxy Managers like NGINX, Caddy, Traefik, etc)
+    # networks:
+      # - name_of_network
+  
 volumes:
   data:
   staticfiles:
   media:
+
+ # remove # to enable custom networking (in case you run these through Proxy Managers like NGINX, Caddy, Traefik, etc)
+ # networks:
+ # name_of_network:
+ #   external: true
