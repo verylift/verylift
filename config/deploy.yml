@@ -133,6 +133,14 @@ env:
     # root/settings.py — prod syncs are cheap enough that a 1-minute floor is
     # fine, and it keeps a participant's numbers current during a live session.
     LIFTOSAUR_SYNC_COOLDOWN_MINUTES: "1"
+    # Kamal already injects KAMAL_VERSION into the container on its own
+    # (hardcoded in Kamal itself, not configurable here) — this file is
+    # parsed as ERB, so this line just copies the same value into a
+    # deploy-tool-agnostic name root/settings.py reads instead. Requires
+    # `just deploy` (see justfile) to export VERSION alongside --version;
+    # ENV.fetch's default only covers a bare `kamal deploy` invocation that
+    # skips the justfile wrapper.
+    VERY_LIFT_VERSION: <%= ENV.fetch("VERSION", "dev") %>
   secret:
     - SECRET_KEY
     - FIELD_ENCRYPTION_KEYS

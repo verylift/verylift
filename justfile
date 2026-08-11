@@ -46,9 +46,12 @@ release ver="":
     ./scripts/release.sh {{ver}}
 
 # Deploy an already-released version via Kamal: pulls the pre-built image
-# (no rebuild), runs migrate/collectstatic, zero-downtime cutover
+# (no rebuild), runs migrate/collectstatic, zero-downtime cutover.
+# VERSION is exported (not just --version) so config/deploy.yml's ERB can
+# copy it into the VERY_LIFT_VERSION container env var -- see the comment
+# there.
 deploy ver:
-    kamal deploy --skip-push --version="{{ver}}"
+    VERSION="{{ver}}" kamal deploy --skip-push --version="{{ver}}"
 
 # Run a given django management command
 manage command +args="":
