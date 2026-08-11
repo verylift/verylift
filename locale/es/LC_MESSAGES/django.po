@@ -1532,6 +1532,7 @@ msgid "Copy AI prompt"
 msgstr "Copiar prompt de IA"
 
 #: templates/challenges/custom_goal_setup.html:68
+#: templates/challenges/_invite_link_section.html
 msgid "Copied!"
 msgstr "¡Copiado!"
 
@@ -1698,9 +1699,9 @@ msgstr "Tu Rendimiento"
 msgid "Summary"
 msgstr "Resumen"
 
-#: templates/challenges/detail.html:289
-msgid "Standards"
-msgstr "Estándares"
+#: templates/challenges/detail.html:306
+msgid "Goals"
+msgstr "Objetivos"
 
 #: templates/challenges/detail.html:299
 #, python-format
@@ -2774,10 +2775,6 @@ msgstr "Generar nuevo enlace"
 #: templates/challenges/_invite_link_section.html
 msgid "Generate invite link"
 msgstr "Generar enlace de invitación"
-
-#: templates/challenges/_invite_link_section.html
-msgid "Copied!"
-msgstr "¡Copiado!"
 
 #: templates/registration/register.html
 #, python-format

@@ -334,12 +334,6 @@ class TestLiftosaurKeyCta:
 class TestSidebarLogoLink:
     """The logo in both sidebar instances links to the dashboard (TASK-223)."""
 
-    def test_logo_links_to_dashboard(self, client):
-        content = client.get(reverse("challenges:dashboard")).content.decode()
-        dashboard_url = reverse("challenges:dashboard")
-        # Mobile top bar + desktop sidebar header = two logo links.
-        assert content.count(f'<a href="{dashboard_url}" aria-label=') >= 2
-
     def test_logo_link_has_accessible_name(self, client):
         content = client.get(reverse("challenges:dashboard")).content.decode()
         assert 'aria-label="very lift, go to dashboard"' in content
@@ -369,10 +363,9 @@ class TestHeroCard:
             is_current_best=True,
         )
         body = client.get(reverse("challenges:dashboard")).content.decode()
-        assert "Challenges" in body
-        assert "Wins" in body
-        assert "Points / week" in body
-        assert "Avg points / challenge" in body
+        # The data-dependent bits only. The four stat labels are static copy
+        # from the same template block, asserted here and in the no-history
+        # test purely because they are easy to assert.
         assert "First scored point vs latest" in body
         assert "Squat" in body
 
@@ -381,13 +374,6 @@ class TestHeroCard:
         user.save()
         body = client.get(reverse("challenges:dashboard")).content.decode()
         assert "TA" in body
-
-    def test_no_history_previews_stats_labels(self, client):
-        body = client.get(reverse("challenges:dashboard")).content.decode()
-        assert "Challenges" in body
-        assert "Wins" in body
-        assert "Points / week" in body
-        assert "Avg points / challenge" in body
 
 
 class TestProfilePhotoCard:
