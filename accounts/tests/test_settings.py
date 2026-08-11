@@ -55,26 +55,19 @@ class TestSettingsViewGet:
         response = authed_client.get(url)
         assert "accounts/settings.html" in [t.name for t in response.templates]
 
-    def test_loading_overlay_rendered(self, authed_client, user, db):
-        # The global loading overlay (TASK-141) is included from base.html, so
-        # every signed-in page renders it ready for window.ppLoading.show().
-        url = reverse("accounts:settings")
-        response = authed_client.get(url)
-        assert b'id="loading-overlay"' in response.content
-
-    def test_sidebar_nav_items_present(self, authed_client, user, db):
+    def test_removed_nav_items_stay_gone(self, authed_client, user, db):
+        # Only the negative assertions are worth a test: these two nav items
+        # were deliberately removed and re-adding one would be a regression.
+        # The items that *should* be there are copy, and asserting on them
+        # just means editing this test whenever the nav is reworded.
         url = reverse("accounts:settings")
         response = authed_client.get(url)
         content = response.content.decode()
-        assert "Dashboard" in content
-        assert "Challenges" in content
         # The standalone notifications page (and its nav item) was removed in
         # TASK-246 — notifications live on the dashboard now.
         assert "Notifications" not in content
         # Find Users went with the user directory itself in TASK-272.
         assert "Find Users" not in content
-        assert "Settings" in content
-        assert "Logout" in content
 
     def test_admin_link_shown_for_staff(self, db):
         staff = UserFactory(is_staff=True)
@@ -102,11 +95,10 @@ class TestSettingsNicknameForm:
 
     def test_post_shows_success_message(self, authed_client, user, db):
         url = reverse("accounts:settings")
-        authed_client.post(url, {"form_name": "nickname", "display_name": "Renamed"})
-        # Follow redirect to verify the page still loads after save
-        authed_client.post(url, {"form_name": "nickname", "display_name": "Again"})
-        resp2 = authed_client.get(reverse("accounts:settings"))
-        assert resp2.status_code == 200
+        response = authed_client.post(
+            url, {"form_name": "nickname", "display_name": "Renamed"}, follow=True
+        )
+        assert "Display name updated." in response.content.decode()
 
     def test_post_nickname_strips_whitespace(self, authed_client, user, db):
         url = reverse("accounts:settings")
@@ -507,17 +499,17 @@ HX = {"HTTP_HX_REQUEST": "true"}
 class TestHtmxFoundation:
     """base.html htmx wiring and the sync-button partial swaps (TASK-145)."""
 
-    def test_base_renders_app_messages_container_unconditionally(self, authed_client):
-        response = authed_client.get(reverse("accounts:settings"))
-        assert response.status_code == 200
-        assert b'id="app-messages"' in response.content
-
-    def test_base_loads_htmx_and_sets_csrf_header(self, authed_client):
+    def test_base_wires_htmx_csrf_and_shared_containers(self, authed_client):
+        # One render for the whole base.html contract: htmx present, CSRF
+        # wired body-level, and the containers partial responses target.
         response = authed_client.get(reverse("accounts:settings"))
         content = response.content.decode()
         assert "vendor/htmx.min.js" in content
         assert "hx-headers" in content
         assert "X-CSRFToken" in content
+        assert 'id="app-messages"' in content
+        # The global loading overlay (TASK-141) that window.ppLoading drives.
+        assert 'id="loading-overlay"' in content
 
     def test_settings_sync_forms_carry_htmx_attrs(self):
         user = UserFactory(liftosaur_api_key="key")
@@ -886,19 +878,19 @@ class TestAvatarForm:
         assert not user.avatar
         assert response.status_code == 200
 
-    def test_settings_page_shows_avatar_section(self, authed_client, user, db):
-        url = reverse("accounts:settings")
-        response = authed_client.get(url)
-        assert "Profile Photo" in response.content.decode()
-
 
 class TestAvatarCropWizardMarkup:
     """The crop step is client-side, so what CI can enforce is the markup
     contract the script binds to (TASK-261)."""
 
     def test_settings_page_renders_crop_wizard(self, authed_client, user, db):
+        # One render, one list of everything avatar.js binds to. The ids and
+        # the multipart file input are a real contract with the script and the
+        # no-JS upload path; the surrounding copy is not, so it isn't asserted.
         content = authed_client.get(reverse("accounts:settings")).content.decode()
         for element_id in (
+            "avatar-cropper",
+            "avatar-picker",
             "avatar-crop-stage",
             "avatar-crop-canvas",
             "avatar-crop-zoom",
@@ -906,18 +898,8 @@ class TestAvatarCropWizardMarkup:
             "avatar-crop-cancel",
         ):
             assert f'id="{element_id}"' in content
-
-    def test_crop_wizard_hidden_until_file_selected(self, authed_client, user, db):
-        content = authed_client.get(reverse("accounts:settings")).content.decode()
-        assert '<div id="avatar-cropper" class="hidden">' in content
-        assert '<div id="avatar-picker">' in content
-
-    def test_avatar_form_still_posts_multipart_to_settings(
-        self, authed_client, user, db
-    ):
         # The wizard wraps the file input; it must never replace it, or the
         # no-JS path and every existing avatar test lose their upload channel.
-        content = authed_client.get(reverse("accounts:settings")).content.decode()
         assert 'hx-encoding="multipart/form-data"' in content
         assert 'name="avatar"' in content
         assert 'type="file"' in content

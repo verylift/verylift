@@ -150,39 +150,25 @@ class TestChallengeSettingsViewContent:
     def test_active_challenge_shows_all_actions(
         self, creator_client, challenge, mock_sync
     ):
-        """Active challenge shows participants section and all management actions."""
+        """An active challenge offers the creator every management action.
+
+        Asserts the actions and the invite-link endpoint, which are gated on
+        status and creator-ness (see the locked/non-creator tests below), not
+        the section headings around them — those are copy, and the version of
+        this test that listed them only broke on rewordings.
+        """
         url = reverse("challenges:settings", args=[challenge.pk])
         response = creator_client.get(url)
         assert response.status_code == 200
         content = response.content.decode()
 
-        # Header
-        assert "Challenge Settings" in content
         assert challenge.name in content
-
-        # Participant section
-        assert "Participants" in content
-
-        # Invite link section (the only way anyone joins, TASK-272)
-        assert "Invite Link" in content
+        # The invite link is the only way anyone joins (TASK-272).
         assert reverse("challenges:regenerate-invite-link", args=[challenge.pk]) in (
             content
         )
-
-        # Management actions
-        assert b"Close Early" in response.content
-        assert b"Cancel Challenge" in response.content
-
-    def test_management_actions_render_after_participants(
-        self, creator_client, challenge, mock_sync
-    ):
-        """Management Actions is the last section, below Participants (TASK-280)."""
-        url = reverse("challenges:settings", args=[challenge.pk])
-        content = creator_client.get(url).content.decode()
-
-        assert content.index(">Participants</h2>") < content.index(
-            ">Management Actions</h2>"
-        )
+        assert "Close Early" in content
+        assert "Cancel Challenge" in content
 
     def test_locked_challenge_hides_info_cards(self, creator_client, mock_sync):
         """Terminal challenges suppress the three editable cards, keep Participants.

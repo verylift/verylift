@@ -97,11 +97,9 @@ The app is server-rendered Django templates with HTMX layered in for same-page i
 
 ## Testing standards
 
-- Tests go in `<app>/tests/test_<thing>.py`
-- Use factory_boy factories (see `<app>/tests/factories.py`)
-- Integration tests use real Postgres — no mocked DB
-- HTTP calls to external services (Liftosaur) must be mocked via `unittest.mock.patch` or `responses`
-- Coverage must be >=95% (`just test` reports coverage)
+See the **Testing standards** section of `AGENTS.md` — it is the canonical version and applies to everyone touching this repo, not just this agent. Read it before writing tests. In particular, hitting the 95% coverage floor does not license tests that restate a template string, re-assert a Django default, or echo back a factory kwarg.
+
+- HTTP calls to external services must be mocked via `unittest.mock.patch` or `responses`.
 
 ## When you discover ambiguity
 
