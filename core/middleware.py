@@ -16,6 +16,7 @@ nothing sensitive.
 
 import logging
 
+from django.conf import settings
 from django.db import connection
 from django.http import JsonResponse
 
@@ -40,6 +41,15 @@ class HealthCheckMiddleware:
                 cursor.fetchone()
         except Exception:
             logger.exception("Health check failed: database unreachable")
-            return JsonResponse({"status": "unhealthy", "database": "down"}, status=503)
+            return JsonResponse(
+                {
+                    "status": "unhealthy",
+                    "database": "down",
+                    "version": settings.APP_VERSION,
+                },
+                status=503,
+            )
 
-        return JsonResponse({"status": "ok", "database": "up"})
+        return JsonResponse(
+            {"status": "ok", "database": "up", "version": settings.APP_VERSION}
+        )

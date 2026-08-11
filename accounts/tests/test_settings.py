@@ -69,6 +69,12 @@ class TestSettingsViewGet:
         # Find Users went with the user directory itself in TASK-272.
         assert "Find Users" not in content
 
+    def test_app_version_rendered(self, authed_client, user, db, settings):
+        settings.APP_VERSION = "2026.8.4"
+        url = reverse("accounts:settings")
+        response = authed_client.get(url)
+        assert "2026.8.4" in response.content.decode()
+
     def test_admin_link_shown_for_staff(self, db):
         staff = UserFactory(is_staff=True)
         c = Client()
