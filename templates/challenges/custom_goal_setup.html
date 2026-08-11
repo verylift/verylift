@@ -168,7 +168,9 @@
                 {% if not lifts %}disabled{% endif %}>
           {% trans "Confirm Goal" %}
         </button>
-        {% include "challenges/_wizard_cancel_actions.html" %}
+        <a href="{% url 'challenges:goal-setup' challenge.pk %}?cancel=1"
+           onclick="return confirm('{% trans "Cancel and discard everything entered so far?" %}')"
+           class="text-sm text-content-muted hover:text-content-strong">{% trans "Cancel" %}</a>
       </div>
     </form>
 {% endblock %}

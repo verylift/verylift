@@ -1281,6 +1281,10 @@ msgstr "Guardar"
 msgid "Edit challenge name"
 msgstr "Editar nombre del reto"
 
+#: templates/challenges/find.html:73 templates/challenges/find.html:115
+msgid "Delete draft challenge"
+msgstr "Eliminar reto en borrador"
+
 #: templates/challenges/confirm_action.html:11
 #, python-format
 msgid "Are you sure you want to %(verb)s <strong>%(name)s</strong>%(suffix)s?"
@@ -2965,25 +2969,9 @@ msgstr "Si no solicitaste esto, puedes ignorar este correo. Tu contraseña no ha
 msgid "Actions"
 msgstr "Acciones"
 
-#: templates/challenges/find.html templates/challenges/_wizard_cancel_actions.html
-msgid "Delete Draft"
-msgstr "Eliminar Borrador"
-
-#: templates/challenges/find.html templates/challenges/_wizard_cancel_actions.html
+#: templates/challenges/find.html
 msgid "Delete this draft challenge? This cannot be undone."
 msgstr "¿Eliminar este reto en borrador? Esta acción no se puede deshacer."
-
-#: templates/challenges/_wizard_cancel_actions.html
-msgid "Cancel and discard everything entered so far? Your draft challenge is kept — you can pick up goal setup again later."
-msgstr "¿Cancelar y descartar todo lo introducido hasta ahora? Tu reto en borrador se conserva — puedes continuar la configuración de tu objetivo más tarde."
-
-#: templates/challenges/_wizard_cancel_actions.html
-msgid "Delete Draft Instead"
-msgstr "Eliminar Borrador en su Lugar"
-
-#: templates/challenges/_wizard_cancel_actions.html
-msgid "Delete this draft challenge entirely? This cannot be undone."
-msgstr "¿Eliminar este reto en borrador por completo? Esta acción no se puede deshacer."
 
 #: challenges/views.py
 msgid "Draft challenge deleted."

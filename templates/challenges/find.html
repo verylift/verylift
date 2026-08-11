@@ -1,5 +1,5 @@
 {% extends "base/app.html" %}
-{% load i18n %}
+{% load i18n icons %}
 
 {% block title %}{% trans "Challenges" %} — very lift{% endblock %}
 
@@ -32,7 +32,7 @@
             <th class="px-4 py-3">{% trans "Start" %}</th>
             <th class="px-4 py-3">{% trans "End" %}</th>
             <th class="px-4 py-3">{% trans "Leader" %}</th>
-            <th class="px-4 py-3"><span class="sr-only">{% trans "Actions" %}</span></th>
+            <th class="px-4 py-3 text-center"><span class="sr-only">{% trans "Actions" %}</span></th>
           </tr>
         </thead>
         <tbody>
@@ -61,7 +61,7 @@
               <span class="text-content-subtle">{% trans "No scores yet" %}</span>
               {% endif %}
             </td>
-            <td class="px-4 py-3 text-right">
+            <td class="px-4 py-3 text-center">
               {% if row.challenge.status == "draft" and row.challenge.creator_id == request.user.id %}
               <button
                 type="button"
@@ -69,8 +69,9 @@
                 hx-target="#challenge-row-{{ row.challenge.pk }}"
                 hx-swap="outerHTML"
                 hx-confirm="{% trans 'Delete this draft challenge? This cannot be undone.' %}"
-                class="text-sm font-medium text-danger hover:text-danger-dark">
-                {% trans "Delete Draft" %}
+                class="inline-flex items-center justify-center h-7 w-7 rounded text-content-muted hover:text-danger hover:bg-surface-sunken"
+                aria-label="{% trans 'Delete draft challenge' %}">
+                {% icon "trash-2" %}
               </button>
               {% endif %}
             </td>
@@ -95,13 +96,27 @@
           <a href="{% url 'challenges:detail' row.challenge.pk %}"
             class="font-medium text-accent hover:text-accent"
             data-loading-message="{% trans 'Loading challenge…' %}">{{ row.challenge.name }}</a>
-          {% if row.challenge.status == "active" %}
-          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-success-light text-success-dark">{% trans "Active" %}</span>
-          {% elif row.challenge.status == "draft" %}
-          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-surface-sunken text-content-muted">{% trans "Draft" %}</span>
-          {% else %}
-          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-surface-sunken text-content-body">{% trans "Completed" %}</span>
-          {% endif %}
+          <div class="flex items-center gap-2 flex-shrink-0">
+            {% if row.challenge.status == "active" %}
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-success-light text-success-dark">{% trans "Active" %}</span>
+            {% elif row.challenge.status == "draft" %}
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-surface-sunken text-content-muted">{% trans "Draft" %}</span>
+            {% else %}
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-surface-sunken text-content-body">{% trans "Completed" %}</span>
+            {% endif %}
+            {% if row.challenge.status == "draft" and row.challenge.creator_id == request.user.id %}
+            <button
+              type="button"
+              hx-post="{% url 'challenges:delete-draft' row.challenge.pk %}"
+              hx-target="#challenge-card-mobile-{{ row.challenge.pk }}"
+              hx-swap="outerHTML"
+              hx-confirm="{% trans 'Delete this draft challenge? This cannot be undone.' %}"
+              class="inline-flex items-center justify-center h-7 w-7 rounded text-content-muted hover:text-danger hover:bg-surface-sunken"
+              aria-label="{% trans 'Delete draft challenge' %}">
+              {% icon "trash-2" %}
+            </button>
+            {% endif %}
+          </div>
         </div>
         <dl class="mt-3 flex flex-wrap gap-x-6 gap-y-2">
           <div>
@@ -123,19 +138,6 @@
             </dd>
           </div>
         </dl>
-        {% if row.challenge.status == "draft" and row.challenge.creator_id == request.user.id %}
-        <div class="mt-3 text-right">
-          <button
-            type="button"
-            hx-post="{% url 'challenges:delete-draft' row.challenge.pk %}"
-            hx-target="#challenge-card-mobile-{{ row.challenge.pk }}"
-            hx-swap="outerHTML"
-            hx-confirm="{% trans 'Delete this draft challenge? This cannot be undone.' %}"
-            class="text-sm font-medium text-danger hover:text-danger-dark">
-            {% trans "Delete Draft" %}
-          </button>
-        </div>
-        {% endif %}
       </div>
       {% endfor %}
     </div>
