@@ -19,6 +19,13 @@ def test_healthz_returns_200_when_db_reachable(client):
 
 
 @pytest.mark.django_db
+def test_healthz_includes_app_version(client, settings):
+    settings.APP_VERSION = "2026.8.4"
+    response = client.get("/healthz")
+    assert response.json()["version"] == "2026.8.4"
+
+
+@pytest.mark.django_db
 def test_healthz_requires_no_auth(client):
     # No login performed; the endpoint must still answer anonymously.
     response = client.get("/healthz")
@@ -32,6 +39,7 @@ def test_healthz_returns_503_when_db_unreachable(client):
     body = response.json()
     assert body["status"] == "unhealthy"
     assert body["database"] == "down"
+    assert "version" in body
 
 
 @pytest.mark.django_db

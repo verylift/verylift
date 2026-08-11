@@ -97,6 +97,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "django.template.context_processors.i18n",
                 "notifications.context_processors.unread_notification_count",
+                "core.context_processors.app_version",
             ],
         },
     },
@@ -198,6 +199,12 @@ LOGOUT_REDIRECT_URL = "/accounts/login/"
 # literal default. Trailing slash included so root/urls.py can pass
 # this straight to path().
 ADMIN_URL_PATH = env("ADMIN_URL_PATH", default="the-rack/")
+
+# Kamal injects KAMAL_VERSION into every deployed container automatically, set
+# to whatever version string `just deploy` passed via --version (see
+# config/deploy.yml, justfile) -- no build-time plumbing needed. Unset in dev
+# and any environment not deployed via Kamal.
+APP_VERSION = env("KAMAL_VERSION", default="dev")
 
 # Render the styled 403 page on CSRF validation failure instead of Django's default.
 CSRF_FAILURE_VIEW = "accounts.views.csrf_failure"
