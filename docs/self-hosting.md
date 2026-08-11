@@ -227,9 +227,22 @@ but only someone with log access can complete it. See `example.env` for SMTP
 settings.
 
 **Occasional "database is locked" errors.**
-A known limitation of the SQLite default under concurrent use, tracked in
-[#16](https://github.com/verylift/verylift/issues/16). Switching to Postgres
-(below) avoids it.
+The SQLite database runs in rollback-journal mode by default, which takes a
+database-wide lock for every write — with several gunicorn workers sharing
+one file, two writes landing at the same moment can collide. Set
+`SQLITE_WAL=True` in your `.env` and restart to switch to WAL mode instead,
+where one writer works alongside readers and a writer that does collide waits
+up to 5 seconds rather than failing immediately. Under genuinely heavy
+concurrent use, switching to Postgres (below) is the next step.
+
+**The app can't open the database at all** (errors mentioning `disk I/O` or
+`unable to open database file`) **and you have `SQLITE_WAL=True` set, with
+your data volume living on a network share.**
+WAL needs working shared memory (mmap) on the filesystem holding the database,
+which NFS and SMB shares typically don't provide. Unset `SQLITE_WAL` (or set
+it to `False`) in your `.env` and restart; the app converts the database back
+to rollback-journal mode on the next start. Concurrent writes are then
+slower, so prefer local storage or Postgres if you can.
 
 ## Advanced: using Postgres
 
