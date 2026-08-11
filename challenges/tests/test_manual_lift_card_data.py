@@ -105,18 +105,22 @@ class TestManualTargets:
         assert card["state"] == "scored"
         assert card["manual_default_rep_count"] == 3
 
-    def test_default_rep_count_falls_back_to_five_with_no_data(
+    def test_default_rep_count_falls_back_to_ten_with_no_history(
         self, user, challenge, participant
     ):
         _give_goal(participant, targets=_flat_targets())
         data = build_personal_data(user, challenge, participant)
         card = data["summary_cards"][0]
         assert card["state"] == "no_data"
-        assert card["manual_default_rep_count"] == 5
+        assert card["manual_default_rep_count"] == 10
 
-    def test_default_rep_count_for_close_to_goal_card(
+    def test_default_rep_count_falls_back_to_ten_when_close_to_goal_but_unscored(
         self, user, challenge, participant, settings
     ):
+        # close_to_goal means "hasn't earned a point yet" by definition (state
+        # is still no_points) -- no PointEarnEvent exists for this lift, so the
+        # no-history default applies same as any other unscored lift, even
+        # though there's unscored LiftHistory close to a target.
         settings.CHALLENGES_CLOSE_TO_GOAL_GAP_FRACTION = 1.0
         settings.CHALLENGES_CLOSE_TO_GOAL_REPS_GAP = 10
         _give_goal(participant, targets=_flat_targets("100.00"))
@@ -131,4 +135,31 @@ class TestManualTargets:
         card = data["summary_cards"][0]
         assert card["state"] == "no_points"
         assert card.get("close_to_goal") is True
-        assert card["manual_default_rep_count"] == card["best_reps"]
+        assert card["manual_default_rep_count"] == 10
+
+    def test_default_rep_count_uses_most_recent_event_not_current_best(
+        self, user, challenge, participant
+    ):
+        _give_goal(participant, targets=_flat_targets())
+        # Current best: 8 points (satisfies 3RM), logged first.
+        PointEarnEventFactory(
+            user=user,
+            challenge=challenge,
+            lift=LIFT,
+            points_earned=8,
+            is_current_best=True,
+            performed_at=timezone.now().date() - timedelta(days=10),
+        )
+        # A later, worse session (4 points, satisfies 7RM) doesn't beat the
+        # best, so it's not is_current_best -- but it IS the most recent.
+        PointEarnEventFactory(
+            user=user,
+            challenge=challenge,
+            lift=LIFT,
+            points_earned=4,
+            is_current_best=False,
+            performed_at=timezone.now().date(),
+        )
+        data = build_personal_data(user, challenge, participant)
+        card = data["summary_cards"][0]
+        assert card["manual_default_rep_count"] == 7

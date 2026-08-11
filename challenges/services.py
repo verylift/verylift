@@ -37,9 +37,11 @@ from scoring.domain.calculator import (
 from scoring.models import PointEarnEvent
 from scoring.services import score_pooled_history
 
-# Default rep-count the self-report carousel opens on when a card's state
-# gives no natural starting point (TASK-25 design review).
-MANUAL_DEFAULT_REP_COUNT_FALLBACK = 5
+# Default rep-count the self-report carousel opens on for a lift with no
+# PointEarnEvent ever logged -- 10RM, the easiest target (TASK-25 design
+# review). A lift with any history opens on the most recently logged rep
+# count instead; see _default_manual_rep_count.
+MANUAL_DEFAULT_REP_COUNT_NO_HISTORY = 10
 
 logger = logging.getLogger(__name__)
 
@@ -903,26 +905,20 @@ def _manual_targets_for_lift(lift, params, *, threshold_at, current_best):
     return targets
 
 
-def _default_manual_rep_count(card):
+def _default_manual_rep_count(most_recent_event):
     """Starting rep count for a summary card's self-report carousel (TASK-25).
 
-    - ``scored``: the rep count the current best actually satisfied (mirrors
-      :func:`_manual_targets_for_lift`'s own is_current_best derivation).
-    - ``no_points`` flagged ``close_to_goal``: the rep count the displayed gap
-      was computed against (``_first_point_gap`` measures the gap at
-      ``min(best_reps, 10)``).
-    - Everything else (no_points not close, no_data_before_window, no_data):
-      no natural default, so the carousel opens on a fixed middle rep count.
+    No PointEarnEvent ever logged for this lift -> 10RM, the easiest target.
+    Otherwise -> the rep count the most recently logged event satisfied
+    (``11 - points_earned``, same derivation as everywhere else that maps a
+    PointEarnEvent back to a rep count) -- deliberately the *most recent*
+    entry, not the current best: a lifter whose last session was worse than
+    their all-time best should open on what they just did, not get steered
+    toward re-confirming an old best.
     """
-    if card["state"] == "scored":
-        return 11 - card["points_earned"]
-    if (
-        card["state"] == "no_points"
-        and card.get("close_to_goal")
-        and card.get("best_reps") is not None
-    ):
-        return min(card["best_reps"], 10)
-    return MANUAL_DEFAULT_REP_COUNT_FALLBACK
+    if most_recent_event is None:
+        return MANUAL_DEFAULT_REP_COUNT_NO_HISTORY
+    return 11 - most_recent_event.points_earned
 
 
 def _standards_row_for_lift(lift, params, *, threshold_at, current_best, rep_columns):
@@ -1135,6 +1131,17 @@ def build_personal_data(user, challenge, participant):
         )
     }
 
+    # Window-independent like current_best_by_lift above, and for the same
+    # reason (a bail/rejoin resetting joined_at shouldn't make the carousel
+    # forget history that still stands on the leaderboard). setdefault (not a
+    # dict comprehension) because this is genuinely one-per-lift out of many
+    # events per lift, not an already-unique is_current_best=True row.
+    most_recent_event_by_lift = {}
+    for event in PointEarnEvent.objects.filter(user=user, challenge=challenge).order_by(
+        "-performed_at", "-synced_at"
+    ):
+        most_recent_event_by_lift.setdefault(event.lift, event)
+
     rep_columns = list(range(10, 0, -1))
 
     summary_cards = []
@@ -1169,10 +1176,10 @@ def build_personal_data(user, challenge, participant):
     _flag_close_to_goal(summary_cards)
     _flag_endgame_suggestion(summary_cards, challenge)
 
-    # Computed last: _default_manual_rep_count reads close_to_goal, which
-    # _flag_close_to_goal only sets once every card has been built.
     for card in summary_cards:
-        card["manual_default_rep_count"] = _default_manual_rep_count(card)
+        card["manual_default_rep_count"] = _default_manual_rep_count(
+            most_recent_event_by_lift.get(card["lift"])
+        )
 
     return {
         "summary_cards": summary_cards,
