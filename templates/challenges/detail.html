@@ -435,8 +435,16 @@
         // back's height inflate it -- and grow .flip-card-inner to the
         // back's height only while flipped, animated by the same
         // transition:height already on .flip-card-inner so it grows in step
-        // with the spin instead of jumping. Re-measure on resize too, since
-        // Tailwind's responsive grid changes how much each face's text wraps.
+        // with the spin instead of jumping.
+        //
+        // Never call this before render() has run: the back face's
+        // .manual-value/.manual-label/.manual-confirm are all empty in the
+        // server-rendered HTML and only get their text from render(), so a
+        // back face measured before then comes out ~40px short. That's
+        // invisible on a normal flip (the open handler re-measures after
+        // render() has long since run) but not on a card the server sends
+        // back already flipped -- the "didn't beat your best" response --
+        // where the init-time measurement is the only one that ever happens.
         const inner = card.querySelector(".flip-card-inner");
         const frontFace = card.querySelector(".flip-card-front");
         const backFace = card.querySelector(".flip-card-back");
@@ -444,7 +452,8 @@
           const activeFace = card.classList.contains("is-flipped") ? backFace : frontFace;
           inner.style.height = activeFace.scrollHeight + "px";
         }
-        syncCardHeight();
+        // Re-measure on resize too, since Tailwind's responsive grid changes
+        // how much each face's text wraps.
         window.addEventListener("resize", syncCardHeight);
 
         let index = targets.findIndex(function (t) {
@@ -493,6 +502,12 @@
           });
           prevBtn.disabled = index === 0;
           nextBtn.disabled = index === targets.length - 1;
+          // Sizing the card is part of rendering it: this is what guarantees
+          // the back face is only ever measured with its text already in
+          // place, both for the initial render() below and for every paging
+          // step (the delta line's reserved h-4 keeps the height stable, but
+          // measuring here means it stays correct even if it stops being).
+          syncCardHeight();
         }
 
         prevBtn.addEventListener("click", function () {
@@ -517,7 +532,18 @@
         document.querySelectorAll(".flip-card").forEach(initManualLiftCard);
       }
       initManualLiftCards();
-      document.body.addEventListener("htmx:afterSwap", initManualLiftCards);
+      // afterSettle, NOT afterSwap. The card div carries an id, so htmx's
+      // attribute settling applies the *old* element's attributes to the
+      // swapped-in one and only restores the server's own attributes in a
+      // settle task (it does this so CSS transitions can animate between the
+      // two). At afterSwap time the new card therefore still has the old
+      // card's class -- including is-flipped -- and its stale
+      // data-default-rep-count, so measuring or reading data attributes then
+      // gives the pre-swap answers: a card confirmed from its back face gets
+      // sized to the back, then silently turns to its front and stays too
+      // tall. afterSettle is the first point the DOM actually reflects the
+      // response.
+      document.body.addEventListener("htmx:afterSettle", initManualLiftCards);
     </script>
     {% endif %}
 
