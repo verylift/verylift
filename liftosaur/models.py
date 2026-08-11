@@ -2,10 +2,24 @@ import uuid
 
 from django.conf import settings
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 from accounts.units import (
     LB_TO_KG,  # noqa: F401 -- re-exported for callers that parse lb weights
 )
+
+
+class LiftSource(models.TextChoices):
+    """Provenance of a pooled LiftHistory/PointEarnEvent row.
+
+    LIFTOSAUR is every row written by liftosaur.services.sync_user_lifts; MANUAL
+    is a lifter self-reporting a completed set with no tracker connected
+    (TASK-25). Left open for future importers (Hevy/Wger/Strong, #8-#11) — a new
+    source is a new choice here, never a second boolean field.
+    """
+
+    LIFTOSAUR = "liftosaur", _("Liftosaur")
+    MANUAL = "manual", _("Manual")
 
 
 class Lift(models.Model):
@@ -110,6 +124,15 @@ class LiftHistory(models.Model):
         ),
     )
     synced_at = models.DateTimeField(null=True, blank=True)
+    source = models.CharField(
+        max_length=20,
+        choices=LiftSource.choices,
+        default=LiftSource.LIFTOSAUR,
+        help_text=(
+            "Where this set came from: a Liftosaur sync pull, or a lifter "
+            "self-reporting a completed set with no tracker connected."
+        ),
+    )
 
     class Meta:
         db_table = "liftosaur_lifthistory"

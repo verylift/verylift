@@ -9,7 +9,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Case, CharField, F, When
 from django.db.models.functions import Lower
 from django.utils import timezone
@@ -23,9 +23,10 @@ from challenges.models import (
     ChallengeLift,
     ChallengeParticipant,
     CustomGoal,
+    CustomGoalTarget,
 )
 from challenges.standards import covered_lift_names
-from liftosaur.models import LiftHistory
+from liftosaur.models import LiftHistory, LiftSource
 from liftosaur.services import sync_user_lifts
 from notifications.models import Notification
 from scoring.domain.calculator import (
@@ -35,6 +36,10 @@ from scoring.domain.calculator import (
 )
 from scoring.models import PointEarnEvent
 from scoring.services import score_pooled_history
+
+# Default rep-count the self-report carousel opens on when a card's state
+# gives no natural starting point (TASK-25 design review).
+MANUAL_DEFAULT_REP_COUNT_FALLBACK = 5
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +57,123 @@ def sync_and_score(user, challenge, *, sync=True) -> None:
     if sync:
         sync_user_lifts(user)
     score_pooled_history(user=user, challenge=challenge)
+
+
+def submit_manual_lift(
+    *,
+    user,
+    challenge,
+    participant: ChallengeParticipant,
+    lift: str,
+    rep_count: int,
+    performed_at,
+) -> tuple[LiftHistory, bool] | None:
+    """Self-report a completed set against one of the participant's own rep-max
+    targets (TASK-25), for a lifter with no workout tracker connected.
+
+    The weight is never taken from the caller — it is always the participant's
+    own ``CustomGoalTarget`` for ``(lift, rep_count)``, so a self-report can
+    only ever confirm "I hit my own target", never fabricate an arbitrary
+    number. Returns ``None`` when the participant has no goal configured yet or
+    the goal does not cover this ``(lift, rep_count)`` cell — the caller treats
+    either as a validation failure.
+
+    The written ``LiftHistory`` row always takes the model's own
+    ``equipment=""`` default. That field only matters for filtering assisted-
+    machine sets out of scoring on bodyweight-added lifts (see
+    ``scoring.services.process_scored_set`` /
+    ``scoring.domain.calculator.is_assisted_equipment``) — a real concern for
+    Liftosaur sync, which parses equipment automatically from data the tracker
+    already recorded, but not for self-report: a manually-reported bodyweight
+    lift should just score normally, and self-report is already an
+    honor-system channel (the confirm button), so an extra disclosure question
+    here would add friction without adding real protection.
+
+    Writes a ``source=MANUAL`` ``LiftHistory`` row (``get_or_create``, so a
+    duplicate resubmission of the identical set is a no-op rather than an
+    ``IntegrityError`` — the unique constraint on ``LiftHistory`` still applies;
+    a lost race for the same insert is handled the same way, matching the
+    tolerant-of-races convention ``liftosaur.services`` already uses), then
+    reuses :func:`scoring.services.score_pooled_history` for the actual
+    scoring/best-promotion — this function never touches ``PointEarnEvent``
+    directly.
+
+    Returns ``(history_row, is_new_best)`` where ``is_new_best`` is True when
+    this exact set is now the participant's current-best ``PointEarnEvent`` for
+    ``lift`` — the caller's signal for whether to show the updated scored card
+    or an "already logged / didn't beat your best" acknowledgement.
+    """
+    if not participant.has_goal_configured:
+        logger.warning(
+            "Manual lift self-report rejected for user %s: no goal configured "
+            "for challenge %s",
+            user.id,
+            challenge.pk,
+        )
+        return None
+
+    target = CustomGoalTarget.objects.filter(
+        goal=participant.custom_goal, lift=lift, rep_count=rep_count
+    ).first()
+    if target is None:
+        logger.warning(
+            "Manual lift self-report rejected for user %s: no target for "
+            "%s %sRM in challenge %s",
+            user.id,
+            lift,
+            rep_count,
+            challenge.pk,
+        )
+        return None
+
+    lookup = {
+        "user": user,
+        "lift": lift,
+        "performed_at": performed_at,
+        "reps": rep_count,
+        "weight_kg": target.target_weight,
+    }
+    try:
+        history_row, created = LiftHistory.objects.get_or_create(
+            **lookup,
+            defaults={"source": LiftSource.MANUAL},
+        )
+    except IntegrityError:
+        logger.warning(
+            "Manual lift self-report for user %s raced a duplicate insert for "
+            "%s %sRM on %s; reusing the existing row",
+            user.id,
+            lift,
+            rep_count,
+            performed_at,
+        )
+        history_row = LiftHistory.objects.get(**lookup)
+        created = False
+
+    logger.info(
+        "Manual lift self-report: user %s logged %s %sRM for challenge %s (new row=%s)",
+        user.id,
+        lift,
+        rep_count,
+        challenge.pk,
+        created,
+    )
+
+    score_pooled_history(user=user, challenge=challenge)
+
+    current_best = PointEarnEvent.objects.filter(
+        user=user,
+        challenge=challenge,
+        lift=lift,
+        is_current_best=True,
+    ).first()
+    is_new_best = (
+        current_best is not None
+        and current_best.reps == rep_count
+        and current_best.weight == target.target_weight
+        and current_best.performed_at == performed_at
+    )
+    return history_row, is_new_best
 
 
 def order_by_effective_name(queryset):
@@ -741,6 +863,62 @@ def _summary_card_for_lift(
     return card
 
 
+def _manual_targets_for_lift(lift, params, *, threshold_at, current_best):
+    """Build the 1RM..10RM target list a summary card's self-report carousel
+    pages through (TASK-25).
+
+    One entry per rep count with the same weight ``threshold_at`` already gives
+    the Standards table, so the carousel can never show a number that drifts
+    from what scoring/the standards table use. ``is_current_best`` mirrors
+    :func:`_standards_row_for_lift`'s own cell test exactly (``11 -
+    current_best.points_earned == reps``): the current-best PointEarnEvent's
+    reps field is the reps actually PERFORMED, which can differ from the rep
+    count whose threshold it satisfied, so the satisfied rep count is always
+    derived from points_earned, never read off current_best.reps directly.
+    """
+    current_best_reps = (
+        11 - current_best.points_earned if current_best is not None else None
+    )
+    targets = []
+    for reps in range(1, 11):
+        targets.append(
+            {
+                "rep_count": reps,
+                "weight": _weight_display(
+                    threshold_at(reps),
+                    lift,
+                    params.display_unit,
+                    params.challenge,
+                    snap=False,
+                ),
+                "is_current_best": reps == current_best_reps,
+            }
+        )
+    return targets
+
+
+def _default_manual_rep_count(card):
+    """Starting rep count for a summary card's self-report carousel (TASK-25).
+
+    - ``scored``: the rep count the current best actually satisfied (mirrors
+      :func:`_manual_targets_for_lift`'s own is_current_best derivation).
+    - ``no_points`` flagged ``close_to_goal``: the rep count the displayed gap
+      was computed against (``_first_point_gap`` measures the gap at
+      ``min(best_reps, 10)``).
+    - Everything else (no_points not close, no_data_before_window, no_data):
+      no natural default, so the carousel opens on a fixed middle rep count.
+    """
+    if card["state"] == "scored":
+        return 11 - card["points_earned"]
+    if (
+        card["state"] == "no_points"
+        and card.get("close_to_goal")
+        and card.get("best_reps") is not None
+    ):
+        return min(card["best_reps"], 10)
+    return MANUAL_DEFAULT_REP_COUNT_FALLBACK
+
+
 def _standards_row_for_lift(lift, params, *, threshold_at, current_best, rep_columns):
     """Build one lift's standards-table row (10RM..1RM cells)."""
     cells = []
@@ -961,15 +1139,17 @@ def build_personal_data(user, challenge, participant):
         # consistent with the chart and leaderboard (window-independent lookup).
         current_best = current_best_by_lift.get(lift)
         threshold_at = _threshold_at_for_lift(lift, targets_by_lift=targets_by_lift)
-        summary_cards.append(
-            _summary_card_for_lift(
-                lift,
-                params,
-                current_best=current_best,
-                lift_window_events=lift_window_events,
-                threshold_at=threshold_at,
-            )
+        card = _summary_card_for_lift(
+            lift,
+            params,
+            current_best=current_best,
+            lift_window_events=lift_window_events,
+            threshold_at=threshold_at,
         )
+        card["manual_targets"] = _manual_targets_for_lift(
+            lift, params, threshold_at=threshold_at, current_best=current_best
+        )
+        summary_cards.append(card)
         standards_rows.append(
             _standards_row_for_lift(
                 lift,
@@ -982,6 +1162,11 @@ def build_personal_data(user, challenge, participant):
 
     _flag_close_to_goal(summary_cards)
     _flag_endgame_suggestion(summary_cards, challenge)
+
+    # Computed last: _default_manual_rep_count reads close_to_goal, which
+    # _flag_close_to_goal only sets once every card has been built.
+    for card in summary_cards:
+        card["manual_default_rep_count"] = _default_manual_rep_count(card)
 
     return {
         "summary_cards": summary_cards,

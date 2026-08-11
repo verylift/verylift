@@ -12,7 +12,7 @@ from django.db import transaction
 from accounts.units import to_display_weight
 from challenges.models import Challenge, ChallengeParticipant
 from challenges.standards import covered_lift_names
-from liftosaur.models import Lift, LiftHistory
+from liftosaur.models import Lift, LiftHistory, LiftSource
 from notifications.models import Notification
 from scoring.domain.calculator import (
     best_score_for_set,
@@ -77,6 +77,7 @@ def process_scored_set(
     participant: ChallengeParticipant | None = None,
     resolver: _GoalTargets | None = None,
     is_bodyweight_added: bool | None = None,
+    source: str = LiftSource.LIFTOSAUR,
 ) -> PointEarnEvent | None:
     """Evaluate a performed set and persist a PointEarnEvent if appropriate.
 
@@ -163,6 +164,7 @@ def process_scored_set(
             reps=reps,
             weight=weight,
             equipment=equipment,
+            source=source,
         )
 
     points_earned, _rep_count_satisfied = result
@@ -177,6 +179,7 @@ def process_scored_set(
         points_earned=points_earned,
         equipment=equipment,
         notify=notify,
+        source=source,
     )
 
 
@@ -190,6 +193,7 @@ def _persist_audit_row(
     reps,
     weight,
     equipment,
+    source=LiftSource.LIFTOSAUR,
 ) -> PointEarnEvent:
     """Persist a sub-threshold set as a zero-point, non-current-best audit row.
 
@@ -208,6 +212,7 @@ def _persist_audit_row(
         points_earned=0,
         is_current_best=False,
         equipment=equipment,
+        source=source,
     )
 
 
@@ -223,6 +228,7 @@ def _persist_best(
     points_earned,
     equipment,
     notify,
+    source=LiftSource.LIFTOSAUR,
 ) -> PointEarnEvent:
     """Persist a threshold-meeting set, promoting it to current best if it beats
     the current high-watermark for (user, challenge, lift).
@@ -264,6 +270,7 @@ def _persist_best(
             points_earned=points_earned,
             is_current_best=is_new_best,
             equipment=equipment,
+            source=source,
         )
 
         if should_diff:
@@ -381,6 +388,7 @@ def score_pooled_history(*, user, challenge) -> ScoringSummary:
             participant=participant,
             resolver=resolver,
             is_bodyweight_added=is_bodyweight_added,
+            source=row.source,
         )
         if event is not None:
             summary.new_point_events += 1

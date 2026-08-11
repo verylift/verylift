@@ -22,6 +22,7 @@ from liftosaur.models import (
     LiftAlias,
     LiftHistory,
     LiftosaurSyncLog,
+    LiftSource,
 )
 
 logger = logging.getLogger(__name__)
@@ -308,6 +309,7 @@ def _history_rows_for_page(
             weight_kg=weight_kg,
             equipment=parsed_set.equipment,
             synced_at=synced_at,
+            source=LiftSource.LIFTOSAUR,
         )
     return list(rows.values())
 

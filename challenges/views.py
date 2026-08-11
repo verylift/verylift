@@ -50,6 +50,7 @@ from challenges.services import (
     regenerate_invite_link,
     remove_participant,
     resolve_invite_token,
+    submit_manual_lift,
     sync_and_score,
     transfer_ownership,
 )
@@ -1270,6 +1271,91 @@ def participant_chart_view(request, pk, participant_pk):
     if is_htmx(request):
         return render(request, "challenges/_participant_chart.html", context)
     return render(request, "challenges/participant_chart.html", context)
+
+
+@login_required
+@require_POST
+def manual_lift_view(request, pk):
+    """Self-report a completed set from the Summary tab's flip-card (TASK-25).
+
+    Membership guard matches every other personal-performance surface
+    (``_require_challenge_member``): self-report still requires
+    ``has_goal_configured``, same as the rest of "Your Performance" — this does
+    not solve pre-goal-setup onboarding, an accepted scope boundary.
+
+    Always returns the single affected card's HTML fragment (this endpoint is
+    only ever called by the flip-card's own htmx form) plus an out-of-band
+    Django message giving minimal feedback either way: a new personal best
+    flips the card back to its front; a submission that doesn't beat the
+    existing best (including an exact resubmission) stays on the card back so
+    the per-rep-count "Already logged" state is visible where the lifter is
+    already paged to.
+    """
+    challenge, participant = _require_challenge_member(request, pk)
+
+    if not participant.has_goal_configured:
+        raise PermissionDenied
+
+    lift = request.POST.get("lift", "")
+    try:
+        rep_count = int(request.POST.get("rep_count", ""))
+    except (TypeError, ValueError):
+        return HttpResponseBadRequest(gettext("Invalid rep count."))
+
+    try:
+        performed_at = date.fromisoformat(request.POST.get("performed_at", ""))
+    except ValueError:
+        return HttpResponseBadRequest(gettext("Invalid date."))
+    if performed_at > date.today():
+        return HttpResponseBadRequest(gettext("Date cannot be in the future."))
+
+    result = submit_manual_lift(
+        user=request.user,
+        challenge=challenge,
+        participant=participant,
+        lift=lift,
+        rep_count=rep_count,
+        performed_at=performed_at,
+    )
+    if result is None:
+        return HttpResponseBadRequest(gettext("Could not log this lift."))
+    _history_row, is_new_best = result
+
+    if is_new_best:
+        messages.success(
+            request,
+            gettext("Logged! New personal best on %(lift)s.") % {"lift": lift},
+        )
+    else:
+        messages.info(
+            request,
+            gettext("Logged — this doesn't beat your current best on %(lift)s yet.")
+            % {"lift": lift},
+        )
+
+    personal_data = build_personal_data(request.user, challenge, participant)
+    card = next((c for c in personal_data["summary_cards"] if c["lift"] == lift), None)
+    if card is None:
+        return HttpResponseBadRequest(gettext("Unknown lift for this challenge."))
+
+    logger.info(
+        "User %s self-reported %s %sRM in challenge %s (new best=%s)",
+        request.user.id,
+        lift,
+        rep_count,
+        challenge.pk,
+        is_new_best,
+    )
+
+    context = {
+        "card": card,
+        "display_unit": personal_data["display_unit"],
+        "challenge": challenge,
+        "flipped": not is_new_best,
+        "start_rep_count": rep_count,
+        "oob_messages": True,
+    }
+    return render(request, "challenges/_summary_card.html", context)
 
 
 @login_required

@@ -310,35 +310,7 @@
       <div id="tab-summary">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {% for card in personal_data.summary_cards %}
-          <div class="{% if card.close_to_goal %}border-2 border-warning-light{% else %}border border-line-subtle{% endif %} rounded p-4">
-            <h3 class="text-sm font-semibold text-content-strong mb-2">{{ card.lift }}</h3>
-            {% if card.state == "scored" %}
-            <p class="text-2xl font-bold text-accent font-mono">{% blocktrans with points=card.points_earned %}{{ points }} pts{% endblocktrans %}</p>
-            <p class="text-sm text-content-body mt-1">
-              <span class="font-mono">{{ card.weight }}</span>{% if card.weight != "BW" %} {{ personal_data.display_unit }}{% endif %} × <span class="font-mono">{{ card.reps }}</span> {% trans "reps" %} ({{ card.date }})
-            </p>
-            <p class="text-xs text-content-muted mt-1">{{ card.tier_satisfied }}</p>
-            {% elif card.state == "no_points" %}
-            {% if card.close_to_goal %}
-            <span class="inline-block text-xs font-medium px-2 py-0.5 mb-2 rounded bg-warning-light text-warning-dark">{% trans "Close to goal" %}</span>
-            {% endif %}
-            <p class="text-sm text-content-body">
-              {% blocktrans with weight=card.best_weight reps=card.best_reps date=card.best_date %}Best logged: <span class="font-mono">{{ weight }}</span>{% endblocktrans %}{% if card.best_weight != "BW" %} {{ personal_data.display_unit }}{% endif %} × <span class="font-mono">{{ card.best_reps }}</span> {% blocktrans with date=card.best_date %}reps ({{ date }}){% endblocktrans %}
-            </p>
-            {% if card.weight_gap is not None %}
-            <p class="text-xs text-content-muted mt-1">
-              {% blocktrans with gap=card.weight_gap unit=personal_data.display_unit %}To reach your first point: add <span class="font-mono">{{ gap }}</span> {{ unit }}{% endblocktrans %}{% if card.reps_gap is not None %}, {% blocktrans count counter=card.reps_gap %}or do <span class="font-mono">{{ counter }}</span> more rep{% plural %}or do <span class="font-mono">{{ counter }}</span> more reps{% endblocktrans %}{% endif %}.
-            </p>
-            {% endif %}
-            {% elif card.state == "no_data_before_window" %}
-            <p class="text-sm text-content-body">
-              {% blocktrans with date=card.window_start_date|date:"M j, Y" %}No data since your challenge window opened on <span class="font-mono">{{ date }}</span>.{% endblocktrans %}
-            </p>
-            <p class="text-xs text-content-muted mt-1">{% trans "You've logged this lift before, but not since then. Log a new set to get started." %}</p>
-            {% else %}
-            <p class="text-sm text-content-muted italic">{% trans "No data yet" %}</p>
-            {% endif %}
-          </div>
+          {% include "challenges/_summary_card.html" with card=card display_unit=personal_data.display_unit challenge=challenge flipped=False %}
           {% endfor %}
         </div>
       </div>
@@ -373,6 +345,54 @@
         <p class="text-xs text-content-muted mt-2">{% blocktrans with unit=personal_data.display_unit %}Thresholds shown in {{ unit }}{% endblocktrans %} {% trans "for your custom goal." %}</p>
       </div>
     </section>
+    <style>
+      /* Self-report flip card (TASK-25). Front/back are both always in the
+         DOM; is-flipped on .flip-card is the only thing that decides which
+         one shows -- see initManualLiftCard() below. */
+      /* overflow:hidden lives on .flip-card (perspective only), NOT on
+         .flip-card-inner -- overflow:hidden on the element that also has
+         transform-style:preserve-3d forces that element into a flattened
+         2D rendering context, which breaks the actual 3D flip (you get a
+         mirrored front face instead of a proper front/back swap). */
+      .flip-card { perspective: 1200px; position: relative; overflow: hidden; }
+      .flip-card-inner {
+        position: relative;
+        min-height: 9.5rem;
+        transition: transform 0.4s, height 0.4s;
+        transform-style: preserve-3d;
+        -webkit-transform-style: preserve-3d;
+      }
+      .flip-card.is-flipped .flip-card-inner {
+        transform: rotateY(180deg);
+        -webkit-transform: rotateY(180deg);
+      }
+      /* top/left/right only (no bottom) so each face's height comes from its
+         own content -- initManualLiftCard() then sizes .flip-card-inner to
+         the taller of the two, since a fixed inset:0 would otherwise clamp
+         both faces to the same box and let the taller one's content spill
+         out. backface-visibility needs the -webkit- prefix too, or the
+         face rotated away from the viewer still shows through mirrored. */
+      .flip-card-front, .flip-card-back {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+      }
+      .flip-card-back {
+        transform: rotateY(180deg);
+        -webkit-transform: rotateY(180deg);
+      }
+      /* backface-visibility alone isn't reliably hiding the away-facing side
+         here, so don't depend on it for correctness -- it's still left on
+         above for whatever cosmetic help it gives mid-spin. This is the
+         actual guarantee: only one face is ever visible, tied to the same
+         .is-flipped class as everything else. */
+      .flip-card-back { visibility: hidden; }
+      .flip-card.is-flipped .flip-card-front { visibility: hidden; }
+      .flip-card.is-flipped .flip-card-back { visibility: visible; }
+    </style>
     <script>
       function showPersonalTab(tab) {
         const summary = document.getElementById("tab-summary");
@@ -393,6 +413,97 @@
           standardsBtn.className = "px-4 py-2 font-medium " + inactive;
         }
       }
+    </script>
+    <script>
+      // Self-report flip card (TASK-25). Each card's back carries its own
+      // per-rep-count target grid as a json_script data island
+      // (#manual-targets-<slug>) so paging the carousel is a pure client-side
+      // re-render, never a round trip -- only Confirm submits (via the
+      // form's own hx-post, htmx's normal form-submit trigger).
+      function initManualLiftCard(card) {
+        if (card.dataset.wired) return;
+        card.dataset.wired = "1";
+
+        const targetsScript = document.getElementById(card.dataset.targetsId);
+        if (!targetsScript) return;
+        const targets = JSON.parse(targetsScript.textContent);
+        const unit = card.dataset.unit;
+        const bodyweightAdded = card.dataset.bodyweightAdded === "1";
+
+        // Front and back have different content heights (the carousel/date
+        // field/button on the back run taller than the summary text on the
+        // front). Size the shared .flip-card-inner to the taller of the two
+        // so neither face is clamped or spills into the card below, and
+        // re-measure on resize since Tailwind's responsive grid changes how
+        // much each face's text wraps.
+        const inner = card.querySelector(".flip-card-inner");
+        const frontFace = card.querySelector(".flip-card-front");
+        const backFace = card.querySelector(".flip-card-back");
+        function syncCardHeight() {
+          inner.style.height = Math.max(frontFace.scrollHeight, backFace.scrollHeight) + "px";
+        }
+        syncCardHeight();
+        window.addEventListener("resize", syncCardHeight);
+
+        let index = targets.findIndex(function (t) {
+          return String(t.rep_count) === card.dataset.defaultRepCount;
+        });
+        if (index < 0) index = targets.length - 1;
+
+        const openBtn = card.querySelector(".manual-flip-open");
+        const closeBtn = card.querySelector(".manual-flip-close");
+        const prevBtn = card.querySelector(".manual-prev");
+        const nextBtn = card.querySelector(".manual-next");
+        const valueEl = card.querySelector(".manual-value");
+        const labelEl = card.querySelector(".manual-label");
+        const dots = Array.from(card.querySelectorAll(".manual-dot"));
+        const confirmBtn = card.querySelector(".manual-confirm");
+        const repInput = card.querySelector(".manual-rep-input");
+
+        function render() {
+          const t = targets[index];
+          const unitSuffix = bodyweightAdded ? "" : " " + unit;
+          valueEl.textContent = t.weight + unitSuffix + " × " + t.rep_count;
+          labelEl.textContent = t.is_current_best
+            ? "{% trans 'Current best' %}"
+            : t.rep_count + "{% trans 'RM target' %}";
+          labelEl.classList.toggle("text-accent", t.is_current_best);
+          labelEl.classList.toggle("font-semibold", t.is_current_best);
+          confirmBtn.disabled = t.is_current_best;
+          confirmBtn.textContent = t.is_current_best
+            ? "{% trans 'Already logged' %}"
+            : "{% trans 'Confirm — I did this' %}";
+          repInput.value = t.rep_count;
+          dots.forEach(function (dot, i) {
+            dot.classList.toggle("bg-accent", i === index);
+            dot.classList.toggle("w-3", i === index);
+            dot.classList.toggle("bg-line-subtle", i !== index);
+          });
+          prevBtn.disabled = index === 0;
+          nextBtn.disabled = index === targets.length - 1;
+        }
+
+        prevBtn.addEventListener("click", function () {
+          if (index > 0) { index -= 1; render(); }
+        });
+        nextBtn.addEventListener("click", function () {
+          if (index < targets.length - 1) { index += 1; render(); }
+        });
+        openBtn.addEventListener("click", function () {
+          card.classList.add("is-flipped");
+        });
+        closeBtn.addEventListener("click", function () {
+          card.classList.remove("is-flipped");
+        });
+
+        render();
+      }
+
+      function initManualLiftCards() {
+        document.querySelectorAll(".flip-card").forEach(initManualLiftCard);
+      }
+      initManualLiftCards();
+      document.body.addEventListener("htmx:afterSwap", initManualLiftCards);
     </script>
     {% endif %}
 
