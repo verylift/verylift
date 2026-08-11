@@ -200,12 +200,8 @@ LOGOUT_REDIRECT_URL = "/accounts/login/"
 # this straight to path().
 ADMIN_URL_PATH = env("ADMIN_URL_PATH", default="the-rack/")
 
-# Deliberately not named after Kamal (contrast KAMAL_VERSION, which Kamal
-# injects into the container on its own and which this app never reads
-# directly): config/deploy.yml copies that same value into VERY_LIFT_VERSION
-# via ERB, so settings.py has no direct dependency on the deploy tool's own
-# env-var naming and a future switch away from Kamal only touches deploy.yml.
-# Unset (default "dev") in dev and any environment not deployed that way.
+# The running app's version string, set by whatever deploys this container.
+# Unset (default "dev") in dev and any environment that doesn't set it.
 APP_VERSION = env("VERY_LIFT_VERSION", default="dev")
 
 # Render the styled 403 page on CSRF validation failure instead of Django's default.
