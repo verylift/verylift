@@ -864,7 +864,7 @@ def _summary_card_for_lift(
 
 
 def _manual_targets_for_lift(lift, params, *, threshold_at, current_best):
-    """Build the 1RM..10RM target list a summary card's self-report carousel
+    """Build the 10RM..1RM target list a summary card's self-report carousel
     pages through (TASK-25).
 
     One entry per rep count with the same weight ``threshold_at`` already gives
@@ -879,8 +879,13 @@ def _manual_targets_for_lift(lift, params, *, threshold_at, current_best):
     current_best_reps = (
         11 - current_best.points_earned if current_best is not None else None
     )
+    current_points = current_best.points_earned if current_best is not None else 0
     targets = []
-    for reps in range(1, 11):
+    for reps in range(10, 0, -1):
+        # Points are a pure function of rep count (11 - reps), so the delta
+        # vs. the participant's current best is arithmetic, not a guess --
+        # always derived here, never estimated client-side.
+        points_delta = (11 - reps) - current_points
         targets.append(
             {
                 "rep_count": reps,
@@ -892,6 +897,7 @@ def _manual_targets_for_lift(lift, params, *, threshold_at, current_best):
                     snap=False,
                 ),
                 "is_current_best": reps == current_best_reps,
+                "points_delta": points_delta,
             }
         )
     return targets

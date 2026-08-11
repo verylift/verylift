@@ -308,7 +308,7 @@
       </div>
 
       <div id="tab-summary">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
           {% for card in personal_data.summary_cards %}
           {% include "challenges/_summary_card.html" with card=card display_unit=personal_data.display_unit challenge=challenge flipped=False %}
           {% endfor %}
@@ -357,7 +357,6 @@
       .flip-card { perspective: 1200px; position: relative; overflow: hidden; }
       .flip-card-inner {
         position: relative;
-        min-height: 9.5rem;
         transition: transform 0.4s, height 0.4s;
         transform-style: preserve-3d;
         -webkit-transform-style: preserve-3d;
@@ -432,15 +431,18 @@
 
         // Front and back have different content heights (the carousel/date
         // field/button on the back run taller than the summary text on the
-        // front). Size the shared .flip-card-inner to the taller of the two
-        // so neither face is clamped or spills into the card below, and
-        // re-measure on resize since Tailwind's responsive grid changes how
-        // much each face's text wraps.
+        // front). Keep the resting card at the front's size -- don't let the
+        // back's height inflate it -- and grow .flip-card-inner to the
+        // back's height only while flipped, animated by the same
+        // transition:height already on .flip-card-inner so it grows in step
+        // with the spin instead of jumping. Re-measure on resize too, since
+        // Tailwind's responsive grid changes how much each face's text wraps.
         const inner = card.querySelector(".flip-card-inner");
         const frontFace = card.querySelector(".flip-card-front");
         const backFace = card.querySelector(".flip-card-back");
         function syncCardHeight() {
-          inner.style.height = Math.max(frontFace.scrollHeight, backFace.scrollHeight) + "px";
+          const activeFace = card.classList.contains("is-flipped") ? backFace : frontFace;
+          inner.style.height = activeFace.scrollHeight + "px";
         }
         syncCardHeight();
         window.addEventListener("resize", syncCardHeight);
@@ -456,6 +458,7 @@
         const nextBtn = card.querySelector(".manual-next");
         const valueEl = card.querySelector(".manual-value");
         const labelEl = card.querySelector(".manual-label");
+        const deltaEl = card.querySelector(".manual-delta");
         const dots = Array.from(card.querySelectorAll(".manual-dot"));
         const confirmBtn = card.querySelector(".manual-confirm");
         const repInput = card.querySelector(".manual-rep-input");
@@ -469,6 +472,15 @@
             : t.rep_count + "{% trans 'RM target' %}";
           labelEl.classList.toggle("text-accent", t.is_current_best);
           labelEl.classList.toggle("font-semibold", t.is_current_best);
+          // Points are 11 - rep_count, so every carousel position already has
+          // a known delta vs. the current best (server-computed in
+          // points_delta) -- show it so paging to a worse rep count is an
+          // informed choice, not a guess.
+          deltaEl.textContent = t.is_current_best
+            ? ""
+            : (t.points_delta > 0 ? "+" + t.points_delta : t.points_delta) + " {% trans 'pts' %}";
+          deltaEl.classList.toggle("text-accent", t.points_delta > 0);
+          deltaEl.classList.toggle("text-content-muted", t.points_delta <= 0);
           confirmBtn.disabled = t.is_current_best;
           confirmBtn.textContent = t.is_current_best
             ? "{% trans 'Already logged' %}"
@@ -491,9 +503,11 @@
         });
         openBtn.addEventListener("click", function () {
           card.classList.add("is-flipped");
+          syncCardHeight();
         });
         closeBtn.addEventListener("click", function () {
           card.classList.remove("is-flipped");
+          syncCardHeight();
         });
 
         render();

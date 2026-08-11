@@ -91,6 +91,7 @@ default-selection rule).
           <div class="text-center min-w-[7rem]">
             <p class="manual-value text-lg font-bold font-mono text-content-strong"></p>
             <p class="manual-label text-xs text-content-muted"></p>
+            <p class="manual-delta h-4 text-xs font-mono font-semibold"></p>
           </div>
           <button type="button" class="manual-next w-7 h-7 inline-flex items-center justify-center rounded border border-line-subtle text-content-body hover:bg-surface-sunken disabled:opacity-40"
                   aria-label="{% trans 'Next rep count' %}">
@@ -115,3 +116,4 @@ default-selection rule).
   </div>
 </div>
 {% endwith %}
+{% if oob_messages %}{% include "components/_messages_oob.html" %}{% endif %}

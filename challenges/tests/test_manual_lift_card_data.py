@@ -69,7 +69,9 @@ class TestManualTargets:
         data = build_personal_data(user, challenge, participant)
         card = data["summary_cards"][0]
         assert len(card["manual_targets"]) == 10
-        assert [t["rep_count"] for t in card["manual_targets"]] == list(range(1, 11))
+        assert [t["rep_count"] for t in card["manual_targets"]] == list(
+            range(10, 0, -1)
+        )
 
     def test_current_best_flag_matches_scored_rep_count(
         self, user, challenge, participant
