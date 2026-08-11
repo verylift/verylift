@@ -45,6 +45,7 @@ from challenges.services import (
     close_challenge,
     create_challenge,
     current_invite_link,
+    delete_draft_challenge,
     get_co_participants,
     regenerate_invite_link,
     remove_participant,
@@ -1943,3 +1944,47 @@ def cancel_challenge_view(request, pk):
         cancel_url=reverse("challenges:detail", args=[challenge.pk]),
         cancel_label=gettext("Go Back"),
     )
+
+
+@login_required
+@require_POST
+def delete_draft_challenge_view(request, pk):
+    """Delete a draft challenge the requesting user is starting over on (#1).
+
+    POST-only (confirmation is handled inline by the caller, e.g. htmx's
+    hx-confirm or a JS confirm() on the link/button, matching the wizard's
+    existing cancel-link convention) -- unlike cancel_challenge_view and the
+    other lifecycle actions on this page there is no separate GET-confirm
+    page here. Creator-only with no staff override: this is a self-service
+    "start over on my own draft", not moderation, so it does not reuse
+    _get_challenge_for_creator's allow_staff escape hatch. Only DRAFT
+    challenges are eligible -- once a challenge has gone ACTIVE (or beyond)
+    it has real participants and history riding on it, so "delete" is no
+    longer the right action; cancel_challenge_view covers that case.
+    Soft-deletes via delete_draft_challenge (status -> CANCELLED) so the row
+    and everything under it survive for audit; the challenge just
+    disappears from find_challenges_view and the dashboard like any other
+    cancelled challenge.
+    """
+    challenge = _get_challenge_for_creator(request, pk)
+
+    if challenge.status != Challenge.Status.DRAFT:
+        logger.warning(
+            "User %s tried to delete non-draft challenge %s (status %s)",
+            request.user.id,
+            pk,
+            challenge.status,
+        )
+        return HttpResponseBadRequest(gettext("Only draft challenges can be deleted."))
+
+    delete_draft_challenge(challenge)
+    logger.info("User %s deleted draft challenge %s", request.user.id, pk)
+    messages.success(request, gettext("Draft challenge deleted."))
+
+    if is_htmx(request):
+        return render(
+            request,
+            "components/_messages_oob.html",
+            {},
+        )
+    return redirect("challenges:find")

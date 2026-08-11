@@ -1281,6 +1281,10 @@ msgstr "Guardar"
 msgid "Edit challenge name"
 msgstr "Editar nombre del reto"
 
+#: templates/challenges/find.html:73 templates/challenges/find.html:115
+msgid "Delete draft challenge"
+msgstr "Eliminar reto en borrador"
+
 #: templates/challenges/confirm_action.html:11
 #, python-format
 msgid "Are you sure you want to %(verb)s <strong>%(name)s</strong>%(suffix)s?"
@@ -2960,3 +2964,19 @@ msgstr "El enlace funciona una sola vez y deja de funcionar después de poco tie
 #: templates/registration/password_reset_email_body.txt
 msgid "If you didn't ask for this, you can ignore this email. Your password hasn't changed."
 msgstr "Si no solicitaste esto, puedes ignorar este correo. Tu contraseña no ha cambiado."
+
+#: templates/challenges/find.html
+msgid "Actions"
+msgstr "Acciones"
+
+#: templates/challenges/find.html
+msgid "Delete this draft challenge? This cannot be undone."
+msgstr "¿Eliminar este reto en borrador? Esta acción no se puede deshacer."
+
+#: challenges/views.py
+msgid "Draft challenge deleted."
+msgstr "Reto en borrador eliminado."
+
+#: challenges/views.py
+msgid "Only draft challenges can be deleted."
+msgstr "Solo se pueden eliminar los retos en borrador."

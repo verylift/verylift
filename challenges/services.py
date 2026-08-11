@@ -1306,6 +1306,25 @@ def _custom_goal_llm_prompt(challenge, lifts, unit) -> str:
     )
 
 
+def delete_draft_challenge(challenge) -> None:
+    """Soft-delete a draft challenge its creator no longer wants (#1).
+
+    Reuses the existing CANCELLED status rather than inventing a "deleted"
+    one: cancelled challenges are already excluded from find_challenges_view,
+    the dashboard, and get_co_participants, which is exactly the
+    "gone from my view" behaviour a deleted draft needs, and it keeps a
+    single terminal-void status instead of two that mean almost the same
+    thing. Nothing is hard-deleted -- the Challenge row, its ChallengeLift
+    rows, the creator's ChallengeParticipant row and its invite link all
+    survive for audit, matching this app's no-hard-delete policy. The
+    caller (the view) is responsible for validating challenge.status ==
+    DRAFT before calling this -- it is not re-checked here.
+    """
+    challenge.status = Challenge.Status.CANCELLED
+    challenge.save(update_fields=["status"])
+    logger.info("Draft challenge %s deleted (cancelled) by its creator", challenge.pk)
+
+
 def activate_draft_for_creator(challenge, user) -> bool:
     """Flip a draft challenge to active when its creator finishes goal setup.
 

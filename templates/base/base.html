@@ -85,7 +85,13 @@
         });
       }
       wireMessages();
-      document.body.addEventListener('htmx:afterSwap', wireMessages);
+      // A response can be *entirely* oob content (e.g. draft-delete: the row's
+      // hx-target gets emptied and the toast rides along as the only payload) --
+      // htmx then skips the main swap lifecycle altogether, so neither
+      // htmx:afterSwap nor htmx:afterSettle ever fires. htmx:oobAfterSwap is the
+      // one event guaranteed to fire whenever an oob-swapped element (like our
+      // #app-messages toast) actually lands in the DOM, so wire on that instead.
+      document.body.addEventListener('htmx:oobAfterSwap', wireMessages);
 
       // Drive the TASK-141 loading overlay from htmx requests when it exists.
       // Guarded so htmx conversions work standalone before TASK-141 lands.
