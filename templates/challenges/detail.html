@@ -459,7 +459,11 @@
         let index = targets.findIndex(function (t) {
           return String(t.rep_count) === card.dataset.defaultRepCount;
         });
-        if (index < 0) index = targets.length - 1;
+        // Fall back to the FIRST entry, not the last: targets run 10RM..1RM,
+        // so index 0 is the easiest target (1 point) and the last is the
+        // hardest (1RM, 10 points). Opening a lifter with no usable default
+        // on the hardest target in the list is never the helpful guess.
+        if (index < 0) index = 0;
 
         const openBtn = card.querySelector(".manual-flip-open");
         const closeBtn = card.querySelector(".manual-flip-close");

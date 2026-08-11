@@ -908,15 +908,23 @@ def _manual_targets_for_lift(lift, params, *, threshold_at, current_best):
 def _default_manual_rep_count(most_recent_event):
     """Starting rep count for a summary card's self-report carousel (TASK-25).
 
-    No PointEarnEvent ever logged for this lift -> 10RM, the easiest target.
-    Otherwise -> the rep count the most recently logged event satisfied
-    (``11 - points_earned``, same derivation as everywhere else that maps a
+    No scoring history for this lift -> 10RM, the easiest target. Otherwise ->
+    the rep count the most recently logged event satisfied (``11 -
+    points_earned``, same derivation as everywhere else that maps a
     PointEarnEvent back to a rep count) -- deliberately the *most recent*
     entry, not the current best: a lifter whose last session was worse than
     their all-time best should open on what they just did, not get steered
     toward re-confirming an old best.
+
+    "No scoring history" has to include a zero-point event, not just a missing
+    one: :func:`scoring.services._persist_audit_row` records sub-threshold
+    sets as real zero-point audit rows, so a lifter who has logged sets but
+    never earned a point does have a most-recent event. Running the usual
+    derivation on it gives ``11 - 0 == 11``, a rep count no carousel entry has
+    (they run 10RM..1RM), which lands on the client's not-found fallback
+    instead of any deliberate choice.
     """
-    if most_recent_event is None:
+    if most_recent_event is None or most_recent_event.points_earned == 0:
         return MANUAL_DEFAULT_REP_COUNT_NO_HISTORY
     return 11 - most_recent_event.points_earned
 

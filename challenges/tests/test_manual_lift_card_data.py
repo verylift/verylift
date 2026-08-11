@@ -163,3 +163,28 @@ class TestManualTargets:
         data = build_personal_data(user, challenge, participant)
         card = data["summary_cards"][0]
         assert card["manual_default_rep_count"] == 7
+
+    def test_default_rep_count_ignores_zero_point_events(
+        self, user, challenge, participant
+    ):
+        """A sub-threshold set is stored as a real zero-point PointEarnEvent, so
+        a lifter who has logged sets but never scored still has a most-recent
+        event. Deriving from it would give 11 - 0 == 11, a rep count no
+        carousel entry has, so it must fall back to the no-history default.
+        """
+        _give_goal(participant, targets=_flat_targets())
+        PointEarnEventFactory(
+            user=user,
+            challenge=challenge,
+            lift=LIFT,
+            points_earned=0,
+            is_current_best=False,
+            performed_at=timezone.now().date(),
+        )
+        data = build_personal_data(user, challenge, participant)
+        card = data["summary_cards"][0]
+        assert card["manual_default_rep_count"] == 10
+        # Whatever it is, it has to be a rep count the carousel can land on.
+        assert card["manual_default_rep_count"] in [
+            t["rep_count"] for t in card["manual_targets"]
+        ]
