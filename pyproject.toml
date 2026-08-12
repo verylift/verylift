@@ -20,6 +20,7 @@ dependencies = [
     # silently resolve to UTC in prod.
     "tzdata>=2026.2",
     "cryptography>=49.0.0",
+    "sentry-sdk>=2.35",
 ]
 
 [dependency-groups]
