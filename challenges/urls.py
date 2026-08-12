@@ -9,6 +9,12 @@ app_name = "challenges"
 
 urlpatterns = [
     path("", views.landing_view, name="landing"),
+    path("about/", views.about_view, name="about"),
+    path(
+        "newsletter/subscribe/",
+        views.newsletter_subscribe_view,
+        name="newsletter-subscribe",
+    ),
     path("dashboard/", views.dashboard_view, name="dashboard"),
     # Top-level and pk-free (not nested under challenges/<uuid:pk>/): short
     # enough to paste into a group chat, and leaks no challenge identifier.
