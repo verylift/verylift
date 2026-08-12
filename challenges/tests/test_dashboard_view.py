@@ -55,11 +55,14 @@ class TestLandingPage:
 
     def test_landing_page_content_and_links(self, db):
         content = Client().get(reverse("challenges:landing")).content.decode()
-        assert "Challenge your friends. Score fairly." in content
+        assert "Challenge your friends." in content
         assert reverse("accounts:register") in content
         assert reverse("accounts:login") in content
         assert reverse("terms") in content
         assert reverse("privacy") in content
+        assert reverse("challenges:about") in content
+        assert reverse("challenges:newsletter-subscribe") in content
+        assert reverse("set_language") in content
 
     def test_authenticated_user_redirected_to_dashboard(self, client):
         response = client.get(reverse("challenges:landing"))
