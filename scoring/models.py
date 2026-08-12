@@ -3,6 +3,8 @@ import uuid
 from django.conf import settings
 from django.db import models
 
+from liftosaur.models import LiftSource
+
 
 class PointEarnEvent(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -33,6 +35,16 @@ class PointEarnEvent(models.Model):
             "of the re-scoring idempotency key so a bodyweight set and an "
             "assisted set of the same lift on the same day with the same rep "
             "count are never collapsed into one event."
+        ),
+    )
+    source = models.CharField(
+        max_length=20,
+        choices=LiftSource.choices,
+        default=LiftSource.LIFTOSAUR,
+        help_text=(
+            "Provenance of the source LiftHistory set this event was scored "
+            "from. PointEarnEvent has no FK to LiftHistory, so this is its own "
+            "copy, not a derived lookup."
         ),
     )
 

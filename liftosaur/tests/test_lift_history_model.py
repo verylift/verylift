@@ -6,7 +6,7 @@ from django.db import IntegrityError
 from django.utils import timezone
 
 from accounts.tests.factories import UserFactory
-from liftosaur.models import LiftHistory
+from liftosaur.models import LiftHistory, LiftSource
 from liftosaur.tests.factories import LiftHistoryFactory
 
 
@@ -74,3 +74,21 @@ class TestLiftHistoryModel:
         assert "Back Squat" in s
         assert "120.00" in s
         assert "3" in s
+
+    def test_source_defaults_to_liftosaur(self):
+        """TASK-25: a row created without an explicit source (the shape of
+        every pre-existing sync-written row) is LIFTOSAUR, never blank/null —
+        the model default is what the AddField migration backfills existing
+        rows to."""
+        row = LiftHistory.objects.create(
+            user=UserFactory(),
+            lift="Back Squat",
+            performed_at=timezone.now().date(),
+            reps=5,
+            weight_kg=Decimal("100.00"),
+        )
+        assert row.source == LiftSource.LIFTOSAUR
+
+    def test_source_can_be_manual(self):
+        row = LiftHistoryFactory(source=LiftSource.MANUAL)
+        assert row.source == LiftSource.MANUAL

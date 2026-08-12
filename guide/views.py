@@ -10,28 +10,28 @@ from django.http import Http404
 from django.shortcuts import render
 from django.urls import reverse
 from django.utils.safestring import mark_safe
-from django.utils.translation import gettext_lazy as _t
+from django.utils.translation import gettext_lazy as _
 
 logger = logging.getLogger(__name__)
 
 # slug -> (title, filename). Titles mirror each file's top-level `# H1` heading.
 DOC_PAGES = {
-    "index": (_t("Welcome to very lift"), "index.md"),
-    "scoring": (_t("How scoring works"), "scoring.md"),
-    "challenges": (_t("Running a challenge"), "challenges.md"),
+    "index": (_("Welcome to very lift"), "index.md"),
+    "scoring": (_("How scoring works"), "scoring.md"),
+    "challenges": (_("Running a challenge"), "challenges.md"),
     "sync-and-data-freshness": (
-        _t("Keeping your data fresh"),
+        _("Keeping your data fresh"),
         "sync-and-data-freshness.md",
     ),
     "bodyweight-and-units": (
-        _t("Units & added-weight lifts"),
+        _("Units & added-weight lifts"),
         "bodyweight-and-units.md",
     ),
 }
 
 # filename -> slug, used to rewrite the docs' own relative cross-links
 # (e.g. "scoring.md", written for GitHub browsing) into in-app guide URLs.
-_FILENAME_TO_SLUG = {filename: slug for slug, (_, filename) in DOC_PAGES.items()}
+_FILENAME_TO_SLUG = {filename: slug for slug, (_title, filename) in DOC_PAGES.items()}
 _MD_LINK_RE = re.compile(r'href="([\w.-]+\.md)"')
 
 

@@ -1,0 +1,123 @@
+{% load i18n icons %}
+{% comment %}
+One "Your Performance" summary card (TASK-25). Rendered both inline, once per
+lift, inside detail.html's Summary tab grid, and standalone as the htmx
+response of manual_lift_view (challenges:manual-lift) — the latter swaps
+outerHTML onto exactly this card's own #summary-card-<slug> wrapper, so the
+markup here must always be a single complete replacement for itself, never a
+sub-fragment that assumes surrounding context is already in the DOM.
+
+Two faces share one card: the front is the existing read-only summary (state
+scored/no_points/no_data_before_window/no_data), the back is the self-report
+carousel. Both are always present in the DOM; only a CSS class ("is-flipped")
+on the outer wrapper picks which one shows (challenges/detail.html's flip-card
+CSS + initManualLiftCard()), so JS never has to fetch anything to flip.
+
+The card always renders on its front face -- there is no server-rendered
+flipped state, because a submission that would leave the lifter on the back
+(nothing gained) is refused before it gets here (challenges.services
+submit_manual_lift). Flipping is purely a client interaction.
+
+Context: card (a personal_data.summary_cards entry), display_unit, challenge,
+start_rep_count (int, carousel's opening rep-count -- defaults to card.manual_default_rep_count when omitted so the
+detail.html initial render and this fragment's post-submit render share one
+default-selection rule).
+{% endcomment %}
+{% with slug=card.lift|slugify opening_rep=start_rep_count|default:card.manual_default_rep_count %}
+<div id="summary-card-{{ slug }}"
+     class="flip-card {% if card.close_to_goal %}border-2 border-warning-light{% else %}border border-line-subtle{% endif %} rounded p-4"
+     data-lift="{{ card.lift }}"
+     data-unit="{{ display_unit }}"
+     data-bodyweight-added="{% if card.is_bodyweight_added %}1{% else %}0{% endif %}"
+     data-default-rep-count="{{ opening_rep }}"
+     data-targets-id="manual-targets-{{ slug }}">
+  <div class="flip-card-inner">
+
+    <div class="flip-card-front">
+      <div class="flex items-start justify-between gap-2 mb-2">
+        <h3 class="text-sm font-semibold text-content-strong">{{ card.lift }}</h3>
+        <button type="button" class="manual-flip-open flex-shrink-0 w-6 h-6 inline-flex items-center justify-center rounded-full bg-accent text-accent-on hover:opacity-90"
+                aria-label="{% blocktrans with lift=card.lift %}Log a set for {{ lift }}{% endblocktrans %}">
+          {% icon "plus" css_class="h-3.5 w-3.5" %}
+        </button>
+      </div>
+      {% if card.state == "scored" %}
+      <p class="text-2xl font-bold text-accent font-mono">{% blocktrans with points=card.points_earned %}{{ points }} pts{% endblocktrans %}</p>
+      <p class="text-sm text-content-body mt-1">
+        <span class="font-mono">{{ card.weight }}</span>{% if card.weight != "BW" %} {{ display_unit }}{% endif %} × <span class="font-mono">{{ card.reps }}</span> {% trans "reps" %} ({{ card.date }})
+      </p>
+      <p class="text-xs text-content-muted mt-1">{{ card.tier_satisfied }}</p>
+      {% elif card.state == "no_points" %}
+      {% if card.close_to_goal %}
+      <span class="inline-block text-xs font-medium px-2 py-0.5 mb-2 rounded bg-warning-light text-warning-dark">{% trans "Close to goal" %}</span>
+      {% endif %}
+      <p class="text-sm text-content-body">
+        {% blocktrans with weight=card.best_weight reps=card.best_reps date=card.best_date %}Best logged: <span class="font-mono">{{ weight }}</span>{% endblocktrans %}{% if card.best_weight != "BW" %} {{ display_unit }}{% endif %} × <span class="font-mono">{{ card.best_reps }}</span> {% blocktrans with date=card.best_date %}reps ({{ date }}){% endblocktrans %}
+      </p>
+      {% if card.weight_gap is not None %}
+      <p class="text-xs text-content-muted mt-1">
+        {% blocktrans with gap=card.weight_gap unit=display_unit %}To reach your first point: add <span class="font-mono">{{ gap }}</span> {{ unit }}{% endblocktrans %}{% if card.reps_gap is not None %}, {% blocktrans count counter=card.reps_gap %}or do <span class="font-mono">{{ counter }}</span> more rep{% plural %}or do <span class="font-mono">{{ counter }}</span> more reps{% endblocktrans %}{% endif %}.
+      </p>
+      {% endif %}
+      {% elif card.state == "no_data_before_window" %}
+      <p class="text-sm text-content-body">
+        {% blocktrans with date=card.window_start_date|date:"M j, Y" %}No data since your challenge window opened on <span class="font-mono">{{ date }}</span>.{% endblocktrans %}
+      </p>
+      <p class="text-xs text-content-muted mt-1">{% trans "You've logged this lift before, but not since then. Log a new set to get started." %}</p>
+      {% else %}
+      <p class="text-sm text-content-muted italic">{% trans "No data yet" %}</p>
+      {% endif %}
+    </div>
+
+    <div class="flip-card-back">
+      <div class="flex items-start justify-between gap-2 mb-3">
+        <h3 class="text-sm font-semibold text-content-strong">{{ card.lift }}</h3>
+        <button type="button" class="manual-flip-close flex-shrink-0 w-6 h-6 inline-flex items-center justify-center rounded-full border border-line-subtle text-content-muted hover:text-content-strong"
+                aria-label="{% trans 'Cancel' %}">
+          {% icon "x" css_class="h-3.5 w-3.5" %}
+        </button>
+      </div>
+
+      {% with target_id="manual-targets-"|add:slug %}{{ card.manual_targets|json_script:target_id }}{% endwith %}
+
+      <form class="manual-lift-form"
+            hx-post="{% url 'challenges:manual-lift' challenge.pk %}"
+            hx-target="#summary-card-{{ slug }}"
+            hx-swap="outerHTML">
+        <input type="hidden" name="lift" value="{{ card.lift }}">
+        <input type="hidden" name="rep_count" class="manual-rep-input" value="{{ opening_rep }}">
+
+        <div class="flex items-center justify-center gap-3 mb-1">
+          <button type="button" class="manual-prev w-7 h-7 inline-flex items-center justify-center rounded border border-line-subtle text-content-body hover:bg-surface-sunken disabled:opacity-40"
+                  aria-label="{% trans 'Previous rep count' %}">
+            {% icon "chevron-left" css_class="h-4 w-4" %}
+          </button>
+          <div class="text-center min-w-[7rem]">
+            <p class="manual-value text-lg font-bold font-mono text-content-strong"></p>
+            <p class="manual-label text-xs text-content-muted"></p>
+            <p class="manual-delta h-4 text-xs font-mono font-semibold"></p>
+          </div>
+          <button type="button" class="manual-next w-7 h-7 inline-flex items-center justify-center rounded border border-line-subtle text-content-body hover:bg-surface-sunken disabled:opacity-40"
+                  aria-label="{% trans 'Next rep count' %}">
+            {% icon "chevron-right" css_class="h-4 w-4" %}
+          </button>
+        </div>
+
+        <div class="manual-dots flex justify-center gap-1 mb-3">
+          {% for i in "0123456789" %}
+          <span class="manual-dot h-1.5 w-1.5 rounded-full bg-line-subtle transition-all"></span>
+          {% endfor %}
+        </div>
+
+        <label class="block text-xs text-content-muted mb-1" for="manual-date-{{ slug }}">{% trans "Date" %}</label>
+        <input id="manual-date-{{ slug }}" type="date" name="performed_at" value="{% now 'Y-m-d' %}" max="{% now 'Y-m-d' %}"
+               class="w-full mb-3 text-sm border border-line-subtle rounded px-2 py-1.5 bg-surface-card text-content-body">
+
+        <button type="submit" class="manual-confirm w-full text-sm font-semibold px-4 py-2 rounded bg-accent text-accent-on hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"></button>
+      </form>
+    </div>
+
+  </div>
+</div>
+{% endwith %}
+{% if oob_messages %}{% include "components/_messages_oob.html" %}{% endif %}

@@ -9,7 +9,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Case, CharField, F, When
 from django.db.models.functions import Lower
 from django.utils import timezone
@@ -23,18 +23,26 @@ from challenges.models import (
     ChallengeLift,
     ChallengeParticipant,
     CustomGoal,
+    CustomGoalTarget,
 )
 from challenges.standards import covered_lift_names
-from liftosaur.models import LiftHistory
+from liftosaur.models import LiftHistory, LiftSource
 from liftosaur.services import sync_user_lifts
 from notifications.models import Notification
 from scoring.domain.calculator import (
+    best_score_for_set,
     format_added_weight,
     is_assisted_equipment,
     is_bodyweight_added_lift,
 )
 from scoring.models import PointEarnEvent
 from scoring.services import score_pooled_history
+
+# Default rep-count the self-report carousel opens on for a lift with no
+# PointEarnEvent ever logged -- 10RM, the easiest target (TASK-25 design
+# review). A lift with any history opens on the most recently logged rep
+# count instead; see _default_manual_rep_count.
+MANUAL_DEFAULT_REP_COUNT_NO_HISTORY = 10
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +60,168 @@ def sync_and_score(user, challenge, *, sync=True) -> None:
     if sync:
         sync_user_lifts(user)
     score_pooled_history(user=user, challenge=challenge)
+
+
+def submit_manual_lift(
+    *,
+    user,
+    challenge,
+    participant: ChallengeParticipant,
+    lift: str,
+    rep_count: int,
+    performed_at,
+) -> tuple[LiftHistory, bool] | None:
+    """Self-report a completed set against one of the participant's own rep-max
+    targets (TASK-25), for a lifter with no workout tracker connected.
+
+    The weight is never taken from the caller — it is always the participant's
+    own ``CustomGoalTarget`` for ``(lift, rep_count)``, so a self-report can
+    only ever confirm "I hit my own target", never fabricate an arbitrary
+    number. Returns ``None`` when the participant has no goal configured yet,
+    the goal does not cover this ``(lift, rep_count)`` cell, or the set could
+    not raise their score on this lift — the caller treats all three as a
+    validation failure.
+
+    That last guard is why a self-report can never be a no-op write: an entry
+    scoring at or below the current best is refused outright rather than
+    recorded and then reported as an improvement. The carousel disables those
+    entries client-side, so reaching this branch means a stale card (the page
+    was open while the same lift scored elsewhere) or a hand-made request.
+
+    The written ``LiftHistory`` row always takes the model's own
+    ``equipment=""`` default. That field only matters for filtering assisted-
+    machine sets out of scoring on bodyweight-added lifts (see
+    ``scoring.services.process_scored_set`` /
+    ``scoring.domain.calculator.is_assisted_equipment``) — a real concern for
+    Liftosaur sync, which parses equipment automatically from data the tracker
+    already recorded, but not for self-report: a manually-reported bodyweight
+    lift should just score normally, and self-report is already an
+    honor-system channel (the confirm button), so an extra disclosure question
+    here would add friction without adding real protection.
+
+    Writes a ``source=MANUAL`` ``LiftHistory`` row (``get_or_create``, so a
+    duplicate resubmission of the identical set is a no-op rather than an
+    ``IntegrityError`` — the unique constraint on ``LiftHistory`` still applies;
+    a lost race for the same insert is handled the same way, matching the
+    tolerant-of-races convention ``liftosaur.services`` already uses), then
+    reuses :func:`scoring.services.score_pooled_history` for the actual
+    scoring/best-promotion — this function never touches ``PointEarnEvent``
+    directly.
+
+    Returns ``(history_row, points_earned)`` — the points this set actually
+    scored, for the caller to report back. Because a set that cannot raise the
+    participant's score is refused above, a successful return always means the
+    lift's current best moved.
+    """
+    if not participant.has_goal_configured:
+        logger.warning(
+            "Manual lift self-report rejected for user %s: no goal configured "
+            "for challenge %s",
+            user.id,
+            challenge.pk,
+        )
+        return None
+
+    target = CustomGoalTarget.objects.filter(
+        goal=participant.custom_goal, lift=lift, rep_count=rep_count
+    ).first()
+    if target is None:
+        logger.warning(
+            "Manual lift self-report rejected for user %s: no target for "
+            "%s %sRM in challenge %s",
+            user.id,
+            lift,
+            rep_count,
+            challenge.pk,
+        )
+        return None
+
+    # Refuse anything that cannot raise the participant's score on this lift.
+    # What the set scores is not 11 - rep_count: best_score_for_set takes the
+    # highest-point rung the set clears, so a tied or non-monotonic ladder can
+    # make one entry score another's points (see _manual_targets_for_lift).
+    # Deriving both sides the same way is what keeps this guard identical to
+    # the points_delta the carousel showed when the button was pressed.
+    thresholds = {
+        row.rep_count: row.target_weight
+        for row in CustomGoalTarget.objects.filter(
+            goal=participant.custom_goal, lift=lift
+        )
+    }
+    scored = best_score_for_set(rep_count, target.target_weight, thresholds)
+    would_earn = scored[0] if scored is not None else 0
+    current_points = (
+        PointEarnEvent.objects.filter(
+            user=user, challenge=challenge, lift=lift, is_current_best=True
+        )
+        .values_list("points_earned", flat=True)
+        .first()
+        or 0
+    )
+    if would_earn <= current_points:
+        logger.warning(
+            "Manual lift self-report rejected for user %s: %s %sRM would earn "
+            "%s point(s), not beating the current best of %s in challenge %s",
+            user.id,
+            lift,
+            rep_count,
+            would_earn,
+            current_points,
+            challenge.pk,
+        )
+        return None
+
+    lookup = {
+        "user": user,
+        "lift": lift,
+        "performed_at": performed_at,
+        "reps": rep_count,
+        "weight_kg": target.target_weight,
+    }
+    try:
+        history_row, created = LiftHistory.objects.get_or_create(
+            **lookup,
+            defaults={"source": LiftSource.MANUAL},
+        )
+    except IntegrityError:
+        logger.warning(
+            "Manual lift self-report for user %s raced a duplicate insert for "
+            "%s %sRM on %s; reusing the existing row",
+            user.id,
+            lift,
+            rep_count,
+            performed_at,
+        )
+        history_row = LiftHistory.objects.get(**lookup)
+        created = False
+
+    logger.info(
+        "Manual lift self-report: user %s logged %s %sRM for challenge %s (new row=%s)",
+        user.id,
+        lift,
+        rep_count,
+        challenge.pk,
+        created,
+    )
+
+    score_pooled_history(user=user, challenge=challenge)
+
+    # Report what this set actually scored, read back from the event scoring
+    # just wrote rather than from the pre-write `would_earn` estimate: the two
+    # differ when the set falls outside the challenge's history window, where
+    # the guard above still passes but nothing is scored.
+    scored_event = (
+        PointEarnEvent.objects.filter(
+            user=user,
+            challenge=challenge,
+            lift=lift,
+            performed_at=performed_at,
+            reps=rep_count,
+        )
+        .order_by("-synced_at")
+        .first()
+    )
+    return history_row, scored_event.points_earned if scored_event else 0
 
 
 def order_by_effective_name(queryset):
@@ -741,6 +911,79 @@ def _summary_card_for_lift(
     return card
 
 
+def _manual_targets_for_lift(lift, params, *, threshold_at, current_best):
+    """Build the 10RM..1RM target list a summary card's self-report carousel
+    pages through (TASK-25).
+
+    One entry per rep count with the same weight ``threshold_at`` already gives
+    the Standards table, so the carousel can never show a number that drifts
+    from what scoring/the standards table use. ``is_current_best`` mirrors
+    :func:`_standards_row_for_lift`'s own cell test exactly (``11 -
+    current_best.points_earned == reps``): the current-best PointEarnEvent's
+    reps field is the reps actually PERFORMED, which can differ from the rep
+    count whose threshold it satisfied, so the satisfied rep count is always
+    derived from points_earned, never read off current_best.reps directly.
+    """
+    current_best_reps = (
+        11 - current_best.points_earned if current_best is not None else None
+    )
+    current_points = current_best.points_earned if current_best is not None else 0
+    # Confirming an entry writes a set of exactly (reps, threshold_at(reps)),
+    # so what it will score is not 11 - reps but whatever best_score_for_set
+    # makes of that set against the whole table -- and that can be MORE.
+    # best_score_for_set walks 1RM..10RM and takes the first (highest-point)
+    # threshold met, so a set at the 10RM weight also clears the 9RM rung
+    # whenever the 9RM target is <= the 10RM one. Ladders tie like that
+    # routinely once an Epley ladder is rounded to plate increments, and a
+    # hand-entered grid can be non-monotonic outright. Running the real
+    # scorer here is what keeps the carousel's promise equal to the award.
+    thresholds = {n: threshold_at(n) for n in range(1, 11)}
+    targets = []
+    for reps in range(10, 0, -1):
+        scored = best_score_for_set(reps, thresholds[reps], thresholds)
+        points_if_logged = scored[0] if scored is not None else 0
+        points_delta = points_if_logged - current_points
+        targets.append(
+            {
+                "rep_count": reps,
+                "weight": _weight_display(
+                    threshold_at(reps),
+                    lift,
+                    params.display_unit,
+                    params.challenge,
+                    snap=False,
+                ),
+                "is_current_best": reps == current_best_reps,
+                "points_delta": points_delta,
+            }
+        )
+    return targets
+
+
+def _default_manual_rep_count(most_recent_event):
+    """Starting rep count for a summary card's self-report carousel (TASK-25).
+
+    No scoring history for this lift -> 10RM, the easiest target. Otherwise ->
+    the rep count the most recently logged event satisfied (``11 -
+    points_earned``, same derivation as everywhere else that maps a
+    PointEarnEvent back to a rep count) -- deliberately the *most recent*
+    entry, not the current best: a lifter whose last session was worse than
+    their all-time best should open on what they just did, not get steered
+    toward re-confirming an old best.
+
+    "No scoring history" has to include a zero-point event, not just a missing
+    one: :func:`scoring.services._persist_audit_row` records sub-threshold
+    sets as real zero-point audit rows, so a lifter who has logged sets but
+    never earned a point does have a most-recent event. Running the usual
+    derivation on it gives ``11 - 0 == 11``, a rep count no carousel entry has
+    (they run 10RM..1RM), which lands on the client's not-found fallback
+    instead of any deliberate choice.
+    """
+    if most_recent_event is None or most_recent_event.points_earned == 0:
+        return MANUAL_DEFAULT_REP_COUNT_NO_HISTORY
+    return 11 - most_recent_event.points_earned
+
+
 def _standards_row_for_lift(lift, params, *, threshold_at, current_best, rep_columns):
     """Build one lift's standards-table row (10RM..1RM cells)."""
     cells = []
@@ -951,6 +1194,17 @@ def build_personal_data(user, challenge, participant):
         )
     }
 
+    # Window-independent like current_best_by_lift above, and for the same
+    # reason (a bail/rejoin resetting joined_at shouldn't make the carousel
+    # forget history that still stands on the leaderboard). setdefault (not a
+    # dict comprehension) because this is genuinely one-per-lift out of many
+    # events per lift, not an already-unique is_current_best=True row.
+    most_recent_event_by_lift = {}
+    for event in PointEarnEvent.objects.filter(user=user, challenge=challenge).order_by(
+        "-performed_at", "-synced_at"
+    ):
+        most_recent_event_by_lift.setdefault(event.lift, event)
+
     rep_columns = list(range(10, 0, -1))
 
     summary_cards = []
@@ -961,15 +1215,17 @@ def build_personal_data(user, challenge, participant):
         # consistent with the chart and leaderboard (window-independent lookup).
         current_best = current_best_by_lift.get(lift)
         threshold_at = _threshold_at_for_lift(lift, targets_by_lift=targets_by_lift)
-        summary_cards.append(
-            _summary_card_for_lift(
-                lift,
-                params,
-                current_best=current_best,
-                lift_window_events=lift_window_events,
-                threshold_at=threshold_at,
-            )
+        card = _summary_card_for_lift(
+            lift,
+            params,
+            current_best=current_best,
+            lift_window_events=lift_window_events,
+            threshold_at=threshold_at,
         )
+        card["manual_targets"] = _manual_targets_for_lift(
+            lift, params, threshold_at=threshold_at, current_best=current_best
+        )
+        summary_cards.append(card)
         standards_rows.append(
             _standards_row_for_lift(
                 lift,
@@ -982,6 +1238,11 @@ def build_personal_data(user, challenge, participant):
 
     _flag_close_to_goal(summary_cards)
     _flag_endgame_suggestion(summary_cards, challenge)
+
+    for card in summary_cards:
+        card["manual_default_rep_count"] = _default_manual_rep_count(
+            most_recent_event_by_lift.get(card["lift"])
+        )
 
     return {
         "summary_cards": summary_cards,
