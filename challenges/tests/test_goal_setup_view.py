@@ -23,6 +23,7 @@ from challenges.tests.factories import (
     make_custom_challenge,
 )
 from fitnessvolt.tests.factories import FitnessVoltStandardCacheFactory
+from liftosaur.models import LiftSource
 from liftosaur.tests.factories import LiftHistoryFactory
 from scoring.models import PointEarnEvent
 
@@ -635,9 +636,10 @@ class TestHistoryMethodFlow:
 
 
 class TestHistoryMethodRequiresLiftosaurKey:
-    """A challenge's creator never goes through join/accept's own Liftosaur
-    key gate (they're auto-added as a participant at creation), so without a
-    gate here too, picking "history" with no key would silently produce an
+    """Joining a challenge never requires a Liftosaur key, and a challenge's
+    creator never goes through a key gate at all (they're auto-added as a
+    participant at creation) -- so without a gate here, picking "history"
+    with neither a key nor any pooled history would silently produce an
     all-blank chart with no explanation why.
     """
 
@@ -713,6 +715,58 @@ class TestHistoryMethodRequiresLiftosaurKey:
         authed_client.post(url, {"rounding_increment": "kg:2.5"})
         chart = authed_client.get(url)
         assert b"Review your chart" in chart.content
+
+
+class TestHistoryMethodRecognizesNonLiftosaurHistory:
+    """A lifter with pooled history from a Hevy CSV import or manual
+    self-report (LiftSource.HEVY / LiftSource.MANUAL) has real data to
+    suggest from even with no Liftosaur key connected -- the key-required
+    gate should only fire when there is genuinely nothing pooled yet."""
+
+    def test_pooled_hevy_history_skips_the_key_prompt(
+        self, authed_client, participant, challenge, user
+    ):
+        LiftHistoryFactory(
+            user=user,
+            lift="Back Squat",
+            performed_at=timezone.now().date(),
+            reps=1,
+            weight_kg=Decimal("100.00"),
+            source=LiftSource.HEVY,
+        )
+        url = _url(challenge)
+        authed_client.post(url, {"method": "history"})
+        resp = authed_client.get(url)
+        assert resp.status_code == 200
+        assert b"Round targets to nearest" in resp.content
+        assert "liftosaur_api_key" not in resp.content.decode()
+
+    def test_pooled_manual_history_skips_the_key_prompt(
+        self, authed_client, participant, challenge, user
+    ):
+        LiftHistoryFactory(
+            user=user,
+            lift="Back Squat",
+            performed_at=timezone.now().date(),
+            reps=1,
+            weight_kg=Decimal("100.00"),
+            source=LiftSource.MANUAL,
+        )
+        url = _url(challenge)
+        authed_client.post(url, {"method": "history"})
+        resp = authed_client.get(url)
+        assert resp.status_code == 200
+        assert b"Round targets to nearest" in resp.content
+        assert "liftosaur_api_key" not in resp.content.decode()
+
+    def test_no_key_and_no_history_still_prompts(
+        self, authed_client, participant, challenge
+    ):
+        url = _url(challenge)
+        authed_client.post(url, {"method": "history"})
+        resp = authed_client.get(url)
+        assert resp.status_code == 200
+        assert "liftosaur_api_key" in resp.content.decode()
 
 
 class TestStandardsMethodFlow:

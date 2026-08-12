@@ -33,9 +33,6 @@ def test_rejoin_does_not_resurrect_bailed_gap_history():
         start_date=date(2025, 1, 1),
         end_date=date(2026, 12, 31),
     )
-    # invite_link_view requires a Liftosaur key before it will rejoin.
-    user.liftosaur_api_key = "test-liftosaur-key"
-    user.save(update_fields=["liftosaur_api_key"])
     challenge.status = Challenge.Status.ACTIVE
     challenge.save(update_fields=["status"])
 

@@ -1,17 +1,15 @@
 {% load i18n %}
 {% comment %}
-Inline "connect your Liftosaur key" prompt, htmx variant. Swapped in place of
-the triggering form's own content — that form has no explicit hx-target, so
-htmx's default (innerHTML of the form itself) leaves its hx-post/action pointed
-at the same URL. Submitting this content re-posts liftosaur_api_key there.
+Inline "connect your Liftosaur key" prompt, htmx variant, for the goal-setup
+wizard's history method. Swapped in place of the triggering form's own
+content — that form has no explicit hx-target, so htmx's default (innerHTML
+of the form itself) leaves its hx-post/action pointed at the same URL.
+Submitting this content re-posts liftosaur_api_key there.
 {% endcomment %}
 <div class="w-full">
   <p class="text-xs text-content-muted mb-2">
-    {% if action == "history-goal" %}
-    {% trans "Add your Liftosaur API key to suggest targets from your recent lifts." %}
-    {% else %}
-    {% trans "Add your Liftosaur API key to join — we use it to track your lifts and score your goal." %}
-    {% endif %}
+    {% url 'accounts:settings' as settings_url %}
+    {% blocktrans with url=settings_url %}Add your Liftosaur API key to suggest targets from your recent lifts, or import a workout CSV from <a href="{{ url }}" class="text-accent hover:underline">Settings</a> instead.{% endblocktrans %}
   </p>
   {% if error %}<p class="text-xs text-danger-dark mb-2">{{ error }}</p>{% endif %}
   <div class="flex gap-2">
@@ -24,7 +22,7 @@ at the same URL. Submitting this content re-posts liftosaur_api_key there.
     <button
       type="submit"
       class="bg-accent text-accent-on text-xs font-medium px-4 py-1.5 rounded hover:bg-accent-hover whitespace-nowrap">
-      {% if action == "history-goal" %}{% trans "Connect & Continue" %}{% else %}{% trans "Connect & Join" %}{% endif %}
+      {% trans "Connect & Continue" %}
     </button>
   </div>
 </div>

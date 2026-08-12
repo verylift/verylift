@@ -302,27 +302,15 @@ class TestSetGoalCta:
         assert "Set Goal" not in content
 
 
-class TestLiftosaurKeyCta:
-    """Keyless dashboard users see an explicit API-key-required CTA (TASK-250)."""
-
-    def test_keyless_user_sees_add_key_banner(self, client):
-        response = client.get(reverse("challenges:dashboard"))
-        assert response.context["needs_liftosaur_key"] is True
-        content = response.content.decode()
-        assert "Connect your Liftosaur API key" in content
-        assert reverse("accounts:settings") in content
-
-    def test_keyed_user_does_not_see_add_key_banner(self, db):
-        user = UserFactory(liftosaur_api_key="test-liftosaur-key")
-        c = Client()
-        c.force_login(user)
-        response = c.get(reverse("challenges:dashboard"))
-        assert response.context["needs_liftosaur_key"] is False
-        assert "Connect your Liftosaur API key" not in response.content.decode()
+class TestKeylessDashboard:
+    """A keyless dashboard user isn't nagged to connect Liftosaur (#11): manual
+    self-report and workout-CSV import are equally valid ways to participate,
+    so no tracker is ever presented as required."""
 
     def test_keyless_user_still_sees_their_challenge_card(self, client, user):
         """A keyless user can still view a challenge they belong to — the key
-        gate is at join time, not at read time (TASK-250)."""
+        gate (where it still applies, e.g. join-time history goal setup) is
+        not at read time (TASK-250)."""
         challenge = ChallengeFactory(status=Challenge.Status.ACTIVE)
         _accepted(user, challenge)
         response = client.get(reverse("challenges:dashboard"))
