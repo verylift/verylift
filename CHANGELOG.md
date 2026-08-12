@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+## 2026.8.6 — 2026-08-11
+
+### Added
+- Settings page footer now shows the running app version
+- /healthz response includes the running app version
+- Draft challenges can now be deleted from the challenges page
+- `SQLITE_WAL=True` enables WAL mode on the SQLite backend, letting concurrent writes from multiple gunicorn workers proceed without risking "database is locked" errors (off by default to avoid changing the journal mode of existing self-hosted databases)
+- Log a completed set by hand from the Summary tab, for lifters who don't use a workout tracker — each summary card flips over to a target carousel with a date and confirm step
+- Manually logged sets are recorded with their source, keeping self-reported work distinguishable from Liftosaur-synced work
+
+### Changed
+- Liftosaur syncs for a given user and challenge can now run once a minute instead of once every 10 minutes
+- The profile photo button in settings now reads "Save Photo" instead of "Upload Photo", matching the other settings sections
+- Challenge detail page tab button now reads "Goals" instead of "Standards"
+
 ## 2026.8.5 — 2026-08-09
 
 ### Added
