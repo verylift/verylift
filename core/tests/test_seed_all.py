@@ -7,6 +7,7 @@ from django.core.management import call_command
 from core.management.commands.seed_all import SEED_COMMANDS
 from fitnessvolt.models import FitnessVoltLiftAlias
 from liftosaur.models import Lift, LiftAlias
+from workout_imports.models import HevyLiftAlias
 
 
 @pytest.mark.django_db
@@ -27,6 +28,7 @@ def test_seed_all_populates_reference_tables_idempotently():
         Lift.objects.count(),
         LiftAlias.objects.count(),
         FitnessVoltLiftAlias.objects.count(),
+        HevyLiftAlias.objects.count(),
     )
     assert all(count > 0 for count in counts)
 
@@ -35,6 +37,7 @@ def test_seed_all_populates_reference_tables_idempotently():
         Lift.objects.count(),
         LiftAlias.objects.count(),
         FitnessVoltLiftAlias.objects.count(),
+        HevyLiftAlias.objects.count(),
     )
 
 

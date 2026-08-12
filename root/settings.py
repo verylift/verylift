@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "challenges",
     "liftosaur",
     "fitnessvolt",
+    "workout_imports",
     "scoring",
     "notifications",
     "guide",
@@ -475,5 +476,9 @@ LOGGING = {
         "liftosaur": {"level": "DEBUG" if DEBUG else "WARNING", "propagate": True},
         "scoring": {"level": "DEBUG" if DEBUG else "WARNING", "propagate": True},
         "notifications": {"level": "DEBUG" if DEBUG else "WARNING", "propagate": True},
+        "workout_imports": {
+            "level": "DEBUG" if DEBUG else "WARNING",
+            "propagate": True,
+        },
     },
 }

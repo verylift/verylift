@@ -60,6 +60,9 @@ from liftosaur.services import (
     validate_liftosaur_key,
 )
 from scoring.services import score_pooled_history
+from workout_imports.forms import WorkoutCsvImportForm
+from workout_imports.services import import_workout_csv
+from workout_imports.services import last_imported_at as workout_import_last_imported_at
 
 logger = logging.getLogger(__name__)
 
@@ -135,7 +138,8 @@ def register_view(request):
     blocked. When a key is submitted it's validated against the live API before
     any account is created. On success the user is logged in; if a key was
     given, their 12-month LiftHistory pool is seeded off the request cycle. The
-    key becomes mandatory later, at the moment the user joins a challenge.
+    key is optional throughout -- joining a challenge with no key at all is
+    fully supported via manual self-report or a Hevy CSV import from Settings.
 
     A visitor arriving with a usable challenge invite-link token in their
     session (TASK-249) bypasses REGISTRATION_OPEN=False — the invite doubles
@@ -197,8 +201,9 @@ def register_view(request):
                 "You must accept the Terms of Service and Privacy Policy."
             )
 
-        # The key is optional at signup (TASK-250): it becomes mandatory only when
-        # the user joins a challenge, gated inline at that point instead of here.
+        # The key is optional at signup (TASK-250) and stays optional forever --
+        # joining a challenge never requires one, since manual self-report and
+        # Hevy CSV import are equally valid ways to log lifts.
         if api_key and not errors and not validate_liftosaur_key(api_key):
             errors["liftosaur_api_key"] = gettext(
                 "Could not validate this Liftosaur API key."
@@ -423,6 +428,7 @@ _SETTINGS_SECTION_PARTIALS = {
     "email": "accounts/_email_section.html",
     "liftosaur_key": "accounts/_liftosaur_section.html",
     "remove_liftosaur_key": "accounts/_liftosaur_section.html",
+    "workout_csv_import": "accounts/_workout_import_section.html",
     "unit_preference": "accounts/_unit_preference_section.html",
     "timezone": "accounts/_timezone_section.html",
 }
@@ -433,6 +439,7 @@ def settings_view(request):
     user = request.user
     avatar_error = None
     email_error = None
+    workout_import_error = None
     # None means "show the stored address"; a rejected submission replaces it
     # with what was typed so the error has something to point at.
     email_value = None
@@ -482,6 +489,52 @@ def settings_view(request):
             user.save(update_fields=["liftosaur_api_key"])
             messages.success(request, gettext("Liftosaur API key removed."))
 
+        elif posted_form_name == "workout_csv_import":
+            form = WorkoutCsvImportForm(request.POST, request.FILES, user=user)
+            if form.is_valid():
+                participations = ChallengeParticipant.objects.filter(
+                    user=user,
+                    invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+                    challenge__status=Challenge.Status.ACTIVE,
+                ).select_related("challenge")
+                try:
+                    result = import_workout_csv(user, form.cleaned_data["csv_file"])
+                    scored = 0
+                    for participation in participations:
+                        score_pooled_history(
+                            user=user, challenge=participation.challenge
+                        )
+                        scored += 1
+                except OperationalError:
+                    # Same degrade-to-message contract as sync_now_view: a
+                    # user-triggered action must report back instead of 500ing
+                    # on a lost write-lock race.
+                    logger.exception("Workout CSV import failed for user %s", user.id)
+                    messages.error(
+                        request,
+                        gettext(
+                            "Couldn't import right now. Please try again in a moment."
+                        ),
+                    )
+                else:
+                    messages.success(
+                        request,
+                        gettext(
+                            "Imported %(count)s set(s) from %(source)s. "
+                            "%(scored)s challenge(s) rescored."
+                        )
+                        % {
+                            "count": result.pooled_count,
+                            "source": result.source.label,
+                            "scored": scored,
+                        },
+                    )
+            else:
+                workout_import_errors = form.errors.get("csv_file")
+                workout_import_error = (
+                    workout_import_errors[0] if workout_import_errors else None
+                )
+
         elif posted_form_name == "unit_preference":
             form = UnitPreferenceForm(request.POST)
             form.is_valid()
@@ -513,7 +566,12 @@ def settings_view(request):
         # HTMX requests swap only the posted section in place; plain requests keep
         # the PRG redirect on success. A validation error falls through to a
         # full-page (or partial) re-render at 200 so the error stays visible.
-        if not is_htmx(request) and avatar_error is None and email_error is None:
+        if (
+            not is_htmx(request)
+            and avatar_error is None
+            and email_error is None
+            and workout_import_error is None
+        ):
             return redirect("accounts:settings")
 
     context = {
@@ -528,6 +586,8 @@ def settings_view(request):
         "has_liftosaur_key": bool(user.liftosaur_api_key),
         "avatar_error": avatar_error,
         "last_synced_at": last_synced_at(user),
+        "workout_import_error": workout_import_error,
+        "last_workout_imported_at": workout_import_last_imported_at(user),
     }
 
     if request.method == "POST" and is_htmx(request):

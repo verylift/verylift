@@ -14,12 +14,16 @@ class LiftSource(models.TextChoices):
 
     LIFTOSAUR is every row written by liftosaur.services.sync_user_lifts; MANUAL
     is a lifter self-reporting a completed set with no tracker connected
-    (TASK-25). Left open for future importers (Hevy/Wger/Strong, #8-#11) — a new
-    source is a new choice here, never a second boolean field.
+    (TASK-25); HEVY is a one-shot CSV upload, dispatched by the generic
+    workout_imports.services.import_workout_csv importer registry rather than
+    a tracker-specific service function (#11). Left open for future importers
+    (Wger/Strong, #8-#10) — a new source is a new choice here, never a second
+    boolean field.
     """
 
     LIFTOSAUR = "liftosaur", _("Liftosaur")
     MANUAL = "manual", _("Manual")
+    HEVY = "hevy", _("Hevy")
 
 
 class Lift(models.Model):
