@@ -57,8 +57,8 @@ class TestSubmitManualLift:
         )
 
         assert result is not None
-        history_row, is_new_best = result
-        assert is_new_best is True
+        history_row, points_earned = result
+        assert points_earned == 3  # 8RM -> 11 - 8
         assert history_row.source == LiftSource.MANUAL
         assert history_row.weight_kg == Decimal("60.00")
         assert history_row.reps == 8
@@ -132,7 +132,11 @@ class TestSubmitManualLift:
         )
         assert result is None
 
-    def test_duplicate_submission_does_not_crash(self, setup):
+    def test_resubmitting_the_same_set_is_refused(self, setup):
+        """The second submission cannot raise the score -- it IS the current
+        best -- so it is refused rather than written again and reported as an
+        improvement (which is how it used to surface: a "new personal best"
+        toast for a set already logged)."""
         user, challenge, participant = setup
 
         first = submit_manual_lift(
@@ -153,8 +157,7 @@ class TestSubmitManualLift:
         )
 
         assert first is not None
-        assert second is not None
-        assert first[0].pk == second[0].pk
+        assert second is None
         assert (
             LiftHistory.objects.filter(
                 user=user, lift=LIFT, performed_at=PERFORMED_AT, reps=8
@@ -195,10 +198,10 @@ class TestSubmitManualLift:
         history_row, _is_new_best = result
         assert history_row.weight_kg == Decimal("60.00")
 
-    def test_does_not_beat_existing_higher_value_best(self, setup):
-        """Submitting a lighter rep-max after a heavier one is already scored
-        must not flip is_current_best -- the existing higher-points event
-        stays the best."""
+    def test_refuses_a_set_worth_less_than_the_existing_best(self, setup):
+        """A lighter rep-max submitted after a heavier one is already scored
+        cannot raise the score, so it is refused outright -- nothing is written
+        and the existing higher-points event stays the best."""
         user, challenge, participant = setup
 
         submit_manual_lift(
@@ -218,9 +221,10 @@ class TestSubmitManualLift:
             performed_at=date(2025, 6, 2),
         )
 
-        assert result is not None
-        _history_row, is_new_best = result
-        assert is_new_best is False
+        assert result is None
+        assert not LiftHistory.objects.filter(
+            user=user, lift=LIFT, performed_at=date(2025, 6, 2)
+        ).exists()
 
         current_best = PointEarnEvent.objects.get(
             user=user, challenge=challenge, lift=LIFT, is_current_best=True

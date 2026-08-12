@@ -9,7 +9,7 @@ from django.utils import timezone
 
 from accounts.tests.factories import UserFactory
 from challenges.models import Challenge, ChallengeParticipant
-from challenges.services import build_personal_data
+from challenges.services import build_personal_data, submit_manual_lift
 from challenges.tests.factories import (
     ChallengeParticipantFactory,
     CustomGoalFactory,
@@ -17,6 +17,7 @@ from challenges.tests.factories import (
     make_custom_challenge,
 )
 from liftosaur.tests.factories import LiftHistoryFactory
+from scoring.models import PointEarnEvent
 from scoring.tests.factories import PointEarnEventFactory
 
 pytestmark = pytest.mark.django_db
@@ -163,6 +164,50 @@ class TestManualTargets:
         data = build_personal_data(user, challenge, participant)
         card = data["summary_cards"][0]
         assert card["manual_default_rep_count"] == 7
+
+    @pytest.mark.parametrize(
+        "nine_rm,expected_points",
+        [
+            ("91.00", 1),  # well-formed ladder: 9RM strictly heavier than 10RM
+            ("90.00", 2),  # tied rungs, as plate rounding routinely produces
+            ("89.00", 2),  # non-monotonic, as a hand-entered grid can be
+        ],
+    )
+    def test_points_delta_matches_what_confirming_actually_scores(
+        self, user, challenge, participant, nine_rm, expected_points
+    ):
+        """The carousel's points figure has to equal the award, not 11 - reps.
+
+        Confirming writes a set of exactly (reps, threshold_at(reps)), and
+        best_score_for_set takes the highest-point threshold that set meets --
+        so a set at the 10RM weight also clears the 9RM rung whenever the 9RM
+        target is <= the 10RM one. Promising 1 point and awarding 2 is the bug
+        this pins.
+        """
+        _give_goal(
+            participant,
+            targets={
+                **{rep: Decimal(100 - rep) for rep in range(1, 11)},
+                10: Decimal("90.00"),
+                9: Decimal(nine_rm),
+            },
+        )
+        data = build_personal_data(user, challenge, participant)
+        card = data["summary_cards"][0]
+        ten_rm = next(t for t in card["manual_targets"] if t["rep_count"] == 10)
+        # No current best, so the delta IS the points the set would earn.
+        assert ten_rm["points_delta"] == expected_points
+
+        submit_manual_lift(
+            user=user,
+            challenge=challenge,
+            participant=participant,
+            lift=LIFT,
+            rep_count=10,
+            performed_at=timezone.now().date(),
+        )
+        event = PointEarnEvent.objects.get(user=user, challenge=challenge, lift=LIFT)
+        assert event.points_earned == ten_rm["points_delta"]
 
     def test_default_rep_count_ignores_zero_point_events(
         self, user, challenge, participant

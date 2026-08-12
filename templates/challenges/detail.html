@@ -310,7 +310,7 @@
       <div id="tab-summary">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
           {% for card in personal_data.summary_cards %}
-          {% include "challenges/_summary_card.html" with card=card display_unit=personal_data.display_unit challenge=challenge flipped=False %}
+          {% include "challenges/_summary_card.html" with card=card display_unit=personal_data.display_unit challenge=challenge %}
           {% endfor %}
         </div>
       </div>
@@ -443,8 +443,8 @@
         // back face measured before then comes out ~40px short. That's
         // invisible on a normal flip (the open handler re-measures after
         // render() has long since run) but not on a card the server sends
-        // back already flipped -- the "didn't beat your best" response --
-        // where the init-time measurement is the only one that ever happens.
+        // back already flipped, and it keeps the invariant cheap to hold:
+        // the back is only ever measured with its text already in place.
         const inner = card.querySelector(".flip-card-inner");
         const frontFace = card.querySelector(".flip-card-front");
         const backFace = card.querySelector(".flip-card-back");
@@ -494,9 +494,16 @@
             : (t.points_delta > 0 ? "+" + t.points_delta : t.points_delta) + " {% trans 'pts' %}";
           deltaEl.classList.toggle("text-accent", t.points_delta > 0);
           deltaEl.classList.toggle("text-content-muted", t.points_delta <= 0);
-          confirmBtn.disabled = t.is_current_best;
-          confirmBtn.textContent = t.is_current_best
-            ? "{% trans 'Already logged' %}"
+          // Gate on the points, not on is_current_best. A tied or
+          // non-monotonic ladder lets an entry score another rung's points, so
+          // an entry can be worth nothing without being the current best --
+          // confirming it would write a set that changes no score. The server
+          // refuses those outright (submit_manual_lift), so leaving the button
+          // live here would only ever produce a failed request.
+          const gainsNothing = t.points_delta <= 0;
+          confirmBtn.disabled = gainsNothing;
+          confirmBtn.textContent = gainsNothing
+            ? "{% trans 'No points to gain' %}"
             : "{% trans 'Confirm — I did this' %}";
           repInput.value = t.rep_count;
           dots.forEach(function (dot, i) {

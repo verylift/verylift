@@ -186,21 +186,13 @@ class TestManualLiftViewSuccess:
         )
         assert event.source == LiftSource.MANUAL
 
-    def test_new_best_card_is_not_flipped(self, user, challenge, participant_with_goal):
-        client = Client()
-        client.force_login(user)
-        response = _post(
-            client,
-            challenge,
-            {"lift": LIFT, "rep_count": "8", "performed_at": "2025-06-01"},
-            **HX,
-        )
-        content = response.content.decode()
-        assert "is-flipped" not in content
-
-    def test_non_beating_submission_keeps_card_flipped(
+    def test_non_beating_submission_is_rejected(
         self, user, challenge, participant_with_goal
     ):
+        """The carousel disables entries that cannot raise the score, so this
+        only arrives from a stale card or a hand-made request -- either way it
+        is refused rather than written, which is what stops a no-op set being
+        reported back as an improvement."""
         client = Client()
         client.force_login(user)
         # First establish a heavier current best.
@@ -217,5 +209,7 @@ class TestManualLiftViewSuccess:
             {"lift": LIFT, "rep_count": "8", "performed_at": "2025-06-02"},
             **HX,
         )
-        assert response.status_code == 200
-        assert "is-flipped" in response.content.decode()
+        assert response.status_code == 400
+        assert not LiftHistory.objects.filter(
+            user=user, lift=LIFT, performed_at=date(2025, 6, 2)
+        ).exists()

@@ -30,6 +30,7 @@ from liftosaur.models import LiftHistory, LiftSource
 from liftosaur.services import sync_user_lifts
 from notifications.models import Notification
 from scoring.domain.calculator import (
+    best_score_for_set,
     format_added_weight,
     is_assisted_equipment,
     is_bodyweight_added_lift,
@@ -76,9 +77,16 @@ def submit_manual_lift(
     The weight is never taken from the caller — it is always the participant's
     own ``CustomGoalTarget`` for ``(lift, rep_count)``, so a self-report can
     only ever confirm "I hit my own target", never fabricate an arbitrary
-    number. Returns ``None`` when the participant has no goal configured yet or
-    the goal does not cover this ``(lift, rep_count)`` cell — the caller treats
-    either as a validation failure.
+    number. Returns ``None`` when the participant has no goal configured yet,
+    the goal does not cover this ``(lift, rep_count)`` cell, or the set could
+    not raise their score on this lift — the caller treats all three as a
+    validation failure.
+
+    That last guard is why a self-report can never be a no-op write: an entry
+    scoring at or below the current best is refused outright rather than
+    recorded and then reported as an improvement. The carousel disables those
+    entries client-side, so reaching this branch means a stale card (the page
+    was open while the same lift scored elsewhere) or a hand-made request.
 
     The written ``LiftHistory`` row always takes the model's own
     ``equipment=""`` default. That field only matters for filtering assisted-
@@ -100,10 +108,10 @@ def submit_manual_lift(
     scoring/best-promotion — this function never touches ``PointEarnEvent``
     directly.
 
-    Returns ``(history_row, is_new_best)`` where ``is_new_best`` is True when
-    this exact set is now the participant's current-best ``PointEarnEvent`` for
-    ``lift`` — the caller's signal for whether to show the updated scored card
-    or an "already logged / didn't beat your best" acknowledgement.
+    Returns ``(history_row, points_earned)`` — the points this set actually
+    scored, for the caller to report back. Because a set that cannot raise the
+    participant's score is refused above, a successful return always means the
+    lift's current best moved.
     """
     if not participant.has_goal_configured:
         logger.warning(
@@ -124,6 +132,41 @@ def submit_manual_lift(
             user.id,
             lift,
             rep_count,
+            challenge.pk,
+        )
+        return None
+
+    # Refuse anything that cannot raise the participant's score on this lift.
+    # What the set scores is not 11 - rep_count: best_score_for_set takes the
+    # highest-point rung the set clears, so a tied or non-monotonic ladder can
+    # make one entry score another's points (see _manual_targets_for_lift).
+    # Deriving both sides the same way is what keeps this guard identical to
+    # the points_delta the carousel showed when the button was pressed.
+    thresholds = {
+        row.rep_count: row.target_weight
+        for row in CustomGoalTarget.objects.filter(
+            goal=participant.custom_goal, lift=lift
+        )
+    }
+    scored = best_score_for_set(rep_count, target.target_weight, thresholds)
+    would_earn = scored[0] if scored is not None else 0
+    current_points = (
+        PointEarnEvent.objects.filter(
+            user=user, challenge=challenge, lift=lift, is_current_best=True
+        )
+        .values_list("points_earned", flat=True)
+        .first()
+        or 0
+    )
+    if would_earn <= current_points:
+        logger.warning(
+            "Manual lift self-report rejected for user %s: %s %sRM would earn "
+            "%s point(s), not beating the current best of %s in challenge %s",
+            user.id,
+            lift,
+            rep_count,
+            would_earn,
+            current_points,
             challenge.pk,
         )
         return None
@@ -163,19 +206,22 @@ def submit_manual_lift(
 
     score_pooled_history(user=user, challenge=challenge)
 
-    current_best = PointEarnEvent.objects.filter(
-        user=user,
-        challenge=challenge,
-        lift=lift,
-        is_current_best=True,
-    ).first()
-    is_new_best = (
-        current_best is not None
-        and current_best.reps == rep_count
-        and current_best.weight == target.target_weight
-        and current_best.performed_at == performed_at
+    # Report what this set actually scored, read back from the event scoring
+    # just wrote rather than from the pre-write `would_earn` estimate: the two
+    # differ when the set falls outside the challenge's history window, where
+    # the guard above still passes but nothing is scored.
+    scored_event = (
+        PointEarnEvent.objects.filter(
+            user=user,
+            challenge=challenge,
+            lift=lift,
+            performed_at=performed_at,
+            reps=rep_count,
+        )
+        .order_by("-synced_at")
+        .first()
     )
-    return history_row, is_new_best
+    return history_row, scored_event.points_earned if scored_event else 0
 
 
 def order_by_effective_name(queryset):
@@ -882,12 +928,21 @@ def _manual_targets_for_lift(lift, params, *, threshold_at, current_best):
         11 - current_best.points_earned if current_best is not None else None
     )
     current_points = current_best.points_earned if current_best is not None else 0
+    # Confirming an entry writes a set of exactly (reps, threshold_at(reps)),
+    # so what it will score is not 11 - reps but whatever best_score_for_set
+    # makes of that set against the whole table -- and that can be MORE.
+    # best_score_for_set walks 1RM..10RM and takes the first (highest-point)
+    # threshold met, so a set at the 10RM weight also clears the 9RM rung
+    # whenever the 9RM target is <= the 10RM one. Ladders tie like that
+    # routinely once an Epley ladder is rounded to plate increments, and a
+    # hand-entered grid can be non-monotonic outright. Running the real
+    # scorer here is what keeps the carousel's promise equal to the award.
+    thresholds = {n: threshold_at(n) for n in range(1, 11)}
     targets = []
     for reps in range(10, 0, -1):
-        # Points are a pure function of rep count (11 - reps), so the delta
-        # vs. the participant's current best is arithmetic, not a guess --
-        # always derived here, never estimated client-side.
-        points_delta = (11 - reps) - current_points
+        scored = best_score_for_set(reps, thresholds[reps], thresholds)
+        points_if_logged = scored[0] if scored is not None else 0
+        points_delta = points_if_logged - current_points
         targets.append(
             {
                 "rep_count": reps,

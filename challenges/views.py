@@ -13,7 +13,7 @@ from django.db import OperationalError
 from django.http import Http404, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.utils.translation import gettext
+from django.utils.translation import gettext, ngettext
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_POST
 
@@ -1284,12 +1284,15 @@ def manual_lift_view(request, pk):
     not solve pre-goal-setup onboarding, an accepted scope boundary.
 
     Always returns the single affected card's HTML fragment (this endpoint is
-    only ever called by the flip-card's own htmx form) plus an out-of-band
-    Django message giving minimal feedback either way: a new personal best
-    flips the card back to its front; a submission that doesn't beat the
-    existing best (including an exact resubmission) stays on the card back so
-    the per-rep-count "Already logged" state is visible where the lifter is
-    already paged to.
+    only ever called by the flip-card's own htmx form), on its front face and
+    now showing the improved score, plus an out-of-band Django message naming
+    the points earned and the lift.
+
+    There is no "logged but didn't beat your best" outcome: ``submit_manual_lift``
+    refuses any set that cannot raise the participant's score, so reaching the
+    success path always means the lift's best moved. The carousel disables
+    those entries anyway, so the 400 below is for a stale card or a hand-made
+    request, not a route the UI can walk into.
     """
     challenge, participant = _require_challenge_member(request, pk)
 
@@ -1319,19 +1322,17 @@ def manual_lift_view(request, pk):
     )
     if result is None:
         return HttpResponseBadRequest(gettext("Could not log this lift."))
-    _history_row, is_new_best = result
+    _history_row, points_earned = result
 
-    if is_new_best:
-        messages.success(
-            request,
-            gettext("Logged! New personal best on %(lift)s.") % {"lift": lift},
+    messages.success(
+        request,
+        ngettext(
+            "Logged %(points)s point on %(lift)s.",
+            "Logged %(points)s points on %(lift)s.",
+            points_earned,
         )
-    else:
-        messages.info(
-            request,
-            gettext("Logged — this doesn't beat your current best on %(lift)s yet.")
-            % {"lift": lift},
-        )
+        % {"points": points_earned, "lift": lift},
+    )
 
     personal_data = build_personal_data(request.user, challenge, participant)
     card = next((c for c in personal_data["summary_cards"] if c["lift"] == lift), None)
@@ -1339,19 +1340,18 @@ def manual_lift_view(request, pk):
         return HttpResponseBadRequest(gettext("Unknown lift for this challenge."))
 
     logger.info(
-        "User %s self-reported %s %sRM in challenge %s (new best=%s)",
+        "User %s self-reported %s %sRM in challenge %s for %s point(s)",
         request.user.id,
         lift,
         rep_count,
         challenge.pk,
-        is_new_best,
+        points_earned,
     )
 
     context = {
         "card": card,
         "display_unit": personal_data["display_unit"],
         "challenge": challenge,
-        "flipped": not is_new_best,
         "start_rep_count": rep_count,
         "oob_messages": True,
     }
