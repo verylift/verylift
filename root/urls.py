@@ -21,6 +21,7 @@ urlpatterns = [
         {"document_root": settings.MEDIA_ROOT},
         name="media",
     ),
+    path("i18n/", include("django.conf.urls.i18n")),
     path("oidc/", include("mozilla_django_oidc.urls")),
     path("accounts/logout/", LogoutView.as_view(), name="logout"),
     # Static legal pages, anonymously readable (linked from the registration flow).

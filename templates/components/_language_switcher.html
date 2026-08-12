@@ -1,0 +1,23 @@
+{% load i18n %}
+<div class="inline-flex items-center gap-1.5">
+  <form method="post" action="{% url 'set_language' %}">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.path }}">
+    <input type="hidden" name="language" value="en">
+    <button
+      type="submit"
+      class="text-xs font-semibold px-3 py-1 rounded-full border {% if LANGUAGE_CODE == 'en' %}bg-accent text-accent-on border-accent{% else %}border-line text-content-body hover:bg-surface-hover{% endif %}">
+      EN
+    </button>
+  </form>
+  <form method="post" action="{% url 'set_language' %}">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.path }}">
+    <input type="hidden" name="language" value="es">
+    <button
+      type="submit"
+      class="text-xs font-semibold px-3 py-1 rounded-full border {% if LANGUAGE_CODE == 'es' %}bg-accent text-accent-on border-accent{% else %}border-line text-content-body hover:bg-surface-hover{% endif %}">
+      ES
+    </button>
+  </form>
+</div>
