@@ -77,6 +77,27 @@ In short: your new set becomes visible the next time a pull runs (once the
 cooldown has passed), and the leaderboard catches up the next time you open
 the challenge after that.
 
+## Importing a workout CSV is a one-shot action, not a sync
+
+If your tracker app doesn't offer very lift a direct sync — its API is
+paywalled, or it simply isn't integrated yet — you can often still get your
+data in by uploading the CSV file the app exports for you. One upload
+control on the settings page accepts CSV exports from any supported tracker
+app: the app is detected automatically from the file itself, so there's
+nothing to pick from a list. Hevy is the first supported format.
+
+Whichever app produced the file, an upload pools whatever working sets are
+in it and immediately rescores every active challenge you're in — this is
+closer to logging a lift manually than it is to a Liftosaur sync: there's no
+cooldown, no watermark, and no background pull. Each upload is a complete,
+explicit action — nothing happens with that data until you upload a file,
+and re-uploading the same file is safe (it updates your existing history in
+place rather than creating duplicates).
+
+If you upload a CSV from a tracker app that isn't recognized yet, the app
+tells you so rather than silently importing nothing or guessing at the
+format.
+
 ## Related pages
 
 - [How scoring works](scoring.md) — what happens to a workout once it's

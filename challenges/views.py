@@ -57,6 +57,7 @@ from challenges.services import (
 from challenges.standards import covered_lift_names
 from core.http import is_htmx
 from fitnessvolt.services import standards_method_available
+from liftosaur.models import LiftHistory
 from liftosaur.services import (
     last_synced_at,
     trigger_lift_history_backfill,
@@ -94,7 +95,8 @@ def _hx_redirect(request, url):
 
 
 def _ensure_liftosaur_key(request):
-    """Make sure the requesting user has a Liftosaur API key before they join.
+    """Make sure the requesting user has a Liftosaur API key for the
+    goal-setup wizard's history method.
 
     Returns ``None`` when the user already has a key, or one was just submitted
     alongside this request and validated successfully (it's saved and a
@@ -113,7 +115,7 @@ def _ensure_liftosaur_key(request):
 
     if not validate_liftosaur_key(submitted):
         logger.warning(
-            "Liftosaur key validation failed for user %s while joining", user.id
+            "Liftosaur key validation failed for user %s during goal-setup", user.id
         )
         return gettext("Could not validate this Liftosaur API key.")
 
@@ -121,26 +123,21 @@ def _ensure_liftosaur_key(request):
     user.save(update_fields=["liftosaur_api_key"])
     trigger_lift_history_backfill(user)
     logger.info(
-        "User %s connected a Liftosaur key while joining/accepting a challenge",
+        "User %s connected a Liftosaur key during goal-setup's history method",
         user.id,
     )
     return None
 
 
 def _key_required_response(
-    request, challenge, *, action, action_url, error=None, cancel_url=None
+    request, challenge, *, action_url, error=None, cancel_url=None
 ):
-    """Render the inline 'connect your Liftosaur key' prompt for the invite-link
-    join or the goal-setup wizard's history method.
-
-    ``action`` is "join" or "history-goal" and only selects the copy. Every
-    caller passes ``action_url`` explicitly — the form target is the URL that
-    handles the key-bearing resubmission, which for a bearer-token join is the
-    token's own link, not a URL derivable from ``action``.
+    """Render the inline 'connect your Liftosaur key' prompt for the
+    goal-setup wizard's history method -- the only remaining caller now that
+    joining a challenge no longer requires a key.
     """
     context = {
         "challenge": challenge,
-        "action": action,
         "action_url": action_url,
         "cancel_url": cancel_url or reverse("challenges:dashboard"),
         "error": error,
@@ -265,7 +262,6 @@ def dashboard_view(request):
         "completed_cards": build_cards(completed),
         "career": build_career_stats(request.user),
         "co_participants": get_co_participants(request.user),
-        "needs_liftosaur_key": not bool(request.user.liftosaur_api_key),
         **dashboard_section_context(request.user, show_read=show_read),
     }
     return render(request, "dashboard.html", context)
@@ -526,19 +522,7 @@ def invite_link_view(request, token):
             )
         )
 
-    action_url = reverse("challenges:invite-link", args=[token])
-
     if existing is not None and existing.is_bailed:
-        key_error = _ensure_liftosaur_key(request)
-        if key_error is not None:
-            return _key_required_response(
-                request,
-                challenge,
-                action="join",
-                error=key_error or None,
-                action_url=action_url,
-            )
-
         existing.is_bailed = False
         existing.bailed_at = None
         existing.invite_status = ChallengeParticipant.InviteStatus.ACCEPTED
@@ -562,16 +546,6 @@ def invite_link_view(request, token):
         request.session.pop("invite_token", None)
         return _hx_redirect(
             request, reverse("challenges:goal-setup", args=[challenge.pk])
-        )
-
-    key_error = _ensure_liftosaur_key(request)
-    if key_error is not None:
-        return _key_required_response(
-            request,
-            challenge,
-            action="join",
-            error=key_error or None,
-            action_url=action_url,
         )
 
     ChallengeParticipant.objects.create(
@@ -758,46 +732,46 @@ def goal_setup_view(request, pk):
     steps = _goal_setup_steps(challenge, data)
     step = steps[index]
 
-    # The history method needs the lifter's own Liftosaur history to suggest
-    # anything; a challenge's creator never goes through join/accept's own
-    # key gate (they're auto-added as a participant at creation), so without
-    # this, picking "history" with no key silently produces an all-blank
-    # chart with no explanation. Gated on data (not the method-step's own
-    # form) so it applies once past "method" regardless of how it was
-    # reached, and never blocks the method-selection step itself.
-    if step != "method" and data.get("method") == CustomGoal.SourceMethod.HISTORY:
-        had_key_already = bool(request.user.liftosaur_api_key)
+    # The history method needs the lifter's own pooled lift history to
+    # suggest anything. Joining a challenge no longer requires a Liftosaur
+    # key at all, so picking "history" with neither a key nor any pooled
+    # LiftHistory (from a live sync, a Hevy CSV import, or manual self-report
+    # -- any source counts, per LiftHistory.source) would otherwise silently
+    # produce an all-blank chart with no explanation. Gated on data (not the
+    # method-step's own form) so it applies once past "method" regardless of
+    # how it was reached, and never blocks the method-selection step itself.
+    if (
+        step != "method"
+        and data.get("method") == CustomGoal.SourceMethod.HISTORY
+        and not request.user.liftosaur_api_key
+        and not LiftHistory.objects.filter(user=request.user).exists()
+    ):
         key_error = _ensure_liftosaur_key(request)
         if key_error is not None:
             return _key_required_response(
                 request,
                 challenge,
-                action="history-goal",
                 error=key_error or None,
                 action_url=reverse("challenges:goal-setup", args=[pk]),
                 cancel_url=reverse("challenges:goal-setup", args=[pk]) + "?cancel=1",
             )
-        if not had_key_already and request.method == "POST":
-            # key_error is None but the user didn't have a key walking into
-            # this request -- this exact POST just supplied and validated
-            # one (the only other way to reach here with key_error is None).
-            # _ensure_liftosaur_key already kicked off an async backfill
-            # thread (matching join/accept's own key gate); do NOT also call
-            # sync_and_score here -- it would pull and pool the same
-            # LiftHistory rows the thread is already pooling, which is
-            # redundant work and a second concurrent writer for no gain.
-            # (This comment used to blame an explicit select_for_update on
-            # LiftHistory "which SQLite cannot arbitrate". There is no such
-            # call in the sync path, and SQLite never emits FOR UPDATE at all
-            # -- the real contention was one auto-committed write per parsed
-            # set, which TASK-274 replaced with one batched upsert per API
-            # page.) The suggestion step may briefly see partial or no history
-            # if the thread hasn't finished yet; that's the same accepted
-            # tradeoff join/accept already lives with. Redirect to a fresh GET
-            # so the actual step renders normally instead of trying to parse
-            # this POST (which only carries liftosaur_api_key) as that step's
-            # own form.
-            return redirect(reverse("challenges:goal-setup", args=[pk]))
+        # key_error is None here means a key was just submitted and validated
+        # in this exact POST -- the guard above already ruled out the user
+        # having one walking in. _ensure_liftosaur_key already kicked off an
+        # async backfill thread; do NOT also call sync_and_score here -- it
+        # would pull and pool the same LiftHistory rows the thread is already
+        # pooling, which is redundant work and a second concurrent writer for
+        # no gain. (This comment used to blame an explicit select_for_update
+        # on LiftHistory "which SQLite cannot arbitrate". There is no such
+        # call in the sync path, and SQLite never emits FOR UPDATE at all --
+        # the real contention was one auto-committed write per parsed set,
+        # which TASK-274 replaced with one batched upsert per API page.) The
+        # suggestion step may briefly see partial or no history if the thread
+        # hasn't finished yet; that's an accepted tradeoff. Redirect to a
+        # fresh GET so the actual step renders normally instead of trying to
+        # parse this POST (which only carries liftosaur_api_key) as that
+        # step's own form.
+        return redirect(reverse("challenges:goal-setup", args=[pk]))
 
     posted_step = request.POST.get("wizard_step")
     if request.method == "POST" and posted_step and posted_step != step:

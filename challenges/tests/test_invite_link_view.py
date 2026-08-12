@@ -1,7 +1,6 @@
 """Tests for the invite-link landing/join view (TASK-249)."""
 
 from datetime import UTC, datetime, timedelta
-from unittest.mock import patch
 
 import pytest
 from django.test import Client
@@ -211,49 +210,46 @@ class TestRemovedByCreatorBlocked:
 
 
 @pytest.mark.django_db
-class TestLiftosaurKeyGate:
-    def test_keyless_visitor_gets_inline_prompt_with_correct_action_url(
-        self, challenge, link
-    ):
+class TestKeylessJoin:
+    """Joining a challenge never requires a Liftosaur key -- manual self-report
+    and Hevy CSV import are equally valid ways to log lifts, so a lifter with
+    zero tracker connected can join exactly like a challenge's creator
+    already could (the creator is auto-added at creation, bypassing this view
+    entirely)."""
+
+    def test_keyless_visitor_joins_and_lands_in_goal_setup(self, challenge, link):
         user = UserFactory(liftosaur_api_key=None)
         c = Client()
         c.force_login(user)
         response = c.get(reverse("challenges:invite-link", args=[link.token]))
 
-        assert response.status_code == 200
-        content = response.content.decode()
-        assert "liftosaur_api_key" in content
-        assert reverse("challenges:invite-link", args=[link.token]) in content
-        assert not ChallengeParticipant.objects.filter(
+        assert response.status_code == 302
+        assert response["Location"] == reverse(
+            "challenges:goal-setup", args=[challenge.pk]
+        )
+        assert ChallengeParticipant.objects.filter(
             challenge=challenge, user=user
         ).exists()
 
-    def test_keyless_visitor_htmx_gets_inline_prompt_partial(self, challenge, link):
+    def test_keyless_visitor_can_rejoin_after_bailing(self, challenge, link):
         user = UserFactory(liftosaur_api_key=None)
+        participant = ChallengeParticipantFactory(
+            challenge=challenge,
+            user=user,
+            invite_status=InviteStatus.ACCEPTED,
+            joined_at=datetime(2025, 1, 1, tzinfo=UTC),
+            is_bailed=True,
+            bailed_at=datetime(2025, 1, 2, tzinfo=UTC),
+            removed_by_creator=False,
+        )
         c = Client()
         c.force_login(user)
-        response = c.get(
-            reverse("challenges:invite-link", args=[link.token]),
-            HTTP_HX_REQUEST="true",
-        )
-        assert response.status_code == 200
-        assert "liftosaur_api_key" in response.content.decode()
+        response = c.get(reverse("challenges:invite-link", args=[link.token]))
 
-    @patch("challenges.views.trigger_lift_history_backfill")
-    @patch("challenges.views.validate_liftosaur_key", return_value=True)
-    def test_submitting_a_key_completes_the_join(
-        self, mock_validate, mock_backfill, challenge, link
-    ):
-        user = UserFactory(liftosaur_api_key=None)
-        c = Client()
-        c.force_login(user)
-        response = c.post(
-            reverse("challenges:invite-link", args=[link.token]),
-            {"liftosaur_api_key": "brand-new-key"},
-        )
         assert response.status_code == 302
-        mock_validate.assert_called_once_with("brand-new-key")
-        user.refresh_from_db()
-        assert user.liftosaur_api_key == "brand-new-key"
-        participant = ChallengeParticipant.objects.get(challenge=challenge, user=user)
+        assert response["Location"] == reverse(
+            "challenges:goal-setup", args=[challenge.pk]
+        )
+        participant.refresh_from_db()
+        assert participant.is_bailed is False
         assert participant.joined_via_link_id == link.pk

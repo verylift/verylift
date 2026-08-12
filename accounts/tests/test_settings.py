@@ -1046,3 +1046,111 @@ class TestAvatarAvifPipeline:
             document_root=settings.MEDIA_ROOT,
         )
         assert response["Content-Type"] == "image/avif"
+
+
+_HEVY_CSV_HEADER = (
+    "title,start_time,end_time,description,exercise_title,superset_id,"
+    "exercise_notes,set_index,set_type,weight_lbs,reps,distance_km,"
+    "duration_seconds,rpe\n"
+)
+
+
+def _hevy_csv_upload(name="export.csv", rows=None):
+    if rows is None:
+        rows = 'Leg day,"01 Jan 2024, 09:15",,,Squat (Barbell),,,1,normal,225,5,,,\n'
+    return SimpleUploadedFile(
+        name, (_HEVY_CSV_HEADER + rows).encode("utf-8"), content_type="text/csv"
+    )
+
+
+@pytest.mark.django_db
+class TestWorkoutCsvImport:
+    """Covers the generic, tracker-agnostic import endpoint (#11). It's
+    exercised here with a Hevy export -- the only registered importer -- but
+    nothing in the view is Hevy-specific; format detection is covered
+    separately in workout_imports/tests/test_registry.py."""
+
+    def test_valid_upload_pools_sets_and_scores_active_challenges(
+        self, authed_client, user
+    ):
+        active = ChallengeFactory(status=Challenge.Status.ACTIVE)
+        ChallengeParticipantFactory(
+            user=user,
+            challenge=active,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        )
+        url = reverse("accounts:settings")
+        with patch("accounts.views.score_pooled_history") as mock_score:
+            response = authed_client.post(
+                url,
+                {"form_name": "workout_csv_import", "csv_file": _hevy_csv_upload()},
+                follow=True,
+            )
+        mock_score.assert_called_once_with(user=user, challenge=active)
+        assert response.status_code == 200
+        assert "Imported 1 set(s) from Hevy" in response.content.decode()
+
+    def test_invalid_file_shows_friendly_error(self, authed_client, user):
+        url = reverse("accounts:settings")
+        bogus = SimpleUploadedFile(
+            "notes.txt", b"not a csv at all", content_type="text/plain"
+        )
+        response = authed_client.post(
+            url, {"form_name": "workout_csv_import", "csv_file": bogus}, follow=True
+        )
+        assert response.status_code == 200
+        assert "Please upload a .csv file." in response.content.decode()
+
+    def test_unrecognized_csv_format_shows_friendly_error_not_500(
+        self, authed_client, user
+    ):
+        url = reverse("accounts:settings")
+        bogus = SimpleUploadedFile(
+            "export.csv", b"not,the,right,columns\na,b,c\n", content_type="text/csv"
+        )
+        response = authed_client.post(
+            url, {"form_name": "workout_csv_import", "csv_file": bogus}, follow=True
+        )
+        assert response.status_code == 200
+        assert "don&#x27;t recognize this CSV format" in response.content.decode()
+
+    def test_htmx_request_returns_workout_import_section_partial(
+        self, authed_client, user
+    ):
+        url = reverse("accounts:settings")
+        response = authed_client.post(
+            url,
+            {"form_name": "workout_csv_import", "csv_file": _hevy_csv_upload()},
+            **HX,
+        )
+        assert response.status_code == 200
+        rendered = [t.name for t in response.templates]
+        assert "accounts/_workout_import_section.html" in rendered
+        assert "accounts/settings.html" not in rendered
+        assert 'id="workout-import-section"' in response.content.decode()
+
+    def test_db_contention_reports_back_instead_of_500(self, authed_client, user):
+        url = reverse("accounts:settings")
+        with patch(
+            "accounts.views.import_workout_csv",
+            side_effect=OperationalError("database is locked"),
+        ):
+            response = authed_client.post(
+                url,
+                {"form_name": "workout_csv_import", "csv_file": _hevy_csv_upload()},
+                follow=True,
+            )
+        assert response.status_code == 200
+        assert "Couldn&#x27;t import right now." in response.content.decode()
+
+    def test_no_active_challenges_still_pools_and_reports_zero_scored(
+        self, authed_client, user
+    ):
+        url = reverse("accounts:settings")
+        response = authed_client.post(
+            url,
+            {"form_name": "workout_csv_import", "csv_file": _hevy_csv_upload()},
+            follow=True,
+        )
+        assert response.status_code == 200
+        assert "0 challenge(s) rescored" in response.content.decode()
