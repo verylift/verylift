@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     "scoring",
     "notifications",
     "guide",
+    "policies",
 ]
 
 MIDDLEWARE = [
@@ -82,6 +83,7 @@ MIDDLEWARE = [
     "accounts.middleware.RatelimitMiddleware",
     "accounts.middleware.UserLanguageMiddleware",
     "accounts.middleware.UserTimezoneMiddleware",
+    "policies.middleware.PolicyConsentMiddleware",
 ]
 
 ROOT_URLCONF = "root.urls"
@@ -484,5 +486,6 @@ LOGGING = {
             "level": "DEBUG" if DEBUG else "WARNING",
             "propagate": True,
         },
+        "policies": {"level": "DEBUG" if DEBUG else "WARNING", "propagate": True},
     },
 }

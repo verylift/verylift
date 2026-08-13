@@ -66,7 +66,7 @@
           {% if request.resolver_match.namespace == 'guide' %}bg-accent-subtle text-accent{% else %}text-content-body hover:bg-surface-hover{% endif %}">
         {% trans "User Guide" %}
       </a>
-      <a href="{% url 'terms' %}"
+      <a href="{% url 'policies:list' %}"
         class="flex items-center gap-3 px-3 py-3 md:py-2 text-sm font-medium text-content-body hover:bg-surface-hover">
         {% trans "Terms & Privacy" %}
       </a>

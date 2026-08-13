@@ -21,13 +21,13 @@ Name the worktree/branch after the work it holds, not the agent run that produce
 
 ## Quality Gate
 
-**Before committing any code, run:**
+**Run this once, right before opening a PR for the first time** — not after every commit, and not repeatedly while still actively iterating on a change. It's a pre-PR gate, not a per-commit ritual; running it mid-development just burns time:
 ```
 docker compose up -d db
 just ci
 ```
 
-`just ci` runs lint + format check + tests — exactly what CI checks. If it fails locally, CI will fail. Fix all issues before committing. Use `just fix` to auto-resolve ruff errors.
+`just ci` runs lint + format check + tests — exactly what CI checks. If it fails locally, CI will fail. Fix all issues before opening the PR. Use `just fix` to auto-resolve ruff errors.
 
 ## Testing standards
 

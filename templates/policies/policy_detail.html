@@ -1,0 +1,83 @@
+{% extends "base/base.html" %}
+{% load i18n %}
+
+{% block title %}{{ policy.name }} — very lift{% endblock %}
+
+{% block content %}
+<div class="min-h-full py-12 px-4">
+  <div class="max-w-3xl mx-auto space-y-6">
+    <div>
+      <a href="{% url 'policies:list' %}" class="text-sm text-accent hover:underline">&larr; {% trans "Back to policies" %}</a>
+    </div>
+
+    <h1 class="text-2xl font-bold text-content-strong">{{ policy.name }}</h1>
+
+    {% if active_version %}
+    <section class="bg-surface-card border border-line-subtle rounded p-5 space-y-3">
+      <h2 class="text-base font-semibold text-content-strong">{% trans "Current version" %}</h2>
+      <table class="text-sm text-content-body">
+        <tbody>
+          <tr>
+            <td class="pr-4 py-0.5 font-medium text-content-subtle">{% trans "Version" %}</td>
+            <td class="py-0.5">{{ active_version.version }}</td>
+          </tr>
+          <tr>
+            <td class="pr-4 py-0.5 font-medium text-content-subtle">{% trans "Effective date" %}</td>
+            <td class="py-0.5">{{ active_version.effective_date }}</td>
+          </tr>
+          {% if active_version.changelog %}
+          <tr>
+            <td class="pr-4 py-0.5 font-medium text-content-subtle">{% trans "What changed" %}</td>
+            <td class="py-0.5">{{ active_version.changelog }}</td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+      <div>
+        <a href="{{ active_version.url }}" target="_blank" rel="noopener noreferrer"
+          class="inline-flex items-center justify-center bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
+          {% blocktrans with name=policy.name %}Read the {{ name }}{% endblocktrans %} &rarr;
+        </a>
+      </div>
+    </section>
+    {% else %}
+    <p class="text-sm text-content-subtle">{% trans "No current version of this policy has been published yet." %}</p>
+    {% endif %}
+
+    {% if all_versions.count > 1 %}
+    <section class="bg-surface-card border border-line-subtle rounded overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-line-subtle text-left text-xs font-medium text-content-muted uppercase tracking-wide">
+              <th class="px-4 py-3">{% trans "Version" %}</th>
+              <th class="px-4 py-3">{% trans "Effective date" %}</th>
+              <th class="px-4 py-3">{% trans "Status" %}</th>
+              <th class="px-4 py-3">{% trans "Document" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for version in all_versions %}
+            <tr class="border-b border-line-subtle last:border-0">
+              <td class="px-4 py-3 text-content-body">{{ version.version }}</td>
+              <td class="px-4 py-3 text-content-body">{{ version.effective_date }}</td>
+              <td class="px-4 py-3">
+                {% if version.is_active %}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-success-light text-success-dark">{% trans "Current" %}</span>
+                {% else %}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-surface-sunken text-content-muted">{% trans "Superseded" %}</span>
+                {% endif %}
+              </td>
+              <td class="px-4 py-3">
+                <a href="{{ version.url }}" target="_blank" rel="noopener noreferrer" class="text-accent hover:underline">{% trans "View" %}</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

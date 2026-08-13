@@ -40,4 +40,5 @@ urlpatterns = [
     path("", include("challenges.urls")),
     path("", include("notifications.urls")),
     path("", include("guide.urls")),
+    path("policies/", include("policies.urls")),
 ]

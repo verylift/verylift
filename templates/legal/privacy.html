@@ -20,15 +20,15 @@
           </tr>
           <tr>
             <td class="pr-4 py-0.5 font-medium text-content-subtle">Version</td>
-            <td class="py-0.5">1.0</td>
+            <td class="py-0.5">1.1</td>
           </tr>
           <tr>
             <td class="pr-4 py-0.5 font-medium text-content-subtle">Effective date</td>
-            <td class="py-0.5">2026-08-04</td>
+            <td class="py-0.5">2026-08-12</td>
           </tr>
           <tr>
             <td class="pr-4 py-0.5 font-medium text-content-subtle">Last updated</td>
-            <td class="py-0.5">2026-08-04</td>
+            <td class="py-0.5">2026-08-12</td>
           </tr>
         </tbody>
       </table>
@@ -37,14 +37,16 @@
     <section class="bg-surface-card border border-line-subtle rounded p-5 space-y-2">
       <h2 class="text-base font-semibold text-content-strong">Plain-language summary</h2>
       <p class="text-sm text-content-body">
-        We store your account details, the Liftosaur API key you provide, and the workout
-        data it syncs from Liftosaur so we can compute your scores and run challenges. Your
-        display name, lift performance, and scores are visible to other users through
-        leaderboards and user pages. Your data is never sold, and there are no ads. Every
-        page load requests fonts from Google Fonts (see
-        <a href="#s6" class="text-accent hover:underline">Cookies &amp; tracking</a>); beyond
-        that, the only outbound requests today are to Liftosaur (using your key), our mail
-        relay when you request a password reset, and, if you sign in with SSO, our identity
+        We store your account details, the API key or credentials you provide for a
+        connected fitness-tracking service (currently Liftosaur), and the workout data it
+        syncs so we can compute your scores and run challenges. Your display name, lift
+        performance, and scores are visible to other users through leaderboards and user
+        pages. Your data is never sold, and there are no ads. Every page load requests
+        fonts from Google Fonts (see <a href="#s6" class="text-accent hover:underline">Cookies
+        &amp; tracking</a>); beyond that, outbound requests today go to your connected
+        fitness-tracking service (using the credentials you provide), our mail relay when
+        you request a password reset, our error-tracking and log-aggregation tooling
+        (operated on infrastructure we control), and, if you sign in with SSO, our identity
         provider. We don't run analytics yet, but plan to add privacy-conscious, first-party
         usage analytics gated behind a consent banner and honoring the Global Privacy Control
         signal &mdash; see section 6 for the commitments that will govern it. Our servers run
@@ -119,15 +121,17 @@
             disclose what that provider shares with us before it's enabled.
           </li>
           <li>
-            <strong>Your Liftosaur API key</strong> — the key you provide is stored in the
-            application's database so the server can fetch your Liftosaur data on your behalf.
-            See <a href="#s11" class="text-accent hover:underline">Security</a> for how this is
+            <strong>Your fitness-tracking credentials</strong> — the API key or access
+            credentials you provide for a connected fitness-tracking service (currently
+            Liftosaur; we may support additional providers in future) are stored in the
+            application's database so the server can fetch your data on your behalf. See
+            <a href="#s11" class="text-accent hover:underline">Security</a> for how this is
             handled.
           </li>
           <li>
             <strong>Synced fitness data</strong> — your lift history (including the lift,
-            weight, reps, dates, and equipment) fetched from Liftosaur, along with logs of
-            those sync operations.
+            weight, reps, dates, and equipment) fetched from your connected fitness-tracking
+            service, along with logs of those sync operations.
           </li>
           <li>
             <strong>Derived scoring data</strong> — the points and events the
@@ -145,7 +149,10 @@
           </li>
           <li>
             <strong>Server logs</strong> — routine technical logs generated when you use the
-            Service, used for debugging and keeping the service running.
+            Service, used for debugging and keeping the service running. These are
+            forwarded to error-tracking and log-aggregation tooling we operate directly (see
+            <a href="#s7" class="text-accent hover:underline">Sharing</a>), not a third-party
+            processor.
           </li>
         </ul>
         <p>
@@ -208,7 +215,7 @@
           <li>A consent banner will gate collection; declining disables tracking while the Service remains fully usable.</li>
           <li>Data stays first-party — no analytics data will be sent to or processed by a third party.</li>
           <li>Nothing is sold or shared with advertisers; there is no advertising on the Service.</li>
-          <li>Analytics infrastructure is self-hosted, on infrastructure we control.</li>
+          <li>Analytics infrastructure runs on infrastructure we control directly.</li>
           <li>The Service will honor the Global Privacy Control (GPC) signal: a browser sending it is treated as an automatic opt-out, with tracking skipped entirely and no consent banner shown.</li>
         </ul>
         <p>
@@ -224,11 +231,15 @@
           Your data is not sold. There are no advertisements. The Service makes outbound
           requests to Google Fonts on every page load (see
           <a href="#s6" class="text-accent hover:underline">Cookies &amp; tracking</a>), and
-          to the Liftosaur API (using the API key you provide, to fetch your data), our mail
-          relay when you request a password reset, and, if you sign in with single sign-on,
-          our identity provider (login server). Sending a password-reset email discloses your
-          email address and username to that mail relay. We may disclose information if
-          required to do so by law.
+          to your connected fitness-tracking service (using the credentials you provide, to
+          fetch your data), our mail relay when you request a password reset, and, if you
+          sign in with single sign-on, our identity provider (login server). Sending a
+          password-reset email discloses your email address and username to that mail relay.
+          Server logs — which may include technical details like your IP address for
+          security purposes such as rate-limiting — are forwarded to error-tracking and
+          log-aggregation tooling that we operate directly on infrastructure we control; this
+          is not a third-party processor, and that data is not shared onward. We may disclose
+          information if required to do so by law.
         </p>
         <p>
           <strong>Business transfers:</strong> if we ever sell, merge, or transfer the
@@ -241,11 +252,14 @@
       <section id="s8" class="space-y-2">
         <h2 class="text-lg font-semibold text-content-strong">8. International data transfers</h2>
         <p>
-          The Service's servers run in Canada. Some requests the Service makes on your
-          behalf leave Canada: our mail relay (Migadu) is based in Switzerland, and Google
-          Fonts (see <a href="#s6" class="text-accent hover:underline">Cookies &amp;
-          tracking</a>) is served from Google's global infrastructure, likely including the
-          United States. Wherever you access the Service from, your information may be
+          The Service's servers run in Canada, as does the error-tracking and log-aggregation
+          infrastructure we operate directly (see <a href="#s7" class="text-accent
+          hover:underline">Sharing</a>) — it introduces no new jurisdiction. Some requests the
+          Service makes on your behalf do leave Canada: our mail relay (Migadu) is based in
+          Switzerland, and Google Fonts (see <a href="#s6" class="text-accent
+          hover:underline">Cookies &amp; tracking</a>) is served from Google's global
+          infrastructure, likely including the United States. Wherever you access the Service
+          from, your information may be
           processed in these locations as described above.
         </p>
       </section>
@@ -277,9 +291,10 @@
         <h2 class="text-lg font-semibold text-content-strong">11. Security</h2>
         <p>
           Passwords are stored using Django's password hashing and are never stored in plain
-          text. The Service is served over HTTPS. Be aware that your Liftosaur API key is
-          stored so the server can act on your behalf to fetch your data; treat the key as
-          sensitive and rotate it in Liftosaur if you believe it has been exposed.
+          text. The Service is served over HTTPS. Be aware that your fitness-tracking
+          credentials are stored so the server can act on your behalf to fetch your data;
+          treat them as sensitive and rotate them with that provider if you believe they have
+          been exposed.
         </p>
       </section>
 

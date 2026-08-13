@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-13 00:35+0000\n"
+"POT-Creation-Date: 2026-08-13 01:46+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -748,6 +748,42 @@ msgstr "%(challenge)s ha terminado — mira tu posición final"
 msgid "You have been removed from %(challenge)s"
 msgstr "Has sido eliminado/a de %(challenge)s"
 
+#: policies/models.py:10 templates/registration/register.html:147
+msgid "Terms of Service"
+msgstr "Términos de Servicio"
+
+#: policies/models.py:11 templates/registration/register.html:149
+msgid "Privacy Policy"
+msgstr "Política de Privacidad"
+
+#: policies/models.py:12
+msgid "Cookie Policy"
+msgstr "Política de Cookies"
+
+#: policies/models.py:13
+msgid "EULA"
+msgstr "EULA"
+
+#: policies/models.py:14
+msgid "Other"
+msgstr "Otro"
+
+#: policies/models.py:83 templates/accounts/_email_section.html:4
+msgid "Email"
+msgstr "Correo electrónico"
+
+#: policies/models.py:113
+msgid "Signup"
+msgstr "Registro"
+
+#: policies/models.py:114
+msgid "Re-consent"
+msgstr "Nuevo consentimiento"
+
+#: policies/models.py:115
+msgid "Admin Override"
+msgstr "Anulación del administrador"
+
 #: templates/400.html:4
 msgid "Bad Request"
 msgstr "Solicitud Incorrecta"
@@ -850,10 +886,6 @@ msgstr "Establecer foto de perfil"
 #: templates/accounts/_avatar_section.html:396
 msgid "That file could not be read as an image."
 msgstr "No se pudo leer ese archivo como imagen."
-
-#: templates/accounts/_email_section.html:4
-msgid "Email"
-msgstr "Correo electrónico"
 
 #: templates/accounts/_email_section.html:11
 msgid "Saving email address…"
@@ -1757,7 +1789,7 @@ msgstr "Ocultar completadas"
 msgid "Challenge"
 msgstr "Reto"
 
-#: templates/challenges/find.html:31
+#: templates/challenges/find.html:31 templates/policies/policy_detail.html:55
 msgid "Status"
 msgstr "Estado"
 
@@ -2428,6 +2460,107 @@ msgstr "Ya estás al día."
 msgid "You have no notifications."
 msgstr "No tienes notificaciones."
 
+#: templates/policies/consent_form.html:4
+msgid "Policy Update"
+msgstr "Actualización de política"
+
+#: templates/policies/consent_form.html:10
+msgid "Policy Update — Action Required"
+msgstr "Actualización de política — Acción requerida"
+
+#: templates/policies/consent_form.html:11
+msgid ""
+"Please review and accept the following updated policies to continue using "
+"very lift."
+msgstr ""
+"Revisa y acepta las siguientes políticas actualizadas para continuar "
+"usando very lift."
+
+#: templates/policies/consent_form.html:22
+msgid "Policy"
+msgstr "Política"
+
+#: templates/policies/consent_form.html:23
+#: templates/policies/policy_detail.html:21
+#: templates/policies/policy_detail.html:53
+msgid "Version"
+msgstr "Versión"
+
+#: templates/policies/consent_form.html:24
+#: templates/policies/policy_detail.html:25
+#: templates/policies/policy_detail.html:54
+msgid "Effective date"
+msgstr "Fecha de vigencia"
+
+#: templates/policies/consent_form.html:25
+#: templates/policies/policy_detail.html:56
+msgid "Document"
+msgstr "Documento"
+
+#: templates/policies/consent_form.html:35
+msgid "Read"
+msgstr "Leer"
+
+#: templates/policies/consent_form.html:61
+msgid "I Agree"
+msgstr "Acepto"
+
+#: templates/policies/policy_detail.html:10
+msgid "Back to policies"
+msgstr "Volver a políticas"
+
+#: templates/policies/policy_detail.html:17
+msgid "Current version"
+msgstr "Versión actual"
+
+#: templates/policies/policy_detail.html:30
+msgid "What changed"
+msgstr "Qué cambió"
+
+#: templates/policies/policy_detail.html:39
+msgid "Read the %(name)s"
+msgstr "Leer %(name)s"
+
+#: templates/policies/policy_detail.html:44
+msgid "No current version of this policy has been published yet."
+msgstr "Aún no se ha publicado ninguna versión vigente de esta política."
+
+#: templates/policies/policy_detail.html:66
+msgid "Current"
+msgstr "Vigente"
+
+#: templates/policies/policy_detail.html:68
+msgid "Superseded"
+msgstr "Reemplazada"
+
+#: templates/policies/policy_detail.html:72
+msgid "View"
+msgstr "Ver"
+
+#: templates/policies/policy_list.html:4 templates/policies/policy_list.html:9
+msgid "Policies"
+msgstr "Políticas"
+
+#: templates/policies/policy_list.html:16
+msgid "Name"
+msgstr "Nombre"
+
+#: templates/policies/policy_list.html:17
+msgid "Type"
+msgstr "Tipo"
+
+#: templates/policies/policy_list.html:18
+msgid "Current Version"
+msgstr "Versión Actual"
+
+#: templates/policies/policy_list.html:19
+msgid "Effective Date"
+msgstr "Fecha de Vigencia"
+
+#: templates/policies/policy_list.html:38
+msgid "No policies have been published yet."
+msgstr "Aún no se han publicado políticas."
+
 #: templates/registration/login.html:4
 msgid "Sign In"
 msgstr "Iniciar Sesión"
@@ -2660,17 +2793,9 @@ msgstr ""
 msgid "I agree to the"
 msgstr "Acepto los"
 
-#: templates/registration/register.html:147
-msgid "Terms of Service"
-msgstr "Términos de Servicio"
-
 #: templates/registration/register.html:148
 msgid "and"
 msgstr "y"
-
-#: templates/registration/register.html:149
-msgid "Privacy Policy"
-msgstr "Política de Privacidad"
 
 #: templates/registration/register.html:158
 msgid "Create account"

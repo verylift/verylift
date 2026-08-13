@@ -59,6 +59,8 @@ from liftosaur.services import (
     trigger_lift_history_backfill,
     validate_liftosaur_key,
 )
+from policies.models import Policy, PolicyConsent, PolicyVersion
+from policies.services import record_consent
 from scoring.services import score_pooled_history
 from workout_imports.forms import WorkoutCsvImportForm
 from workout_imports.services import import_workout_csv
@@ -228,6 +230,21 @@ def register_view(request):
                 "New account registered: user %s (acquisition_source=%s)",
                 user.id,
                 acquisition_source,
+            )
+
+            # The checkbox above only shows/links Terms of Service and Privacy
+            # Policy, so only record consent for those two -- not any other
+            # gated policy type that might exist later but wasn't shown here.
+            record_consent(
+                user,
+                request,
+                PolicyVersion.objects.active_gated().filter(
+                    policy__policy_type__in=[
+                        Policy.PolicyType.TOS,
+                        Policy.PolicyType.PRIVACY,
+                    ]
+                ),
+                PolicyConsent.Method.SIGNUP,
             )
 
             if api_key:
