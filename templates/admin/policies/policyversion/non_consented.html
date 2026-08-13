@@ -1,0 +1,30 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<p><a href="{% url 'admin:policies_policyversion_changelist' %}">&larr; Back to policy versions</a></p>
+
+<h2>{{ title }}</h2>
+
+{% if non_consented %}
+<table>
+  <thead>
+    <tr>
+      <th>Username</th>
+      <th>Email</th>
+      <th>Display name</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for user in non_consented %}
+    <tr>
+      <td>{{ user.username }}</td>
+      <td>{{ user.email }}</td>
+      <td>{{ user.display_name }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>Every active user has consented to this version.</p>
+{% endif %}
+{% endblock %}

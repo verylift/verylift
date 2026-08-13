@@ -1,0 +1,13 @@
+Hi,
+
+{{ version.policy.name }} has been updated to version {{ version.version }}, effective {{ version.effective_date }}.
+{% if version.changelog %}
+What changed:
+{{ version.changelog }}
+{% endif %}
+Please review and accept the updated policy to continue using very lift:
+
+  {{ consent_url }}
+
+
+— The very lift team

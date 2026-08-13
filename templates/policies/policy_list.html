@@ -1,0 +1,51 @@
+{% extends "base/base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Policies" %} — very lift{% endblock %}
+
+{% block content %}
+<div class="min-h-full py-12 px-4">
+  <div class="max-w-3xl mx-auto space-y-6">
+    <div>
+      <a href="/" class="text-sm text-accent hover:underline">&larr; {% trans "Back" %}</a>
+    </div>
+
+    <h1 class="text-2xl font-bold text-content-strong">{% trans "Policies" %}</h1>
+
+    <section class="bg-surface-card border border-line-subtle rounded overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-line-subtle text-left text-xs font-medium text-content-muted uppercase tracking-wide">
+              <th class="px-4 py-3">{% trans "Name" %}</th>
+              <th class="px-4 py-3">{% trans "Type" %}</th>
+              <th class="px-4 py-3">{% trans "Current Version" %}</th>
+              <th class="px-4 py-3">{% trans "Effective Date" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for policy in policies %}
+            <tr class="border-b border-line-subtle last:border-0">
+              <td class="px-4 py-3">
+                <a href="{% url 'policies:detail' policy.slug %}" class="font-medium text-accent hover:underline">{{ policy.name }}</a>
+              </td>
+              <td class="px-4 py-3 text-content-body">{{ policy.get_policy_type_display }}</td>
+              <td class="px-4 py-3 text-content-body">
+                {% for version in policy.versions.all %}{% if version.is_active %}{{ version.version }}{% endif %}{% empty %}—{% endfor %}
+              </td>
+              <td class="px-4 py-3 text-content-body">
+                {% for version in policy.versions.all %}{% if version.is_active %}{{ version.effective_date }}{% endif %}{% empty %}—{% endfor %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td class="px-4 py-3 text-content-subtle" colspan="4">{% trans "No policies have been published yet." %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}

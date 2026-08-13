@@ -12,6 +12,8 @@ from django.utils import timezone
 from accounts.tests.factories import UserFactory
 from challenges.models import Challenge
 from challenges.tests.factories import ChallengeFactory, ChallengeInviteLinkFactory
+from policies.models import Policy, PolicyConsent
+from policies.tests.factories import PolicyFactory, PolicyVersionFactory
 
 User = get_user_model()
 
@@ -76,6 +78,37 @@ class TestRegistrationSuccess:
         assert user.tos_accepted_at is not None
         # User is logged in automatically.
         assert client.session["_auth_user_id"] == str(user.id)
+
+    @patch("accounts.views.trigger_lift_history_backfill")
+    @patch("accounts.views.validate_liftosaur_key", return_value=True)
+    def test_agreeing_at_signup_satisfies_the_policy_consent_gate(
+        self, mock_validate, mock_backfill, client
+    ):
+        """The registration checkbox must not leave the new user immediately
+        redirected to /policies/consent/ on their very next request."""
+        tos_version = PolicyVersionFactory(
+            policy=PolicyFactory(policy_type=Policy.PolicyType.TOS),
+            is_active=True,
+        )
+        privacy_version = PolicyVersionFactory(
+            policy=PolicyFactory(policy_type=Policy.PolicyType.PRIVACY),
+            is_active=True,
+        )
+
+        client.post(reverse("accounts:register"), _post_data())
+
+        user = User.objects.get(username="newlifter")
+        assert PolicyConsent.objects.filter(
+            user=user, policy_version=tos_version, method=PolicyConsent.Method.SIGNUP
+        ).exists()
+        assert PolicyConsent.objects.filter(
+            user=user,
+            policy_version=privacy_version,
+            method=PolicyConsent.Method.SIGNUP,
+        ).exists()
+
+        response = client.get(reverse("challenges:dashboard"))
+        assert response.status_code == 200
 
 
 @pytest.mark.django_db

@@ -76,6 +76,44 @@ def _valid_oidc_session(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _consent_to_active_policies_on_login(monkeypatch):
+    """Auto-grant consent to every active gated PolicyVersion on force_login().
+
+    PolicyConsentMiddleware (policies app) redirects any authenticated request
+    to /policies/consent/ until the user has consented to every active, gated
+    PolicyVersion. Real deployments grandfather already-existing users in via
+    a one-off data migration (policies/migrations/0002_...), but that only
+    covers whoever existed when it ran -- every ``UserFactory``-made test user
+    is "new" from the middleware's perspective, so without this fixture the
+    entire suite's view tests would 302 to the consent page instead of
+    exercising the page they meant to test. Mirrors ``_valid_oidc_session``
+    above: patch force_login() rather than push this orthogonal concern onto
+    every other app's tests. policies/tests overrides this fixture with a
+    no-op (see policies/tests/conftest.py) since those tests deliberately
+    control consent state themselves.
+    """
+    from policies.models import PolicyConsent, PolicyVersion
+
+    original_force_login = Client.force_login
+
+    def force_login(self, user, backend=None):
+        original_force_login(self, user, backend=backend)
+        PolicyConsent.objects.bulk_create(
+            [
+                PolicyConsent(
+                    user=user,
+                    policy_version=version,
+                    method=PolicyConsent.Method.ADMIN_OVERRIDE,
+                )
+                for version in PolicyVersion.objects.active_gated()
+            ],
+            ignore_conflicts=True,
+        )
+
+    monkeypatch.setattr(Client, "force_login", force_login)
+
+
+@pytest.fixture(autouse=True)
 def _skip_timezone_detection(monkeypatch):
     """Seed the tzdetect cookie on every test Client (TASK-273).
 
