@@ -99,6 +99,7 @@ TEMPLATES = [
                 "django.template.context_processors.i18n",
                 "notifications.context_processors.unread_notification_count",
                 "core.context_processors.app_version",
+                "core.context_processors.discord_invite_url",
             ],
         },
     },
@@ -252,6 +253,11 @@ ADMIN_URL_PATH = env("ADMIN_URL_PATH", default="the-rack/")
 # The running app's version string, set by whatever deploys this container.
 # Unset (default "dev") in dev and any environment that doesn't set it.
 APP_VERSION = env("VERY_LIFT_VERSION", default="dev")
+
+# The community Discord invite, linked from the landing page.
+# Env-overridable so a rotated/expired invite can be swapped without a code
+# change or redeploy of the image itself, just a restart.
+DISCORD_INVITE_URL = env("DISCORD_INVITE_URL", default="https://discord.gg/DH5ZWDXJdH")
 
 # Render the styled 403 page on CSRF validation failure instead of Django's default.
 CSRF_FAILURE_VIEW = "accounts.views.csrf_failure"
