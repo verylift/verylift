@@ -208,9 +208,7 @@ def newsletter_subscribe_view(request):
         _, created = NewsletterSubscriber.objects.get_or_create(email=email)
         if created:
             logger.info("New newsletter subscription")
-        messages.success(
-            request, gettext("You're subscribed. Thanks for joining the beta!")
-        )
+        messages.success(request, gettext("You're subscribed. Thanks for joining!"))
         return redirect(f"{reverse('challenges:landing')}#newsletter")
 
     for error in form.errors.get("email", []):
