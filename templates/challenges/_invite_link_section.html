@@ -35,8 +35,13 @@
     {% csrf_token %}
     <button
       type="submit"
-      class="bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
-      {% if current_invite_link %}{% trans "Generate new link" %}{% else %}{% trans "Generate invite link" %}{% endif %}
+      title="{% if current_invite_link %}{% trans "Generate new link" %}{% else %}{% trans "Generate invite link" %}{% endif %}"
+      aria-label="{% if current_invite_link %}{% trans "Generate new link" %}{% else %}{% trans "Generate invite link" %}{% endif %}"
+      class="flex items-center justify-center h-9 w-9 rounded bg-accent text-accent-on hover:bg-accent-hover">
+      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
+        <path d="M21 3v5h-5"/>
+      </svg>
     </button>
   </form>
   {% endif %}

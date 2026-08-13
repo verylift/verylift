@@ -1,107 +1,122 @@
 {% load i18n %}
 <!-- Avatar section -->
-<section class="bg-surface-card border border-line-subtle rounded p-6 mb-6 max-w-lg">
+<section class="bg-surface-card border border-line-subtle rounded p-6 mb-6">
   <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "Profile Photo" %}</h2>
-  <div class="flex items-center gap-4 mb-4">
-    {% include "components/_avatar.html" with avatar_user=user size_classes="w-16 h-16 text-xl" %}
-  </div>
   {% if avatar_error %}
   <p class="mb-4 text-sm text-danger">{{ avatar_error }}</p>
   {% endif %}
-  <form
-    method="post"
-    action="{% url 'accounts:settings' %}"
-    hx-post="{% url 'accounts:settings' %}"
-    hx-target="closest section"
-    hx-swap="outerHTML"
-    hx-encoding="multipart/form-data"
-    enctype="multipart/form-data"
-    data-loading-message="{% trans 'Uploading photo…' %}">
-    {% csrf_token %}
-    <input type="hidden" name="form_name" value="avatar">
-    {% comment %}
-      Two mutually exclusive states. #avatar-picker is the plain no-JS form and
-      what renders on first paint; the crop script swaps to #avatar-cropper once
-      a file is chosen. The file input stays a real named input either way, so
-      an inert script degrades to today's straight upload.
-    {% endcomment %}
-    <div id="avatar-picker">
-      <div class="mb-4">
-        <input
-          type="file"
-          id="avatar"
-          name="avatar"
-          accept="image/*"
-          class="w-full text-sm text-content-body">
+  <details class="group" {% if avatar_error %}open{% endif %}>
+    <summary
+      class="flex justify-center mb-4 cursor-pointer select-none list-none marker:hidden [&::-webkit-details-marker]:hidden"
+      aria-label="{% trans 'Change profile photo' %}"
+      title="{% trans 'Change profile photo' %}">
+      <span class="relative inline-block">
+        {% include "components/_avatar.html" with avatar_user=user size_classes="w-32 h-32 text-3xl" %}
+        <span
+          class="absolute bottom-3 right-0 flex items-center justify-center h-6 w-6 rounded-full bg-accent text-accent-on border-2 border-surface-card group-open:hidden"
+          aria-hidden="true">
+          <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/>
+            <path d="m15 5 4 4"/>
+          </svg>
+        </span>
+      </span>
+    </summary>
+    <form
+      method="post"
+      action="{% url 'accounts:settings' %}"
+      hx-post="{% url 'accounts:settings' %}"
+      hx-target="closest section"
+      hx-swap="outerHTML"
+      hx-encoding="multipart/form-data"
+      enctype="multipart/form-data"
+      data-loading-message="{% trans 'Uploading photo…' %}">
+      {% csrf_token %}
+      <input type="hidden" name="form_name" value="avatar">
+      {% comment %}
+        Two mutually exclusive states. #avatar-picker is the plain no-JS form and
+        what renders on first paint; the crop script swaps to #avatar-cropper once
+        a file is chosen. The file input stays a real named input either way, so
+        an inert script degrades to today's straight upload.
+      {% endcomment %}
+      <div id="avatar-picker">
+        <div class="mb-4 flex justify-center">
+          <input
+            type="file"
+            id="avatar"
+            name="avatar"
+            accept="image/*"
+            class="text-sm text-content-body">
+        </div>
+        <div class="flex items-center gap-3">
+          <button
+            type="submit"
+            class="bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
+            {% trans "Save Photo" %}
+          </button>
+          {% if user.avatar %}
+          <button
+            type="submit"
+            name="clear_avatar"
+            value="true"
+            class="text-sm font-medium text-content-muted hover:text-content-body">
+            {% trans "Remove photo" %}
+          </button>
+          {% endif %}
+        </div>
       </div>
-      <div class="flex items-center gap-3">
-        <button
-          type="submit"
-          class="bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
-          {% trans "Save Photo" %}
-        </button>
-        {% if user.avatar %}
-        <button
-          type="submit"
-          name="clear_avatar"
-          value="true"
-          class="text-sm font-medium text-content-muted hover:text-content-body">
-          {% trans "Remove photo" %}
-        </button>
-        {% endif %}
-      </div>
-    </div>
-    <div id="avatar-cropper" class="hidden">
-      <div
-        id="avatar-crop-stage"
-        class="relative w-64 h-64 mx-auto overflow-hidden bg-surface-sunken select-none cursor-move"
-        style="touch-action: none;">
-        <canvas id="avatar-crop-canvas" width="256" height="256" class="block w-full h-full"></canvas>
-        {% comment %}
-          The dimmed surround is a 9999px ring on an inscribed circle, clipped
-          by the stage's overflow-hidden. Must stay pointer-events-none or it
-          swallows the drag gestures.
-        {% endcomment %}
+      <div id="avatar-cropper" class="hidden">
         <div
-          class="pointer-events-none absolute inset-0 rounded-full ring-[9999px] ring-black/50 border border-line-subtle"
-          aria-hidden="true"></div>
+          id="avatar-crop-stage"
+          class="relative w-64 h-64 mx-auto overflow-hidden bg-surface-sunken select-none cursor-move"
+          style="touch-action: none;">
+          <canvas id="avatar-crop-canvas" width="256" height="256" class="block w-full h-full"></canvas>
+          {% comment %}
+            The dimmed surround is a 9999px ring on an inscribed circle, clipped
+            by the stage's overflow-hidden. Must stay pointer-events-none or it
+            swallows the drag gestures.
+          {% endcomment %}
+          <div
+            class="pointer-events-none absolute inset-0 rounded-full ring-[9999px] ring-black/50 border border-line-subtle"
+            aria-hidden="true"></div>
+        </div>
+        <input
+          type="range"
+          id="avatar-crop-zoom"
+          min="1"
+          max="4"
+          step="0.01"
+          value="1"
+          class="w-64 mx-auto block mt-4 accent-accent"
+          aria-label="{% trans 'Zoom' %}">
+        <p class="mt-3 text-sm text-content-muted text-center">
+          {% trans "Drag to reposition, scroll or pinch to zoom." %}
+        </p>
+        <p class="mt-1 text-xs text-content-subtle text-center">
+          {% trans "Your photo also appears as a wide banner on your dashboard." %}
+        </p>
+        <p id="avatar-crop-error" class="hidden mt-3 text-sm text-danger"></p>
+        <div class="flex items-center gap-3 mt-4">
+          {% comment %}
+            Both type="button": a bare <button> defaults to submit and would post
+            the uncropped original.
+          {% endcomment %}
+          <button
+            type="button"
+            id="avatar-crop-confirm"
+            class="bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
+            {% trans "Set profile photo" %}
+          </button>
+          <button
+            type="button"
+            id="avatar-crop-cancel"
+            class="text-sm font-medium text-content-muted hover:text-content-body">
+            {% trans "Cancel" %}
+          </button>
+        </div>
       </div>
-      <input
-        type="range"
-        id="avatar-crop-zoom"
-        min="1"
-        max="4"
-        step="0.01"
-        value="1"
-        class="w-64 mx-auto block mt-4 accent-accent"
-        aria-label="{% trans 'Zoom' %}">
-      <p class="mt-3 text-sm text-content-muted text-center">
-        {% trans "Drag to reposition, scroll or pinch to zoom." %}
-      </p>
-      <p class="mt-1 text-xs text-content-subtle text-center">
-        {% trans "Your photo also appears as a wide banner on your dashboard." %}
-      </p>
-      <p id="avatar-crop-error" class="hidden mt-3 text-sm text-danger"></p>
-      <div class="flex items-center gap-3 mt-4">
-        {% comment %}
-          Both type="button": a bare <button> defaults to submit and would post
-          the uncropped original.
-        {% endcomment %}
-        <button
-          type="button"
-          id="avatar-crop-confirm"
-          class="bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
-          {% trans "Set profile photo" %}
-        </button>
-        <button
-          type="button"
-          id="avatar-crop-cancel"
-          class="text-sm font-medium text-content-muted hover:text-content-body">
-          {% trans "Cancel" %}
-        </button>
-      </div>
-    </div>
-  </form>
+    </form>
+  </details>
   <script>
     // Avatar crop wizard (TASK-261). Progressive enhancement over the plain
     // file input above: picking a file rasterises it into a canvas the user can

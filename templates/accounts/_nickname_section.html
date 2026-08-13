@@ -1,6 +1,6 @@
 {% load i18n %}
 <!-- Nickname section -->
-<section class="bg-surface-card border border-line-subtle rounded p-6 mb-6 max-w-lg">
+<section class="bg-surface-card border border-line-subtle rounded p-6 mb-6">
   <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "Display Name" %}</h2>
   <form
     method="post"
@@ -31,56 +31,5 @@
     </button>
   </form>
 
-  <div class="mt-6 pt-6 border-t border-line-subtle">
-    <label for="support-id" class="block text-sm font-medium text-content-body mb-1">
-      {% trans "Support ID" %}
-    </label>
-    <p class="text-xs text-content-muted mb-2">
-      {% trans "Quote this if you contact us about a problem — it lets us find your account's log entries without asking for anything else." %}
-    </p>
-    <div class="flex flex-wrap gap-2">
-      <input
-        type="text"
-        readonly
-        id="support-id"
-        value="{{ user.id }}"
-        class="flex-1 min-w-0 border border-line rounded px-3 py-2 text-sm bg-surface-sunken text-content-body font-mono"
-        onclick="this.select()">
-      <button
-        type="button"
-        data-copy-support-id
-        class="border border-line-subtle text-content-body text-sm font-medium px-3 py-2 rounded hover:bg-surface-sunken whitespace-nowrap">
-        {% trans "Copy" %}
-      </button>
-    </div>
-  </div>
-
   {% if oob_messages %}{% include "components/_messages_oob.html" %}{% endif %}
-  <script>
-    (function () {
-      var section = document.currentScript.closest('section');
-      var button = section.querySelector('[data-copy-support-id]');
-      if (!button) return;
-      button.addEventListener('click', function () {
-        var input = section.querySelector('#support-id');
-        if (!input) return;
-        var restore = button.textContent;
-        var done = function () {
-          button.textContent = "{% trans 'Copied!' %}";
-          setTimeout(function () { button.textContent = restore; }, 1500);
-        };
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(input.value).then(done, function () {
-            input.select();
-            document.execCommand('copy');
-            done();
-          });
-        } else {
-          input.select();
-          document.execCommand('copy');
-          done();
-        }
-      });
-    })();
-  </script>
 </section>
