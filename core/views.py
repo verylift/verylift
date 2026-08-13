@@ -1,14 +1,60 @@
-"""Cross-cutting views that belong to no single feature app.
-
-Currently just the authenticated gate in front of MEDIA_ROOT (TASK-277).
-"""
+"""Cross-cutting views that belong to no single feature app."""
 
 import logging
 
+from django.conf import settings
+from django.contrib import messages
 from django.core.exceptions import PermissionDenied
+from django.shortcuts import redirect, render
+from django.urls import reverse
+from django.utils.translation import gettext
 from django.views.static import serve as serve_static
+from django_ratelimit.decorators import ratelimit
+
+from accounts.ratelimit import client_ip
+from core.forms import NewsletterSubscribeForm
+from core.models import NewsletterSubscriber, SiteSettings
 
 logger = logging.getLogger(__name__)
+
+
+def _newsletter_ip_rate(group, request):
+    return settings.RATELIMIT_NEWSLETTER_IP
+
+
+def landing_view(request):
+    """Public landing page at ``/``.
+
+    Anonymous visitors get the marketing page (``landing.html``); already
+    authenticated visitors are sent straight to their dashboard.
+    """
+    if request.user.is_authenticated:
+        return redirect("challenges:dashboard")
+    context = {"discord_invite_url": SiteSettings.load().discord_invite_url}
+    return render(request, "landing.html", context)
+
+
+@ratelimit(
+    group="newsletter_ip", key=client_ip, rate=_newsletter_ip_rate, method="POST"
+)
+def newsletter_subscribe_view(request):
+    """Handles the "Get the newsletter" form on the landing page.
+
+    A duplicate email is treated as an idempotent success rather than an
+    error — a returning subscriber shouldn't see a validation failure.
+    """
+    form = NewsletterSubscribeForm(request.POST)
+    if form.is_valid():
+        email = form.cleaned_data["email"]
+        _, created = NewsletterSubscriber.objects.get_or_create(email=email)
+        if created:
+            logger.info("New newsletter subscription")
+        messages.success(request, gettext("You're subscribed. Thanks for joining!"))
+        return redirect(f"{reverse('core:landing')}#newsletter")
+
+    for error in form.errors.get("email", []):
+        messages.error(request, error)
+    return redirect(f"{reverse('core:landing')}#newsletter")
 
 
 def protected_media_view(request, path, document_root=None):

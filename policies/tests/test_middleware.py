@@ -39,7 +39,7 @@ class TestPolicyConsentMiddleware:
     def test_does_not_redirect_an_anonymous_request(self, client):
         PolicyVersionFactory(is_active=True)
 
-        response = client.get(reverse("challenges:landing"))
+        response = client.get(reverse("core:landing"))
 
         assert response.status_code == 200
 
