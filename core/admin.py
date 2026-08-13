@@ -5,6 +5,17 @@ from django.http import HttpResponse
 
 from .models import NewsletterSubscriber, SiteSettings
 
+# Formula-injection guard for CSV export: a spreadsheet app treats a cell
+# starting with any of these as a formula, not text. Django's EmailField
+# validator is permissive enough to accept e.g. "-2+3@example.com" as a
+# syntactically valid address, so a subscriber's own (valid) email can
+# land here -- prefix with a single quote to force text interpretation.
+_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _csv_safe(value):
+    return f"'{value}" if value.startswith(_FORMULA_PREFIXES) else value
+
 
 @admin.register(NewsletterSubscriber)
 class NewsletterSubscriberAdmin(admin.ModelAdmin):
@@ -22,7 +33,9 @@ class NewsletterSubscriberAdmin(admin.ModelAdmin):
         writer = csv.writer(response)
         writer.writerow(["email", "created_at"])
         for subscriber in queryset.order_by("-created_at"):
-            writer.writerow([subscriber.email, subscriber.created_at.isoformat()])
+            writer.writerow(
+                [_csv_safe(subscriber.email), subscriber.created_at.isoformat()]
+            )
         return response
 
 

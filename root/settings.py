@@ -192,6 +192,10 @@ RATELIMIT_VALIDATE_KEY_USER = env("RATELIMIT_VALIDATE_KEY_USER", default="10/m")
 # difference uninteresting. See accounts.views.password_reset_view.
 RATELIMIT_PASSWORD_RESET_IP = env("RATELIMIT_PASSWORD_RESET_IP", default="5/h")
 RATELIMIT_PASSWORD_RESET_EMAIL = env("RATELIMIT_PASSWORD_RESET_EMAIL", default="3/h")
+# Anonymous, unauthenticated public form -- bounds spam/junk-row flooding
+# rather than defending a secret, so a looser rate than the auth endpoints
+# above is fine.
+RATELIMIT_NEWSLETTER_IP = env("RATELIMIT_NEWSLETTER_IP", default="5/m")
 
 _VALIDATORS = "django.contrib.auth.password_validation"
 AUTH_PASSWORD_VALIDATORS = [

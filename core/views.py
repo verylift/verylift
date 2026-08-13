@@ -2,17 +2,24 @@
 
 import logging
 
+from django.conf import settings
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext
 from django.views.static import serve as serve_static
+from django_ratelimit.decorators import ratelimit
 
+from accounts.ratelimit import client_ip
 from core.forms import NewsletterSubscribeForm
 from core.models import NewsletterSubscriber, SiteSettings
 
 logger = logging.getLogger(__name__)
+
+
+def _newsletter_ip_rate(group, request):
+    return settings.RATELIMIT_NEWSLETTER_IP
 
 
 def landing_view(request):
@@ -27,6 +34,9 @@ def landing_view(request):
     return render(request, "landing.html", context)
 
 
+@ratelimit(
+    group="newsletter_ip", key=client_ip, rate=_newsletter_ip_rate, method="POST"
+)
 def newsletter_subscribe_view(request):
     """Handles the "Get the newsletter" form on the landing page.
 
