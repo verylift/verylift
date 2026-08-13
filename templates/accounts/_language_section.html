@@ -1,6 +1,6 @@
 {% load i18n %}
 <!-- Language section -->
-<section class="bg-surface-card border border-line-subtle rounded p-6 mb-6 max-w-lg">
+<section class="bg-surface-card border border-line-subtle rounded p-6 mb-6">
   <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "Language" %}</h2>
   <form method="post" action="{% url 'accounts:settings' %}">
     {% csrf_token %}

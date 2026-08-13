@@ -17,11 +17,10 @@
           </div>
         </div>
         {% else %}
-        <div class="bg-surface-card rounded-lg shadow-sm border border-line-subtle p-6 flex flex-col items-center text-center gap-3">
+        <div class="bg-surface-card rounded-lg shadow-sm border border-line-subtle p-6 min-h-64 flex flex-col items-center justify-center text-center gap-3">
           {% include "components/_avatar.html" with avatar_user=request.user size_classes="w-20 h-20 text-3xl" %}
           <div class="min-w-0">
             <h1 class="text-xl font-bold text-content-strong truncate">{{ request.user.display_name|default:request.user.username }}</h1>
-            <p class="mt-1 text-xs text-content-muted">{% blocktrans with joined=request.user.date_joined|date:"M Y" %}Joined {{ joined }}{% endblocktrans %}</p>
           </div>
         </div>
         {% endif %}

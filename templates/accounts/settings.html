@@ -6,16 +6,19 @@
 {% block title %}{% trans "Settings" %} — very lift{% endblock %}
 
 {% block main %}
+  <div class="max-w-lg mx-auto">
     <h1 class="text-2xl font-bold text-content-strong mb-8">{% trans "Settings" %}</h1>
 
     {% include "accounts/_avatar_section.html" %}
 
     {% include "accounts/_nickname_section.html" %}
 
+    {% include "accounts/_support_id_section.html" %}
+
     {% include "accounts/_email_section.html" %}
 
     <!-- Appearance section -->
-    <section class="bg-surface-card border border-line-subtle rounded p-6 mb-6 max-w-lg">
+    <section class="bg-surface-card border border-line-subtle rounded p-6 mb-6">
       <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "Appearance" %}</h2>
       <div class="space-y-2">
         <label class="flex items-center gap-3 border border-line rounded px-4 py-3 cursor-pointer hover:bg-surface-hover">
@@ -44,6 +47,7 @@
     {% include "accounts/_unit_preference_section.html" %}
 
     <p class="text-xs text-content-muted mt-8">very lift {{ app_version }}</p>
+  </div>
 {% endblock %}
 
 {% block after_main %}
