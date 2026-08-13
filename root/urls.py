@@ -35,6 +35,7 @@ urlpatterns = [
         TemplateView.as_view(template_name="legal/privacy.html"),
         name="privacy",
     ),
+    path("", include("core.urls")),
     path("", include("accounts.urls")),
     path("", include("challenges.urls")),
     path("", include("notifications.urls")),

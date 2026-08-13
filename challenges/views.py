@@ -27,7 +27,6 @@ from challenges.forms import (
     GoalInputsForm,
     GoalMethodForm,
     HistoryWindowForm,
-    NewsletterSubscribeForm,
     RenameChallengeForm,
 )
 from challenges.goal_builders import (
@@ -57,7 +56,6 @@ from challenges.services import (
 )
 from challenges.standards import covered_lift_names
 from core.http import is_htmx
-from core.models import NewsletterSubscriber, SiteSettings
 from fitnessvolt.services import standards_method_available
 from liftosaur.models import LiftHistory
 from liftosaur.services import (
@@ -183,38 +181,6 @@ def _notify_user_joined(challenge, joining_user):
         challenge.pk,
         others.count(),
     )
-
-
-def landing_view(request):
-    """Public landing page at ``/``.
-
-    Anonymous visitors get the marketing page (``landing.html``); already
-    authenticated visitors are sent straight to their dashboard.
-    """
-    if request.user.is_authenticated:
-        return redirect("challenges:dashboard")
-    context = {"discord_invite_url": SiteSettings.load().discord_invite_url}
-    return render(request, "landing.html", context)
-
-
-def newsletter_subscribe_view(request):
-    """Handles the "Get the newsletter" form on the landing page.
-
-    A duplicate email is treated as an idempotent success rather than an
-    error — a returning subscriber shouldn't see a validation failure.
-    """
-    form = NewsletterSubscribeForm(request.POST)
-    if form.is_valid():
-        email = form.cleaned_data["email"]
-        _, created = NewsletterSubscriber.objects.get_or_create(email=email)
-        if created:
-            logger.info("New newsletter subscription")
-        messages.success(request, gettext("You're subscribed. Thanks for joining!"))
-        return redirect(f"{reverse('challenges:landing')}#newsletter")
-
-    for error in form.errors.get("email", []):
-        messages.error(request, error)
-    return redirect(f"{reverse('challenges:landing')}#newsletter")
 
 
 @login_required

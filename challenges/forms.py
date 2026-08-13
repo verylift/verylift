@@ -439,7 +439,3 @@ class CustomGoalForm(forms.Form):
         for bound in self:
             errors.extend(f"{bound.label}: {e}" for e in bound.errors)
         return errors
-
-
-class NewsletterSubscribeForm(forms.Form):
-    email = forms.EmailField()

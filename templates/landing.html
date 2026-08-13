@@ -117,7 +117,7 @@
           <p class="mt-2 text-sm text-content-body">
             {% trans "Opt-in updates as we build. No spam, unsubscribe anytime." %}
           </p>
-          <form method="post" action="{% url 'challenges:newsletter-subscribe' %}" class="mt-4 flex flex-col sm:flex-row gap-2">
+          <form method="post" action="{% url 'core:newsletter-subscribe' %}" class="mt-4 flex flex-col sm:flex-row gap-2">
             {% csrf_token %}
             <input
               id="newsletter-email"
