@@ -47,26 +47,6 @@ def _accepted(user, challenge):
     )
 
 
-class TestLandingPage:
-    def test_anonymous_gets_landing_page(self, db):
-        response = Client().get(reverse("challenges:landing"))
-        assert response.status_code == 200
-        assert "landing.html" in [t.name for t in response.templates]
-
-    def test_landing_page_content_and_links(self, db):
-        content = Client().get(reverse("challenges:landing")).content.decode()
-        assert "Challenge your friends. Score fairly." in content
-        assert reverse("accounts:register") in content
-        assert reverse("accounts:login") in content
-        assert reverse("terms") in content
-        assert reverse("privacy") in content
-
-    def test_authenticated_user_redirected_to_dashboard(self, client):
-        response = client.get(reverse("challenges:landing"))
-        assert response.status_code == 302
-        assert response["Location"] == reverse("challenges:dashboard")
-
-
 class TestDashboardAuth:
     def test_anonymous_redirected_to_login(self, db):
         response = Client().get(reverse("challenges:dashboard"))

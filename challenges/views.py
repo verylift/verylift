@@ -183,17 +183,6 @@ def _notify_user_joined(challenge, joining_user):
     )
 
 
-def landing_view(request):
-    """Public landing page at ``/``.
-
-    Anonymous visitors get the marketing page (``landing.html``); already
-    authenticated visitors are sent straight to their dashboard.
-    """
-    if request.user.is_authenticated:
-        return redirect("challenges:dashboard")
-    return render(request, "landing.html")
-
-
 @login_required
 def dashboard_view(request):
     """Personal home page at ``/dashboard/``.
