@@ -2,6 +2,37 @@
 
 ## Unreleased
 
+## 2026.8.7 — 2026-08-12
+
+### Added
+- Settings page footer now shows the running app version
+- /healthz response includes the running app version
+- Draft challenges can now be deleted from the challenges page
+- `SQLITE_WAL=True` enables WAL mode on the SQLite backend, letting concurrent writes from multiple gunicorn workers proceed without risking "database is locked" errors (off by default to avoid changing the journal mode of existing self-hosted databases)
+- Log a completed set by hand from the Summary tab, for lifters who don't use a workout tracker — each summary card flips over to a target carousel with a date and confirm step
+- Manually logged sets are recorded with their source, keeping self-reported work distinguishable from Liftosaur-synced work
+- Upload a Hevy CSV export to log workouts, for free-tier Hevy users whose API access is Pro-gated
+- Account settings shows a "Support ID" to quote when reporting an issue
+- Reworked landing page including a newsletter signup and a "Join our Discord" card
+- Terms of Service and Privacy Policy versions are now tracked with per-user consent records; existing users are grandfathered in automatically
+- Signed-in users are prompted to re-consent if a tracked policy is updated with a new active version
+- Production errors and logs can be forwarded to GlitchTip (or any Sentry-compatible endpoint) by setting `GLITCHTIP_DSN`
+
+### Changed
+- Liftosaur syncs for a given user and challenge can now run once a minute instead of once every 10 minutes
+- The profile photo button in settings now reads "Save Photo" instead of "Upload Photo", matching the other settings sections
+- Challenge detail page tab button now reads "Goals" instead of "Standards"
+- Joining a challenge via invite link no longer requires a Liftosaur API key — manual self-report and Hevy CSV import work just as well
+- Signup now offers a choice of tracking method (Liftosaur, manual entry, or CSV import) instead of a single optional API key field
+- Privacy Policy and Terms of Service (v1.1) describe infrastructure and connected fitness-tracking services generically rather than naming specific vendors, and disclose the error-tracking/log-aggregation tooling used in production
+- Privacy Policy updated to v1.2, naming the self-hosted GlitchTip instance explicitly; existing users will be prompted to re-consent.
+
+### Fixed
+- The goal-setup wizard's "suggested from history" method now recognizes pooled lift history from any source, not just a connected Liftosaur key
+
+### Removed
+- The dashboard no longer shows a banner urging keyless users to connect a Liftosaur API key
+
 ## 2026.8.5 — 2026-08-09
 
 ### Added
