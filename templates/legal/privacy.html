@@ -20,15 +20,15 @@
           </tr>
           <tr>
             <td class="pr-4 py-0.5 font-medium text-content-subtle">Version</td>
-            <td class="py-0.5">1.1</td>
+            <td class="py-0.5">1.2</td>
           </tr>
           <tr>
             <td class="pr-4 py-0.5 font-medium text-content-subtle">Effective date</td>
-            <td class="py-0.5">2026-08-12</td>
+            <td class="py-0.5">2026-08-19</td>
           </tr>
           <tr>
             <td class="pr-4 py-0.5 font-medium text-content-subtle">Last updated</td>
-            <td class="py-0.5">2026-08-12</td>
+            <td class="py-0.5">2026-08-19</td>
           </tr>
         </tbody>
       </table>
@@ -150,7 +150,8 @@
           <li>
             <strong>Server logs</strong> — routine technical logs generated when you use the
             Service, used for debugging and keeping the service running. These are
-            forwarded to error-tracking and log-aggregation tooling we operate directly (see
+            forwarded to GlitchTip, an error-tracking and log-aggregation tool we run on a
+            self-hosted instance on infrastructure we control (see
             <a href="#s7" class="text-accent hover:underline">Sharing</a>), not a third-party
             processor.
           </li>
@@ -236,9 +237,10 @@
           sign in with single sign-on, our identity provider (login server). Sending a
           password-reset email discloses your email address and username to that mail relay.
           Server logs — which may include technical details like your IP address for
-          security purposes such as rate-limiting — are forwarded to error-tracking and
-          log-aggregation tooling that we operate directly on infrastructure we control; this
-          is not a third-party processor, and that data is not shared onward. We may disclose
+          security purposes such as rate-limiting — are forwarded to GlitchTip, an
+          error-tracking and log-aggregation tool running on a self-hosted instance on
+          infrastructure we control; this is not a third-party processor, and that data is
+          not shared onward. We may disclose
           information if required to do so by law.
         </p>
         <p>
@@ -252,9 +254,9 @@
       <section id="s8" class="space-y-2">
         <h2 class="text-lg font-semibold text-content-strong">8. International data transfers</h2>
         <p>
-          The Service's servers run in Canada, as does the error-tracking and log-aggregation
-          infrastructure we operate directly (see <a href="#s7" class="text-accent
-          hover:underline">Sharing</a>) — it introduces no new jurisdiction. Some requests the
+          The Service's servers run in Canada, as does our self-hosted GlitchTip instance (see
+          <a href="#s7" class="text-accent hover:underline">Sharing</a>) — it introduces no new
+          jurisdiction. Some requests the
           Service makes on your behalf do leave Canada: our mail relay (Migadu) is based in
           Switzerland, and Google Fonts (see <a href="#s6" class="text-accent
           hover:underline">Cookies &amp; tracking</a>) is served from Google's global

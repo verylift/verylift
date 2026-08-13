@@ -21,11 +21,15 @@ from django.urls import reverse
 
 from accounts.tests.factories import UserFactory
 from policies.models import Policy, PolicyConsent, PolicyVersion
+from policies.services import pending_versions_for
 
 pytestmark = pytest.mark.django_db
 
 grandfather_migration = importlib.import_module(
     "policies.migrations.0002_grandfather_existing_consent"
+)
+name_glitchtip_migration = importlib.import_module(
+    "policies.migrations.0003_name_glitchtip_in_privacy_v1_2"
 )
 
 
@@ -61,3 +65,48 @@ class TestGrandfatherExistingUsers:
         grandfather_migration.grandfather_existing_users(apps, None)
 
         assert not PolicyConsent.objects.filter(user=deactivated_user).exists()
+
+
+class TestAddPrivacyV1_2:
+    """Exercises the 0003 migration's data function, which bumps the Privacy
+    Policy to v1.2 without grandfathering consent -- unlike 0002, existing
+    users are expected to genuinely re-consent."""
+
+    def _seed_v1_1(self):
+        Policy.objects.filter(slug__in=["terms-of-service", "privacy-policy"]).delete()
+        grandfather_migration.grandfather_existing_users(apps, None)
+        return PolicyVersion.objects.get(policy__slug="privacy-policy", version="1.1")
+
+    def test_creates_exactly_one_new_active_v1_2_version(self):
+        self._seed_v1_1()
+
+        name_glitchtip_migration.add_privacy_v1_2(apps, None)
+
+        versions = PolicyVersion.objects.filter(
+            policy__slug="privacy-policy", version="1.2", is_active=True
+        )
+        assert versions.count() == 1
+        assert versions.get().url == reverse("privacy")
+
+    def test_deactivates_the_prior_active_v1_1_version(self):
+        v1_1 = self._seed_v1_1()
+
+        name_glitchtip_migration.add_privacy_v1_2(apps, None)
+
+        v1_1.refresh_from_db()
+        assert v1_1.is_active is False
+
+    def test_user_consented_to_v1_1_is_not_consented_to_v1_2(self):
+        v1_1 = self._seed_v1_1()
+        consented_user = UserFactory(is_active=True)
+        PolicyConsent.objects.create(
+            user=consented_user,
+            policy_version=v1_1,
+            method=PolicyConsent.Method.ADMIN_OVERRIDE,
+        )
+
+        name_glitchtip_migration.add_privacy_v1_2(apps, None)
+
+        v1_2 = PolicyVersion.objects.get(policy__slug="privacy-policy", version="1.2")
+        pending = pending_versions_for(consented_user)
+        assert v1_2 in pending

@@ -5,6 +5,7 @@ Verifies that root.settings_prod hardens the deployment and that
 """
 
 import importlib
+from unittest.mock import patch
 
 import pytest
 from django.core.management import call_command
@@ -20,6 +21,7 @@ def prod_settings(monkeypatch):
     )
     monkeypatch.setenv("ALLOWED_HOSTS", "verylift.example.com")
     monkeypatch.setenv("DATABASE_URL", "postgres://verylift:verylift@db:5432/verylift")
+    monkeypatch.delenv("GLITCHTIP_DSN", raising=False)
     import root.settings_prod as prod
 
     return importlib.reload(prod)
@@ -164,6 +166,48 @@ class TestCollectstaticManifest:
         ):
             call_command("collectstatic", "--noinput", verbosity=0)
         assert (tmp_path / "staticfiles.json").exists()
+
+
+class TestSentryInit:
+    def test_defaults_to_empty_dsn(self, prod_settings):
+        """No GLITCHTIP_DSN in the environment must not crash settings import.
+
+        The prod_settings fixture never sets GLITCHTIP_DSN; a successful import
+        already proves sentry_sdk.init(dsn="") didn't raise, but assert the
+        call shape too so a future refactor can't silently drop the dsn kwarg.
+        """
+        with patch("sentry_sdk.init") as mock_init:
+            import root.settings_prod as prod
+
+            importlib.reload(prod)
+
+        mock_init.assert_called_once()
+        _, kwargs = mock_init.call_args
+        assert kwargs["dsn"] == ""
+        assert kwargs["send_default_pii"] is False
+        assert kwargs["enable_logs"] is True
+
+    def test_init_called_with_env_dsn_and_no_pii(self, monkeypatch):
+        monkeypatch.setenv(
+            "SECRET_KEY",
+            "superduperultrasecretkeysuperduperultrasecretkeyok",
+        )
+        monkeypatch.setenv("ALLOWED_HOSTS", "verylift.example.com")
+        monkeypatch.setenv(
+            "DATABASE_URL", "postgres://verylift:verylift@db:5432/verylift"
+        )
+        monkeypatch.setenv("GLITCHTIP_DSN", "https://public@glitchtip.example.com/1")
+
+        with patch("sentry_sdk.init") as mock_init:
+            import root.settings_prod as prod
+
+            importlib.reload(prod)
+
+        mock_init.assert_called_once()
+        _, kwargs = mock_init.call_args
+        assert kwargs["dsn"] == "https://public@glitchtip.example.com/1"
+        assert kwargs["send_default_pii"] is False
+        assert kwargs["enable_logs"] is True
 
 
 class TestCheckDeploy:

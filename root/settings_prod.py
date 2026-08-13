@@ -8,11 +8,34 @@ request was HTTPS.
 Activate with: DJANGO_SETTINGS_MODULE=root.settings_prod
 """
 
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
+
 from .settings import *  # noqa: F403
 from .settings import env
 
 # DEBUG is force-disabled in production regardless of the .env value.
 DEBUG = False
+
+# Error tracking and log forwarding via a Sentry-compatible DSN. GLITCHTIP_DSN
+# is blank by default -- sentry_sdk.init with an empty dsn is a documented
+# no-op, so any deployment that never sets it simply doesn't send anything,
+# no separate on/off flag needed.
+#
+# send_default_pii=False: don't attach request bodies, cookies, or other
+# ambient PII sentry_sdk would otherwise infer -- events should carry only
+# what our own logger calls explicitly say.
+#
+# enable_logs=True forwards logger.* calls (see LOGGING below and CLAUDE.md's
+# logging conventions) to GlitchTip's Logs feature over the same DSN, so
+# existing logger.info/warning/exception call sites get log aggregation for
+# free without a separate shipping pipeline.
+sentry_sdk.init(
+    dsn=env("GLITCHTIP_DSN", default=""),
+    integrations=[DjangoIntegration()],
+    send_default_pii=False,
+    enable_logs=True,
+)
 
 # Required in production — no localhost default. Re-derived here (not just
 # inherited via the wildcard import above) because
