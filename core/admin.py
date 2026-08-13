@@ -1,4 +1,7 @@
+import csv
+
 from django.contrib import admin
+from django.http import HttpResponse
 
 from .models import NewsletterSubscriber, SiteSettings
 
@@ -8,6 +11,19 @@ class NewsletterSubscriberAdmin(admin.ModelAdmin):
     list_display = ["email", "created_at"]
     ordering = ["-created_at"]
     search_fields = ["email"]
+    actions = ["export_as_csv"]
+
+    @admin.action(description="Export selected as CSV")
+    def export_as_csv(self, request, queryset):
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = (
+            "attachment; filename=newsletter_subscribers.csv"
+        )
+        writer = csv.writer(response)
+        writer.writerow(["email", "created_at"])
+        for subscriber in queryset.order_by("-created_at"):
+            writer.writerow([subscriber.email, subscriber.created_at.isoformat()])
+        return response
 
 
 @admin.register(SiteSettings)
