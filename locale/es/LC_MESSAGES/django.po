@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-12 21:40+0000\n"
+"POT-Creation-Date: 2026-08-12 23:58+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -344,28 +344,28 @@ msgstr ""
 "Todavía no hay historial reciente ni un estándar publicado para este "
 "ejercicio."
 
-#: challenges/views.py:217
-msgid "You're subscribed. Thanks for joining the beta!"
-msgstr "Estás suscrito. ¡Gracias por unirte a la beta!"
+#: challenges/views.py:211
+msgid "You're subscribed. Thanks for joining!"
+msgstr "Estás suscrito. ¡Gracias por unirte!"
 
-#: challenges/views.py:526
+#: challenges/views.py:519
 msgid "Challenge is not active"
 msgstr "El reto no está activo"
 
-#: challenges/views.py:550
+#: challenges/views.py:543
 msgid "You were removed from this challenge and cannot rejoin with this link."
 msgstr ""
 "Se te eliminó de este reto y no puedes volver a unirte con este enlace."
 
-#: challenges/views.py:685
+#: challenges/views.py:678
 msgid "This challenge has ended; goals can no longer be set."
 msgstr "Este reto ha terminado; ya no se pueden establecer objetivos."
 
-#: challenges/views.py:692
+#: challenges/views.py:685
 msgid "Your chart for this challenge is locked and can't be changed."
 msgstr "Tu tabla para este desafío está bloqueada y no se puede cambiar."
 
-#: challenges/views.py:756
+#: challenges/views.py:749
 msgid ""
 "Couldn't refresh your Liftosaur history just now — showing the history we "
 "already have."
@@ -373,7 +373,7 @@ msgstr ""
 "No se pudo actualizar tu historial de Liftosaur ahora mismo; se muestra el "
 "historial que ya tenemos."
 
-#: challenges/views.py:1050
+#: challenges/views.py:1043
 msgid ""
 "Prefilled from FitnessVolt strength standards. Review every row before "
 "confirming — this chart is locked once you save it."
@@ -381,7 +381,7 @@ msgstr ""
 "Prellenado con los estándares de fuerza de FitnessVolt. Revisa cada fila "
 "antes de confirmar — esta tabla queda bloqueada en cuanto la guardes."
 
-#: challenges/views.py:1066
+#: challenges/views.py:1059
 #, python-brace-format
 msgid ""
 "Prefilled from your recent Liftosaur history, uplifted {percent}%. Review "
@@ -391,59 +391,59 @@ msgstr ""
 "del {percent}%. Revisa cada fila antes de confirmar — esta tabla queda "
 "bloqueada en cuanto la guardes."
 
-#: challenges/views.py:1150
+#: challenges/views.py:1143
 msgid "Set your goal to view this challenge."
 msgstr "Establece tu objetivo para ver este reto."
 
-#: challenges/views.py:1309
+#: challenges/views.py:1302
 msgid "Invalid rep count."
 msgstr "Número de repeticiones inválido."
 
-#: challenges/views.py:1314
+#: challenges/views.py:1307
 msgid "Invalid date."
 msgstr "Fecha inválida."
 
-#: challenges/views.py:1316
+#: challenges/views.py:1309
 msgid "Date cannot be in the future."
 msgstr "La fecha no puede ser futura."
 
-#: challenges/views.py:1327
+#: challenges/views.py:1320
 msgid "Could not log this lift."
 msgstr "No se pudo registrar este levantamiento."
 
-#: challenges/views.py:1333
+#: challenges/views.py:1326
 #, python-format
 msgid "Logged %(points)s point on %(lift)s."
 msgid_plural "Logged %(points)s points on %(lift)s."
 msgstr[0] "Registrado %(points)s punto en %(lift)s."
 msgstr[1] "Registrados %(points)s puntos en %(lift)s."
 
-#: challenges/views.py:1343
+#: challenges/views.py:1336
 msgid "Unknown lift for this challenge."
 msgstr "Levantamiento desconocido para este desafío."
 
-#: challenges/views.py:1419
+#: challenges/views.py:1412
 msgid "This challenge has already ended."
 msgstr "Este reto ya ha terminado."
 
-#: challenges/views.py:1433
+#: challenges/views.py:1426
 msgid "You cannot leave this challenge."
 msgstr "No puedes abandonar este reto."
 
-#: challenges/views.py:1440
+#: challenges/views.py:1433
 msgid "You have left the challenge."
 msgstr "Has abandonado el reto."
 
-#: challenges/views.py:1446 challenges/views.py:1454
+#: challenges/views.py:1439 challenges/views.py:1447
 #: templates/challenges/detail.html:574
 msgid "Leave Challenge"
 msgstr "Abandonar Reto"
 
-#: challenges/views.py:1447
+#: challenges/views.py:1440
 msgid "leave"
 msgstr "abandonar"
 
-#: challenges/views.py:1449
+#: challenges/views.py:1442
 msgid ""
 "Leaving freezes your scoring — no further points will be earned for you in "
 "this challenge. Your past entries stay visible. This action cannot be undone."
@@ -451,7 +451,7 @@ msgstr ""
 "Abandonar congela tu puntuación — no ganarás más puntos en este reto. Tus "
 "entradas anteriores seguirán visibles. Esta acción no se puede deshacer."
 
-#: challenges/views.py:1528 templates/accounts/_avatar_section.html:103
+#: challenges/views.py:1521 templates/accounts/_avatar_section.html:103
 #: templates/challenges/_history_window_section.html:41
 #: templates/challenges/_rename_section.html:31
 #: templates/challenges/_summary_card.html:76
@@ -463,37 +463,37 @@ msgstr ""
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: challenges/views.py:1559 challenges/views.py:1639
+#: challenges/views.py:1552 challenges/views.py:1632
 msgid "Former Participant"
 msgstr "Antiguo Participante"
 
-#: challenges/views.py:1599
+#: challenges/views.py:1592
 msgid "This challenge can no longer be modified."
 msgstr "Este reto ya no se puede modificar."
 
-#: challenges/views.py:1618
+#: challenges/views.py:1611
 msgid "The creator cannot be removed from their own challenge."
 msgstr "El creador no puede ser eliminado de su propio reto."
 
-#: challenges/views.py:1634
+#: challenges/views.py:1627
 msgid "This participant cannot be removed."
 msgstr "Este participante no se puede eliminar."
 
-#: challenges/views.py:1652
+#: challenges/views.py:1645
 #, python-format
 msgid "%(name)s has been removed from the challenge."
 msgstr "%(name)s ha sido eliminado/a del reto."
 
-#: challenges/views.py:1659 challenges/views.py:1668
+#: challenges/views.py:1652 challenges/views.py:1661
 msgid "Remove Participant"
 msgstr "Eliminar Participante"
 
-#: challenges/views.py:1660
+#: challenges/views.py:1653
 #, python-format
 msgid "remove %(name)s from"
 msgstr "eliminar a %(name)s de"
 
-#: challenges/views.py:1662
+#: challenges/views.py:1655
 msgid ""
 "Removing freezes their scoring — no further points will be earned for them "
 "in this challenge. Their past entries stay on the leaderboard. They cannot "
@@ -504,27 +504,27 @@ msgstr ""
 "unirse, ni siquiera con un enlace de invitación. Esta acción no se puede "
 "deshacer."
 
-#: challenges/views.py:1681
+#: challenges/views.py:1674
 msgid "This challenge can no longer be closed."
 msgstr "Este reto ya no se puede cerrar."
 
-#: challenges/views.py:1690
+#: challenges/views.py:1683
 msgid "Challenge closed."
 msgstr "Reto cerrado."
 
-#: challenges/views.py:1696 challenges/views.py:1705
+#: challenges/views.py:1689 challenges/views.py:1698
 msgid "Close Challenge"
 msgstr "Cerrar Reto"
 
-#: challenges/views.py:1697
+#: challenges/views.py:1690
 msgid "close"
 msgstr "cerrar"
 
-#: challenges/views.py:1698
+#: challenges/views.py:1691
 msgid " early"
 msgstr " anticipadamente"
 
-#: challenges/views.py:1700
+#: challenges/views.py:1693
 msgid ""
 "Closing runs a final sync for every participant, locks the leaderboard, and "
 "notifies everyone that the challenge has ended. This action cannot be undone."
@@ -533,59 +533,59 @@ msgstr ""
 "clasificación y notifica a todos que el reto ha terminado. Esta acción no se "
 "puede deshacer."
 
-#: challenges/views.py:1734
+#: challenges/views.py:1727
 msgid "This challenge can no longer be renamed."
 msgstr "Este reto ya no se puede renombrar."
 
-#: challenges/views.py:1747
+#: challenges/views.py:1740
 msgid "Challenge name updated."
 msgstr "Nombre del reto actualizado."
 
-#: challenges/views.py:1789
+#: challenges/views.py:1782
 msgid "This challenge's point-eligible window can no longer be changed."
 msgstr ""
 "La ventana de elegibilidad de puntos de este desafío ya no se puede cambiar."
 
-#: challenges/views.py:1807
+#: challenges/views.py:1800
 msgid "Point-eligible window updated."
 msgstr "Ventana de elegibilidad de puntos actualizada."
 
-#: challenges/views.py:1855
+#: challenges/views.py:1848
 msgid "This challenge can no longer accept invites."
 msgstr "Este reto ya no puede aceptar invitaciones."
 
-#: challenges/views.py:1865
+#: challenges/views.py:1858
 msgid "A new invite link has been generated."
 msgstr "Se ha generado un nuevo enlace de invitación."
 
-#: challenges/views.py:1921
+#: challenges/views.py:1914
 msgid "This challenge's ownership can no longer be transferred."
 msgstr "La propiedad de este reto ya no se puede transferir."
 
-#: challenges/views.py:1946
+#: challenges/views.py:1939
 msgid "Ownership can only be transferred to an active, accepted participant."
 msgstr ""
 "La propiedad solo se puede transferir a un participante activo y aceptado."
 
-#: challenges/views.py:1971
+#: challenges/views.py:1964
 #, python-format
 msgid "Ownership transferred to %(name)s."
 msgstr "Propiedad transferida a %(name)s."
 
-#: challenges/views.py:1978 challenges/views.py:1989
+#: challenges/views.py:1971 challenges/views.py:1982
 msgid "Transfer Ownership"
 msgstr "Transferir Propiedad"
 
-#: challenges/views.py:1979
+#: challenges/views.py:1972
 msgid "transfer ownership of"
 msgstr "transferir la propiedad de"
 
-#: challenges/views.py:1980
+#: challenges/views.py:1973
 #, python-format
 msgid " to %(name)s"
 msgstr " a %(name)s"
 
-#: challenges/views.py:1982
+#: challenges/views.py:1975
 #, python-format
 msgid ""
 "%(name)s will gain full control of this challenge — closing, cancelling, "
@@ -598,24 +598,24 @@ msgstr ""
 "nuevo propietario puede transferirte la propiedad de vuelta, por lo que no "
 "puedes deshacer esto por tu cuenta."
 
-#: challenges/views.py:2007
+#: challenges/views.py:2000
 msgid "This challenge can no longer be cancelled."
 msgstr "Este reto ya no se puede cancelar."
 
-#: challenges/views.py:2017
+#: challenges/views.py:2010
 msgid "Challenge cancelled."
 msgstr "Reto cancelado."
 
-#: challenges/views.py:2023 challenges/views.py:2032
+#: challenges/views.py:2016 challenges/views.py:2025
 #: templates/challenges/settings.html:45
 msgid "Cancel Challenge"
 msgstr "Cancelar Reto"
 
-#: challenges/views.py:2024
+#: challenges/views.py:2017
 msgid "cancel"
 msgstr "cancelar"
 
-#: challenges/views.py:2026
+#: challenges/views.py:2019
 msgid ""
 "Cancelling voids the challenge entirely — no final sync runs, no scores are "
 "recorded, and no closing notifications are sent. The challenge is removed "
@@ -626,15 +626,15 @@ msgstr ""
 "cierre. El reto se elimina de la lista de Buscar Retos. Esta acción no se "
 "puede deshacer."
 
-#: challenges/views.py:2034
+#: challenges/views.py:2027
 msgid "Go Back"
 msgstr "Volver"
 
-#: challenges/views.py:2067
+#: challenges/views.py:2060
 msgid "Only draft challenges can be deleted."
 msgstr "Solo se pueden eliminar los retos en borrador."
 
-#: challenges/views.py:2071
+#: challenges/views.py:2064
 msgid "Draft challenge deleted."
 msgstr "Reto en borrador eliminado."
 
@@ -806,100 +806,6 @@ msgstr "Algo salió mal"
 msgid "An unexpected error occurred. Please try again in a moment."
 msgstr "Se produjo un error inesperado. Inténtalo de nuevo en un momento."
 
-#: templates/about.html:4 templates/about.html:20 templates/landing.html:169
-msgid "About Us"
-msgstr "Sobre nosotros"
-
-#: templates/about.html:10
-msgid "← Back"
-msgstr "← Volver"
-
-#: templates/about.html:22
-msgid ""
-"\n"
-"        We're a small team of lifters who got tired of spreadsheets and\n"
-"        group-chat leaderboards, so we built the thing we wanted to use\n"
-"        ourselves.\n"
-"        "
-msgstr ""
-"\n"
-"        Somos un pequeño equipo de levantadores cansados de hojas de "
-"cálculo y\n"
-"        tablas de clasificación en chats grupales, así que construimos lo "
-"que\n"
-"        nosotros mismos queríamos usar.\n"
-"        "
-
-#: templates/about.html:38
-msgid "Tomi — role TBD"
-msgstr "Tomi — rol por definir"
-
-#: templates/about.html:39 templates/about.html:51
-msgid "Co-founder"
-msgstr "Cofundador/a"
-
-#: templates/about.html:41 templates/about.html:53
-msgid ""
-"[bio placeholder — supplied before merge. 2-4 sentences on background, why "
-"this project, what they do day-to-day.]"
-msgstr ""
-"[biografía provisional — se completará antes de fusionar. 2-4 frases sobre "
-"su trayectoria, por qué este proyecto, y qué hace en su día a día.]"
-
-#: templates/about.html:50
-msgid "Jules — role TBD"
-msgstr "Jules — rol por definir"
-
-#: templates/about.html:60
-msgid "Our story"
-msgstr "Nuestra historia"
-
-#: templates/about.html:62
-msgid ""
-"\"Let's have a friendly competition.\" she said. \"Whoever can do the "
-"proficient lifts on this standards chart by the end of August wins\"."
-msgstr ""
-"\"Hagamos una competencia amistosa\", dijo ella. \"Quien logre los "
-"levantamientos de nivel competente de esta tabla de estándares antes de "
-"que termine agosto, gana\"."
-
-#: templates/about.html:65
-msgid ""
-"[Origin story placeholder — supplied before merge. What prompted building "
-"this, the friend-group backstory, why a strength-challenge app instead of "
-"another spreadsheet, and what \"fuckarounditis\" means to the team.]"
-msgstr ""
-"[historia de origen provisional — se completará antes de fusionar. Qué "
-"motivó construir esto, la historia del grupo de amigos, por qué una app de "
-"retos de fuerza en lugar de otra hoja de cálculo, y qué significa "
-"\"fuckarounditis\" para el equipo.]"
-
-#: templates/about.html:72 templates/landing.html:165
-#: templates/registration/login.html:81
-#: templates/registration/password_reset.html:49
-#: templates/registration/register.html:168
-msgid "Terms"
-msgstr "Términos"
-
-#: templates/about.html:74 templates/landing.html:167
-#: templates/registration/login.html:83
-#: templates/registration/password_reset.html:51
-#: templates/registration/register.html:170
-msgid "Privacy"
-msgstr "Privacidad"
-
-#: templates/about.html:77 templates/landing.html:172
-msgid "Built with ❤️ in 🇨🇦"
-msgstr "Hecho con ❤️ en 🇨🇦"
-
-#: templates/about.html:78 templates/landing.html:173
-msgid "GitHub"
-msgstr "GitHub"
-
-#: templates/about.html:84 templates/landing.html:179
-msgid "Discord"
-msgstr "Discord"
-
 #: templates/accounts/_avatar_section.html:4
 msgid "Profile Photo"
 msgstr "Foto de perfil"
@@ -945,7 +851,7 @@ msgstr "Correo electrónico"
 msgid "Saving email address…"
 msgstr "Guardando el correo electrónico…"
 
-#: templates/accounts/_email_section.html:16 templates/landing.html:123
+#: templates/accounts/_email_section.html:16
 #: templates/registration/password_reset.html:24
 #: templates/registration/register.html:51
 msgid "Email address"
@@ -1827,7 +1733,7 @@ msgstr "Propietario: %(owner)s"
 #: templates/challenges/find.html:4 templates/challenges/find.html:8
 #: templates/components/sidebar.html:50 templates/dashboard.html:33
 #: templates/dashboard.html:61 templates/dashboard.html:64
-#: templates/landing.html:72
+#: templates/landing.html:73
 msgid "Challenges"
 msgstr "Retos"
 
@@ -2281,99 +2187,110 @@ msgid "Why very lift"
 msgstr "Por qué very lift"
 
 #: templates/landing.html:39
-msgid "Break fuckarounditis"
-msgstr "Vence la fuckarounditis"
+msgid "Motivation without the group-class price tag"
+msgstr "Motivación sin el precio de una clase grupal"
 
 #: templates/landing.html:41
 msgid ""
 "\n"
-"            A time-boxed challenge with friends watching is the push that "
-"turns\n"
-"            \"I should lift today\" into actually lifting today.\n"
+"            Get the social accountability of a training group without "
+"paying\n"
+"            for one.\n"
 "            "
 msgstr ""
 "\n"
-"            Un reto con límite de tiempo y amigos observando es el empujón "
-"que\n"
-"            convierte \"debería entrenar hoy\" en entrenar de verdad hoy.\n"
+"            Obtén la responsabilidad social de un grupo de entrenamiento\n"
+"            sin pagar por uno.\n"
 "            "
 
 #: templates/landing.html:48
-msgid "Motivation without the group-class price tag"
-msgstr "Motivación sin el precio de una clase grupal"
+msgid "See your progress instantly"
+msgstr "Ve tu progreso al instante"
 
 #: templates/landing.html:50
 msgid ""
 "\n"
-"            Get the social accountability of a training group — friends "
-"checking\n"
-"            in on your progress — without paying for one.\n"
-"            "
-msgstr ""
-"\n"
-"            Obtén la responsabilidad social de un grupo de entrenamiento "
-"—\n"
-"            amigos que siguen tu progreso— sin pagar por uno.\n"
-"            "
-
-#: templates/landing.html:57
-msgid "See your progress instantly"
-msgstr "Ve tu progreso al instante"
-
-#: templates/landing.html:59
-msgid ""
-"\n"
-"            Every lift updates your points and standing in real time — "
+"            Every lift updates your points and standing in real time: "
 "visual,\n"
 "            gamified, and satisfying to watch climb.\n"
 "            "
 msgstr ""
 "\n"
 "            Cada levantamiento actualiza tus puntos y posición en tiempo "
-"real\n"
-"            —visual, gamificado y satisfactorio de ver crecer.\n"
+"real:\n"
+"            visual, gamificado y satisfactorio de ver crecer.\n"
 "            "
 
-#: templates/landing.html:69
+#: templates/landing.html:57
+msgid "Break fuckarounditis"
+msgstr "Vence la fuckarounditis"
+
+#: templates/landing.html:59
+msgid ""
+"\n"
+"            <a href=\"https://leangains.com/fuckarounditis/\" class=\"text-"
+"accent hover:underline\" target=\"_blank\" rel=\"noopener "
+"noreferrer\">Fuckarounditis</a>\n"
+"            can be overcome by having realistic goals and working "
+"consistently\n"
+"            toward them. very lift makes that easy.\n"
+"            "
+msgstr ""
+"\n"
+"            <a href=\"https://leangains.com/fuckarounditis/\" class=\"text-"
+"accent hover:underline\" target=\"_blank\" rel=\"noopener "
+"noreferrer\">Fuckarounditis</a>\n"
+"            se puede superar con objetivos realistas y trabajando de forma\n"
+"            constante hacia ellos. very lift lo hace fácil.\n"
+"            "
+
+#: templates/landing.html:70
 msgid "How it works"
 msgstr "Cómo funciona"
 
-#: templates/landing.html:74
+#: templates/landing.html:75
 msgid ""
 "\n"
 "            Create a time-boxed challenge, invite friends, and pick the "
 "lifts\n"
-"            everyone competes on.\n"
+"            everyone competes on. Each person then sets their own goals to\n"
+"            chase.\n"
 "            "
 msgstr ""
 "\n"
 "            Crea un desafío con límite de tiempo, invita a amigos y elige\n"
-"            los ejercicios en los que todos competirán.\n"
+"            los ejercicios en los que todos competirán. Cada persona\n"
+"            establece luego sus propios objetivos a alcanzar.\n"
 "            "
 
-#: templates/landing.html:81
+#: templates/landing.html:83
 msgid "Automatic scoring"
 msgstr "Puntuación automática"
 
-#: templates/landing.html:83
+#: templates/landing.html:85
 msgid ""
 "\n"
-"            Syncs lift data from Liftosaur and awards points when you hit "
+"            Syncs lift data from workout trackers like <a href=\"https://www."
+"liftosaur.com\" class=\"text-accent hover:underline\" target=\"_blank\" "
+"rel=\"noopener noreferrer\">Liftosaur</a> and awards points when you hit "
 "the\n"
 "            rep-max targets on your own goal chart.\n"
 "            "
 msgstr ""
 "\n"
-"            Sincroniza tus datos de levantamientos desde Liftosaur y otorga\n"
+"            Sincroniza tus datos de levantamientos desde aplicaciones de "
+"seguimiento como <a href=\"https://www.liftosaur.com\" class=\"text-accent "
+"hover:underline\" target=\"_blank\" rel=\"noopener noreferrer\">Liftosaur</"
+"a> y otorga\n"
 "            puntos cuando alcanzas los objetivos de repeticiones máximas de\n"
 "            tu propia tabla.\n"
 "            "
 
-#: templates/landing.html:90
+#: templates/landing.html:92
 msgid "Fair by design"
 msgstr "Justa por diseño"
 
-#: templates/landing.html:92
+#: templates/landing.html:94
 msgid ""
 "\n"
 "            Each participant sets their own targets when they join, so "
@@ -2388,11 +2305,11 @@ msgstr ""
 "            tabla, no la de otra persona.\n"
 "            "
 
-#: templates/landing.html:99
+#: templates/landing.html:101
 msgid "Live leaderboard"
 msgstr "Clasificación en vivo"
 
-#: templates/landing.html:101
+#: templates/landing.html:103
 msgid ""
 "\n"
 "            A points chart, personal performance cards, and gap-to-next-"
@@ -2408,52 +2325,70 @@ msgstr ""
 "            por ejercicio.\n"
 "            "
 
-#: templates/landing.html:111
-msgid "Join the beta"
-msgstr "Únete a la beta"
-
 #: templates/landing.html:113
-msgid "Newsletter updates, or hop into our Discord — the beta home base."
-msgstr "Novedades por correo, o entra a nuestro Discord — la sede de la beta."
+msgid "Stay in touch"
+msgstr "Mantente en contacto"
 
-#: templates/landing.html:117
+#: templates/landing.html:116
 msgid "Get the newsletter"
 msgstr "Recibe el boletín"
 
-#: templates/landing.html:119
+#: templates/landing.html:118
 msgid "Opt-in updates as we build. No spam, unsubscribe anytime."
 msgstr ""
-"Novedades opcionales mientras construimos. Sin spam, cancela cuando "
-"quieras."
+"Novedades opcionales mientras construimos. Sin spam, cancela cuando quieras."
 
-#: templates/landing.html:129
+#: templates/landing.html:127
 msgid "you@example.com"
 msgstr "tu@ejemplo.com"
 
-#: templates/landing.html:134
+#: templates/landing.html:132
 msgid "Subscribe"
 msgstr "Suscribirse"
 
-#: templates/landing.html:138
-msgid "By subscribing you agree to receive occasional emails from Very Lift."
-msgstr ""
-"Al suscribirte aceptas recibir correos ocasionales de Very Lift."
+#: templates/landing.html:136
+msgid "By subscribing, you agree to receive emails from us."
+msgstr "Al suscribirte, aceptas recibir correos de nuestra parte."
 
-#: templates/landing.html:142
+#: templates/landing.html:140
 msgid "Join our Discord"
 msgstr "Únete a nuestro Discord"
 
-#: templates/landing.html:144
+#: templates/landing.html:142
 msgid ""
-"The beta home base — chat with other lifters, share feedback, and help shape "
-"the app."
+"Find and share challenges, chat with other lifters, share feedback, and help "
+"shape the app."
 msgstr ""
-"La sede de la beta — chatea con otros levantadores, comparte comentarios y "
-"ayuda a dar forma a la app."
+"Encuentra y comparte desafíos, chatea con otros levantadores, comparte "
+"comentarios y ayuda a dar forma a la app."
 
-#: templates/landing.html:155
+#: templates/landing.html:152
 msgid "Join Discord"
 msgstr "Unirse a Discord"
+
+#: templates/landing.html:162 templates/registration/login.html:81
+#: templates/registration/password_reset.html:49
+#: templates/registration/register.html:168
+msgid "Terms"
+msgstr "Términos"
+
+#: templates/landing.html:164 templates/registration/login.html:83
+#: templates/registration/password_reset.html:51
+#: templates/registration/register.html:170
+msgid "Privacy"
+msgstr "Privacidad"
+
+#: templates/landing.html:167
+msgid "GitHub"
+msgstr "GitHub"
+
+#: templates/landing.html:172
+msgid "Discord"
+msgstr "Discord"
+
+#: templates/landing.html:179
+msgid "Made with ❤️ by 🏳️‍🌈 in 🇨🇦"
+msgstr "Hecho con ❤️ por 🏳️‍🌈 en 🇨🇦"
 
 #: templates/notifications/_notification_list.html:12
 msgid "Mark all as read"
