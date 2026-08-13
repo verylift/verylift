@@ -57,7 +57,7 @@ from challenges.services import (
 )
 from challenges.standards import covered_lift_names
 from core.http import is_htmx
-from core.models import NewsletterSubscriber
+from core.models import NewsletterSubscriber, SiteSettings
 from fitnessvolt.services import standards_method_available
 from liftosaur.models import LiftHistory
 from liftosaur.services import (
@@ -193,7 +193,8 @@ def landing_view(request):
     """
     if request.user.is_authenticated:
         return redirect("challenges:dashboard")
-    return render(request, "landing.html")
+    context = {"discord_invite_url": SiteSettings.load().discord_invite_url}
+    return render(request, "landing.html", context)
 
 
 def newsletter_subscribe_view(request):

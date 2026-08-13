@@ -99,7 +99,6 @@ TEMPLATES = [
                 "django.template.context_processors.i18n",
                 "notifications.context_processors.unread_notification_count",
                 "core.context_processors.app_version",
-                "core.context_processors.discord_invite_url",
             ],
         },
     },
