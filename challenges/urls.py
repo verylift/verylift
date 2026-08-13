@@ -9,7 +9,6 @@ app_name = "challenges"
 
 urlpatterns = [
     path("", views.landing_view, name="landing"),
-    path("about/", views.about_view, name="about"),
     path(
         "newsletter/subscribe/",
         views.newsletter_subscribe_view,

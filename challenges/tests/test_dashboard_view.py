@@ -60,7 +60,6 @@ class TestLandingPage:
         assert reverse("accounts:login") in content
         assert reverse("terms") in content
         assert reverse("privacy") in content
-        assert reverse("challenges:about") in content
         assert reverse("challenges:newsletter-subscribe") in content
         assert reverse("set_language") in content
 

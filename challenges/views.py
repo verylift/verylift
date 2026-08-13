@@ -196,11 +196,6 @@ def landing_view(request):
     return render(request, "landing.html")
 
 
-def about_view(request):
-    """Public "About Us" page at ``/about/``, reachable from anonymous pages."""
-    return render(request, "about.html")
-
-
 def newsletter_subscribe_view(request):
     """Handles the "Get the newsletter" form on the landing page.
 
