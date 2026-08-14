@@ -1,12 +1,17 @@
 """Tests for LocalLoginView and local-auth related code."""
 
+from datetime import timedelta
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.test import Client
 from django.urls import reverse
+from django.utils import timezone
 
 from accounts.tests.factories import UserFactory
+from challenges.models import Challenge
+from challenges.tests.factories import ChallengeFactory, ChallengeInviteLinkFactory
 
 User = get_user_model()
 
@@ -58,6 +63,62 @@ class TestLocalLoginView:
             {"username": "nobody", "password": "wrong"},
         )
         assert response.status_code == 200
+
+
+@pytest.mark.django_db
+class TestLocalLoginInviteRedirect:
+    """TASK-249 gap (#39): local login must honor a pending invite-link token
+    the same way registration and OIDC login already do."""
+
+    @pytest.fixture
+    def link(self):
+        challenge = ChallengeFactory(status=Challenge.Status.ACTIVE)
+        return ChallengeInviteLinkFactory(
+            challenge=challenge,
+            revoked_at=None,
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+
+    def _login(self, client, next_url=None):
+        user = UserFactory(username="localdev")
+        user.set_password("secret")
+        user.save()
+        data = {"username": "localdev", "password": "secret"}
+        if next_url:
+            data["next"] = next_url
+        return client.post(reverse("accounts:login"), data)
+
+    def test_usable_invite_token_redirects_into_the_challenge(self, link):
+        client = Client()
+        session = client.session
+        session["invite_token"] = link.token
+        session.save()
+
+        response = self._login(client, next_url="/settings/")
+
+        assert response.status_code == 302
+        assert response["Location"] == reverse(
+            "challenges:invite-link", args=[link.token]
+        )
+
+    def test_no_invite_token_leaves_next_behavior_untouched(self):
+        client = Client()
+
+        response = self._login(client, next_url="/settings/")
+
+        assert response.status_code == 302
+        assert response["Location"] == "/settings/"
+
+    def test_stale_invite_token_falls_back_to_next_without_erroring(self):
+        client = Client()
+        session = client.session
+        session["invite_token"] = "does-not-exist"
+        session.save()
+
+        response = self._login(client, next_url="/settings/")
+
+        assert response.status_code == 302
+        assert response["Location"] == "/settings/"
 
 
 @pytest.mark.django_db
