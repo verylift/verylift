@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## 2026.8.9 — 2026-08-14
+
+### Added
+- Challenges now automatically close within 30 minutes of their real end time in every creator timezone (including half-hour offsets), via a new in-container scheduler — no more challenges stuck at ACTIVE indefinitely.
+- Following a challenge invite link now shows an accept/decline preview page (host, stats, lifts, leaderboard, points-over-time chart) before joining, instead of joining automatically
+
+### Changed
+- Leaderboard cards on the challenge detail and invite-accept pages show the full participant list in a scrollable panel instead of only whoever happened to already be scored
+- `close_challenges` now fires 30 seconds past each half-hour tick instead of exactly on it, avoiding a boundary race for half-hour-offset timezones (configurable via `CLOSE_CHALLENGES_SCHEDULER_SKEW_SECONDS`)
+
+### Fixed
+- Local sign-in now honors a pending challenge invite, matching existing registration/SSO behavior.
+- Leaderboards now show every accepted participant, including those with zero points (shown tied-last, or with "-" ranks if nobody has scored yet), instead of hiding unscored participants
+
 ## 2026.8.8 — 2026-08-13
 
 ### Added
