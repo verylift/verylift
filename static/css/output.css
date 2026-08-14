@@ -1749,6 +1749,10 @@ body {
   padding-left: 0.5rem;
 }
 
+.pr-2 {
+  padding-right: 0.5rem;
+}
+
 .pr-4 {
   padding-right: 1rem;
 }
@@ -2033,6 +2037,10 @@ body {
 
 .\[scroll-snap-stop\:always\] {
   scroll-snap-stop: always;
+}
+
+.\[scrollbar-gutter\:stable\] {
+  scrollbar-gutter: stable;
 }
 
 .\[scrollbar-width\:none\] {
@@ -2388,10 +2396,6 @@ body {
     top: 0px;
   }
 
-  .md\:mb-10 {
-    margin-bottom: 2.5rem;
-  }
-
   .md\:block {
     display: block;
   }
@@ -2410,6 +2414,18 @@ body {
 
   .md\:h-auto {
     height: auto;
+  }
+
+  .md\:h-full {
+    height: 100%;
+  }
+
+  .md\:max-h-none {
+    max-height: none;
+  }
+
+  .md\:min-h-0 {
+    min-height: 0px;
   }
 
   .md\:min-h-\[20rem\] {
@@ -2446,10 +2462,6 @@ body {
 
   .md\:flex-col {
     flex-direction: column;
-  }
-
-  .md\:items-center {
-    align-items: center;
   }
 
   .md\:gap-4 {

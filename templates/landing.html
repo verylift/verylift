@@ -1,15 +1,11 @@
-{% extends "base/base.html" %}
+{% extends "base/public.html" %}
 {% load i18n %}
 
 {% block title %}very lift — {% trans "Challenge your friends" %}{% endblock %}
 
-{% block content %}
-<div class="min-h-full flex flex-col">
-  <header class="py-6 px-4 flex items-center justify-between max-w-4xl mx-auto w-full">
-    <span class="text-accent font-bold text-2xl">very lift</span>
-    {% include "components/_language_switcher.html" %}
-  </header>
+{% block header_right %}{% include "components/_language_switcher.html" %}{% endblock %}
 
+{% block page_body %}
   <main class="flex-1">
     <section class="max-w-3xl mx-auto px-4 py-12 text-center">
       <h1 class="text-4xl sm:text-5xl font-extrabold text-content-strong tracking-tight">
@@ -183,5 +179,4 @@
       </span>
     </div>
   </footer>
-</div>
 {% endblock %}
