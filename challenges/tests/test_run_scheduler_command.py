@@ -20,17 +20,19 @@ class TestBuildScheduler:
         assert job is not None
         assert isinstance(job.trigger, CronTrigger)
         fields = {field.name: str(field) for field in job.trigger.fields}
-        assert fields["minute"] == "5,35"
+        assert fields["minute"] == "0,30"
+        assert fields["second"] == "30"
         assert job.max_instances == 1
 
-    def test_skew_setting_shifts_the_cron_minutes(self, settings):
-        settings.CLOSE_CHALLENGES_SCHEDULER_SKEW_MINUTES = 2
+    def test_skew_setting_shifts_the_cron_seconds(self, settings):
+        settings.CLOSE_CHALLENGES_SCHEDULER_SKEW_SECONDS = 2
 
         scheduler = build_scheduler()
 
         job = scheduler.get_job("close_challenges")
         fields = {field.name: str(field) for field in job.trigger.fields}
-        assert fields["minute"] == "2,32"
+        assert fields["minute"] == "0,30"
+        assert fields["second"] == "2"
 
     def test_job_target_invokes_close_challenges_job(self):
         scheduler = build_scheduler()

@@ -331,16 +331,16 @@ CHALLENGES_GOAL_SUGGESTION_LOOKBACK_DAYS = env.int(
 # owner can regenerate at any time, which revokes the incumbent.
 CHALLENGES_INVITE_LINK_TTL_DAYS = env.int("CHALLENGES_INVITE_LINK_TTL_DAYS", default=7)
 
-# Minutes past each half hour the close_challenges scheduler fires (e.g. 5 ->
-# :05/:35 instead of :00/:30). Challenge end instants are always an exact
-# end-of-day instant in the creator's timezone, never an arbitrary time -- for
-# half-hour-offset timezones (Newfoundland UTC-3:30, India UTC+5:30, etc.)
-# that instant lands within a fraction of a second of the un-skewed :00/:30
-# tick, which is exactly why the half-hour cadence was chosen. The skew
-# guarantees the sweep always observes "already past" rather than racing a
-# near-simultaneous tick.
-CLOSE_CHALLENGES_SCHEDULER_SKEW_MINUTES = env.int(
-    "CLOSE_CHALLENGES_SCHEDULER_SKEW_MINUTES", default=5
+# Seconds past each half-hour tick the close_challenges scheduler fires (e.g.
+# 30 -> :00:30/:30:30 instead of exactly :00:00/:30:00). Challenge end
+# instants are always an exact end-of-day instant in the creator's timezone,
+# never an arbitrary time -- for half-hour-offset timezones (Newfoundland
+# UTC-3:30, India UTC+5:30, etc.) that instant lands within a fraction of a
+# second of the un-skewed tick, which is exactly why the half-hour cadence
+# was chosen. The skew guarantees the sweep always observes "already past"
+# rather than racing a near-simultaneous tick.
+CLOSE_CHALLENGES_SCHEDULER_SKEW_SECONDS = env.int(
+    "CLOSE_CHALLENGES_SCHEDULER_SKEW_SECONDS", default=30
 )
 
 # Generic OIDC relying-party config. Any spec-compliant provider (Authentik,
