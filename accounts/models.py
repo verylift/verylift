@@ -93,6 +93,17 @@ class User(AbstractBaseUser, PermissionsMixin):
     # update never requires a migration.
     timezone = models.CharField(max_length=64, blank=True, default="")
 
+    # Best-known browser-detected IANA timezone (TASK-300), refreshed
+    # opportunistically by accounts.middleware.UserTimezoneMiddleware whenever
+    # the pp_timezone cookie resolves to something new. Distinct from the
+    # pinned `timezone` field above: this exists purely so code with no live
+    # request to read that cookie from (e.g. the close_challenges cron) has
+    # something better than UTC to fall back to for an "automatic" account,
+    # without turning "automatic" into a de-facto pin for the live
+    # per-request rendering path, which must stay exactly as dynamic as it
+    # already is.
+    detected_timezone = models.CharField(max_length=64, blank=True, default="")
+
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     deactivated_at = models.DateTimeField(null=True, blank=True)

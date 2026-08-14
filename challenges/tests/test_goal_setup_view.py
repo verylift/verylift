@@ -217,7 +217,7 @@ class TestWizardShellCentering:
         authed_client.post(_url(challenge), {"method": "custom"})
         resp = authed_client.get(_url(challenge))
         assert b"data-wizard-shell" in resp.content
-        assert b"max-w-4xl" in resp.content
+        assert b"max-w-6xl" in resp.content
 
     def test_inputs_step_renders_the_centered_shell(
         self, authed_client, participant, challenge, user

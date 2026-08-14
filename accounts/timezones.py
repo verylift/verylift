@@ -55,6 +55,33 @@ def grouped_timezones() -> list[tuple[str, list[str]]]:
     return GROUPED_TIMEZONES
 
 
+def cookie_timezone(request) -> str | None:
+    """The browser-detected timezone from the ``pp_timezone`` cookie, if valid.
+
+    Split out of ``resolve_timezone`` (TASK-300) so
+    ``accounts.middleware.UserTimezoneMiddleware`` can also read just this
+    part -- to opportunistically persist it onto ``User.detected_timezone``
+    -- without re-deriving the pinned-``User.timezone`` priority above it.
+    """
+    raw_cookie_value = request.COOKIES.get(TIMEZONE_COOKIE_NAME)
+    if not raw_cookie_value:
+        return None
+    # request.COOKIES holds the raw cookie-header value verbatim -- Django
+    # does not URL-decode it the way it does request.GET/POST. The
+    # detection script writes it via encodeURIComponent (belt-and-suspenders
+    # against a future browser reporting a zone name with characters that
+    # do need escaping), so "/" comes back as "%2F" and every real zone
+    # name with a "/" (i.e. all but "UTC" itself) would otherwise fail
+    # validation and silently fall back to UTC.
+    cookie_value = unquote(raw_cookie_value)
+    if is_valid_timezone(cookie_value):
+        return cookie_value
+    logger.debug(
+        "Ignoring invalid %s cookie: %r", TIMEZONE_COOKIE_NAME, raw_cookie_value
+    )
+    return None
+
+
 def resolve_timezone(request) -> str | None:
     """Return the timezone that should be activated for ``request``.
 
@@ -72,23 +99,7 @@ def resolve_timezone(request) -> str | None:
             user.timezone,
         )
 
-    raw_cookie_value = request.COOKIES.get(TIMEZONE_COOKIE_NAME)
-    if raw_cookie_value:
-        # request.COOKIES holds the raw cookie-header value verbatim -- Django
-        # does not URL-decode it the way it does request.GET/POST. The
-        # detection script writes it via encodeURIComponent (belt-and-suspenders
-        # against a future browser reporting a zone name with characters that
-        # do need escaping), so "/" comes back as "%2F" and every real zone
-        # name with a "/" (i.e. all but "UTC" itself) would otherwise fail
-        # validation and silently fall back to UTC.
-        cookie_value = unquote(raw_cookie_value)
-        if is_valid_timezone(cookie_value):
-            return cookie_value
-        logger.debug(
-            "Ignoring invalid %s cookie: %r", TIMEZONE_COOKIE_NAME, raw_cookie_value
-        )
-
-    return None
+    return cookie_timezone(request)
 
 
 def with_detect_param(url: str) -> str:

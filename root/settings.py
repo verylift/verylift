@@ -198,6 +198,11 @@ RATELIMIT_PASSWORD_RESET_EMAIL = env("RATELIMIT_PASSWORD_RESET_EMAIL", default="
 # rather than defending a secret, so a looser rate than the auth endpoints
 # above is fine.
 RATELIMIT_NEWSLETTER_IP = env("RATELIMIT_NEWSLETTER_IP", default="5/m")
+# Invite-link join landing page (TASK-300). Tokens are 8 characters/48 bits
+# of entropy (matching Discord invite codes) -- plenty against a naive brute
+# force, but this bounds a fast unthrottled scan across many guesses from one
+# IP the same way the auth endpoints above are bounded.
+RATELIMIT_INVITE_LINK_IP = env("RATELIMIT_INVITE_LINK_IP", default="20/m")
 
 _VALIDATORS = "django.contrib.auth.password_validation"
 AUTH_PASSWORD_VALIDATORS = [

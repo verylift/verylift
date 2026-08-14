@@ -3,7 +3,7 @@
 
 {% block title %}{% blocktrans with name=challenge.name %}Set Your Goal — {{ name }}{% endblocktrans %}{% endblock %}
 
-{% block wizard_width %}max-w-4xl{% endblock %}
+{% block wizard_width %}max-w-6xl{% endblock %}
 
 {% block wizard_body %}
     {% if step_number %}
@@ -100,7 +100,7 @@
           <textarea data-llm-prompt class="hidden" aria-hidden="true">{{ llm_prompt }}</textarea>
         </div>
         <textarea name="targets_json" rows="6"
-                  class="w-full bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm font-mono focus:outline-none focus:border-accent"
+                  class="w-full min-h-[55vh] bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm font-mono focus:outline-none focus:border-accent"
                   placeholder='{&#10;  "name": "Spring targets",&#10;  "unit": "{{ display_unit }}",&#10;  "targets": {&#10;    "Bench Press": {"1": 100, "2": 95, "...": "...", "10": 70}&#10;  }&#10;}'>{{ targets_json }}</textarea>
       </section>
       {% endif %}

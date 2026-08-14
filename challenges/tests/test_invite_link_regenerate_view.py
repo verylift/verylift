@@ -1,4 +1,4 @@
-"""Tests for the owner-facing invite-link regenerate action (TASK-249)."""
+"""Tests for the owner-facing invite-link regenerate action (TASK-249, TASK-300)."""
 
 import pytest
 from django.test import Client
@@ -86,3 +86,38 @@ class TestRegenerateInviteLinkView:
         url = reverse("challenges:regenerate-invite-link", args=[challenge.pk])
         response = creator_client.get(url)
         assert response.status_code == 405
+
+    def test_regenerate_uses_defaults_when_there_is_no_incumbent_link(
+        self, creator_client, challenge
+    ):
+        url = reverse("challenges:regenerate-invite-link", args=[challenge.pk])
+        response = creator_client.post(url)
+        assert response.status_code == 302
+        link = current_invite_link(challenge)
+        assert link.max_uses is None
+
+    def test_regenerate_carries_forward_the_incumbents_expiry_and_max_uses(
+        self, creator_client, challenge
+    ):
+        """Regenerating is "give me a new URL", not "reset my settings" --
+        a custom expiry/max-uses set via the edit pencil survives a
+        regenerate, only the token and use_count are actually fresh."""
+        custom_expiry = timezone.now() + timezone.timedelta(days=3)
+        old = ChallengeInviteLinkFactory(
+            challenge=challenge,
+            revoked_at=None,
+            expires_at=custom_expiry,
+            max_uses=5,
+            use_count=2,
+        )
+        url = reverse("challenges:regenerate-invite-link", args=[challenge.pk])
+        response = creator_client.post(url)
+
+        assert response.status_code == 302
+        old.refresh_from_db()
+        assert old.revoked_at is not None
+        new_link = current_invite_link(challenge)
+        assert new_link.pk != old.pk
+        assert new_link.max_uses == 5
+        assert new_link.expires_at == custom_expiry
+        assert new_link.use_count == 0

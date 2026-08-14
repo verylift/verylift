@@ -59,6 +59,18 @@ class TestExpiredOrRevokedToken:
         assert response.status_code == 200
         assert challenge.name.encode() in response.content
 
+    def test_exhausted_token_renders_invalid_page(self, challenge):
+        link = ChallengeInviteLinkFactory(
+            challenge=challenge,
+            revoked_at=None,
+            expires_at=timezone.now() + timedelta(days=7),
+            max_uses=1,
+            use_count=1,
+        )
+        response = Client().get(reverse("challenges:invite-link", args=[link.token]))
+        assert response.status_code == 200
+        assert challenge.name.encode() in response.content
+
     def test_expired_token_works_for_an_authenticated_visitor_too(self, challenge):
         link = ChallengeInviteLinkFactory(
             challenge=challenge,
@@ -106,6 +118,14 @@ class TestAuthenticatedFreshJoin:
         participant = ChallengeParticipant.objects.get(challenge=challenge, user=user)
         assert participant.invite_status == InviteStatus.ACCEPTED
         assert participant.joined_via_link_id == link.pk
+
+    def test_join_increments_the_links_use_count(self, challenge, link):
+        user = UserFactory(liftosaur_api_key="test-key")
+        c = Client()
+        c.force_login(user)
+        c.get(reverse("challenges:invite-link", args=[link.token]))
+        link.refresh_from_db()
+        assert link.use_count == 1
 
     def test_join_clears_the_session_token(self, challenge, link):
         user = UserFactory(liftosaur_api_key="test-key")
@@ -160,6 +180,20 @@ class TestIdempotentRevisit:
         assert response.status_code == 302
         assert response["Location"] == reverse("challenges:detail", args=[challenge.pk])
 
+    def test_revisit_does_not_increment_use_count(self, challenge, link):
+        user = UserFactory()
+        ChallengeParticipantFactory(
+            challenge=challenge,
+            user=user,
+            invite_status=InviteStatus.ACCEPTED,
+            joined_at=datetime.now(tz=UTC),
+        )
+        c = Client()
+        c.force_login(user)
+        c.get(reverse("challenges:invite-link", args=[link.token]))
+        link.refresh_from_db()
+        assert link.use_count == 0
+
 
 @pytest.mark.django_db
 class TestVoluntaryBailRejoin:
@@ -184,6 +218,23 @@ class TestVoluntaryBailRejoin:
         assert participant.bailed_at is None
         assert participant.invite_status == InviteStatus.ACCEPTED
         assert participant.joined_via_link_id == link.pk
+
+    def test_rejoin_increments_the_links_use_count(self, challenge, link):
+        user = UserFactory(liftosaur_api_key="test-key")
+        ChallengeParticipantFactory(
+            challenge=challenge,
+            user=user,
+            invite_status=InviteStatus.ACCEPTED,
+            joined_at=datetime(2025, 1, 1, tzinfo=UTC),
+            is_bailed=True,
+            bailed_at=datetime(2025, 1, 2, tzinfo=UTC),
+            removed_by_creator=False,
+        )
+        c = Client()
+        c.force_login(user)
+        c.get(reverse("challenges:invite-link", args=[link.token]))
+        link.refresh_from_db()
+        assert link.use_count == 1
 
 
 @pytest.mark.django_db

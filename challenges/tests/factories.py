@@ -43,12 +43,14 @@ class ChallengeInviteLinkFactory(factory.django.DjangoModelFactory):
         model = ChallengeInviteLink
 
     challenge = factory.SubFactory(ChallengeFactory)
-    token = factory.LazyFunction(lambda: secrets.token_urlsafe(32))
+    token = factory.LazyFunction(lambda: secrets.token_urlsafe(6))
     created_by = factory.SubFactory(UserFactory)
     expires_at = factory.LazyFunction(
         lambda: timezone.now() + timezone.timedelta(days=7)
     )
     revoked_at = None
+    max_uses = None
+    use_count = 0
 
 
 class ChallengeLiftFactory(factory.django.DjangoModelFactory):
