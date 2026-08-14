@@ -2,6 +2,7 @@ import logging
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
+from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
 
@@ -14,16 +15,19 @@ def close_challenges_job():
 
 
 def build_scheduler():
+    skew = settings.CLOSE_CHALLENGES_SCHEDULER_SKEW_MINUTES
+    minute_expr = f"{skew},{30 + skew}"
     scheduler = BlockingScheduler()
     scheduler.add_job(
         close_challenges_job,
-        trigger=CronTrigger(minute="0,30"),
+        trigger=CronTrigger(minute=minute_expr),
         id="close_challenges",
         max_instances=1,
     )
     logger.info(
-        "run_scheduler: registered close_challenges job (cron minute=0,30, "
-        "max_instances=1)"
+        "run_scheduler: registered close_challenges job (cron minute=%s, "
+        "max_instances=1)",
+        minute_expr,
     )
     return scheduler
 
