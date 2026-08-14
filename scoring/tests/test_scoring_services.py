@@ -1,6 +1,6 @@
 """Integration tests for scoring/services.py.
 
-Covers process_scored_set and get_leaderboard. Every challenge is CUSTOM
+Covers process_scored_set and rank_participants. Every challenge is CUSTOM
 (TASK-248): thresholds are a flat per-lift, per-rep target table, never a
 bodyweight-scaled multiplier, so tests build the equivalent flat table via
 tier_thresholds (the same Epley expansion the old built-in path used) rather
@@ -23,7 +23,7 @@ from challenges.tests.factories import (
 )
 from scoring.domain.calculator import tier_thresholds
 from scoring.models import PointEarnEvent
-from scoring.services import get_leaderboard, process_scored_set
+from scoring.services import process_scored_set, rank_participants
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -348,7 +348,7 @@ class TestProcessScoredSet:
             weight=Decimal("50.00"),
             synced_at=SYNCED_AT,
         )
-        assert get_leaderboard(challenge) == []
+        assert rank_participants(challenge) == []
 
     def test_sub_threshold_does_not_trigger_overtaken_notifications(self):
         """A sub-threshold set must not create overtaken notifications."""
@@ -467,15 +467,15 @@ class TestProcessScoredSet:
 
 
 # ---------------------------------------------------------------------------
-# get_leaderboard
+# rank_participants
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.django_db
-class TestGetLeaderboard:
+class TestRankParticipants:
     def test_empty_challenge_returns_empty_list(self):
         challenge = make_custom_challenge(lifts=[LIFT])
-        assert get_leaderboard(challenge) == []
+        assert rank_participants(challenge) == []
 
     def test_single_user_rank_1(self):
         user, challenge, _ = make_setup(multiplier=Decimal("1.0000"))
@@ -489,7 +489,7 @@ class TestGetLeaderboard:
             weight=Decimal("87.00"),
             synced_at=SYNCED_AT,
         )
-        board = get_leaderboard(challenge)
+        board = rank_participants(challenge)
         assert len(board) == 1
         assert board[0]["user"] == user
         assert board[0]["total_points"] == 6
@@ -526,7 +526,7 @@ class TestGetLeaderboard:
             synced_at=SYNCED_AT,
         )
 
-        board = get_leaderboard(challenge)
+        board = rank_participants(challenge)
         assert board[0]["user"] == user_a
         assert board[0]["total_points"] == 10
         assert board[0]["rank"] == 1
@@ -553,7 +553,7 @@ class TestGetLeaderboard:
                 synced_at=SYNCED_AT,
             )
 
-        board = get_leaderboard(challenge)
+        board = rank_participants(challenge)
         assert len(board) == 2
         assert board[0]["rank"] == 1
         assert board[1]["rank"] == 1  # Dense ranking: tied users share rank
@@ -578,7 +578,7 @@ class TestGetLeaderboard:
                 synced_at=SYNCED_AT,
             )
 
-        board = get_leaderboard(challenge)
+        board = rank_participants(challenge)
         assert len(board) == 1
         assert board[0]["total_points"] == 12  # 6 + 6
 
@@ -604,7 +604,7 @@ class TestGetLeaderboard:
             weight=Decimal("100.00"),
             synced_at=SYNCED_AT,
         )
-        board = get_leaderboard(challenge)
+        board = rank_participants(challenge)
         assert board[0]["total_points"] == 10  # not 16
 
     def test_bailed_participant_excluded_and_ranks_recompute(self):
@@ -643,7 +643,7 @@ class TestGetLeaderboard:
         bailer_participant.is_bailed = True
         bailer_participant.save(update_fields=["is_bailed"])
 
-        board = get_leaderboard(challenge)
+        board = rank_participants(challenge)
         board_users = {row["user"].pk for row in board}
         assert bailer.pk not in board_users
         assert len(board) == 1
@@ -682,9 +682,86 @@ class TestGetLeaderboard:
             synced_at=SYNCED_AT,
         )
 
-        board = get_leaderboard(challenge)
+        board = rank_participants(challenge)
         assert len(board) == 3
         ranks = [row["rank"] for row in board]
         assert ranks[0] == 1
         assert ranks[1] == 1
         assert ranks[2] == 2  # Dense: next distinct score is rank 2, not 3
+
+
+# ---------------------------------------------------------------------------
+# rank_participants(include_unscored=True)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestRankParticipantsIncludeUnscored:
+    def test_unscored_participants_included_at_zero(self):
+        """An accepted participant with no PointEarnEvent still appears, tied
+        last at 0 points, once include_unscored=True."""
+        user, challenge, _ = make_setup(multiplier=Decimal("1.0000"))
+        process_scored_set(
+            user=user,
+            challenge=challenge,
+            lift=LIFT,
+            performed_at=PERFORMED_AT,
+            reps=1,
+            weight=Decimal("100.00"),
+            synced_at=SYNCED_AT,
+        )
+        unscored = UserFactory()
+        _add_participant_with_goal(
+            challenge,
+            unscored,
+            {LIFT: targets_from_multiplier(Decimal("1.0000"), Decimal("100.00"))},
+        )
+
+        default_board = rank_participants(challenge)
+        assert {row["user"] for row in default_board} == {user}
+
+        full_board = rank_participants(challenge, include_unscored=True)
+        by_user = {row["user"].pk: row for row in full_board}
+        assert by_user[user.pk]["rank"] == 1
+        assert by_user[unscored.pk]["total_points"] == 0
+        assert by_user[unscored.pk]["rank"] == 2
+
+    def test_one_scorer_rest_tied_at_zero(self):
+        """One scorer at rank 1; every unscored participant dense-ties at rank 2."""
+        user, challenge, _ = make_setup(multiplier=Decimal("1.0000"))
+        process_scored_set(
+            user=user,
+            challenge=challenge,
+            lift=LIFT,
+            performed_at=PERFORMED_AT,
+            reps=1,
+            weight=Decimal("100.00"),
+            synced_at=SYNCED_AT,
+        )
+        targets = targets_from_multiplier(Decimal("1.0000"), Decimal("100.00"))
+        unscored_users = [UserFactory() for _ in range(2)]
+        for u in unscored_users:
+            _add_participant_with_goal(challenge, u, {LIFT: targets})
+
+        board = rank_participants(challenge, include_unscored=True)
+        assert len(board) == 3
+        ranks_by_user = {row["user"].pk: row["rank"] for row in board}
+        assert ranks_by_user[user.pk] == 1
+        for u in unscored_users:
+            assert ranks_by_user[u.pk] == 2
+
+    def test_bailed_unscored_participant_excluded(self):
+        """A bailed participant never appears, scored or not."""
+        challenge = make_custom_challenge(lifts=[LIFT])
+        targets = targets_from_multiplier(Decimal("1.0000"), Decimal("100.00"))
+        bailed_user = UserFactory()
+        _add_participant_with_goal(
+            challenge, bailed_user, {LIFT: targets}, is_bailed=True
+        )
+
+        board = rank_participants(challenge, include_unscored=True)
+        assert board == []
+
+    def test_no_participants_returns_empty(self):
+        challenge = make_custom_challenge(lifts=[LIFT])
+        assert rank_participants(challenge, include_unscored=True) == []

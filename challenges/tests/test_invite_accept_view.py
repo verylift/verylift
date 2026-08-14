@@ -103,6 +103,40 @@ class TestAcceptPageContent:
         assert rows[leader.pk] == 100
         assert rows[second.pk] == 50
 
+    def test_unscored_participant_included_at_zero(self, challenge, link):
+        """An accepted participant with no points still appears (TASK-304)
+        instead of being invisible on the leaderboard."""
+        never_scored = UserFactory(display_name="Never Scored")
+        ChallengeParticipantFactory(
+            challenge=challenge, user=never_scored, invite_status=InviteStatus.ACCEPTED
+        )
+
+        visitor = UserFactory()
+        c = Client()
+        c.force_login(visitor)
+        response = c.get(reverse("challenges:invite-link", args=[link.token]))
+
+        rows = {row["user"].pk for row in response.context["leaderboard_rows"]}
+        assert never_scored.pk in rows
+
+    def test_no_scores_at_all_shows_dash_ranks(self, challenge, link):
+        """When nobody has scored yet, every rank renders as '-' (TASK-304)."""
+        for _ in range(2):
+            ChallengeParticipantFactory(
+                challenge=challenge,
+                user=UserFactory(),
+                invite_status=InviteStatus.ACCEPTED,
+            )
+
+        visitor = UserFactory()
+        c = Client()
+        c.force_login(visitor)
+        response = c.get(reverse("challenges:invite-link", args=[link.token]))
+
+        rows = response.context["leaderboard_rows"]
+        assert len(rows) == 2
+        assert all(row["rank"] == "-" for row in rows)
+
     def test_custom_lifts_are_listed(self, challenge, link):
         ChallengeLiftFactory(challenge=challenge, name="Deadlift")
         ChallengeLiftFactory(challenge=challenge, name="Overhead Press")

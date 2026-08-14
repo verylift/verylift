@@ -1,4 +1,4 @@
-"""Tests for create_overtaken_notifications (TASK-33)."""
+"""Tests for compute_ranking_deltas / notify_ranking_changes (TASK-33, TASK-304)."""
 
 from datetime import date
 from decimal import Decimal
@@ -15,7 +15,8 @@ from challenges.tests.factories import (
 from liftosaur.tests.factories import LiftHistoryFactory
 from notifications.models import Notification
 from scoring.services import (
-    create_overtaken_notifications,
+    compute_ranking_deltas,
+    notify_ranking_changes,
     process_scored_set,
     score_pooled_history,
 )
@@ -34,19 +35,86 @@ def _entry(user, total_points, rank):
     return {"user": user, "total_points": total_points, "rank": rank}
 
 
+class TestComputeRankingDeltas:
+    """Pure function: plain in-memory before/after lists, no DB."""
+
+    def test_dropped_participant_produces_one_delta(self):
+        a, b = object(), object()
+        before = [_entry(a, 10, 1), _entry(b, 5, 2)]
+        after = [_entry(b, 20, 1), _entry(a, 10, 2)]
+
+        deltas = compute_ranking_deltas(before, after)
+
+        assert len(deltas) == 1
+        assert deltas[0] == {
+            "user": a,
+            "from_rank": 1,
+            "to_rank": 2,
+            "overtaken_by": b,
+        }
+
+    def test_multi_position_drop_is_single_delta(self):
+        """A participant who drops from 2nd to 4th produces ONE delta, and the
+        overtaker is whoever now sits at their OLD rank, not who beat them."""
+        a, b, c, d = object(), object(), object(), object()
+        before = [
+            _entry(a, 40, 1),
+            _entry(b, 30, 2),
+            _entry(c, 20, 3),
+            _entry(d, 10, 4),
+        ]
+        after = [
+            _entry(a, 40, 1),
+            _entry(c, 35, 2),
+            _entry(d, 32, 3),
+            _entry(b, 30, 4),
+        ]
+
+        deltas = compute_ranking_deltas(before, after)
+
+        assert len(deltas) == 1
+        assert deltas[0]["user"] is b
+        assert deltas[0]["from_rank"] == 2
+        assert deltas[0]["to_rank"] == 4
+        assert deltas[0]["overtaken_by"] is c
+
+    def test_no_delta_when_rank_unchanged(self):
+        a, b = object(), object()
+        before = [_entry(a, 10, 1), _entry(b, 5, 2)]
+        after = [_entry(a, 15, 1), _entry(b, 5, 2)]
+
+        assert compute_ranking_deltas(before, after) == []
+
+    def test_no_delta_when_rank_improves(self):
+        """Only the participant who dropped gets a delta; the one who improved
+        does not."""
+        a, b = object(), object()
+        before = [_entry(a, 10, 1), _entry(b, 5, 2)]
+        after = [_entry(b, 20, 1), _entry(a, 10, 2)]
+
+        deltas = compute_ranking_deltas(before, after)
+
+        assert {d["user"] for d in deltas} == {a}
+
+    def test_new_participant_not_in_before_is_ignored(self):
+        a, b = object(), object()
+        before = [_entry(a, 10, 1)]
+        after = [_entry(a, 10, 1), _entry(b, 5, 2)]
+
+        assert compute_ranking_deltas(before, after) == []
+
+
 @pytest.mark.django_db
-class TestCreateOvertakenNotifications:
-    def test_dropped_participant_gets_one_notification(self):
+class TestNotifyRankingChanges:
+    def test_delta_creates_notification(self):
         challenge = ChallengeFactory()
         a = UserFactory()
         b = UserFactory()
         ChallengeParticipantFactory(challenge=challenge, user=a)
         ChallengeParticipantFactory(challenge=challenge, user=b)
 
-        before = [_entry(a, 10, 1), _entry(b, 5, 2)]
-        after = [_entry(b, 20, 1), _entry(a, 10, 2)]
-
-        create_overtaken_notifications(challenge, before, after)
+        deltas = [{"user": a, "from_rank": 1, "to_rank": 2, "overtaken_by": b}]
+        notify_ranking_changes(challenge, deltas)
 
         notes = Notification.objects.filter(event_type=Notification.EventType.OVERTAKEN)
         assert notes.count() == 1
@@ -58,72 +126,6 @@ class TestCreateOvertakenNotifications:
         assert note.metadata["overtaken_by_id"] == str(b.pk)
         assert note.metadata["overtaken_by_name"] == b.display_name
 
-    def test_multi_position_drop_is_single_notification(self):
-        """A participant who drops from 2nd to 4th gets ONE notification."""
-        challenge = ChallengeFactory()
-        users = [UserFactory() for _ in range(4)]
-        for u in users:
-            ChallengeParticipantFactory(challenge=challenge, user=u)
-        a, b, c, d = users
-
-        before = [
-            _entry(a, 40, 1),
-            _entry(b, 30, 2),
-            _entry(c, 20, 3),
-            _entry(d, 10, 4),
-        ]
-        # b drops from 2 to 4
-        after = [
-            _entry(a, 40, 1),
-            _entry(c, 35, 2),
-            _entry(d, 32, 3),
-            _entry(b, 30, 4),
-        ]
-
-        create_overtaken_notifications(challenge, before, after)
-
-        b_notes = Notification.objects.filter(
-            event_type=Notification.EventType.OVERTAKEN, user=b
-        )
-        assert b_notes.count() == 1
-        note = b_notes.get()
-        assert note.metadata["from_rank"] == 2
-        assert note.metadata["to_rank"] == 4
-        # Overtaker is whoever now sits at b's old rank (2) → c
-        assert note.metadata["overtaken_by_id"] == str(c.pk)
-
-    def test_no_notification_when_rank_unchanged(self):
-        challenge = ChallengeFactory()
-        a = UserFactory()
-        b = UserFactory()
-        ChallengeParticipantFactory(challenge=challenge, user=a)
-        ChallengeParticipantFactory(challenge=challenge, user=b)
-
-        before = [_entry(a, 10, 1), _entry(b, 5, 2)]
-        after = [_entry(a, 15, 1), _entry(b, 5, 2)]
-
-        create_overtaken_notifications(challenge, before, after)
-        assert Notification.objects.count() == 0
-
-    def test_no_notification_when_rank_improves(self):
-        challenge = ChallengeFactory()
-        a = UserFactory()
-        b = UserFactory()
-        ChallengeParticipantFactory(challenge=challenge, user=a)
-        ChallengeParticipantFactory(challenge=challenge, user=b)
-
-        before = [_entry(a, 10, 1), _entry(b, 5, 2)]
-        after = [_entry(b, 20, 1), _entry(a, 10, 2)]
-
-        # Only A dropped; B improved and must not be notified.
-        create_overtaken_notifications(challenge, before, after)
-        assert (
-            Notification.objects.filter(
-                event_type=Notification.EventType.OVERTAKEN, user=b
-            ).count()
-            == 0
-        )
-
     def test_bailed_participant_excluded(self):
         challenge = ChallengeFactory()
         a = UserFactory()
@@ -131,10 +133,9 @@ class TestCreateOvertakenNotifications:
         ChallengeParticipantFactory(challenge=challenge, user=a, is_bailed=True)
         ChallengeParticipantFactory(challenge=challenge, user=b)
 
-        before = [_entry(a, 10, 1), _entry(b, 5, 2)]
-        after = [_entry(b, 20, 1), _entry(a, 10, 2)]
+        deltas = [{"user": a, "from_rank": 1, "to_rank": 2, "overtaken_by": b}]
+        notify_ranking_changes(challenge, deltas)
 
-        create_overtaken_notifications(challenge, before, after)
         assert (
             Notification.objects.filter(
                 event_type=Notification.EventType.OVERTAKEN, user=a
@@ -142,17 +143,9 @@ class TestCreateOvertakenNotifications:
             == 0
         )
 
-    def test_new_participant_not_in_before_is_ignored(self):
+    def test_empty_deltas_creates_no_notifications(self):
         challenge = ChallengeFactory()
-        a = UserFactory()
-        b = UserFactory()
-        ChallengeParticipantFactory(challenge=challenge, user=a)
-        ChallengeParticipantFactory(challenge=challenge, user=b)
-
-        before = [_entry(a, 10, 1)]
-        after = [_entry(a, 10, 1), _entry(b, 5, 2)]
-
-        create_overtaken_notifications(challenge, before, after)
+        notify_ranking_changes(challenge, [])
         assert Notification.objects.count() == 0
 
 

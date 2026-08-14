@@ -90,9 +90,18 @@
             {% blocktrans count counter=participant_count %}{{ counter }} joined{% plural %}{{ counter }} joined{% endblocktrans %}
           </span>
         </div>
-        <ul class="space-y-3">
+        <ul class="space-y-3 max-h-64 overflow-y-auto pr-2 -mr-2 [scrollbar-gutter:stable]">
           <li class="flex items-center gap-3">
-            <span class="w-6 text-center text-lg" aria-hidden="true">🏆</span>
+            <span class="w-6 flex items-center justify-center text-accent" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
+                <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+                <path d="M4 22h16"/>
+                <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
+                <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
+                <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+              </svg>
+            </span>
             {% include "components/_avatar.html" with avatar_user=request.user size_classes="w-8 h-8 text-xs" %}
             <div class="flex-1 min-w-0">
               <p class="text-sm font-semibold text-content-strong truncate">
@@ -105,7 +114,7 @@
           </li>
           {% for row in leaderboard_rows %}
           <li class="flex items-center gap-3">
-            <span class="w-6 text-center text-sm font-mono text-content-muted">#{{ row.rank }}</span>
+            <span class="w-6 text-center text-sm font-mono text-content-muted">{% if row.rank == "-" %}-{% else %}#{{ row.rank }}{% endif %}</span>
             {% include "components/_avatar.html" with avatar_user=row.user size_classes="w-8 h-8 text-xs" %}
             <div class="flex-1 min-w-0">
               <p class="text-sm font-medium text-content-body truncate">

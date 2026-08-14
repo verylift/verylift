@@ -379,6 +379,43 @@ class TestLeaderboard:
         survivor = next(row for row in leaderboard if row["is_self"])
         assert survivor["rank"] == 1
 
+    def test_unscored_participant_shown_with_zero_points(
+        self, authed_client, participant, challenge, user, mock_sync
+    ):
+        """A participant with no PointEarnEvent still appears on the leaderboard
+        (TASK-304), instead of being invisible."""
+        never_scored = UserFactory(display_name="Never Scored")
+        ChallengeParticipantFactory(
+            challenge=challenge,
+            user=never_scored,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        )
+        PointEarnEventFactory(
+            user=user, challenge=challenge, lift="Squat", points_earned=5
+        )
+        url = reverse("challenges:detail", args=[challenge.pk])
+        resp = authed_client.get(url)
+        leaderboard = resp.context["leaderboard"]
+        row = next(r for r in leaderboard if r["name"] == "Never Scored")
+        assert row["total_points"] == 0
+
+    def test_no_scores_at_all_shows_dash_ranks(
+        self, authed_client, participant, challenge, user, mock_sync
+    ):
+        """When nobody in the challenge has scored anything yet, every rank
+        renders as '-' rather than a numeric dense rank (TASK-304)."""
+        other = UserFactory(display_name="Other Lifter")
+        ChallengeParticipantFactory(
+            challenge=challenge,
+            user=other,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        )
+        url = reverse("challenges:detail", args=[challenge.pk])
+        resp = authed_client.get(url)
+        leaderboard = resp.context["leaderboard"]
+        assert len(leaderboard) == 2
+        assert all(row["rank"] == "-" for row in leaderboard)
+
 
 class TestChart:
     def test_chart_data_in_context(

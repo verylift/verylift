@@ -79,8 +79,8 @@ from scoring.services import (
     build_points_over_time,
     build_recent_scoring_activity,
     get_leader,
-    get_leaderboard,
     get_user_standing,
+    rank_participants,
 )
 
 logger = logging.getLogger(__name__)
@@ -605,11 +605,16 @@ def _render_invite_accept(request, challenge, link):
         is_bailed=False,
     ).count()
 
-    leaderboard = get_leaderboard(challenge)
+    leaderboard = rank_participants(challenge, include_unscored=True)
     leader_points = leaderboard[0]["total_points"] if leaderboard else 0
+    # When nobody has scored yet, every dense rank is honestly tied at 1 --
+    # render "-" instead of a numeric rank so a fresh challenge doesn't imply
+    # a meaningless ranking (rank_participants itself stays mathematically
+    # honest; this substitution is presentation-only).
+    show_ranks = leader_points > 0
     leaderboard_rows = [
         {
-            "rank": row["rank"],
+            "rank": row["rank"] if show_ranks else "-",
             "user": row["user"],
             "total_points": row["total_points"],
             "bar_pct": (
@@ -1287,8 +1292,13 @@ def challenge_detail_view(request, pk):
         request.user.id,
     )
 
+    ranked_entries = rank_participants(challenge, include_unscored=True)
+    # See the matching comment in _render_invite_accept: nobody-has-scored-yet
+    # means every dense rank is a meaningless tie, so it renders as "-".
+    show_ranks = any(entry["total_points"] > 0 for entry in ranked_entries)
+
     leaderboard = []
-    for entry in get_leaderboard(challenge):
+    for entry in ranked_entries:
         entry_user = entry["user"]
         is_self = entry_user.pk == request.user.pk
         chart_url = None
@@ -1304,7 +1314,7 @@ def challenge_detail_view(request, pk):
             name = "Former Participant"
         leaderboard.append(
             {
-                "rank": entry["rank"],
+                "rank": entry["rank"] if show_ranks else "-",
                 "name": name,
                 "total_points": entry["total_points"],
                 "is_self": is_self,
