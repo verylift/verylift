@@ -4,8 +4,23 @@
 {% block title %}{{ challenge.name }} — very lift{% endblock %}
 
 {% block content %}
-<div class="min-h-full flex flex-col pb-28 md:pb-0">
-  <main class="flex-1 max-w-5xl mx-auto w-full px-4 py-8 md:py-12">
+<div class="min-h-full flex flex-col pb-28 md:pb-0" data-mobile-scroll-wrapper>
+  <main class="md:flex-1 max-w-5xl mx-auto w-full px-4 pt-8 md:py-12">
+    <div class="flex items-center justify-between mb-6 md:mb-10">
+      <span class="text-accent font-bold text-lg">very lift</span>
+      <div class="flex md:hidden items-center gap-4">
+        <a href="https://github.com/verylift/verylift" class="hover:text-content-body text-content-muted" aria-label="{% trans 'GitHub' %}">
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M8,0C3.58,0,0,3.58,0,8c0,3.54,2.29,6.53,5.47,7.59c0.4,0.07,0.55-0.17,0.55-0.38c0-0.19-0.01-0.82-0.01-1.49c-2.01,0.37-2.53-0.49-2.69-0.94c-0.09-0.23-0.48-0.94-0.82-1.13c-0.28-0.15-0.68-0.52-0.01-0.53c0.63-0.01,1.08,0.58,1.23,0.82c0.72,1.21,1.87,0.87,2.33,0.66c0.07-0.52,0.28-0.87,0.51-1.07c-1.78-0.2-3.64-0.89-3.64-3.95c0-0.87,0.31-1.59,0.82-2.15C3.66,5.23,3.38,4.41,3.82,3.31c0,0,0.67-0.21,2.2,0.82c0.64-0.18,1.32-0.27,2-0.27c0.68,0,1.36,0.09,2,0.27c1.53-1.04,2.2-0.82,2.2-0.82c0.44,1.1,0.16,1.92,0.08,2.12c0.51,0.56,0.82,1.27,0.82,2.15c0,3.07-1.87,3.75-3.65,3.95c0.29,0.25,0.54,0.73,0.54,1.48c0,1.07-0.01,1.93-0.01,2.2c0,0.21,0.15,0.46,0.55,0.38C13.71,14.53,16,11.54,16,8C16,3.58,12.42,0,8,0z"/>
+          </svg>
+        </a>
+        <a href="{{ discord_invite_url }}" class="hover:text-content-body text-content-muted" aria-label="{% trans 'Discord' %}">
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M13.55,1.91C12.51,1.44,11.41,1.1,10.29,0.9c-0.02,0-0.04,0.01-0.05,0.03C10.09,1.18,9.94,1.5,9.83,1.76C8.6,1.58,7.38,1.58,6.17,1.76C6.06,1.5,5.9,1.18,5.76,0.93C5.75,0.91,5.73,0.9,5.71,0.9C4.58,1.1,3.49,1.44,2.45,1.91C2.44,1.92,2.43,1.92,2.43,1.93C0.36,5.03-0.21,8.05,0.07,11.04c0,0.01,0.01,0.03,0.02,0.04c1.37,1,2.69,1.61,4,2.02c0.02,0.01,0.04,0,0.05-0.02c0.31-0.42,0.58-0.86,0.82-1.33c0.01-0.03,0-0.06-0.03-0.07c-0.43-0.17-0.85-0.37-1.25-0.6c-0.03-0.02-0.03-0.06,0-0.08c0.08-0.06,0.17-0.13,0.25-0.19c0.01-0.01,0.03-0.02,0.05-0.01c2.62,1.2,5.45,1.2,8.04,0c0.02-0.01,0.03,0,0.05,0.01c0.08,0.07,0.16,0.13,0.25,0.19c0.03,0.02,0.03,0.06,0,0.08c-0.4,0.23-0.82,0.43-1.25,0.6c-0.03,0.01-0.04,0.04-0.03,0.07c0.24,0.47,0.52,0.9,0.82,1.33c0.02,0.02,0.04,0.02,0.06,0.02c1.32-0.41,2.64-1.02,4.01-2.02c0.01-0.01,0.02-0.02,0.02-0.04c0.34-3.45-0.56-6.44-2.34-9.11C13.57,1.92,13.56,1.92,13.55,1.91z M5.35,9.24c-0.79,0-1.44-0.72-1.44-1.61c0-0.89,0.64-1.61,1.44-1.61c0.81,0,1.45,0.73,1.44,1.61C6.79,8.52,6.15,9.24,5.35,9.24z M10.66,9.24c-0.79,0-1.44-0.72-1.44-1.61c0-0.89,0.64-1.61,1.44-1.61c0.81,0,1.45,0.73,1.44,1.61C12.1,8.52,11.46,9.24,10.66,9.24z"/>
+          </svg>
+        </a>
+      </div>
+    </div>
     <div class="max-w-2xl mx-auto text-center">
       <div class="flex items-center justify-center gap-2 mb-4">
         {% include "components/_avatar.html" with avatar_user=challenge.creator size_classes="w-8 h-8 text-xs" %}
@@ -29,18 +44,18 @@
         </a>
       </div>
 
-      <dl class="mt-6 flex items-center justify-center gap-6 md:gap-10">
-        <div>
-          <dt class="text-xs uppercase tracking-wide text-content-muted">{% trans "Participants" %}</dt>
-          <dd class="text-lg font-semibold text-content-strong">{{ participant_count }}</dd>
+      <dl class="mt-6 grid grid-cols-3 gap-3 md:gap-4 items-stretch">
+        <div class="bg-surface-raised rounded-lg px-3 py-3 md:px-4 md:py-4 flex flex-col items-center text-center">
+          <dd class="flex-1 flex items-center text-lg font-semibold text-content-strong">{{ participant_count }}</dd>
+          <dt class="text-xs text-content-muted">{% trans "Participants" %}</dt>
         </div>
-        <div>
-          <dt class="text-xs uppercase tracking-wide text-content-muted">{% trans "Days Left" %}</dt>
-          <dd class="text-lg font-semibold text-content-strong">{{ challenge.end_date|timeuntil }}</dd>
+        <div class="bg-surface-raised rounded-lg px-3 py-3 md:px-4 md:py-4 flex flex-col items-center text-center">
+          <dd class="flex-1 flex items-center text-lg font-semibold text-content-strong">{{ challenge.end_date|timeuntil }}</dd>
+          <dt class="text-xs text-content-muted">{% trans "Days Left" %}</dt>
         </div>
-        <div>
-          <dt class="text-xs uppercase tracking-wide text-content-muted">{% trans "Lifts" %}</dt>
-          <dd class="text-lg font-semibold text-content-strong">{{ custom_lifts|length }}</dd>
+        <div class="bg-surface-raised rounded-lg px-3 py-3 md:px-4 md:py-4 flex flex-col items-center text-center">
+          <dd class="flex-1 flex items-center text-lg font-semibold text-content-strong">{{ custom_lifts|length }}</dd>
+          <dt class="text-xs text-content-muted">{% trans "Lifts" %}</dt>
         </div>
       </dl>
 
@@ -59,16 +74,16 @@
           </span>
           {% endfor %}
         </div>
-        <div class="hidden justify-center gap-2 mt-3" data-carousel-dots>
-          <button type="button" tabindex="-1" class="w-2 h-2 rounded-full bg-accent transition-colors" data-dot="0" aria-hidden="true"></button>
-          <button type="button" tabindex="-1" class="w-2 h-2 rounded-full bg-line-subtle transition-colors" data-dot="1" aria-hidden="true"></button>
-          <button type="button" tabindex="-1" class="w-2 h-2 rounded-full bg-line-subtle transition-colors" data-dot="2" aria-hidden="true"></button>
+        <div class="hidden mt-3" data-carousel-progress aria-hidden="true">
+          <div class="relative h-1 w-full rounded-full bg-line-subtle overflow-hidden">
+            <div class="absolute inset-y-0 left-0 rounded-full bg-accent" data-carousel-progress-thumb style="width: 100%;"></div>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="mt-10 grid md:grid-cols-2 gap-6 md:items-center md:min-h-[20rem]">
-      <section class="bg-surface-card border border-line-subtle rounded p-6">
+    <div class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6 md:items-center md:min-h-[20rem]">
+      <section class="bg-surface-card border border-line-subtle rounded p-6 min-w-0">
         <div class="flex items-baseline justify-between mb-4 gap-2 flex-wrap">
           <h2 class="text-lg font-semibold text-content-strong">{% trans "Top Challengers" %}</h2>
           <span class="text-xs text-content-muted">
@@ -106,12 +121,12 @@
         </ul>
       </section>
 
-      <section class="bg-surface-card border border-line-subtle rounded p-6">
+      <section class="bg-surface-card border border-line-subtle rounded p-6 min-w-0">
         <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "Points Over Time" %}</h2>
-        <div class="relative h-64 block md:hidden">
+        <div class="relative w-full h-64 block md:hidden">
           <canvas id="points-over-time-chart-mobile"></canvas>
         </div>
-        <div class="relative h-80 hidden md:block">
+        <div class="relative w-full h-80 hidden md:block">
           <canvas id="points-over-time-chart-desktop"></canvas>
         </div>
       </section>
@@ -135,7 +150,8 @@
 
   {# Mobile CTA: sticky to the viewport bottom, padded for the iOS home indicator. #}
   <div class="md:hidden fixed inset-x-0 bottom-0 bg-surface-card border-t border-line-subtle px-4 pt-3"
-       style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));">
+       style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));"
+       data-mobile-cta>
     <div class="flex gap-3">
       <form method="post" action="{{ accept_url }}" class="flex-1">
         {% csrf_token %}
@@ -191,8 +207,8 @@
     if (!track) return;
     var fadeLeft = document.querySelector("[data-carousel-fade-left]");
     var fadeRight = document.querySelector("[data-carousel-fade-right]");
-    var dotsWrap = document.querySelector("[data-carousel-dots]");
-    var dots = dotsWrap ? dotsWrap.querySelectorAll("[data-dot]") : [];
+    var progressWrap = document.querySelector("[data-carousel-progress]");
+    var progressThumb = document.querySelector("[data-carousel-progress-thumb]");
 
     function update() {
       var overflow = track.scrollWidth > track.clientWidth + 1;
@@ -201,18 +217,22 @@
         var atEnd = track.scrollLeft + track.clientWidth >= track.scrollWidth - 1;
         fadeRight.style.opacity = overflow && !atEnd ? "1" : "0";
       }
-      if (dotsWrap) {
-        dotsWrap.classList.toggle("hidden", !overflow);
-        dotsWrap.classList.toggle("flex", overflow);
+      if (progressWrap) {
+        progressWrap.classList.toggle("hidden", !overflow);
+        progressWrap.classList.toggle("block", overflow);
       }
-      if (overflow && dots.length) {
+      // Continuous scrollbar-style thumb: width reflects how much of the
+      // carousel is visible at once, position reflects scroll progress.
+      // Scales to any lift count without the "meaningless past ~8 dots"
+      // problem of discrete pagination.
+      if (overflow && progressThumb) {
+        var visibleFraction = track.clientWidth / track.scrollWidth;
+        var thumbPct = Math.max(15, visibleFraction * 100);
         var maxScroll = track.scrollWidth - track.clientWidth;
         var progress = maxScroll > 0 ? track.scrollLeft / maxScroll : 0;
-        var active = Math.min(2, Math.floor(progress * 3));
-        dots.forEach(function (dot, i) {
-          dot.classList.toggle("bg-accent", i === active);
-          dot.classList.toggle("bg-line-subtle", i !== active);
-        });
+        var maxLeftPct = 100 - thumbPct;
+        progressThumb.style.width = thumbPct + "%";
+        progressThumb.style.left = progress * maxLeftPct + "%";
       }
     }
 
@@ -258,6 +278,34 @@
     });
 
     update();
+  })();
+</script>
+
+<script>
+  // Bottom scroll padding is measured from the fixed mobile CTA bar's real
+  // rendered height (safe-area inset included) rather than a flat guess, so
+  // the gap below the last card matches the page's horizontal margin instead
+  // of overshooting into extra scrollable empty space.
+  (function () {
+    var wrapper = document.querySelector("[data-mobile-scroll-wrapper]");
+    var cta = document.querySelector("[data-mobile-cta]");
+    if (!wrapper || !cta) return;
+    var GAP_PX = 16; // matches the page's px-4 horizontal margin
+    var mq = window.matchMedia("(min-width: 768px)");
+    function update() {
+      if (mq.matches) {
+        wrapper.style.paddingBottom = "";
+        return;
+      }
+      wrapper.style.paddingBottom = cta.offsetHeight + GAP_PX + "px";
+    }
+    update();
+    window.addEventListener("resize", update);
+    if (mq.addEventListener) {
+      mq.addEventListener("change", update);
+    } else {
+      mq.addListener(update);
+    }
   })();
 </script>
 {% endblock %}
