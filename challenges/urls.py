@@ -12,6 +12,11 @@ urlpatterns = [
     # Top-level and pk-free (not nested under challenges/<uuid:pk>/): short
     # enough to paste into a group chat, and leaks no challenge identifier.
     path("join/<str:token>/", views.invite_link_view, name="invite-link"),
+    path(
+        "join/<str:token>/accept/",
+        views.invite_accept_view,
+        name="invite-accept",
+    ),
     path("challenges/create/", views.create_challenge_view, name="create"),
     path("challenges/", views.find_challenges_view, name="find"),
     path(

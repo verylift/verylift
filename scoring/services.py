@@ -402,7 +402,7 @@ def score_pooled_history(*, user, challenge) -> ScoringSummary:
     return summary
 
 
-def build_points_over_time(challenge) -> dict:
+def build_points_over_time(challenge, *, top_n: int | None = None) -> dict:
     """Build Chart.js line-chart data of cumulative points per participant.
 
     For each accepted, non-bailed participant, the cumulative points at any date
@@ -417,6 +417,11 @@ def build_points_over_time(challenge) -> dict:
     rising slope from zero. Participants with no events produce a flat zero series.
 
     Deactivated users are labelled "Former Participant".
+
+    ``top_n``, when given, keeps only the ``top_n`` datasets with the highest
+    final cumulative value (the shared label axis is unaffected) -- used by the
+    invite accept/decline preview (TASK-303) to fit a small card; the full
+    challenge detail page always calls this with ``top_n=None``.
 
     Shape: {"labels": [...], "datasets": [{"label": str, "data": [int, ...]}, ...]}
     """
@@ -489,6 +494,11 @@ def build_points_over_time(challenge) -> dict:
                 idx += 1
             data.append(cumulative)
         datasets.append({"label": label, "data": data})
+
+    if top_n is not None and len(datasets) > top_n:
+        datasets = sorted(
+            datasets, key=lambda ds: ds["data"][-1] if ds["data"] else 0, reverse=True
+        )[:top_n]
 
     return {"labels": labels, "datasets": datasets}
 

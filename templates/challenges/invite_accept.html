@@ -1,0 +1,263 @@
+{% extends "base/base.html" %}
+{% load static i18n %}
+
+{% block title %}{{ challenge.name }} — very lift{% endblock %}
+
+{% block content %}
+<div class="min-h-full flex flex-col pb-28 md:pb-0">
+  <main class="flex-1 max-w-5xl mx-auto w-full px-4 py-8 md:py-12">
+    <div class="max-w-2xl mx-auto text-center">
+      <div class="flex items-center justify-center gap-2 mb-4">
+        {% include "components/_avatar.html" with avatar_user=challenge.creator size_classes="w-8 h-8 text-xs" %}
+        <span class="text-sm text-content-subtle">
+          {% blocktrans with name=challenge.creator.display_name|default:challenge.creator.username %}Hosted by {{ name }}{% endblocktrans %}
+        </span>
+      </div>
+      <h1 class="text-2xl md:text-3xl font-bold text-content-strong">{{ challenge.name }}</h1>
+
+      {# Desktop CTA: static, directly below the title, never follows scroll. #}
+      <div class="hidden md:flex mt-6 items-center justify-center gap-3">
+        <form method="post" action="{{ accept_url }}">
+          {% csrf_token %}
+          <button type="submit" class="bg-accent text-accent-on text-sm font-medium px-6 py-3 rounded hover:bg-accent-hover">
+            {% trans "Accept & Join" %}
+          </button>
+        </form>
+        <a href="{% url 'challenges:dashboard' %}"
+           class="text-sm font-medium px-6 py-3 rounded border border-line text-content-body hover:bg-surface-hover">
+          {% trans "No thanks" %}
+        </a>
+      </div>
+
+      <dl class="mt-6 flex items-center justify-center gap-6 md:gap-10">
+        <div>
+          <dt class="text-xs uppercase tracking-wide text-content-muted">{% trans "Participants" %}</dt>
+          <dd class="text-lg font-semibold text-content-strong">{{ participant_count }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs uppercase tracking-wide text-content-muted">{% trans "Days Left" %}</dt>
+          <dd class="text-lg font-semibold text-content-strong">{{ challenge.end_date|timeuntil }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs uppercase tracking-wide text-content-muted">{% trans "Lifts" %}</dt>
+          <dd class="text-lg font-semibold text-content-strong">{{ custom_lifts|length }}</dd>
+        </div>
+      </dl>
+
+      <div class="mt-8 relative" data-carousel>
+        <div class="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-surface to-transparent opacity-0 transition-opacity z-10" data-carousel-fade-left></div>
+        <div class="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-surface to-transparent opacity-0 transition-opacity z-10" data-carousel-fade-right></div>
+        <div
+          class="flex gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden px-1 py-1 focus:outline-none"
+          tabindex="0"
+          data-carousel-track
+          role="list"
+          aria-label="{% trans 'Lifts in this challenge' %}">
+          {% for lift in custom_lifts %}
+          <span role="listitem" class="shrink-0 inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-surface-card border border-line-subtle text-content-body">
+            {{ lift.name }}
+          </span>
+          {% endfor %}
+        </div>
+        <div class="hidden justify-center gap-2 mt-3" data-carousel-dots>
+          <button type="button" tabindex="-1" class="w-2 h-2 rounded-full bg-accent transition-colors" data-dot="0" aria-hidden="true"></button>
+          <button type="button" tabindex="-1" class="w-2 h-2 rounded-full bg-line-subtle transition-colors" data-dot="1" aria-hidden="true"></button>
+          <button type="button" tabindex="-1" class="w-2 h-2 rounded-full bg-line-subtle transition-colors" data-dot="2" aria-hidden="true"></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-10 grid md:grid-cols-2 gap-6 md:items-center md:min-h-[20rem]">
+      <section class="bg-surface-card border border-line-subtle rounded p-6">
+        <div class="flex items-baseline justify-between mb-4 gap-2 flex-wrap">
+          <h2 class="text-lg font-semibold text-content-strong">{% trans "Top Challengers" %}</h2>
+          <span class="text-xs text-content-muted">
+            {% blocktrans count counter=participant_count %}{{ counter }} joined{% plural %}{{ counter }} joined{% endblocktrans %}
+          </span>
+        </div>
+        <ul class="space-y-3">
+          <li class="flex items-center gap-3">
+            <span class="w-6 text-center text-lg" aria-hidden="true">🏆</span>
+            {% include "components/_avatar.html" with avatar_user=request.user size_classes="w-8 h-8 text-xs" %}
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-semibold text-content-strong truncate">
+                {{ request.user.display_name|default:request.user.username }}
+                <span class="text-xs text-accent font-normal">({% trans "you, probably" %})</span>
+              </p>
+              <div class="mt-1 h-1.5 rounded-full bg-surface-sunken"></div>
+            </div>
+            <span class="text-sm font-mono text-content-muted">{% trans "??? pts" %}</span>
+          </li>
+          {% for row in leaderboard_rows %}
+          <li class="flex items-center gap-3">
+            <span class="w-6 text-center text-sm font-mono text-content-muted">#{{ row.rank }}</span>
+            {% include "components/_avatar.html" with avatar_user=row.user size_classes="w-8 h-8 text-xs" %}
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-content-body truncate">
+                {{ row.user.display_name|default:row.user.username }}
+              </p>
+              <div class="mt-1 h-1.5 rounded-full bg-surface-sunken overflow-hidden">
+                <div class="h-full bg-accent rounded-full" style="width: {{ row.bar_pct }}%"></div>
+              </div>
+            </div>
+            <span class="text-sm font-mono text-content-strong">{{ row.total_points }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </section>
+
+      <section class="bg-surface-card border border-line-subtle rounded p-6">
+        <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "Points Over Time" %}</h2>
+        <div class="relative h-64 block md:hidden">
+          <canvas id="points-over-time-chart-mobile"></canvas>
+        </div>
+        <div class="relative h-80 hidden md:block">
+          <canvas id="points-over-time-chart-desktop"></canvas>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="hidden md:block py-6 px-4 text-center text-xs text-content-subtle">
+    <div class="flex items-center justify-center gap-3">
+      <a href="https://github.com/verylift/verylift" class="hover:text-content-body" aria-label="{% trans 'GitHub' %}">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M8,0C3.58,0,0,3.58,0,8c0,3.54,2.29,6.53,5.47,7.59c0.4,0.07,0.55-0.17,0.55-0.38c0-0.19-0.01-0.82-0.01-1.49c-2.01,0.37-2.53-0.49-2.69-0.94c-0.09-0.23-0.48-0.94-0.82-1.13c-0.28-0.15-0.68-0.52-0.01-0.53c0.63-0.01,1.08,0.58,1.23,0.82c0.72,1.21,1.87,0.87,2.33,0.66c0.07-0.52,0.28-0.87,0.51-1.07c-1.78-0.2-3.64-0.89-3.64-3.95c0-0.87,0.31-1.59,0.82-2.15C3.66,5.23,3.38,4.41,3.82,3.31c0,0,0.67-0.21,2.2,0.82c0.64-0.18,1.32-0.27,2-0.27c0.68,0,1.36,0.09,2,0.27c1.53-1.04,2.2-0.82,2.2-0.82c0.44,1.1,0.16,1.92,0.08,2.12c0.51,0.56,0.82,1.27,0.82,2.15c0,3.07-1.87,3.75-3.65,3.95c0.29,0.25,0.54,0.73,0.54,1.48c0,1.07-0.01,1.93-0.01,2.2c0,0.21,0.15,0.46,0.55,0.38C13.71,14.53,16,11.54,16,8C16,3.58,12.42,0,8,0z"/>
+        </svg>
+      </a>
+      <a href="{{ discord_invite_url }}" class="hover:text-content-body" aria-label="{% trans 'Discord' %}">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M13.55,1.91C12.51,1.44,11.41,1.1,10.29,0.9c-0.02,0-0.04,0.01-0.05,0.03C10.09,1.18,9.94,1.5,9.83,1.76C8.6,1.58,7.38,1.58,6.17,1.76C6.06,1.5,5.9,1.18,5.76,0.93C5.75,0.91,5.73,0.9,5.71,0.9C4.58,1.1,3.49,1.44,2.45,1.91C2.44,1.92,2.43,1.92,2.43,1.93C0.36,5.03-0.21,8.05,0.07,11.04c0,0.01,0.01,0.03,0.02,0.04c1.37,1,2.69,1.61,4,2.02c0.02,0.01,0.04,0,0.05-0.02c0.31-0.42,0.58-0.86,0.82-1.33c0.01-0.03,0-0.06-0.03-0.07c-0.43-0.17-0.85-0.37-1.25-0.6c-0.03-0.02-0.03-0.06,0-0.08c0.08-0.06,0.17-0.13,0.25-0.19c0.01-0.01,0.03-0.02,0.05-0.01c2.62,1.2,5.45,1.2,8.04,0c0.02-0.01,0.03,0,0.05,0.01c0.08,0.07,0.16,0.13,0.25,0.19c0.03,0.02,0.03,0.06,0,0.08c-0.4,0.23-0.82,0.43-1.25,0.6c-0.03,0.01-0.04,0.04-0.03,0.07c0.24,0.47,0.52,0.9,0.82,1.33c0.02,0.02,0.04,0.02,0.06,0.02c1.32-0.41,2.64-1.02,4.01-2.02c0.01-0.01,0.02-0.02,0.02-0.04c0.34-3.45-0.56-6.44-2.34-9.11C13.57,1.92,13.56,1.92,13.55,1.91z M5.35,9.24c-0.79,0-1.44-0.72-1.44-1.61c0-0.89,0.64-1.61,1.44-1.61c0.81,0,1.45,0.73,1.44,1.61C6.79,8.52,6.15,9.24,5.35,9.24z M10.66,9.24c-0.79,0-1.44-0.72-1.44-1.61c0-0.89,0.64-1.61,1.44-1.61c0.81,0,1.45,0.73,1.44,1.61C12.1,8.52,11.46,9.24,10.66,9.24z"/>
+        </svg>
+      </a>
+    </div>
+  </footer>
+
+  {# Mobile CTA: sticky to the viewport bottom, padded for the iOS home indicator. #}
+  <div class="md:hidden fixed inset-x-0 bottom-0 bg-surface-card border-t border-line-subtle px-4 pt-3"
+       style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));">
+    <div class="flex gap-3">
+      <form method="post" action="{{ accept_url }}" class="flex-1">
+        {% csrf_token %}
+        <button type="submit" class="w-full bg-accent text-accent-on text-sm font-medium px-4 py-3 rounded hover:bg-accent-hover">
+          {% trans "Accept & Join" %}
+        </button>
+      </form>
+      <a href="{% url 'challenges:dashboard' %}"
+         class="flex-1 text-center text-sm font-medium px-4 py-3 rounded border border-line text-content-body hover:bg-surface-hover">
+        {% trans "No thanks" %}
+      </a>
+    </div>
+  </div>
+</div>
+
+{{ chart_data_mobile|json_script:"chart-data-mobile" }}
+{{ chart_data_desktop|json_script:"chart-data-desktop" }}
+<script src="{% static 'vendor/chart.js' %}"></script>
+<script>
+  (function () {
+    function renderChart(canvasId, dataElId) {
+      var canvas = document.getElementById(canvasId);
+      var dataEl = document.getElementById(dataElId);
+      if (!canvas || !dataEl) return;
+      var chartData = JSON.parse(dataEl.textContent);
+      new Chart(canvas, {
+        type: "line",
+        data: {
+          labels: chartData.labels,
+          datasets: chartData.datasets.map(function (ds) {
+            return { label: ds.label, data: ds.data, fill: false, tension: 0.1 };
+          }),
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { title: { display: true, text: "{% trans 'Date' %}" } },
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: "{% trans 'Cumulative Points' %}" },
+            },
+          },
+        },
+      });
+    }
+    renderChart("points-over-time-chart-mobile", "chart-data-mobile");
+    renderChart("points-over-time-chart-desktop", "chart-data-desktop");
+  })();
+
+  (function () {
+    var track = document.querySelector("[data-carousel-track]");
+    if (!track) return;
+    var fadeLeft = document.querySelector("[data-carousel-fade-left]");
+    var fadeRight = document.querySelector("[data-carousel-fade-right]");
+    var dotsWrap = document.querySelector("[data-carousel-dots]");
+    var dots = dotsWrap ? dotsWrap.querySelectorAll("[data-dot]") : [];
+
+    function update() {
+      var overflow = track.scrollWidth > track.clientWidth + 1;
+      if (fadeLeft) fadeLeft.style.opacity = overflow && track.scrollLeft > 0 ? "1" : "0";
+      if (fadeRight) {
+        var atEnd = track.scrollLeft + track.clientWidth >= track.scrollWidth - 1;
+        fadeRight.style.opacity = overflow && !atEnd ? "1" : "0";
+      }
+      if (dotsWrap) {
+        dotsWrap.classList.toggle("hidden", !overflow);
+        dotsWrap.classList.toggle("flex", overflow);
+      }
+      if (overflow && dots.length) {
+        var maxScroll = track.scrollWidth - track.clientWidth;
+        var progress = maxScroll > 0 ? track.scrollLeft / maxScroll : 0;
+        var active = Math.min(2, Math.floor(progress * 3));
+        dots.forEach(function (dot, i) {
+          dot.classList.toggle("bg-accent", i === active);
+          dot.classList.toggle("bg-line-subtle", i !== active);
+        });
+      }
+    }
+
+    track.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+
+    track.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowRight") {
+        track.scrollBy({ left: 120, behavior: "smooth" });
+        e.preventDefault();
+      } else if (e.key === "ArrowLeft") {
+        track.scrollBy({ left: -120, behavior: "smooth" });
+        e.preventDefault();
+      }
+    });
+
+    track.addEventListener(
+      "wheel",
+      function (e) {
+        if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+          track.scrollLeft += e.deltaY;
+          e.preventDefault();
+        }
+      },
+      { passive: false }
+    );
+
+    var isDragging = false;
+    var dragStartX = 0;
+    var dragStartScrollLeft = 0;
+    track.addEventListener("mousedown", function (e) {
+      isDragging = true;
+      dragStartX = e.pageX;
+      dragStartScrollLeft = track.scrollLeft;
+    });
+    window.addEventListener("mouseup", function () {
+      isDragging = false;
+    });
+    track.addEventListener("mousemove", function (e) {
+      if (!isDragging) return;
+      e.preventDefault();
+      track.scrollLeft = dragStartScrollLeft - (e.pageX - dragStartX);
+    });
+
+    update();
+  })();
+</script>
+{% endblock %}

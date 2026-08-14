@@ -62,6 +62,7 @@ from challenges.services import (
 )
 from challenges.standards import covered_lift_names
 from core.http import is_htmx
+from core.models import SiteSettings
 from fitnessvolt.services import standards_method_available
 from liftosaur.models import LiftHistory
 from liftosaur.services import (
@@ -556,6 +557,18 @@ def invite_link_view(request, token):
             request, reverse("challenges:goal-setup", args=[challenge.pk])
         )
 
+    return _render_invite_accept(request, challenge, link)
+
+
+def _join_challenge_via_link(request, challenge, link):
+    """Create the accepted ``ChallengeParticipant`` row for a fresh join.
+
+    The GET branch of ``invite_link_view`` used to call this directly and
+    auto-join; TASK-303 moved that to a confirmation page instead, so this is
+    now only reached via the ``invite-accept`` POST endpoint below -- kept as
+    its own function so the create/notify/record/redirect sequence still
+    lives in exactly one place.
+    """
     ChallengeParticipant.objects.create(
         challenge=challenge,
         user=request.user,
@@ -570,6 +583,117 @@ def invite_link_view(request, token):
     record_invite_link_use(link)
     request.session.pop("invite_token", None)
     return _hx_redirect(request, reverse("challenges:goal-setup", args=[challenge.pk]))
+
+
+# Fewer datasets fit comfortably on the invite-accept page's narrow mobile
+# card than its wide desktop card (TASK-303) -- these are fixed per-breakpoint
+# counts rather than a JS-measured width, since the chart is server-rendered
+# from two separate contexts (one per breakpoint, toggled via CSS).
+_INVITE_ACCEPT_CHART_TOP_N_MOBILE = 5
+_INVITE_ACCEPT_CHART_TOP_N_DESKTOP = 8
+
+
+def _render_invite_accept(request, challenge, link):
+    """Render the accept/decline preview for an authenticated non-participant.
+
+    Reused verbatim by the GET landing branch and by the POST accept view's
+    "state changed since page load" fallback (TASK-303) -- both need the same
+    challenge preview, not a full guard-ladder rewrite.
+    """
+    participant_count = challenge.participants.filter(
+        invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        is_bailed=False,
+    ).count()
+
+    leaderboard = get_leaderboard(challenge)
+    leader_points = leaderboard[0]["total_points"] if leaderboard else 0
+    leaderboard_rows = [
+        {
+            "rank": row["rank"],
+            "user": row["user"],
+            "total_points": row["total_points"],
+            "bar_pct": (
+                round(row["total_points"] / leader_points * 100, 1)
+                if leader_points
+                else 0
+            ),
+        }
+        for row in leaderboard
+    ]
+
+    context = {
+        "challenge": challenge,
+        "link": link,
+        "participant_count": participant_count,
+        "custom_lifts": list(challenge.custom_lifts.all()),
+        "leaderboard_rows": leaderboard_rows,
+        "chart_data_mobile": build_points_over_time(
+            challenge, top_n=_INVITE_ACCEPT_CHART_TOP_N_MOBILE
+        ),
+        "chart_data_desktop": build_points_over_time(
+            challenge, top_n=_INVITE_ACCEPT_CHART_TOP_N_DESKTOP
+        ),
+        "discord_invite_url": SiteSettings.load().discord_invite_url,
+        "accept_url": reverse("challenges:invite-accept", args=[link.token]),
+    }
+    return render(request, "challenges/invite_accept.html", context)
+
+
+@login_required
+@require_POST
+@ratelimit(group="invite_link_ip", key=client_ip, rate=_invite_link_ip_rate)
+def invite_accept_view(request, token):
+    """Handle the "Accept & Join" click on the invite accept/decline page.
+
+    Re-runs the same guard ladder as ``invite_link_view`` rather than trusting
+    that nothing changed between the GET render and this click (TASK-303).
+    Fill/end races between the two are explicitly out of this task's scope --
+    if state changed (link no longer usable, challenge went terminal, or a
+    participant row now exists), this just falls back to re-rendering
+    whatever ``invite_link_view`` itself would show for that state, rather
+    than building new race-condition UX.
+    """
+    link, reason = resolve_invite_token(token)
+
+    if reason == "unknown":
+        raise Http404
+
+    challenge = link.challenge
+
+    if reason in ("expired", "revoked", "exhausted"):
+        logger.warning(
+            "User %s POSTed accept for a %s invite link for challenge %s",
+            request.user.id,
+            reason,
+            challenge.pk,
+        )
+        return render(
+            request,
+            "challenges/invite_link_invalid.html",
+            {"challenge": challenge, "reason": reason},
+        )
+
+    if challenge.is_terminal:
+        logger.warning(
+            "User %s POSTed accept for terminal challenge %s",
+            request.user.id,
+            challenge.pk,
+        )
+        return HttpResponseBadRequest(gettext("Challenge is not active"))
+
+    existing = ChallengeParticipant.objects.filter(
+        challenge=challenge, user=request.user
+    ).first()
+    if existing is not None:
+        logger.info(
+            "User %s already had a participant row for challenge %s by the "
+            "time they clicked accept; falling back to the invite-link view",
+            request.user.id,
+            challenge.pk,
+        )
+        return redirect("challenges:invite-link", token=token)
+
+    return _join_challenge_via_link(request, challenge, link)
 
 
 _GOAL_DATA_SESSION_KEY = "goal_setup_data"
