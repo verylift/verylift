@@ -59,6 +59,36 @@ servers:
       secret:
         - DATABASE_URL:OWNER_DATABASE_URL   # overrides the app-role URL below
 
+  # Never registered with kamal-proxy (proxy: false) -- runs manage.py run_scheduler
+  # (TASK-302), an in-process APScheduler BlockingScheduler that invokes
+  # close_challenges every 30 minutes so challenges transition out of ACTIVE
+  # promptly in every creator timezone, including half-hour offsets. Shares the
+  # same app image and env as `web`; the app-scoped DATABASE_URL below is enough
+  # since close_challenges only reads/writes Challenge rows, not migrations.
+  #
+  # Kamal DOES support a direct restart-policy option here: every role already
+  # gets `--restart unless-stopped` by default (kamal/configuration/role.rb),
+  # and `options: restart:` overrides it -- this isn't a Docker passthrough
+  # hack, Kamal validates the value itself (kamal/configuration/validator.rb,
+  # only "no"/"always"/"unless-stopped"/"on-failure[:N]" accepted). Set to
+  # "always" explicitly (rather than relying on the unless-stopped default) so
+  # a crashed scheduler process comes back on its own without a redeploy. Note
+  # this is independent of Kamal's own rolling-restart/healthcheck machinery,
+  # which is proxy-only and doesn't apply to a non-proxied role like this one.
+  scheduler:
+    hosts:
+      - verylift-prod
+    proxy: false
+    cmd: "python manage.py run_scheduler"
+    options:
+      cap-drop: "ALL"
+      security-opt: "no-new-privileges:true"
+      read-only: true
+      tmpfs: "/tmp:size=64m,mode=1777"
+      memory: "256m"
+      cpus: "0.5"
+      restart: "always"
+
 proxy:
   app_port: 8000
   ssl: false                # Cloudflare Tunnel terminates TLS; kamal-proxy speaks plain HTTP

@@ -4,6 +4,12 @@ set dotenv-load
 serve *args:
     uv run python manage.py runserver {{args}}
 
+# Run the in-process scheduler (TASK-302) natively, same as `serve` -- closes
+# challenges every 30 minutes via APScheduler. Blocks in the foreground; run
+# in a second terminal alongside `just serve` if you need it running locally.
+run-scheduler:
+    uv run python manage.py run_scheduler
+
 # Run tests with coverage
 test:
     uv run pytest
