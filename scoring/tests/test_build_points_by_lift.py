@@ -10,7 +10,7 @@ from challenges.tests.factories import (
     ChallengeParticipantFactory,
     make_custom_challenge,
 )
-from scoring.services import build_points_by_lift, get_leaderboard
+from scoring.services import build_points_by_lift, rank_participants
 from scoring.tests.factories import PointEarnEventFactory
 
 
@@ -131,7 +131,7 @@ class TestBuildPointsByLift:
         )
 
         data = build_points_by_lift(challenge)
-        leaderboard = get_leaderboard(challenge)
+        leaderboard = rank_participants(challenge)
 
         alice_bars = next(
             ds["data"] for ds in data["datasets"] if ds["label"] == "Alice"

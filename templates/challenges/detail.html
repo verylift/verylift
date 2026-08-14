@@ -56,10 +56,10 @@
         {% endif %}
       </div>
       {% if leaderboard %}
-      <div class="overflow-x-auto">
+      <div class="overflow-x-auto max-h-64 overflow-y-auto">
         <table class="text-sm text-left w-full">
           <thead>
-            <tr class="text-content-muted border-b border-line-subtle">
+            <tr class="text-content-muted border-b border-line-subtle bg-surface-card sticky top-0">
               <th class="py-2 pr-4 font-medium">{% trans "Rank" %}</th>
               <th class="py-2 pr-4 font-medium">{% trans "Participant" %}</th>
               <th class="py-2 pr-4 font-medium text-right">{% trans "Points" %}</th>
@@ -68,7 +68,7 @@
           <tbody>
             {% for row in leaderboard %}
             <tr class="border-b border-line-subtle {% if row.is_self %}bg-accent-subtle font-semibold text-content-strong{% else %}text-content-body{% endif %}">
-              <td class="py-2 pr-4 font-mono">#{{ row.rank }}</td>
+              <td class="py-2 pr-4 font-mono">{% if row.rank == "-" %}-{% else %}#{{ row.rank }}{% endif %}</td>
               <td class="py-2 pr-4">
                 {% if row.chart_url %}
                 <a href="{{ row.chart_url }}" hx-get="{{ row.chart_url }}"

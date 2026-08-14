@@ -290,6 +290,47 @@ class TestBuildPointsOverTime:
         assert data["labels"] == ["2024-02-15", "2024-03-01"]
         assert data["datasets"][0]["data"] == [0, 8]
 
+    def test_top_n_keeps_highest_final_cumulative_datasets(self, challenge):
+        """TASK-303: top_n truncates to the N datasets with the highest final
+        value, without touching the shared label axis."""
+        high = UserFactory(display_name="High")
+        mid = UserFactory(display_name="Mid")
+        low = UserFactory(display_name="Low")
+        for user, points in [(high, 10), (mid, 5), (low, 1)]:
+            _accept(challenge, user)
+            PointEarnEventFactory(
+                user=user,
+                challenge=challenge,
+                lift="Squat",
+                performed_at=date(2024, 1, 1),
+                points_earned=points,
+                is_current_best=True,
+            )
+
+        full = build_points_over_time(challenge)
+        truncated = build_points_over_time(challenge, top_n=2)
+
+        assert len(full["datasets"]) == 3
+        assert truncated["labels"] == full["labels"]
+        labels = {ds["label"] for ds in truncated["datasets"]}
+        assert labels == {"High", "Mid"}
+
+    def test_top_n_is_a_no_op_when_not_exceeded(self, challenge):
+        alice = UserFactory(display_name="Alice")
+        _accept(challenge, alice)
+        PointEarnEventFactory(
+            user=alice,
+            challenge=challenge,
+            lift="Squat",
+            performed_at=date(2024, 1, 1),
+            points_earned=4,
+            is_current_best=True,
+        )
+
+        data = build_points_over_time(challenge, top_n=5)
+
+        assert len(data["datasets"]) == 1
+
     def test_excludes_bailed_and_invited(self, challenge):
         active = UserFactory(display_name="Active")
         _accept(challenge, active)

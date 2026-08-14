@@ -200,7 +200,7 @@ class TestJoinedViaLinkProvenance:
         user = UserFactory(liftosaur_api_key="test-key")
         c = Client()
         c.force_login(user)
-        c.get(reverse("challenges:invite-link", args=[link.token]))
+        c.post(reverse("challenges:invite-accept", args=[link.token]))
 
         participant = ChallengeParticipant.objects.get(challenge=challenge, user=user)
         assert participant.joined_via_link_id == link.pk

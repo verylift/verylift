@@ -102,42 +102,30 @@ class TestAnonymousVisitor:
 
 
 @pytest.mark.django_db
-class TestAuthenticatedFreshJoin:
-    def test_join_creates_accepted_participant_and_records_provenance(
-        self, challenge, link
-    ):
+class TestAuthenticatedFreshVisitor:
+    """TASK-303: a fresh (never-a-participant) authenticated visitor now sees
+    the accept/decline preview instead of being auto-joined."""
+
+    def test_renders_accept_page_without_joining(self, challenge, link):
         user = UserFactory(liftosaur_api_key="test-key")
         c = Client()
         c.force_login(user)
         response = c.get(reverse("challenges:invite-link", args=[link.token]))
 
-        assert response.status_code == 302
-        assert response["Location"] == reverse(
-            "challenges:goal-setup", args=[challenge.pk]
-        )
-        participant = ChallengeParticipant.objects.get(challenge=challenge, user=user)
-        assert participant.invite_status == InviteStatus.ACCEPTED
-        assert participant.joined_via_link_id == link.pk
+        assert response.status_code == 200
+        assert not ChallengeParticipant.objects.filter(
+            challenge=challenge, user=user
+        ).exists()
 
-    def test_join_increments_the_links_use_count(self, challenge, link):
+    def test_does_not_increment_the_links_use_count(self, challenge, link):
         user = UserFactory(liftosaur_api_key="test-key")
         c = Client()
         c.force_login(user)
         c.get(reverse("challenges:invite-link", args=[link.token]))
         link.refresh_from_db()
-        assert link.use_count == 1
+        assert link.use_count == 0
 
-    def test_join_clears_the_session_token(self, challenge, link):
-        user = UserFactory(liftosaur_api_key="test-key")
-        c = Client()
-        c.force_login(user)
-        session = c.session
-        session["invite_token"] = link.token
-        session.save()
-        c.get(reverse("challenges:invite-link", args=[link.token]))
-        assert "invite_token" not in c.session
-
-    def test_draft_challenge_is_joinable(self, link):
+    def test_draft_challenge_renders_accept_page(self, link):
         challenge = link.challenge
         challenge.status = Challenge.Status.DRAFT
         challenge.save(update_fields=["status"])
@@ -145,8 +133,8 @@ class TestAuthenticatedFreshJoin:
         c = Client()
         c.force_login(user)
         response = c.get(reverse("challenges:invite-link", args=[link.token]))
-        assert response.status_code == 302
-        assert ChallengeParticipant.objects.filter(
+        assert response.status_code == 200
+        assert not ChallengeParticipant.objects.filter(
             challenge=challenge, user=user
         ).exists()
 
@@ -268,17 +256,16 @@ class TestKeylessJoin:
     already could (the creator is auto-added at creation, bypassing this view
     entirely)."""
 
-    def test_keyless_visitor_joins_and_lands_in_goal_setup(self, challenge, link):
+    def test_keyless_visitor_sees_accept_page_without_a_liftosaur_key(
+        self, challenge, link
+    ):
         user = UserFactory(liftosaur_api_key=None)
         c = Client()
         c.force_login(user)
         response = c.get(reverse("challenges:invite-link", args=[link.token]))
 
-        assert response.status_code == 302
-        assert response["Location"] == reverse(
-            "challenges:goal-setup", args=[challenge.pk]
-        )
-        assert ChallengeParticipant.objects.filter(
+        assert response.status_code == 200
+        assert not ChallengeParticipant.objects.filter(
             challenge=challenge, user=user
         ).exists()
 

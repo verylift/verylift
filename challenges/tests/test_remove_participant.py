@@ -16,7 +16,7 @@ from challenges.tests.factories import (
     ChallengeParticipantFactory,
 )
 from notifications.models import Notification
-from scoring.services import get_leaderboard
+from scoring.services import rank_participants
 from scoring.tests.factories import PointEarnEventFactory
 
 InviteStatus = ChallengeParticipant.InviteStatus
@@ -126,7 +126,7 @@ class TestRemoveParticipantView:
         url = reverse("challenges:remove", args=[challenge.pk, participant.pk])
         creator_client.post(url)
 
-        leaderboard_users = {row["user"].pk for row in get_leaderboard(challenge)}
+        leaderboard_users = {row["user"].pk for row in rank_participants(challenge)}
         assert participant.user.pk not in leaderboard_users
 
     def test_works_on_draft_challenge(self, db):

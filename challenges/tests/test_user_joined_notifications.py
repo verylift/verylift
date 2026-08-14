@@ -27,10 +27,23 @@ def _accepted(challenge, user):
 
 
 def _join_via_link(challenge, user):
+    """Rejoin (or revisit) via the GET invite-link landing page -- unchanged
+    by TASK-303 for a user who already has a participant row (e.g. a bailed
+    rejoin)."""
     link = ChallengeInviteLinkFactory(challenge=challenge, created_by=challenge.creator)
     client = Client()
     client.force_login(user)
     return client.get(reverse("challenges:invite-link", args=[link.token]))
+
+
+def _join_fresh_via_accept(challenge, user):
+    """Fresh join (no existing participant row) via the POST accept endpoint
+    (TASK-303): the GET landing page only renders the accept/decline preview
+    for these users now, so the actual join happens here instead."""
+    link = ChallengeInviteLinkFactory(challenge=challenge, created_by=challenge.creator)
+    client = Client()
+    client.force_login(user)
+    return client.post(reverse("challenges:invite-accept", args=[link.token]))
 
 
 @pytest.mark.django_db
@@ -43,7 +56,7 @@ class TestJoinViaLinkNotifications:
         _accepted(challenge, existing_b)
 
         joiner = UserFactory(liftosaur_api_key="test-liftosaur-key")
-        _join_via_link(challenge, joiner)
+        _join_fresh_via_accept(challenge, joiner)
 
         notes = Notification.objects.filter(
             event_type=Notification.EventType.USER_JOINED
@@ -61,7 +74,7 @@ class TestJoinViaLinkNotifications:
         _accepted(challenge, UserFactory())
 
         joiner = UserFactory(liftosaur_api_key="test-liftosaur-key")
-        _join_via_link(challenge, joiner)
+        _join_fresh_via_accept(challenge, joiner)
 
         assert (
             Notification.objects.filter(
@@ -89,7 +102,7 @@ class TestJoinViaLinkNotifications:
         )
 
         joiner = UserFactory(liftosaur_api_key="test-liftosaur-key")
-        _join_via_link(challenge, joiner)
+        _join_fresh_via_accept(challenge, joiner)
 
         notes = Notification.objects.filter(
             event_type=Notification.EventType.USER_JOINED

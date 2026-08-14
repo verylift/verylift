@@ -253,7 +253,7 @@ def _persist_best(
         is_new_best = current_best is None or points_earned > current_best.points_earned
 
         should_diff = is_new_best and notify
-        leaderboard_before = get_leaderboard(challenge) if should_diff else None
+        leaderboard_before = rank_participants(challenge) if should_diff else None
 
         if is_new_best and current_best is not None:
             current_best.is_current_best = False
@@ -274,9 +274,9 @@ def _persist_best(
         )
 
         if should_diff:
-            leaderboard_after = get_leaderboard(challenge)
-            create_overtaken_notifications(
-                challenge, leaderboard_before, leaderboard_after
+            leaderboard_after = rank_participants(challenge)
+            notify_ranking_changes(
+                challenge, compute_ranking_deltas(leaderboard_before, leaderboard_after)
             )
 
     return new_event
@@ -372,7 +372,7 @@ def score_pooled_history(*, user, challenge) -> ScoringSummary:
             continue
 
         if leaderboard_before is None:
-            leaderboard_before = get_leaderboard(challenge)
+            leaderboard_before = rank_participants(challenge)
 
         summary.sets_evaluated += 1
         event = process_scored_set(
@@ -396,13 +396,15 @@ def score_pooled_history(*, user, challenge) -> ScoringSummary:
     # Diff the leaderboard once for the whole run: notify only on the net change
     # in standings, not on each intermediate PR scored during the backfill.
     if summary.new_point_events:
-        leaderboard_after = get_leaderboard(challenge)
-        create_overtaken_notifications(challenge, leaderboard_before, leaderboard_after)
+        leaderboard_after = rank_participants(challenge)
+        notify_ranking_changes(
+            challenge, compute_ranking_deltas(leaderboard_before, leaderboard_after)
+        )
 
     return summary
 
 
-def build_points_over_time(challenge) -> dict:
+def build_points_over_time(challenge, *, top_n: int | None = None) -> dict:
     """Build Chart.js line-chart data of cumulative points per participant.
 
     For each accepted, non-bailed participant, the cumulative points at any date
@@ -417,6 +419,11 @@ def build_points_over_time(challenge) -> dict:
     rising slope from zero. Participants with no events produce a flat zero series.
 
     Deactivated users are labelled "Former Participant".
+
+    ``top_n``, when given, keeps only the ``top_n`` datasets with the highest
+    final cumulative value (the shared label axis is unaffected) -- used by the
+    invite accept/decline preview (TASK-303) to fit a small card; the full
+    challenge detail page always calls this with ``top_n=None``.
 
     Shape: {"labels": [...], "datasets": [{"label": str, "data": [int, ...]}, ...]}
     """
@@ -490,6 +497,11 @@ def build_points_over_time(challenge) -> dict:
             data.append(cumulative)
         datasets.append({"label": label, "data": data})
 
+    if top_n is not None and len(datasets) > top_n:
+        datasets = sorted(
+            datasets, key=lambda ds: ds["data"][-1] if ds["data"] else 0, reverse=True
+        )[:top_n]
+
     return {"labels": labels, "datasets": datasets}
 
 
@@ -561,7 +573,7 @@ def build_recent_scoring_activity(challenge, viewing_user, limit: int = 5) -> li
 
     Zero-point events are dropped entirely -- they are not meaningful activity.
     Superseded events (is_current_best=False) are dropped too, matching
-    get_leaderboard/get_leader -- a later set on a lift that doesn't beat the
+    rank_participants/get_leader -- a later set on a lift that doesn't beat the
     existing PR still earns points_earned equal to whatever tier it clears, but
     it isn't a new personal best, so it shouldn't read as fresh activity here.
     Events are also collapsed per (lifter, lift, performed_at day): a lifting
@@ -624,7 +636,7 @@ def build_recent_scoring_activity(challenge, viewing_user, limit: int = 5) -> li
     return activity
 
 
-def get_leaderboard(challenge) -> list[dict]:
+def rank_participants(challenge, *, include_unscored=False) -> list[dict]:
     """Return a dense-ranked leaderboard for a challenge.
 
     Queries PointEarnEvent where is_current_best=True, groups by user, sums
@@ -633,6 +645,17 @@ def get_leaderboard(challenge) -> list[dict]:
 
     Bailed participants (voluntarily left or creator-removed) are excluded so a
     frozen ledger no longer occupies a ranked row, matching build_points_over_time.
+
+    By default (``include_unscored=False``) only participants who have earned
+    at least one point event appear -- this is the exact historical behavior
+    that notification/standing code relies on: an unscored participant must
+    stay absent from the ranked set, or every zero-scorer would appear to
+    shift rank the moment anyone else scores, firing spurious "overtaken"
+    notifications. Pass ``include_unscored=True`` for display purposes (a
+    leaderboard UI) to additionally include every accepted, non-bailed
+    ChallengeParticipant missing from the scored set, defaulted to
+    total_points=0 and ranked via the same dense-rank pass across the
+    combined set.
 
     Dict shape: {'user': <User>, 'total_points': <int>, 'rank': <int>}
     """
@@ -653,26 +676,40 @@ def get_leaderboard(challenge) -> list[dict]:
         .order_by("-total_points")
     )
 
-    # Resolve User objects
     from django.contrib.auth import get_user_model
 
     User = get_user_model()
-    user_map = {
-        u.pk: u for u in User.objects.filter(pk__in=[row["user"] for row in rows])
-    }
+    scored_totals = {row["user"]: row["total_points"] for row in rows}
+
+    if include_unscored:
+        unscored_user_ids = (
+            ChallengeParticipant.objects.filter(
+                challenge=challenge,
+                invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+                is_bailed=False,
+            )
+            .exclude(user_id__in=scored_totals)
+            .values_list("user_id", flat=True)
+        )
+        totals = {**scored_totals, **dict.fromkeys(unscored_user_ids, 0)}
+    else:
+        totals = scored_totals
+
+    user_map = {u.pk: u for u in User.objects.filter(pk__in=totals)}
+
+    ordered = sorted(totals.items(), key=lambda item: item[1], reverse=True)
 
     # Assign dense ranks in Python
     leaderboard = []
     current_rank = 0
     previous_points: int | None = None
-    for row in rows:
-        total_points = row["total_points"]
+    for user_id, total_points in ordered:
         if total_points != previous_points:
             current_rank += 1
             previous_points = total_points
         leaderboard.append(
             {
-                "user": user_map[row["user"]],
+                "user": user_map[user_id],
                 "total_points": total_points,
                 "rank": current_rank,
             }
@@ -728,49 +765,80 @@ def get_user_standing(challenge, user) -> dict:
 
     Dict shape: {'total_points': <int>, 'rank': <int | None>}.
     """
-    for entry in get_leaderboard(challenge):
+    for entry in rank_participants(challenge):
         if entry["user"].pk == user.pk:
             return {"total_points": entry["total_points"], "rank": entry["rank"]}
     return {"total_points": 0, "rank": None}
 
 
-def create_overtaken_notifications(
-    challenge, leaderboard_before: list[dict], leaderboard_after: list[dict]
-) -> None:
-    """Create overtaken notifications for participants whose rank worsened.
+def compute_ranking_deltas(
+    leaderboard_before: list[dict], leaderboard_after: list[dict]
+) -> list[dict]:
+    """Diff two ordered rank_participants() snapshots into overtake events.
 
-    Compares two ordered leaderboard snapshots from get_leaderboard(). For every
-    participant whose rank is numerically higher (worse) in ``leaderboard_after``
-    than in ``leaderboard_before``, a single overtaken Notification is created
-    recording the drop and the participant now occupying their old rank.
+    Pure function: no DB access, no side effects. For every participant whose
+    rank is numerically higher (worse) in ``leaderboard_after`` than in
+    ``leaderboard_before``, returns one delta recording the drop and whichever
+    participant now occupies their old rank -- the same "who got overtaken"
+    computation ``create_overtaken_notifications`` used to do inline, split out
+    so it can be unit-tested with plain in-memory data.
 
-    Bailed participants are excluded — their ledger is frozen and being passed
-    while bailed is not meaningful.
+    Dict shape: {'user': <User>, 'from_rank': <int>, 'to_rank': <int>,
+    'overtaken_by': <User>}.
     """
-    before_rank_by_user = {
-        entry["user"].pk: entry["rank"] for entry in leaderboard_before
-    }
+    # Keyed on the user object itself, not user.pk: Django model instances
+    # compare and hash by pk (so two separately-fetched rows for the same
+    # user still collide correctly here), and keeping it identity/equality
+    # based -- rather than reaching for .pk -- is what lets this stay a pure
+    # function callable with plain in-memory test doubles, no ORM required.
+    before_rank_by_user = {entry["user"]: entry["rank"] for entry in leaderboard_before}
     after_by_rank = {entry["rank"]: entry["user"] for entry in leaderboard_after}
 
+    deltas = []
+    for entry in leaderboard_after:
+        user = entry["user"]
+        new_rank = entry["rank"]
+        old_rank = before_rank_by_user.get(user)
+
+        if old_rank is None or new_rank <= old_rank:
+            continue
+
+        overtaker = after_by_rank.get(old_rank)
+        if overtaker is None or overtaker == user:
+            continue
+
+        deltas.append(
+            {
+                "user": user,
+                "from_rank": old_rank,
+                "to_rank": new_rank,
+                "overtaken_by": overtaker,
+            }
+        )
+
+    return deltas
+
+
+def notify_ranking_changes(challenge, deltas: list[dict]) -> None:
+    """Create overtaken Notification rows for the given ranking deltas.
+
+    Bailed participants are excluded — their ledger is frozen and notifying
+    them while bailed is not meaningful.
+    """
     bailed_user_ids = set(
         ChallengeParticipant.objects.filter(
             challenge=challenge, is_bailed=True
         ).values_list("user_id", flat=True)
     )
 
-    for entry in leaderboard_after:
-        user = entry["user"]
-        new_rank = entry["rank"]
-        old_rank = before_rank_by_user.get(user.pk)
-
-        if old_rank is None or new_rank <= old_rank:
-            continue
+    for delta in deltas:
+        user = delta["user"]
         if user.pk in bailed_user_ids:
             continue
 
-        overtaker = after_by_rank.get(old_rank)
-        if overtaker is None or overtaker.pk == user.pk:
-            continue
+        overtaker = delta["overtaken_by"]
+        old_rank = delta["from_rank"]
+        new_rank = delta["to_rank"]
 
         Notification.objects.create(
             user=user,
@@ -801,7 +869,7 @@ def build_career_stats(user) -> dict:
     - ``challenges_played``: accepted participations in non-draft challenges.
       Bailed participations still count — the user did play.
     - ``wins``: completed challenges where the user holds dense rank #1
-      (bailed participants are already excluded by get_leaderboard).
+      (bailed participants are already excluded by rank_participants).
     - ``total_points``: sum of the user's current-best point events everywhere.
     - ``points_per_week``: total_points spread over the span from their first
       to their most recent scoring event, with a one-week floor so a brand-new
