@@ -13,10 +13,13 @@ from django.db import OperationalError
 from django.http import Http404, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.translation import gettext, ngettext
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_POST
+from django_ratelimit.decorators import ratelimit
 
+from accounts.ratelimit import client_ip
 from accounts.units import to_display_weight
 from challenges.custom_goals import save_custom_goal
 from challenges.forms import (
@@ -55,6 +58,7 @@ from challenges.services import (
     submit_manual_lift,
     sync_and_score,
     transfer_ownership,
+    update_invite_link,
 )
 from challenges.standards import covered_lift_names
 from core.http import is_htmx
@@ -79,6 +83,10 @@ from scoring.services import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _invite_link_ip_rate(group, request):
+    return settings.RATELIMIT_INVITE_LINK_IP
 
 
 def _hx_redirect(request, url):
@@ -438,6 +446,7 @@ def find_challenges_view(request):
     )
 
 
+@ratelimit(group="invite_link_ip", key=client_ip, rate=_invite_link_ip_rate)
 def invite_link_view(request, token):
     """Landing page for a challenge's shareable invite link (TASK-249, AC#1/#2).
 
@@ -446,6 +455,13 @@ def invite_link_view(request, token):
     on to register). An unknown token 404s with no information leaked; an
     expired/revoked one renders an explanatory page naming the challenge (the
     bearer already held a valid-format link for it, so that's not a leak).
+
+    Per-IP rate limited (TASK-300): tokens are now Discord-length (8 chars,
+    48 bits of entropy) rather than the original 43-char/256-bit ones, which
+    is enough entropy against a naive brute force but not against a fast,
+    unthrottled scan. Matches the client_ip/rate-callable/settings pattern
+    already used for auth (accounts/ratelimit.py, TASK-153) and the
+    newsletter form (core/views.py) rather than inventing a new one.
 
     This is now the only way to join a challenge (TASK-272 deleted the direct
     join and accept/decline views). Its guard ladder was ported from the old
@@ -1494,6 +1510,26 @@ def _render_confirm_action(
     )
 
 
+def _invite_link_form_for(link):
+    """An InviteLinkOptionsForm pre-filled from ``link``'s current values.
+
+    Without this, the Custom expiry/Max uses inputs always render blank next
+    to a live link's "Expires in N days" text, which reads as if the two are
+    unrelated quantities -- they're the same field, one shown as a relative
+    countdown and the other as an editable absolute value. ``link`` may be
+    ``None`` (no live link yet), in which case the form is left blank.
+    """
+    if link is None:
+        return InviteLinkOptionsForm()
+    return InviteLinkOptionsForm(
+        initial={
+            "expires_at": timezone.localtime(link.expires_at),
+            "max_uses": link.max_uses,
+        },
+        challenge=link.challenge,
+    )
+
+
 def _participants_section_context(challenge):
     """Context for the Settings page's creator-only sections.
 
@@ -1538,12 +1574,14 @@ def _participants_section_context(challenge):
         for row in rows
         if not row.is_bailed
     ]
+    link = current_invite_link(challenge)
     return {
         "challenge": challenge,
         "participant_rows": participant_rows,
         "is_locked": challenge.is_terminal,
-        "current_invite_link": current_invite_link(challenge),
-        "invite_link_form": InviteLinkOptionsForm(),
+        "current_invite_link": link,
+        "invite_link_form": _invite_link_form_for(link),
+        "invite_link_editing": False,
     }
 
 
@@ -1812,9 +1850,14 @@ def regenerate_invite_link_view(request, pk):
     invite-link section back (with an out-of-band success message); a plain
     request PRG-redirects to Settings.
 
-    Accepts optional ``expires_at``/``max_uses`` overrides via
-    InviteLinkOptionsForm — both blank means the plain default behaviour
-    (end-of-day of the challenge's end_date, unlimited uses).
+    Carries the incumbent link's expiry/max-uses forward onto the new one
+    (only its token and use_count are actually fresh) -- regenerating is "give
+    me a new URL", not "reset my settings", so an owner who'd set a custom
+    expiry or a use cap doesn't lose it just because the old link leaked.
+    Takes no form, since there's nothing here for a user to get wrong; those
+    settings are adjusted afterward via the invite-link section's
+    click-to-edit pencil (update_invite_link_view), which edits the link in
+    place without minting a new token.
     """
     challenge = _get_challenge_for_creator(request, pk)
 
@@ -1827,27 +1870,12 @@ def regenerate_invite_link_view(request, pk):
     if response is not None:
         return response
 
-    form = InviteLinkOptionsForm(request.POST)
-    if not form.is_valid():
-        messages.error(request, gettext("Could not generate a new invite link."))
-        if is_htmx(request):
-            return render(
-                request,
-                "challenges/_invite_link_section.html",
-                {
-                    "challenge": challenge,
-                    "current_invite_link": current_invite_link(challenge),
-                    "invite_link_form": form,
-                    "oob_messages": True,
-                },
-            )
-        return redirect(reverse("challenges:settings", args=[pk]))
-
-    regenerate_invite_link(
+    incumbent = current_invite_link(challenge)
+    new_link = regenerate_invite_link(
         challenge,
         request.user,
-        expires_at=form.cleaned_data["expires_at"],
-        max_uses=form.cleaned_data["max_uses"],
+        expires_at=incumbent.expires_at if incumbent else None,
+        max_uses=incumbent.max_uses if incumbent else None,
     )
     logger.info(
         "User %s regenerated the invite link for challenge %s", request.user.id, pk
@@ -1860,8 +1888,80 @@ def regenerate_invite_link_view(request, pk):
             "challenges/_invite_link_section.html",
             {
                 "challenge": challenge,
-                "current_invite_link": current_invite_link(challenge),
-                "invite_link_form": InviteLinkOptionsForm(),
+                "current_invite_link": new_link,
+                "invite_link_form": _invite_link_form_for(new_link),
+                "invite_link_editing": False,
+                "oob_messages": True,
+            },
+        )
+    return redirect(reverse("challenges:settings", args=[pk]))
+
+
+@login_required
+def update_invite_link_view(request, pk):
+    """Adjust the challenge's current invite link's expiry/max-uses in place.
+
+    Unlike regenerate_invite_link_view, this does not mint a new token or
+    touch use_count -- it's for an owner tweaking the limits on a link
+    they've already shared, without invalidating it. 404s if there's no live
+    link to update (the Settings/Share UI never renders this form in that
+    state, so reaching here without one means a stale page).
+
+    Click-to-edit toggle mirroring rename_challenge_view: GET renders display
+    mode (relative-time/uses-count text plus a pencil) by default, or edit
+    mode (the Expiry/Max uses inputs) when the pencil's ``?edit=1`` is
+    present. POST validates and saves: success drops back to display mode,
+    failure re-renders edit mode with the bound form's errors.
+    """
+    challenge = _get_challenge_for_creator(request, pk)
+
+    response = _terminal_status_response(
+        request,
+        challenge,
+        gettext("This challenge can no longer accept invites."),
+        action="update the invite link for",
+    )
+    if response is not None:
+        return response
+
+    link = current_invite_link(challenge)
+    if link is None:
+        raise Http404
+
+    editing = request.GET.get("edit") == "1"
+    if request.method == "POST":
+        form = InviteLinkOptionsForm(request.POST, challenge=challenge)
+        if form.is_valid():
+            link = update_invite_link(
+                link,
+                expires_at=form.cleaned_data["expires_at"],
+                max_uses=form.cleaned_data["max_uses"],
+            )
+            logger.info(
+                "User %s updated the invite link for challenge %s",
+                request.user.id,
+                pk,
+            )
+            messages.success(request, gettext("The invite link has been updated."))
+            if not is_htmx(request):
+                return redirect(reverse("challenges:settings", args=[pk]))
+            form = _invite_link_form_for(link)
+            editing = False
+        else:
+            messages.error(request, gettext("Could not update the invite link."))
+            editing = True
+    else:
+        form = _invite_link_form_for(link)
+
+    if is_htmx(request):
+        return render(
+            request,
+            "challenges/_invite_link_section.html",
+            {
+                "challenge": challenge,
+                "current_invite_link": link,
+                "invite_link_form": form,
+                "invite_link_editing": editing,
                 "oob_messages": True,
             },
         )
@@ -1884,13 +1984,15 @@ def share_challenge_view(request, pk):
     in-progress sibling state a swap would need to preserve.
     """
     challenge = _get_challenge_for_creator(request, pk)
+    link = current_invite_link(challenge)
     return render(
         request,
         "challenges/share.html",
         {
             "challenge": challenge,
-            "current_invite_link": current_invite_link(challenge),
-            "invite_link_form": InviteLinkOptionsForm(),
+            "current_invite_link": link,
+            "invite_link_form": _invite_link_form_for(link),
+            "invite_link_editing": False,
         },
     )
 

@@ -4,7 +4,7 @@ BodyweightLog, neither of which exists anymore."""
 
 from datetime import UTC, datetime
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
@@ -197,6 +197,82 @@ class TestUserTimezoneMiddleware:
             assert timezone.get_current_timezone_name() == "UTC"
         finally:
             timezone.deactivate()
+
+
+@pytest.mark.django_db
+class TestUserTimezoneMiddlewarePersistsDetectedTimezone:
+    """detected_timezone persistence half of UserTimezoneMiddleware (TASK-300)."""
+
+    def test_cookie_is_persisted_for_an_automatic_account(self):
+        user = UserFactory(timezone="", detected_timezone="")
+        get_response = MagicMock(return_value=MagicMock(status_code=200))
+        middleware = UserTimezoneMiddleware(get_response)
+        try:
+            middleware(_tz_request(user=user, cookies={"pp_timezone": "Asia/Tokyo"}))
+        finally:
+            timezone.deactivate()
+        user.refresh_from_db()
+        assert user.detected_timezone == "Asia/Tokyo"
+
+    def test_cookie_is_persisted_even_when_a_pin_wins_activation(self):
+        """detected_timezone tracks the browser regardless of whether the pin
+        is what actually gets activated for rendering -- it exists for
+        contexts with no pin-vs-cookie choice to make at all (no request)."""
+        user = UserFactory(timezone="America/Toronto", detected_timezone="")
+        get_response = MagicMock(return_value=MagicMock(status_code=200))
+        middleware = UserTimezoneMiddleware(get_response)
+        try:
+            middleware(_tz_request(user=user, cookies={"pp_timezone": "Asia/Tokyo"}))
+        finally:
+            timezone.deactivate()
+        user.refresh_from_db()
+        assert user.detected_timezone == "Asia/Tokyo"
+        assert user.timezone == "America/Toronto"
+
+    def test_no_cookie_leaves_detected_timezone_untouched(self):
+        user = UserFactory(timezone="", detected_timezone="Asia/Tokyo")
+        get_response = MagicMock(return_value=MagicMock(status_code=200))
+        middleware = UserTimezoneMiddleware(get_response)
+        try:
+            middleware(_tz_request(user=user))
+        finally:
+            timezone.deactivate()
+        user.refresh_from_db()
+        assert user.detected_timezone == "Asia/Tokyo"
+
+    def test_invalid_cookie_does_not_overwrite_detected_timezone(self):
+        user = UserFactory(timezone="", detected_timezone="Asia/Tokyo")
+        get_response = MagicMock(return_value=MagicMock(status_code=200))
+        middleware = UserTimezoneMiddleware(get_response)
+        try:
+            middleware(_tz_request(user=user, cookies={"pp_timezone": "Not/AZone"}))
+        finally:
+            timezone.deactivate()
+        user.refresh_from_db()
+        assert user.detected_timezone == "Asia/Tokyo"
+
+    def test_anonymous_request_is_not_persisted_anywhere(self):
+        """No user row exists to persist to -- this just must not error."""
+        get_response = MagicMock(return_value=MagicMock(status_code=200))
+        middleware = UserTimezoneMiddleware(get_response)
+        try:
+            middleware(_tz_request(user=None, cookies={"pp_timezone": "Asia/Tokyo"}))
+        finally:
+            timezone.deactivate()
+
+    def test_unchanged_cookie_does_not_write(self):
+        """Same value already stored -- no DB write should happen at all."""
+        user = UserFactory(timezone="", detected_timezone="Asia/Tokyo")
+        get_response = MagicMock(return_value=MagicMock(status_code=200))
+        middleware = UserTimezoneMiddleware(get_response)
+        with patch.object(user, "save") as mock_save:
+            try:
+                middleware(
+                    _tz_request(user=user, cookies={"pp_timezone": "Asia/Tokyo"})
+                )
+            finally:
+                timezone.deactivate()
+        mock_save.assert_not_called()
 
 
 @pytest.mark.django_db

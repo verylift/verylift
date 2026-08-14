@@ -1,18 +1,8 @@
-{% load i18n humanize %}
+{% load i18n humanize icons %}
 <section class="bg-surface-card border border-line-subtle rounded p-6">
   <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "Invite Link" %}</h2>
 
   {% if current_invite_link %}
-  <p class="text-xs text-content-muted mb-1">
-    {% blocktrans with when=current_invite_link.expires_at|timeuntil %}Expires in {{ when }}{% endblocktrans %}
-  </p>
-  <p class="text-xs text-content-muted mb-2">
-    {% if current_invite_link.max_uses %}
-      {% blocktrans with used=current_invite_link.use_count total=current_invite_link.max_uses %}{{ used }} of {{ total }} uses used{% endblocktrans %}
-    {% else %}
-      {% trans "Unlimited uses" %}
-    {% endif %}
-  </p>
   <div class="flex flex-wrap gap-2 mb-4">
     <input
       type="text"
@@ -21,6 +11,22 @@
       value="{{ request.scheme }}://{{ request.get_host }}{% url 'challenges:invite-link' current_invite_link.token %}"
       class="flex-1 min-w-0 border border-line rounded px-3 py-2 text-sm bg-surface-sunken text-content-body"
       onclick="this.select()">
+    {% if challenge.creator_id == request.user.id %}
+    <button
+      type="button"
+      hx-post="{% url 'challenges:regenerate-invite-link' challenge.pk %}"
+      hx-target="closest section"
+      hx-swap="outerHTML"
+      hx-confirm="{% trans 'Generate a new link? The current one will stop working immediately.' %}"
+      title="{% trans 'Generate new link (invalidates the current one)' %}"
+      aria-label="{% trans 'Generate new link (invalidates the current one)' %}"
+      class="flex items-center justify-center h-9 w-9 rounded border border-line-subtle text-content-body hover:bg-surface-sunken shrink-0">
+      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
+        <path d="M21 3v5h-5"/>
+      </svg>
+    </button>
+    {% endif %}
     <button
       type="button"
       data-copy-invite-link
@@ -29,74 +35,111 @@
     </button>
   </div>
   {% if challenge.creator_id == request.user.id %}
-  <form
-    method="post"
-    action="{% url 'challenges:regenerate-invite-link' challenge.pk %}"
-    hx-post="{% url 'challenges:regenerate-invite-link' challenge.pk %}"
-    hx-target="closest section"
-    hx-swap="outerHTML"
-    class="flex flex-wrap items-end gap-2">
-    {% csrf_token %}
-    <div>
-      <label for="{{ invite_link_form.expires_at.id_for_label }}" class="block text-xs text-content-muted mb-1">{% trans "Custom expiry (optional)" %}</label>
-      {{ invite_link_form.expires_at }}
+    {% if invite_link_editing %}
+    <form
+      id="invite-link-form"
+      method="post"
+      action="{% url 'challenges:update-invite-link' challenge.pk %}"
+      hx-post="{% url 'challenges:update-invite-link' challenge.pk %}"
+      hx-target="closest section"
+      hx-swap="outerHTML">
+      {% csrf_token %}
+      <div class="flex flex-wrap items-start gap-4">
+        <div>
+          <label for="{{ invite_link_form.expires_at.id_for_label }}" class="block text-xs text-content-muted mb-1">
+            {% trans "Expiry" %}
+            <span class="font-normal text-content-subtle">({% now "T" %}, UTC{% now "O" %})</span>
+          </label>
+          {{ invite_link_form.expires_at }}
+          <p class="text-xs text-content-muted mt-1" data-expiry-relative>
+            {% blocktrans with when=current_invite_link.expires_at|timeuntil %}Expires in {{ when }}{% endblocktrans %}
+          </p>
+        </div>
+        <div>
+          <label for="{{ invite_link_form.max_uses.id_for_label }}" class="block text-xs text-content-muted mb-1">{% trans "Max uses" %}</label>
+          <div class="flex items-center gap-1">
+            {{ invite_link_form.max_uses }}
+            <button
+              type="button"
+              data-clear-max-uses
+              title="{% trans 'Clear (unlimited uses)' %}"
+              aria-label="{% trans 'Clear max uses (unlimited uses)' %}"
+              class="flex items-center justify-center h-9 w-9 rounded text-content-muted hover:text-content-strong hover:bg-surface-sunken shrink-0">
+              {% icon "infinity" css_class="h-4 w-4" %}
+            </button>
+          </div>
+        </div>
+      </div>
+      {% if invite_link_form.errors %}
+      <p class="text-xs text-danger mt-2">{{ invite_link_form.expires_at.errors|join:" " }}{{ invite_link_form.max_uses.errors|join:" " }}</p>
+      {% endif %}
+      <div class="flex gap-2 mt-3">
+        <button
+          type="submit"
+          class="bg-accent text-accent-on text-sm font-medium px-3 py-2 rounded hover:bg-accent-hover">
+          {% trans "Save" %}
+        </button>
+        <button
+          type="button"
+          hx-get="{% url 'challenges:update-invite-link' challenge.pk %}"
+          hx-target="closest section"
+          hx-swap="outerHTML"
+          class="text-content-muted text-sm font-medium px-3 py-2 rounded hover:bg-surface-sunken">
+          {% trans "Cancel" %}
+        </button>
+      </div>
+    </form>
+    {% else %}
+    <div class="flex items-center gap-2 text-sm text-content-body">
+      <span>{% blocktrans with when=current_invite_link.expires_at|timeuntil %}Expires in {{ when }}{% endblocktrans %}</span>
+      <span class="text-content-subtle">&middot;</span>
+      <span>
+        {% if current_invite_link.max_uses %}
+          {% blocktrans with used=current_invite_link.use_count total=current_invite_link.max_uses %}{{ used }} of {{ total }} uses{% endblocktrans %}
+        {% else %}
+          {% trans "Unlimited uses" %}
+        {% endif %}
+      </span>
+      <button
+        type="button"
+        hx-get="{% url 'challenges:update-invite-link' challenge.pk %}?edit=1"
+        hx-target="closest section"
+        hx-swap="outerHTML"
+        class="flex items-center justify-center h-7 w-7 rounded text-content-muted hover:text-content-strong hover:bg-surface-sunken"
+        aria-label="{% trans 'Edit invite link expiry and max uses' %}">
+        {% icon "pencil" %}
+      </button>
     </div>
-    <div>
-      <label for="{{ invite_link_form.max_uses.id_for_label }}" class="block text-xs text-content-muted mb-1">{% trans "Max uses (optional)" %}</label>
-      {{ invite_link_form.max_uses }}
-    </div>
-    <button
-      type="submit"
-      title="{% trans 'Generate new link' %}"
-      aria-label="{% trans 'Generate new link' %}"
-      class="flex items-center justify-center h-9 w-9 rounded border border-line-subtle text-content-body hover:bg-surface-sunken shrink-0">
-      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
-        <path d="M21 3v5h-5"/>
-      </svg>
-    </button>
-  </form>
-  {% if invite_link_form.errors %}
-  <p class="text-xs text-danger mt-2">{{ invite_link_form.expires_at.errors|join:" " }}{{ invite_link_form.max_uses.errors|join:" " }}</p>
-  {% endif %}
+    {% endif %}
   {% endif %}
   {% else %}
   <p class="text-sm text-content-muted italic mb-4">{% trans "No active invite link. Generate one to invite people." %}</p>
   {% if challenge.creator_id == request.user.id %}
-  <form
-    method="post"
-    action="{% url 'challenges:regenerate-invite-link' challenge.pk %}"
+  <button
+    type="button"
     hx-post="{% url 'challenges:regenerate-invite-link' challenge.pk %}"
     hx-target="closest section"
     hx-swap="outerHTML"
-    class="flex flex-wrap items-end gap-2">
-    {% csrf_token %}
-    <div>
-      <label for="{{ invite_link_form.expires_at.id_for_label }}" class="block text-xs text-content-muted mb-1">{% trans "Custom expiry (optional)" %}</label>
-      {{ invite_link_form.expires_at }}
-    </div>
-    <div>
-      <label for="{{ invite_link_form.max_uses.id_for_label }}" class="block text-xs text-content-muted mb-1">{% trans "Max uses (optional)" %}</label>
-      {{ invite_link_form.max_uses }}
-    </div>
-    <button
-      type="submit"
-      title="{% trans 'Generate invite link' %}"
-      aria-label="{% trans 'Generate invite link' %}"
-      class="flex items-center justify-center h-9 w-9 rounded bg-accent text-accent-on hover:bg-accent-hover shrink-0">
-      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
-        <path d="M21 3v5h-5"/>
-      </svg>
-    </button>
-  </form>
-  {% if invite_link_form.errors %}
-  <p class="text-xs text-danger mt-2">{{ invite_link_form.expires_at.errors|join:" " }}{{ invite_link_form.max_uses.errors|join:" " }}</p>
-  {% endif %}
+    class="bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
+    {% trans "Generate invite link" %}
+  </button>
   {% endif %}
   {% endif %}
 
   {% if oob_messages %}{% include "components/_messages_oob.html" %}{% endif %}
+  <script>
+    (function () {
+      var section = document.currentScript.closest('section');
+      var button = section.querySelector('[data-clear-max-uses]');
+      if (!button) return;
+      button.addEventListener('click', function () {
+        var input = section.querySelector('#{{ invite_link_form.max_uses.id_for_label }}');
+        if (!input) return;
+        input.value = '';
+        input.focus();
+      });
+    })();
+  </script>
   <script>
     (function () {
       var section = document.currentScript.closest('section');
@@ -120,6 +163,61 @@
           input.select();
           document.execCommand('copy');
           done();
+        }
+      });
+    })();
+  </script>
+  <script>
+    (function () {
+      var section = document.currentScript.closest('section');
+      var input = section.querySelector('#{{ invite_link_form.expires_at.id_for_label }}');
+      var output = section.querySelector('[data-expiry-relative]');
+      if (!input || !output) return;
+
+      // Same chunking as Django's timeuntil/timesince filters (a largest
+      // unit plus one runner-up, e.g. "6 days, 23 hours") so the live
+      // preview reads identically to the server-rendered text either side
+      // of it -- a single-unit or differently-rounded JS approximation
+      // would visibly disagree with what display mode shows.
+      var CHUNKS = [
+        [60 * 60 * 24 * 365, 'year'],
+        [60 * 60 * 24 * 30, 'month'],
+        [60 * 60 * 24 * 7, 'week'],
+        [60 * 60 * 24, 'day'],
+        [60 * 60, 'hour'],
+        [60, 'minute']
+      ];
+
+      function pluralize(n, unit) {
+        return n + ' ' + unit + (n === 1 ? '' : 's');
+      }
+
+      function djangoStyleDuration(diffSeconds) {
+        var seconds = Math.max(0, Math.floor(diffSeconds));
+        for (var i = 0; i < CHUNKS.length; i++) {
+          var chunkSeconds = CHUNKS[i][0], unit = CHUNKS[i][1];
+          var count = Math.floor(seconds / chunkSeconds);
+          if (count === 0) continue;
+          var text = pluralize(count, unit);
+          if (i + 1 < CHUNKS.length) {
+            var remainder = seconds - count * chunkSeconds;
+            var count2 = Math.floor(remainder / CHUNKS[i + 1][0]);
+            if (count2 !== 0) text += ', ' + pluralize(count2, CHUNKS[i + 1][1]);
+          }
+          return text;
+        }
+        return pluralize(0, 'minute');
+      }
+
+      input.addEventListener('input', function () {
+        if (!input.value) return;
+        var target = new Date(input.value);
+        if (isNaN(target.getTime())) return;
+        var diffSeconds = (target.getTime() - Date.now()) / 1000;
+        if (diffSeconds <= 0) {
+          output.textContent = "{% trans 'Expired' %} " + djangoStyleDuration(-diffSeconds) + " {% trans 'ago' %}";
+        } else {
+          output.textContent = "{% trans 'Expires in' %} " + djangoStyleDuration(diffSeconds);
         }
       });
     })();

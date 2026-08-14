@@ -9,13 +9,48 @@ from django.utils import timezone
 from accounts.tests.factories import UserFactory
 from challenges.models import Challenge, ChallengeInviteLink
 from challenges.services import (
+    challenge_timezone,
     create_challenge,
     current_invite_link,
     record_invite_link_use,
     regenerate_invite_link,
     resolve_invite_token,
+    update_invite_link,
 )
 from challenges.tests.factories import ChallengeFactory, ChallengeInviteLinkFactory
+
+
+@pytest.mark.django_db
+class TestChallengeTimezone:
+    """Priority ladder: pinned User.timezone, then detected_timezone, then
+    UTC (TASK-300)."""
+
+    def test_pinned_timezone_wins(self):
+        creator = UserFactory(
+            timezone="America/Toronto", detected_timezone="Asia/Tokyo"
+        )
+        challenge = ChallengeFactory(creator=creator)
+        assert str(challenge_timezone(challenge)) == "America/Toronto"
+
+    def test_detected_timezone_used_when_nothing_pinned(self):
+        creator = UserFactory(timezone="", detected_timezone="Asia/Tokyo")
+        challenge = ChallengeFactory(creator=creator)
+        assert str(challenge_timezone(challenge)) == "Asia/Tokyo"
+
+    def test_falls_back_to_utc_when_neither_is_set(self):
+        creator = UserFactory(timezone="", detected_timezone="")
+        challenge = ChallengeFactory(creator=creator)
+        assert str(challenge_timezone(challenge)) == "UTC"
+
+    def test_invalid_pinned_timezone_falls_through_to_detected(self):
+        creator = UserFactory(timezone="Not/AZone", detected_timezone="Asia/Tokyo")
+        challenge = ChallengeFactory(creator=creator)
+        assert str(challenge_timezone(challenge)) == "Asia/Tokyo"
+
+    def test_creator_less_challenge_uses_utc(self):
+        assert str(challenge_timezone(Challenge(end_date=timezone.now().date()))) == (
+            "UTC"
+        )
 
 
 @pytest.mark.django_db
@@ -50,6 +85,55 @@ class TestCurrentInviteLink:
             expires_at=timezone.now() + timedelta(days=1),
         )
         assert current_invite_link(challenge) is None
+
+
+@pytest.mark.django_db
+class TestUpdateInviteLink:
+    def test_updates_expiry_and_max_uses_on_the_same_row(self):
+        challenge = ChallengeFactory()
+        link = ChallengeInviteLinkFactory(
+            challenge=challenge,
+            revoked_at=None,
+            expires_at=timezone.now() + timedelta(days=7),
+            max_uses=None,
+        )
+        new_expiry = timezone.now() + timedelta(days=2)
+
+        updated = update_invite_link(link, expires_at=new_expiry, max_uses=3)
+
+        assert updated.pk == link.pk
+        assert updated.token == link.token
+        assert updated.expires_at == new_expiry
+        assert updated.max_uses == 3
+        link.refresh_from_db()
+        assert link.expires_at == new_expiry
+        assert link.max_uses == 3
+
+    def test_blank_expiry_falls_back_to_challenge_end_date(self):
+        challenge = ChallengeFactory(
+            end_date=(timezone.now() + timedelta(days=30)).date()
+        )
+        link = ChallengeInviteLinkFactory(
+            challenge=challenge,
+            revoked_at=None,
+            expires_at=timezone.now() + timedelta(days=2),
+        )
+
+        updated = update_invite_link(link, expires_at=None, max_uses=None)
+
+        expected = datetime.combine(challenge.end_date, time.max, tzinfo=UTC)
+        assert updated.expires_at == expected
+        assert updated.max_uses is None
+
+    def test_does_not_reset_use_count(self):
+        challenge = ChallengeFactory()
+        link = ChallengeInviteLinkFactory(
+            challenge=challenge, revoked_at=None, use_count=4
+        )
+
+        updated = update_invite_link(link, expires_at=None, max_uses=10)
+
+        assert updated.use_count == 4
 
 
 @pytest.mark.django_db
@@ -151,7 +235,7 @@ class TestRegenerateInviteLink:
         first = regenerate_invite_link(challenge, user)
         second_challenge = ChallengeFactory()
         second = regenerate_invite_link(second_challenge, user)
-        assert len(first.token) >= 32
+        assert len(first.token) >= 6
         assert first.token != second.token
 
 

@@ -18,6 +18,7 @@ from challenges.custom_goals import (
 from challenges.goal_builders import default_goal_name
 from challenges.lift_presets import CLASSIC_LIFT_NAMES
 from challenges.models import Challenge, CustomGoal
+from challenges.services import challenge_display_end_of_day
 from fitnessvolt import services as fitnessvolt_services
 from fitnessvolt.models import FitnessVoltStandardCache
 from liftosaur.models import Lift
@@ -362,10 +363,16 @@ class InviteLinkOptionsForm(forms.Form):
 
     Both fields are optional and independent: blank ``expires_at`` falls back
     to challenges.services._default_invite_link_expiry (the challenge's own
-    end_date); blank or ``0`` ``max_uses`` means unlimited uses -- 0 is
-    treated as "no limit" rather than "unusable", since a real cap of zero
-    would be pointless to submit and this keeps the field simple as a single
-    blank-or-number widget with no separate "unlimited" checkbox.
+    end_date); blank ``max_uses`` means unlimited uses (the section's clear
+    button blanks the field for exactly this). ``0`` is rejected rather than
+    silently treated as unlimited -- a cap of zero admits no one, which is
+    never what a submitter meant, so 1 is the lowest accepted explicit value.
+
+    Pass ``challenge`` so a custom ``expires_at`` can be bounded to the
+    challenge's own end_date -- a link that outlives the competition it's
+    for doesn't make sense, and the plain-default expiry already caps there
+    (services._default_invite_link_expiry), so a custom value shouldn't be
+    able to exceed it either.
     """
 
     expires_at = forms.DateTimeField(
@@ -376,20 +383,25 @@ class InviteLinkOptionsForm(forms.Form):
         # than relying on the defaults.
         input_formats=["%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S"],
         widget=forms.DateTimeInput(
-            attrs={"type": "datetime-local", "class": _DATE_INPUT_CSS}
+            format="%Y-%m-%dT%H:%M",
+            attrs={"type": "datetime-local", "class": _DATE_INPUT_CSS},
         ),
     )
     max_uses = forms.IntegerField(
         required=False,
-        min_value=0,
+        min_value=1,
         widget=forms.NumberInput(
             attrs={
                 "class": _INPUT_CSS,
                 "placeholder": _("Unlimited"),
-                "min": "0",
+                "min": "1",
             }
         ),
     )
+
+    def __init__(self, *args, challenge=None, **kwargs):
+        self.challenge = challenge
+        super().__init__(*args, **kwargs)
 
     def clean_expires_at(self):
         expires_at = self.cleaned_data.get("expires_at")
@@ -402,13 +414,15 @@ class InviteLinkOptionsForm(forms.Form):
             expires_at = timezone.make_aware(expires_at)
         if expires_at <= timezone.now():
             raise forms.ValidationError(gettext("Expiry must be in the future."))
+        if self.challenge is not None:
+            challenge_end = challenge_display_end_of_day(
+                self.challenge, self.challenge.end_date
+            )
+            if expires_at > challenge_end:
+                raise forms.ValidationError(
+                    gettext("Expiry can't be after the challenge ends.")
+                )
         return expires_at
-
-    def clean_max_uses(self):
-        max_uses = self.cleaned_data.get("max_uses")
-        if not max_uses:
-            return None
-        return max_uses
 
 
 class CustomGoalForm(forms.Form):

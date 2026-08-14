@@ -40,6 +40,11 @@ urlpatterns = [
         name="regenerate-invite-link",
     ),
     path(
+        "challenges/<uuid:pk>/invite-link/update/",
+        views.update_invite_link_view,
+        name="update-invite-link",
+    ),
+    path(
         "challenges/<uuid:pk>/share/",
         views.share_challenge_view,
         name="share",

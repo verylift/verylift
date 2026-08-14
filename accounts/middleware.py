@@ -7,7 +7,12 @@ from django.utils import timezone, translation
 from django_ratelimit.exceptions import Ratelimited
 
 from accounts.ratelimit import ratelimited_429
-from accounts.timezones import DETECT_COOKIE_NAME, DETECT_PARAM, resolve_timezone
+from accounts.timezones import (
+    DETECT_COOKIE_NAME,
+    DETECT_PARAM,
+    cookie_timezone,
+    resolve_timezone,
+)
 from core.http import build_url, is_htmx
 
 
@@ -81,6 +86,13 @@ class UserTimezoneMiddleware:
     exemptions and the two loop-breaking guards. Note the ordering below:
     ``deactivate()`` runs before the redirect check, so even a request that
     gets detoured leaves clean thread-local state behind.
+
+    Detected-timezone persistence (TASK-300): separately from activation,
+    an authenticated user's ``detected_timezone`` is opportunistically kept
+    in sync with the ``pp_timezone`` cookie. This exists for code with no
+    live request to read that cookie from (the close_challenges cron) --
+    it's a fallback for an "automatic" account (blank pinned ``timezone``),
+    not a substitute for it, so it never affects activation above.
     """
 
     def __init__(self, get_response):
@@ -95,7 +107,23 @@ class UserTimezoneMiddleware:
             detour = self._detection_redirect(request)
             if detour is not None:
                 return detour
+        self._persist_detected_timezone(request)
         return self.get_response(request)
+
+    def _persist_detected_timezone(self, request):
+        """Save the browser-detected zone onto ``request.user`` if it changed.
+
+        A no-op write on every request except the rare one where the
+        detected zone is new (first-ever detection, a new device, actual
+        travel) -- comparing before saving keeps this cheap on the hot path.
+        """
+        user = request.user
+        if not user.is_authenticated:
+            return
+        detected = cookie_timezone(request)
+        if detected and detected != user.detected_timezone:
+            user.detected_timezone = detected
+            user.save(update_fields=["detected_timezone"])
 
     def _detection_redirect(self, request):
         """A 302 to the detection endpoint, or ``None`` when exempt.

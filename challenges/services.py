@@ -4,8 +4,9 @@ import json
 import logging
 import secrets
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import UTC, datetime, time, timedelta
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -15,6 +16,7 @@ from django.db.models.functions import Lower
 from django.utils import timezone
 from django.utils.translation import gettext
 
+from accounts.timezones import is_valid_timezone
 from accounts.units import to_display_weight
 from challenges.custom_goals import grid_field_name
 from challenges.models import (
@@ -293,6 +295,69 @@ def current_invite_link(challenge):
     ).first()
 
 
+def challenge_timezone(challenge) -> ZoneInfo:
+    """The IANA zone to interpret ``challenge``'s start_date/end_date in.
+
+    Priority: the creator's pinned accounts.User.timezone (an explicit
+    Settings choice); then their opportunistically-persisted
+    detected_timezone (accounts.middleware.UserTimezoneMiddleware's best
+    last-known browser zone for an "automatic" account); then UTC. There's
+    no *live* browser-detected cookie available here the way a request has
+    one (accounts.timezones.resolve_timezone's cookie fallback) --
+    close_challenges runs from a cron with no request in sight -- so
+    detected_timezone is what stands in for that. Checking ``creator_id``
+    first (rather than deferencing ``.creator`` directly) also lets callers
+    pass an unsaved, creator-less Challenge -- a pattern this app's
+    endgame-window tests use deliberately to stay a real-DB-free unit test
+    (see test_personal_performance.TestFlagEndgameSuggestion).
+    """
+    if not challenge.creator_id:
+        return ZoneInfo("UTC")
+    creator = challenge.creator
+    for tz_name in (creator.timezone, creator.detected_timezone):
+        if tz_name and is_valid_timezone(tz_name):
+            return ZoneInfo(tz_name)
+    return ZoneInfo("UTC")
+
+
+def challenge_instant(challenge, day, time_of_day) -> datetime:
+    """``day``/``time_of_day`` interpreted in ``challenge``'s timezone, as UTC.
+
+    The single conversion point for "when does this civil date/time actually
+    happen" for a challenge -- used to compute the end-of-competition instant
+    (``time.max`` on ``end_date``) consistently across close_challenges and
+    _within_endgame_window, both of which need a timezone that's still
+    meaningful with no request in sight (a cron), hence the creator's
+    *persisted* pin. See ``challenge_display_end_of_day`` for the
+    invite-link expiry's separate, request-time notion of "end of the
+    selected day".
+    """
+    local_dt = datetime.combine(day, time_of_day, tzinfo=challenge_timezone(challenge))
+    return local_dt.astimezone(UTC)
+
+
+def challenge_end_instant(challenge) -> datetime:
+    """The instant ``challenge.end_date`` ends, in the creator's timezone."""
+    return challenge_instant(challenge, challenge.end_date, time.max)
+
+
+def challenge_display_end_of_day(challenge, day):
+    """``day``'s end-of-day, in *this request's* active display timezone.
+
+    Deliberately independent of challenge_timezone/challenge_end_instant:
+    those exist so close_challenges (a cron, no request) still has a
+    meaningful timezone via the creator's persisted pin. The invite-link
+    expiry picker, by contrast, only ever renders inside a live request, and
+    labels itself with whatever timezone UserTimezoneMiddleware activated for
+    it (see the Expiry field's "(TZ, UTC offset)" hint) -- so its own "end of
+    the selected day" must match that same active timezone, not the
+    creator's separately-configured Settings preference, or the two would
+    silently disagree by however many hours those timezones differ.
+    """
+    local_dt = datetime.combine(day, time.max, tzinfo=timezone.get_current_timezone())
+    return local_dt.astimezone(UTC)
+
+
 def _default_invite_link_expiry(challenge):
     """End-of-day expiry for ``challenge.end_date``, with a safety-net fallback.
 
@@ -301,7 +366,7 @@ def _default_invite_link_expiry(challenge):
     the past), so a fresh link is never minted pre-expired. Kept as a setting
     deliberately for that reason rather than dropped.
     """
-    end_of_day = datetime.combine(challenge.end_date, time.max, tzinfo=UTC)
+    end_of_day = challenge_display_end_of_day(challenge, challenge.end_date)
     if end_of_day <= timezone.now():
         return timezone.now() + timedelta(days=settings.CHALLENGES_INVITE_LINK_TTL_DAYS)
     return end_of_day
@@ -326,6 +391,14 @@ def regenerate_invite_link(
     the two overrides are independent of each other and combinable. A fresh
     row's use_count always starts at 0, never carried over from the revoked
     incumbent.
+
+    The token is 6 random bytes (48 bits of entropy, `secrets.token_urlsafe`
+    encodes to a fixed 8 characters) -- matching Discord invite codes' length
+    and security margin. That's plenty against brute force (2**48 guesses)
+    given the worst case of a guessed token is joining a challenge, not an
+    account compromise; invite_link_view has no rate limiting today, so
+    revisit this if that ever becomes a real concern (add rate limiting
+    there, the way login already has it, rather than lengthening the token).
     """
     with transaction.atomic():
         ChallengeInviteLink.objects.filter(
@@ -333,7 +406,7 @@ def regenerate_invite_link(
         ).update(revoked_at=timezone.now())
         link = ChallengeInviteLink.objects.create(
             challenge=challenge,
-            token=secrets.token_urlsafe(32),
+            token=secrets.token_urlsafe(6),
             created_by=by_user,
             expires_at=expires_at or _default_invite_link_expiry(challenge),
             max_uses=max_uses,
@@ -344,6 +417,29 @@ def regenerate_invite_link(
         link.pk,
         challenge.pk,
         by_user.id,
+        link.expires_at.isoformat(),
+        max_uses,
+    )
+    return link
+
+
+def update_invite_link(link, *, expires_at=None, max_uses=None) -> ChallengeInviteLink:
+    """Adjust ``link``'s expiry/max-uses in place, without touching its token.
+
+    Unlike ``regenerate_invite_link``, this keeps the same row (and therefore
+    the same shareable URL and use_count) live -- it's for an owner tweaking
+    an already-shared link's limits, not invalidating it. ``expires_at``
+    missing/blank falls back to the challenge's default (its own end_date),
+    same as a fresh link would get; ``max_uses`` missing/blank means
+    unlimited. Both are independent, matching ``regenerate_invite_link``.
+    """
+    link.expires_at = expires_at or _default_invite_link_expiry(link.challenge)
+    link.max_uses = max_uses
+    link.save(update_fields=["expires_at", "max_uses"])
+    logger.info(
+        "Updated invite link %s for challenge %s (expires_at=%s, max_uses=%s)",
+        link.pk,
+        link.challenge_id,
         link.expires_at.isoformat(),
         max_uses,
     )
@@ -1095,13 +1191,21 @@ def _within_endgame_window(challenge):
     challenge is in its window from day one (doc-5 §1). A terminal
     (COMPLETED/CANCELLED) challenge is excluded even if its ``end_date`` is
     still ahead — a dead challenge shouldn't nag.
+
+    Both boundaries are resolved through challenge_instant/challenge_timezone
+    (the creator's pinned timezone, UTC fallback) rather than a naive
+    ``date.today()``, so this agrees with close_challenges and the
+    invite-link default expiry about when a challenge's day actually starts
+    and ends.
     """
     if challenge.is_terminal:
         return False
-    window_open = challenge.end_date - timedelta(
+    window_open_date = challenge.end_date - timedelta(
         days=settings.CHALLENGES_ENDGAME_WINDOW_DAYS
     )
-    return window_open <= date.today() <= challenge.end_date
+    window_open_instant = challenge_instant(challenge, window_open_date, time.min)
+    now = timezone.now()
+    return window_open_instant <= now <= challenge_end_instant(challenge)
 
 
 def _flag_endgame_suggestion(summary_cards, challenge):
