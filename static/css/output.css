@@ -998,6 +998,10 @@ body {
   min-height: 16rem;
 }
 
+.min-h-\[55vh\] {
+  min-height: 55vh;
+}
+
 .min-h-dvh {
   min-height: 100dvh;
 }
@@ -1109,6 +1113,10 @@ body {
 
 .max-w-4xl {
   max-width: 56rem;
+}
+
+.max-w-6xl {
+  max-width: 72rem;
 }
 
 .max-w-\[90\%\] {
@@ -1965,6 +1973,122 @@ body {
 
 .\[touch-action\:pan-x_pan-y\] {
   touch-action: pan-x pan-y;
+}
+
+/* ===========================================================================
+   Self-hosted webfonts (TASK-297) — vendored under static/vendor/fonts/,
+   mirroring the existing static/vendor/ pattern for htmx and Chart.js.
+   Loading these from fonts.googleapis.com/fonts.gstatic.com would leak every
+   visitor's IP to Google on every page load, so we serve the OFL-licensed
+   woff2 files ourselves instead.
+   =========================================================================== */
+
+@font-face {
+  font-family: "Inter";
+
+  font-style: normal;
+
+  font-weight: 400;
+
+  font-display: swap;
+
+  src: url("../vendor/fonts/inter/inter-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Inter";
+
+  font-style: normal;
+
+  font-weight: 500;
+
+  font-display: swap;
+
+  src: url("../vendor/fonts/inter/inter-latin-500-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Inter";
+
+  font-style: normal;
+
+  font-weight: 600;
+
+  font-display: swap;
+
+  src: url("../vendor/fonts/inter/inter-latin-600-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Inter";
+
+  font-style: normal;
+
+  font-weight: 700;
+
+  font-display: swap;
+
+  src: url("../vendor/fonts/inter/inter-latin-700-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Inter";
+
+  font-style: normal;
+
+  font-weight: 800;
+
+  font-display: swap;
+
+  src: url("../vendor/fonts/inter/inter-latin-800-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+
+  font-style: normal;
+
+  font-weight: 400;
+
+  font-display: swap;
+
+  src: url("../vendor/fonts/jetbrains-mono/jetbrains-mono-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+
+  font-style: normal;
+
+  font-weight: 500;
+
+  font-display: swap;
+
+  src: url("../vendor/fonts/jetbrains-mono/jetbrains-mono-latin-500-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+
+  font-style: normal;
+
+  font-weight: 600;
+
+  font-display: swap;
+
+  src: url("../vendor/fonts/jetbrains-mono/jetbrains-mono-latin-600-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+
+  font-style: normal;
+
+  font-weight: 700;
+
+  font-display: swap;
+
+  src: url("../vendor/fonts/jetbrains-mono/jetbrains-mono-latin-700-normal.woff2") format("woff2");
 }
 
 /* ===========================================================================
