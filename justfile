@@ -1,4 +1,4 @@
-set dotenv-load
+# set dotenv-load
 
 # Run the Django dev server natively against the dockerized Postgres
 serve *args:
@@ -56,7 +56,18 @@ release ver="":
 # VERSION is exported (not just --version) so config/deploy.yml's ERB can
 # copy it into the VERY_LIFT_VERSION container env var -- see the comment
 # there.
+#
+# .kamal/secrets-common shells out to `bw get password ...` for every secret,
+# which needs an unlocked vault session -- unlock up front so the master-
+# password prompt happens here instead of getting buried under kamal's
+# deploy output later on (see scripts/release.sh for the same pattern).
 deploy ver:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ -z "${BW_SESSION:-}" ]; then
+        echo ">> Unlocking Bitwarden vault..."
+        export BW_SESSION="$(bw unlock --raw)"
+    fi
     VERSION="{{ver}}" kamal deploy --skip-push --version="{{ver}}"
 
 # Run a given django management command

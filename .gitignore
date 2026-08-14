@@ -42,6 +42,7 @@ Thumbs.db
 # Claude
 .claude/worktrees/
 .claude/local-docs/
+.claude/agent-memory/
 CLAUDE.local.md
 
 # Local supervisord staging (dev-only process management, not project source)
