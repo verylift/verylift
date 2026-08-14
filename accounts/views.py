@@ -109,6 +109,24 @@ class LocalLoginView(LoginView):
         ctx["oidc_provider_name"] = getattr(settings, "OIDC_PROVIDER_NAME", "SSO")
         return ctx
 
+    def form_valid(self, form):
+        """Redirect a usable-invite-token session to the invite-link join flow.
+
+        Mirrors OIDCCallbackView.login_success: a user who clicked a challenge
+        invite link (TASK-249), then chose "sign in" instead of registering,
+        would otherwise land on their normal next/LOGIN_REDIRECT_URL target
+        and silently lose the pending invite. Calls super() first for its
+        login-and-default-redirect side effects, then substitutes the
+        invite-link redirect when a usable token is present -- the session
+        token itself is left in place, cleared by challenges.views.invite_link_view
+        once the join actually succeeds.
+        """
+        response = super().form_valid(form)
+        invite_link = _invite_token_link(self.request)
+        if invite_link is not None:
+            return redirect("challenges:invite-link", token=invite_link.token)
+        return response
+
 
 def _invite_token_link(request):
     """The usable ChallengeInviteLink named by this session's invite token, if any.
