@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+## 2026.8.8 — 2026-08-13
+
+### Added
+- Invite links can be given a custom expiry and a max-uses cap, and edited in place without invalidating the shared URL
+
+### Changed
+- Settings page, profile photo preview, and dashboard profile card content are now centered
+- Profile photo upload is now behind a pencil-icon toggle on the (larger) preview
+- Support ID moved to its own settings card
+- Invite link Regenerate/Copy buttons restyled as an icon + accent pair; landing page Challenges copy now highlights solo goal tracking
+- Invite links default to expiring at the competition's own end date instead of a flat 7-day timer
+- Competitions now close relative to the creator's own timezone instead of always UTC
+
+### Security
+- Invite-link tokens are shorter (8 characters) and the join page is now rate-limited per IP
+- Inter and JetBrains Mono fonts are now self-hosted instead of loaded from Google Fonts, so visitors no longer send their IP/browser info to Google on page load
+
 ## 2026.8.7 — 2026-08-12
 
 ### Added
