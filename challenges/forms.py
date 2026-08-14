@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from django import forms
 from django.conf import settings
+from django.utils import timezone
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 
@@ -354,6 +355,60 @@ class RenameChallengeForm(forms.Form):
             }
         ),
     )
+
+
+class InviteLinkOptionsForm(forms.Form):
+    """Owner-facing overrides at invite-link generation time (Settings/Share).
+
+    Both fields are optional and independent: blank ``expires_at`` falls back
+    to challenges.services._default_invite_link_expiry (the challenge's own
+    end_date); blank or ``0`` ``max_uses`` means unlimited uses -- 0 is
+    treated as "no limit" rather than "unusable", since a real cap of zero
+    would be pointless to submit and this keeps the field simple as a single
+    blank-or-number widget with no separate "unlimited" checkbox.
+    """
+
+    expires_at = forms.DateTimeField(
+        required=False,
+        # Native <input type="datetime-local"> submits "%Y-%m-%dT%H:%M" (no
+        # seconds), which isn't among Django's default DATETIME_INPUT_FORMATS
+        # (those use a space separator, not "T") -- add it explicitly rather
+        # than relying on the defaults.
+        input_formats=["%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S"],
+        widget=forms.DateTimeInput(
+            attrs={"type": "datetime-local", "class": _DATE_INPUT_CSS}
+        ),
+    )
+    max_uses = forms.IntegerField(
+        required=False,
+        min_value=0,
+        widget=forms.NumberInput(
+            attrs={
+                "class": _INPUT_CSS,
+                "placeholder": _("Unlimited"),
+                "min": "0",
+            }
+        ),
+    )
+
+    def clean_expires_at(self):
+        expires_at = self.cleaned_data.get("expires_at")
+        if expires_at is None:
+            return None
+        # The datetime-local widget submits a naive local value; interpret it
+        # in the current (server) timezone rather than leaving it naive, since
+        # this becomes ChallengeInviteLink.expires_at (an aware DateTimeField).
+        if timezone.is_naive(expires_at):
+            expires_at = timezone.make_aware(expires_at)
+        if expires_at <= timezone.now():
+            raise forms.ValidationError(gettext("Expiry must be in the future."))
+        return expires_at
+
+    def clean_max_uses(self):
+        max_uses = self.cleaned_data.get("max_uses")
+        if not max_uses:
+            return None
+        return max_uses
 
 
 class CustomGoalForm(forms.Form):

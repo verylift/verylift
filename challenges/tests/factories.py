@@ -49,6 +49,8 @@ class ChallengeInviteLinkFactory(factory.django.DjangoModelFactory):
         lambda: timezone.now() + timezone.timedelta(days=7)
     )
     revoked_at = None
+    max_uses = None
+    use_count = 0
 
 
 class ChallengeLiftFactory(factory.django.DjangoModelFactory):

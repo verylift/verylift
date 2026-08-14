@@ -4,7 +4,7 @@ import json
 import logging
 import secrets
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 
 from django.conf import settings
@@ -293,7 +293,23 @@ def current_invite_link(challenge):
     ).first()
 
 
-def regenerate_invite_link(challenge, by_user) -> ChallengeInviteLink:
+def _default_invite_link_expiry(challenge):
+    """End-of-day expiry for ``challenge.end_date``, with a safety-net fallback.
+
+    CHALLENGES_INVITE_LINK_TTL_DAYS used to be the *only* expiry rule; now it
+    only backstops the rare case where end_date is bad data (e.g. already in
+    the past), so a fresh link is never minted pre-expired. Kept as a setting
+    deliberately for that reason rather than dropped.
+    """
+    end_of_day = datetime.combine(challenge.end_date, time.max, tzinfo=UTC)
+    if end_of_day <= timezone.now():
+        return timezone.now() + timedelta(days=settings.CHALLENGES_INVITE_LINK_TTL_DAYS)
+    return end_of_day
+
+
+def regenerate_invite_link(
+    challenge, by_user, *, expires_at=None, max_uses=None
+) -> ChallengeInviteLink:
     """Mint a fresh live invite link for ``challenge``, revoking any incumbent.
 
     Only one link is ever live per challenge (the DB constraint on
@@ -302,6 +318,14 @@ def regenerate_invite_link(challenge, by_user) -> ChallengeInviteLink:
     security purpose. Revoking the incumbent (including one that is merely
     expired-but-unrevoked) happens inside the same transaction as the new
     row's creation, satisfying that constraint atomically.
+
+    ``expires_at``, when given, is used verbatim -- validation (e.g. must be
+    in the future) is the caller's/form's responsibility. When omitted, the
+    default is the challenge's own end_date (end of that day); see
+    ``_default_invite_link_expiry``. ``max_uses`` is None for unlimited uses;
+    the two overrides are independent of each other and combinable. A fresh
+    row's use_count always starts at 0, never carried over from the revoked
+    incumbent.
     """
     with transaction.atomic():
         ChallengeInviteLink.objects.filter(
@@ -311,25 +335,39 @@ def regenerate_invite_link(challenge, by_user) -> ChallengeInviteLink:
             challenge=challenge,
             token=secrets.token_urlsafe(32),
             created_by=by_user,
-            expires_at=timezone.now()
-            + timedelta(days=settings.CHALLENGES_INVITE_LINK_TTL_DAYS),
+            expires_at=expires_at or _default_invite_link_expiry(challenge),
+            max_uses=max_uses,
         )
     logger.info(
-        "Regenerated invite link %s for challenge %s by user %s",
+        "Regenerated invite link %s for challenge %s by user %s (expires_at=%s, "
+        "max_uses=%s)",
         link.pk,
         challenge.pk,
         by_user.id,
+        link.expires_at.isoformat(),
+        max_uses,
     )
     return link
+
+
+def record_invite_link_use(link) -> None:
+    """Increment ``link``'s use_count for a completed join (fresh or rejoin).
+
+    Not called on the "already an active member, redirect" path in
+    invite_link_view -- that's a revisit, not a new use. A single .update()
+    call is already atomic, so no wrapping transaction is needed.
+    """
+    ChallengeInviteLink.objects.filter(pk=link.pk).update(use_count=F("use_count") + 1)
+    logger.debug("Recorded a use of invite link %s", link.pk)
 
 
 def resolve_invite_token(token):
     """Resolve a bearer token to ``(link, reason)``.
 
     ``reason`` is ``None`` on success, or one of ``"unknown"`` / ``"expired"``
-    / ``"revoked"`` — distinct reasons so the invite-link landing view can
-    render three different responses without a second query. ``link`` is
-    ``None`` only when ``reason == "unknown"``.
+    / ``"revoked"`` / ``"exhausted"`` — distinct reasons so the invite-link
+    landing view can render four different responses without a second query.
+    ``link`` is ``None`` only when ``reason == "unknown"``.
     """
     link = (
         ChallengeInviteLink.objects.select_related("challenge")
@@ -342,6 +380,8 @@ def resolve_invite_token(token):
         return link, "revoked"
     if link.is_expired:
         return link, "expired"
+    if link.max_uses is not None and link.use_count >= link.max_uses:
+        return link, "exhausted"
     return link, None
 
 

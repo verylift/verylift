@@ -3,8 +3,15 @@
   <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "Invite Link" %}</h2>
 
   {% if current_invite_link %}
-  <p class="text-xs text-content-muted mb-2">
+  <p class="text-xs text-content-muted mb-1">
     {% blocktrans with when=current_invite_link.expires_at|timeuntil %}Expires in {{ when }}{% endblocktrans %}
+  </p>
+  <p class="text-xs text-content-muted mb-2">
+    {% if current_invite_link.max_uses %}
+      {% blocktrans with used=current_invite_link.use_count total=current_invite_link.max_uses %}{{ used }} of {{ total }} uses used{% endblocktrans %}
+    {% else %}
+      {% trans "Unlimited uses" %}
+    {% endif %}
   </p>
   <div class="flex flex-wrap gap-2 mb-4">
     <input
@@ -14,27 +21,6 @@
       value="{{ request.scheme }}://{{ request.get_host }}{% url 'challenges:invite-link' current_invite_link.token %}"
       class="flex-1 min-w-0 border border-line rounded px-3 py-2 text-sm bg-surface-sunken text-content-body"
       onclick="this.select()">
-    {% if challenge.creator_id == request.user.id %}
-    <form
-      method="post"
-      action="{% url 'challenges:regenerate-invite-link' challenge.pk %}"
-      hx-post="{% url 'challenges:regenerate-invite-link' challenge.pk %}"
-      hx-target="closest section"
-      hx-swap="outerHTML"
-      class="shrink-0">
-      {% csrf_token %}
-      <button
-        type="submit"
-        title="{% trans 'Generate new link' %}"
-        aria-label="{% trans 'Generate new link' %}"
-        class="flex items-center justify-center h-9 w-9 rounded border border-line-subtle text-content-body hover:bg-surface-sunken">
-        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
-          <path d="M21 3v5h-5"/>
-        </svg>
-      </button>
-    </form>
-    {% endif %}
     <button
       type="button"
       data-copy-invite-link
@@ -42,6 +28,38 @@
       {% trans "Copy" %}
     </button>
   </div>
+  {% if challenge.creator_id == request.user.id %}
+  <form
+    method="post"
+    action="{% url 'challenges:regenerate-invite-link' challenge.pk %}"
+    hx-post="{% url 'challenges:regenerate-invite-link' challenge.pk %}"
+    hx-target="closest section"
+    hx-swap="outerHTML"
+    class="flex flex-wrap items-end gap-2">
+    {% csrf_token %}
+    <div>
+      <label for="{{ invite_link_form.expires_at.id_for_label }}" class="block text-xs text-content-muted mb-1">{% trans "Custom expiry (optional)" %}</label>
+      {{ invite_link_form.expires_at }}
+    </div>
+    <div>
+      <label for="{{ invite_link_form.max_uses.id_for_label }}" class="block text-xs text-content-muted mb-1">{% trans "Max uses (optional)" %}</label>
+      {{ invite_link_form.max_uses }}
+    </div>
+    <button
+      type="submit"
+      title="{% trans 'Generate new link' %}"
+      aria-label="{% trans 'Generate new link' %}"
+      class="flex items-center justify-center h-9 w-9 rounded border border-line-subtle text-content-body hover:bg-surface-sunken shrink-0">
+      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
+        <path d="M21 3v5h-5"/>
+      </svg>
+    </button>
+  </form>
+  {% if invite_link_form.errors %}
+  <p class="text-xs text-danger mt-2">{{ invite_link_form.expires_at.errors|join:" " }}{{ invite_link_form.max_uses.errors|join:" " }}</p>
+  {% endif %}
+  {% endif %}
   {% else %}
   <p class="text-sm text-content-muted italic mb-4">{% trans "No active invite link. Generate one to invite people." %}</p>
   {% if challenge.creator_id == request.user.id %}
@@ -50,19 +68,31 @@
     action="{% url 'challenges:regenerate-invite-link' challenge.pk %}"
     hx-post="{% url 'challenges:regenerate-invite-link' challenge.pk %}"
     hx-target="closest section"
-    hx-swap="outerHTML">
+    hx-swap="outerHTML"
+    class="flex flex-wrap items-end gap-2">
     {% csrf_token %}
+    <div>
+      <label for="{{ invite_link_form.expires_at.id_for_label }}" class="block text-xs text-content-muted mb-1">{% trans "Custom expiry (optional)" %}</label>
+      {{ invite_link_form.expires_at }}
+    </div>
+    <div>
+      <label for="{{ invite_link_form.max_uses.id_for_label }}" class="block text-xs text-content-muted mb-1">{% trans "Max uses (optional)" %}</label>
+      {{ invite_link_form.max_uses }}
+    </div>
     <button
       type="submit"
       title="{% trans 'Generate invite link' %}"
       aria-label="{% trans 'Generate invite link' %}"
-      class="flex items-center justify-center h-9 w-9 rounded bg-accent text-accent-on hover:bg-accent-hover">
+      class="flex items-center justify-center h-9 w-9 rounded bg-accent text-accent-on hover:bg-accent-hover shrink-0">
       <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
         <path d="M21 3v5h-5"/>
       </svg>
     </button>
   </form>
+  {% if invite_link_form.errors %}
+  <p class="text-xs text-danger mt-2">{{ invite_link_form.expires_at.errors|join:" " }}{{ invite_link_form.max_uses.errors|join:" " }}</p>
+  {% endif %}
   {% endif %}
   {% endif %}
 

@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-13 23:37+0000\n"
+"POT-Creation-Date: 2026-08-14 01:40+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -78,7 +78,7 @@ msgstr "Demasiados intentos. Inténtalo de nuevo en un minuto."
 msgid "You must accept the Terms of Service and Privacy Policy."
 msgstr "Debes aceptar los Términos de Servicio y la Política de Privacidad."
 
-#: accounts/views.py:211 challenges/views.py:120
+#: accounts/views.py:211 challenges/views.py:122
 msgid "Could not validate this Liftosaur API key."
 msgstr "No se pudo validar esta clave de API de Liftosaur."
 
@@ -210,59 +210,67 @@ msgstr ""
 msgid "\"%(lift_name)s\" is missing targets for %(missing)s."
 msgstr "A \"%(lift_name)s\" le faltan objetivos para %(missing)s."
 
-#: challenges/forms.py:51 challenges/forms.py:352
+#: challenges/forms.py:52 challenges/forms.py:353
 msgid "Challenge name"
 msgstr "Nombre del reto"
 
-#: challenges/forms.py:87
+#: challenges/forms.py:88
 msgid "End date must be after start date."
 msgstr "La fecha de finalización debe ser posterior a la fecha de inicio."
 
-#: challenges/forms.py:105
+#: challenges/forms.py:106
 msgid "Select at least one lift."
 msgstr "Selecciona al menos un ejercicio."
 
-#: challenges/forms.py:174 challenges/forms.py:257
+#: challenges/forms.py:175 challenges/forms.py:258
 msgid "Enter a bodyweight greater than zero."
 msgstr "Introduce un peso corporal mayor que cero."
 
-#: challenges/forms.py:182
+#: challenges/forms.py:183
 msgid "Enter a stretch percentage (e.g. 10)."
 msgstr "Introduce un porcentaje de incremento (por ejemplo, 10)."
 
-#: challenges/forms.py:232 challenges/forms.py:240
+#: challenges/forms.py:233 challenges/forms.py:241
 msgid "No rounding (exact)"
 msgstr "Sin redondeo (exacto)"
 
-#: challenges/forms.py:276
+#: challenges/forms.py:277
 msgid "Select a rounding increment."
 msgstr "Selecciona un incremento de redondeo."
 
-#: challenges/forms.py:303
+#: challenges/forms.py:304
 msgid "Select your sex."
 msgstr "Selecciona tu sexo."
 
-#: challenges/forms.py:307
+#: challenges/forms.py:308
 msgid "Select a population."
 msgstr "Selecciona una población."
 
-#: challenges/forms.py:322
+#: challenges/forms.py:323
 msgid "Strength standards are not available right now."
 msgstr "Los estándares de fuerza no están disponibles en este momento."
 
-#: challenges/forms.py:328
+#: challenges/forms.py:329
 msgid "Select a tier."
 msgstr "Selecciona un nivel."
 
-#: challenges/forms.py:373
+#: challenges/forms.py:388
+msgid "Unlimited"
+msgstr "Ilimitado"
+
+#: challenges/forms.py:404
+msgid "Expiry must be in the future."
+msgstr "La expiración debe ser en el futuro."
+
+#: challenges/forms.py:428
 msgid "Goal name"
 msgstr "Nombre del objetivo"
 
-#: challenges/forms.py:377 templates/challenges/custom_goal_setup.html:116
+#: challenges/forms.py:432 templates/challenges/custom_goal_setup.html:116
 msgid "e.g. Spring targets"
 msgstr "p. ej. Objetivos de primavera"
 
-#: challenges/forms.py:381
+#: challenges/forms.py:436
 msgid "Targets JSON"
 msgstr "JSON de objetivos"
 
@@ -293,31 +301,31 @@ msgstr "Desde la fecha de inscripción"
 msgid "From challenge start"
 msgstr "Desde el inicio del reto"
 
-#: challenges/models.py:188
+#: challenges/models.py:199
 msgid "Invited"
 msgstr "Invitado"
 
-#: challenges/models.py:189
+#: challenges/models.py:200
 msgid "Accepted"
 msgstr "Aceptado"
 
-#: challenges/models.py:190
+#: challenges/models.py:201
 msgid "Declined"
 msgstr "Rechazado"
 
-#: challenges/models.py:270 templates/challenges/goal_setup_method.html:32
+#: challenges/models.py:281 templates/challenges/goal_setup_method.html:32
 msgid "Strength standards"
 msgstr "Estándares de fuerza"
 
-#: challenges/models.py:271
+#: challenges/models.py:282
 msgid "Suggested from history"
 msgstr "Sugerido a partir del historial"
 
-#: challenges/models.py:272 templates/challenges/goal_setup_method.html:49
+#: challenges/models.py:283 templates/challenges/goal_setup_method.html:49
 msgid "Fully custom"
 msgstr "Totalmente personalizado"
 
-#: challenges/services.py:1377
+#: challenges/services.py:1417
 #, python-format, python-brace-format
 msgid ""
 "Suggested from history: +{percent}% uplift, based on the last {days} days"
@@ -325,12 +333,12 @@ msgstr ""
 "Sugerido a partir del historial: +{percent}% de incremento, basado en los "
 "últimos {days} días"
 
-#: challenges/services.py:1383
+#: challenges/services.py:1423
 #, python-brace-format
 msgid "(rounded to the nearest {amount} {unit})"
 msgstr "(redondeado al {amount} {unit} más cercano)"
 
-#: challenges/services.py:1475
+#: challenges/services.py:1515
 msgid ""
 "Recent history for this lift is entirely machine-assisted, which can't be "
 "converted into a target."
@@ -338,30 +346,30 @@ msgstr ""
 "El historial reciente de este ejercicio es completamente asistido por "
 "máquina y no puede convertirse en un objetivo."
 
-#: challenges/services.py:1480
+#: challenges/services.py:1520
 msgid "No recent history or published standard for this lift yet."
 msgstr ""
 "Todavía no hay historial reciente ni un estándar publicado para este "
 "ejercicio."
 
-#: challenges/views.py:486
+#: challenges/views.py:488
 msgid "Challenge is not active"
 msgstr "El reto no está activo"
 
-#: challenges/views.py:510
+#: challenges/views.py:512
 msgid "You were removed from this challenge and cannot rejoin with this link."
 msgstr ""
 "Se te eliminó de este reto y no puedes volver a unirte con este enlace."
 
-#: challenges/views.py:645
+#: challenges/views.py:649
 msgid "This challenge has ended; goals can no longer be set."
 msgstr "Este reto ha terminado; ya no se pueden establecer objetivos."
 
-#: challenges/views.py:652
+#: challenges/views.py:656
 msgid "Your chart for this challenge is locked and can't be changed."
 msgstr "Tu tabla para este desafío está bloqueada y no se puede cambiar."
 
-#: challenges/views.py:716
+#: challenges/views.py:720
 msgid ""
 "Couldn't refresh your Liftosaur history just now — showing the history we "
 "already have."
@@ -369,7 +377,7 @@ msgstr ""
 "No se pudo actualizar tu historial de Liftosaur ahora mismo; se muestra el "
 "historial que ya tenemos."
 
-#: challenges/views.py:1010
+#: challenges/views.py:1014
 msgid ""
 "Prefilled from FitnessVolt strength standards. Review every row before "
 "confirming — this chart is locked once you save it."
@@ -377,7 +385,7 @@ msgstr ""
 "Prellenado con los estándares de fuerza de FitnessVolt. Revisa cada fila "
 "antes de confirmar — esta tabla queda bloqueada en cuanto la guardes."
 
-#: challenges/views.py:1026
+#: challenges/views.py:1030
 #, python-brace-format
 msgid ""
 "Prefilled from your recent Liftosaur history, uplifted {percent}%. Review "
@@ -387,59 +395,59 @@ msgstr ""
 "del {percent}%. Revisa cada fila antes de confirmar — esta tabla queda "
 "bloqueada en cuanto la guardes."
 
-#: challenges/views.py:1110
+#: challenges/views.py:1114
 msgid "Set your goal to view this challenge."
 msgstr "Establece tu objetivo para ver este reto."
 
-#: challenges/views.py:1269
+#: challenges/views.py:1273
 msgid "Invalid rep count."
 msgstr "Número de repeticiones inválido."
 
-#: challenges/views.py:1274
+#: challenges/views.py:1278
 msgid "Invalid date."
 msgstr "Fecha inválida."
 
-#: challenges/views.py:1276
+#: challenges/views.py:1280
 msgid "Date cannot be in the future."
 msgstr "La fecha no puede ser futura."
 
-#: challenges/views.py:1287
+#: challenges/views.py:1291
 msgid "Could not log this lift."
 msgstr "No se pudo registrar este levantamiento."
 
-#: challenges/views.py:1293
+#: challenges/views.py:1297
 #, python-format
 msgid "Logged %(points)s point on %(lift)s."
 msgid_plural "Logged %(points)s points on %(lift)s."
 msgstr[0] "Registrado %(points)s punto en %(lift)s."
 msgstr[1] "Registrados %(points)s puntos en %(lift)s."
 
-#: challenges/views.py:1303
+#: challenges/views.py:1307
 msgid "Unknown lift for this challenge."
 msgstr "Levantamiento desconocido para este desafío."
 
-#: challenges/views.py:1379
+#: challenges/views.py:1383
 msgid "This challenge has already ended."
 msgstr "Este reto ya ha terminado."
 
-#: challenges/views.py:1393
+#: challenges/views.py:1397
 msgid "You cannot leave this challenge."
 msgstr "No puedes abandonar este reto."
 
-#: challenges/views.py:1400
+#: challenges/views.py:1404
 msgid "You have left the challenge."
 msgstr "Has abandonado el reto."
 
-#: challenges/views.py:1406 challenges/views.py:1414
+#: challenges/views.py:1410 challenges/views.py:1418
 #: templates/challenges/detail.html:574
 msgid "Leave Challenge"
 msgstr "Abandonar Reto"
 
-#: challenges/views.py:1407
+#: challenges/views.py:1411
 msgid "leave"
 msgstr "abandonar"
 
-#: challenges/views.py:1409
+#: challenges/views.py:1413
 msgid ""
 "Leaving freezes your scoring — no further points will be earned for you in "
 "this challenge. Your past entries stay visible. This action cannot be undone."
@@ -447,7 +455,7 @@ msgstr ""
 "Abandonar congela tu puntuación — no ganarás más puntos en este reto. Tus "
 "entradas anteriores seguirán visibles. Esta acción no se puede deshacer."
 
-#: challenges/views.py:1488 templates/accounts/_avatar_section.html:117
+#: challenges/views.py:1492 templates/accounts/_avatar_section.html:117
 #: templates/challenges/_history_window_section.html:41
 #: templates/challenges/_rename_section.html:31
 #: templates/challenges/_summary_card.html:76
@@ -459,37 +467,37 @@ msgstr ""
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: challenges/views.py:1519 challenges/views.py:1599
+#: challenges/views.py:1523 challenges/views.py:1604
 msgid "Former Participant"
 msgstr "Antiguo Participante"
 
-#: challenges/views.py:1559
+#: challenges/views.py:1564
 msgid "This challenge can no longer be modified."
 msgstr "Este reto ya no se puede modificar."
 
-#: challenges/views.py:1578
+#: challenges/views.py:1583
 msgid "The creator cannot be removed from their own challenge."
 msgstr "El creador no puede ser eliminado de su propio reto."
 
-#: challenges/views.py:1594
+#: challenges/views.py:1599
 msgid "This participant cannot be removed."
 msgstr "Este participante no se puede eliminar."
 
-#: challenges/views.py:1612
+#: challenges/views.py:1617
 #, python-format
 msgid "%(name)s has been removed from the challenge."
 msgstr "%(name)s ha sido eliminado/a del reto."
 
-#: challenges/views.py:1619 challenges/views.py:1628
+#: challenges/views.py:1624 challenges/views.py:1633
 msgid "Remove Participant"
 msgstr "Eliminar Participante"
 
-#: challenges/views.py:1620
+#: challenges/views.py:1625
 #, python-format
 msgid "remove %(name)s from"
 msgstr "eliminar a %(name)s de"
 
-#: challenges/views.py:1622
+#: challenges/views.py:1627
 msgid ""
 "Removing freezes their scoring — no further points will be earned for them "
 "in this challenge. Their past entries stay on the leaderboard. They cannot "
@@ -500,27 +508,27 @@ msgstr ""
 "unirse, ni siquiera con un enlace de invitación. Esta acción no se puede "
 "deshacer."
 
-#: challenges/views.py:1641
+#: challenges/views.py:1646
 msgid "This challenge can no longer be closed."
 msgstr "Este reto ya no se puede cerrar."
 
-#: challenges/views.py:1650
+#: challenges/views.py:1655
 msgid "Challenge closed."
 msgstr "Reto cerrado."
 
-#: challenges/views.py:1656 challenges/views.py:1665
+#: challenges/views.py:1661 challenges/views.py:1670
 msgid "Close Challenge"
 msgstr "Cerrar Reto"
 
-#: challenges/views.py:1657
+#: challenges/views.py:1662
 msgid "close"
 msgstr "cerrar"
 
-#: challenges/views.py:1658
+#: challenges/views.py:1663
 msgid " early"
 msgstr " anticipadamente"
 
-#: challenges/views.py:1660
+#: challenges/views.py:1665
 msgid ""
 "Closing runs a final sync for every participant, locks the leaderboard, and "
 "notifies everyone that the challenge has ended. This action cannot be undone."
@@ -529,59 +537,63 @@ msgstr ""
 "clasificación y notifica a todos que el reto ha terminado. Esta acción no se "
 "puede deshacer."
 
-#: challenges/views.py:1694
+#: challenges/views.py:1699
 msgid "This challenge can no longer be renamed."
 msgstr "Este reto ya no se puede renombrar."
 
-#: challenges/views.py:1707
+#: challenges/views.py:1712
 msgid "Challenge name updated."
 msgstr "Nombre del reto actualizado."
 
-#: challenges/views.py:1749
+#: challenges/views.py:1754
 msgid "This challenge's point-eligible window can no longer be changed."
 msgstr ""
 "La ventana de elegibilidad de puntos de este desafío ya no se puede cambiar."
 
-#: challenges/views.py:1767
+#: challenges/views.py:1772
 msgid "Point-eligible window updated."
 msgstr "Ventana de elegibilidad de puntos actualizada."
 
-#: challenges/views.py:1815
+#: challenges/views.py:1824
 msgid "This challenge can no longer accept invites."
 msgstr "Este reto ya no puede aceptar invitaciones."
 
-#: challenges/views.py:1825
+#: challenges/views.py:1832
+msgid "Could not generate a new invite link."
+msgstr "No se pudo generar un nuevo enlace de invitación."
+
+#: challenges/views.py:1855
 msgid "A new invite link has been generated."
 msgstr "Se ha generado un nuevo enlace de invitación."
 
-#: challenges/views.py:1881
+#: challenges/views.py:1913
 msgid "This challenge's ownership can no longer be transferred."
 msgstr "La propiedad de este reto ya no se puede transferir."
 
-#: challenges/views.py:1906
+#: challenges/views.py:1938
 msgid "Ownership can only be transferred to an active, accepted participant."
 msgstr ""
 "La propiedad solo se puede transferir a un participante activo y aceptado."
 
-#: challenges/views.py:1931
+#: challenges/views.py:1963
 #, python-format
 msgid "Ownership transferred to %(name)s."
 msgstr "Propiedad transferida a %(name)s."
 
-#: challenges/views.py:1938 challenges/views.py:1949
+#: challenges/views.py:1970 challenges/views.py:1981
 msgid "Transfer Ownership"
 msgstr "Transferir Propiedad"
 
-#: challenges/views.py:1939
+#: challenges/views.py:1971
 msgid "transfer ownership of"
 msgstr "transferir la propiedad de"
 
-#: challenges/views.py:1940
+#: challenges/views.py:1972
 #, python-format
 msgid " to %(name)s"
 msgstr " a %(name)s"
 
-#: challenges/views.py:1942
+#: challenges/views.py:1974
 #, python-format
 msgid ""
 "%(name)s will gain full control of this challenge — closing, cancelling, "
@@ -594,24 +606,24 @@ msgstr ""
 "nuevo propietario puede transferirte la propiedad de vuelta, por lo que no "
 "puedes deshacer esto por tu cuenta."
 
-#: challenges/views.py:1967
+#: challenges/views.py:1999
 msgid "This challenge can no longer be cancelled."
 msgstr "Este reto ya no se puede cancelar."
 
-#: challenges/views.py:1977
+#: challenges/views.py:2009
 msgid "Challenge cancelled."
 msgstr "Reto cancelado."
 
-#: challenges/views.py:1983 challenges/views.py:1992
+#: challenges/views.py:2015 challenges/views.py:2024
 #: templates/challenges/settings.html:45
 msgid "Cancel Challenge"
 msgstr "Cancelar Reto"
 
-#: challenges/views.py:1984
+#: challenges/views.py:2016
 msgid "cancel"
 msgstr "cancelar"
 
-#: challenges/views.py:1986
+#: challenges/views.py:2018
 msgid ""
 "Cancelling voids the challenge entirely — no final sync runs, no scores are "
 "recorded, and no closing notifications are sent. The challenge is removed "
@@ -622,15 +634,15 @@ msgstr ""
 "cierre. El reto se elimina de la lista de Buscar Retos. Esta acción no se "
 "puede deshacer."
 
-#: challenges/views.py:1994
+#: challenges/views.py:2026
 msgid "Go Back"
 msgstr "Volver"
 
-#: challenges/views.py:2027
+#: challenges/views.py:2059
 msgid "Only draft challenges can be deleted."
 msgstr "Solo se pueden eliminar los retos en borrador."
 
-#: challenges/views.py:2031
+#: challenges/views.py:2063
 msgid "Draft challenge deleted."
 msgstr "Reto en borrador eliminado."
 
@@ -1034,12 +1046,12 @@ msgstr ""
 "entradas de registro de tu cuenta sin pedirte nada más."
 
 #: templates/accounts/_support_id_section.html:20
-#: templates/challenges/_invite_link_section.html:42
+#: templates/challenges/_invite_link_section.html:28
 msgid "Copy"
 msgstr "Copiar"
 
 #: templates/accounts/_support_id_section.html:33
-#: templates/challenges/_invite_link_section.html:80
+#: templates/challenges/_invite_link_section.html:110
 #: templates/challenges/custom_goal_setup.html:95
 msgid "Copied!"
 msgstr "¡Copiado!"
@@ -1206,18 +1218,37 @@ msgstr "Enlace de invitación"
 msgid "Expires in %(when)s"
 msgstr "Caduca en %(when)s"
 
-#: templates/challenges/_invite_link_section.html:28
-#: templates/challenges/_invite_link_section.html:29
+#: templates/challenges/_invite_link_section.html:11
+#, python-format
+msgid "%(used)s of %(total)s uses used"
+msgstr "%(used)s de %(total)s usos utilizados"
+
+#: templates/challenges/_invite_link_section.html:13
+msgid "Unlimited uses"
+msgstr "Usos ilimitados"
+
+#: templates/challenges/_invite_link_section.html:41
+#: templates/challenges/_invite_link_section.html:75
+msgid "Custom expiry (optional)"
+msgstr "Expiración personalizada (opcional)"
+
+#: templates/challenges/_invite_link_section.html:45
+#: templates/challenges/_invite_link_section.html:79
+msgid "Max uses (optional)"
+msgstr "Usos máximos (opcional)"
+
+#: templates/challenges/_invite_link_section.html:50
+#: templates/challenges/_invite_link_section.html:51
 msgid "Generate new link"
 msgstr "Generar nuevo enlace"
 
-#: templates/challenges/_invite_link_section.html:46
+#: templates/challenges/_invite_link_section.html:64
 msgid "No active invite link. Generate one to invite people."
 msgstr ""
 "No hay ningún enlace de invitación activo. Genera uno para invitar a gente."
 
-#: templates/challenges/_invite_link_section.html:57
-#: templates/challenges/_invite_link_section.html:58
+#: templates/challenges/_invite_link_section.html:84
+#: templates/challenges/_invite_link_section.html:85
 msgid "Generate invite link"
 msgstr "Generar enlace de invitación"
 
@@ -1993,25 +2024,29 @@ msgid "This invite link has expired"
 msgstr "Este enlace de invitación ha caducado"
 
 #: templates/challenges/invite_link_invalid.html:17
+msgid "This invite link has reached its maximum number of uses"
+msgstr "Este enlace de invitación ha alcanzado su número máximo de usos"
+
+#: templates/challenges/invite_link_invalid.html:19
 msgid "This invite link is no longer valid"
 msgstr "Este enlace de invitación ya no es válido"
 
-#: templates/challenges/invite_link_invalid.html:20
+#: templates/challenges/invite_link_invalid.html:22
 #, python-format
 msgid "Ask the owner of “%(name)s” for a fresh invite link."
 msgstr "Pide al propietario de «%(name)s» un nuevo enlace de invitación."
 
-#: templates/challenges/invite_link_invalid.html:25
+#: templates/challenges/invite_link_invalid.html:27
 msgid "Back to your dashboard"
 msgstr "Volver a tu panel"
 
-#: templates/challenges/invite_link_invalid.html:29
+#: templates/challenges/invite_link_invalid.html:31
 #: templates/registration/register.html:19
 #: templates/registration/register.html:163
 msgid "Already have an account?"
 msgstr "¿Ya tienes una cuenta?"
 
-#: templates/challenges/invite_link_invalid.html:30
+#: templates/challenges/invite_link_invalid.html:32
 #: templates/registration/login.html:14 templates/registration/login.html:58
 #: templates/registration/register.html:20
 #: templates/registration/register.html:164

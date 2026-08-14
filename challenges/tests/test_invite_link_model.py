@@ -45,6 +45,27 @@ class TestChallengeInviteLinkModel:
         )
         assert link.is_usable is False
 
+    def test_is_exhausted_false_when_max_uses_is_unlimited(self):
+        link = ChallengeInviteLinkFactory(max_uses=None, use_count=1000)
+        assert link.is_exhausted is False
+
+    def test_is_exhausted_false_below_the_cap(self):
+        link = ChallengeInviteLinkFactory(max_uses=5, use_count=4)
+        assert link.is_exhausted is False
+
+    def test_is_exhausted_true_at_the_cap(self):
+        link = ChallengeInviteLinkFactory(max_uses=5, use_count=5)
+        assert link.is_exhausted is True
+
+    def test_is_usable_false_when_exhausted(self):
+        link = ChallengeInviteLinkFactory(
+            expires_at=timezone.now() + timedelta(days=1),
+            revoked_at=None,
+            max_uses=1,
+            use_count=1,
+        )
+        assert link.is_usable is False
+
     def test_one_live_link_per_challenge_constraint(self):
         challenge = ChallengeFactory()
         ChallengeInviteLinkFactory(challenge=challenge, revoked_at=None)

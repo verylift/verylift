@@ -27,6 +27,7 @@ from challenges.forms import (
     GoalInputsForm,
     GoalMethodForm,
     HistoryWindowForm,
+    InviteLinkOptionsForm,
     RenameChallengeForm,
 )
 from challenges.goal_builders import (
@@ -47,6 +48,7 @@ from challenges.services import (
     current_invite_link,
     delete_draft_challenge,
     get_co_participants,
+    record_invite_link_use,
     regenerate_invite_link,
     remove_participant,
     resolve_invite_token,
@@ -463,7 +465,7 @@ def invite_link_view(request, token):
 
     challenge = link.challenge
 
-    if reason in ("expired", "revoked"):
+    if reason in ("expired", "revoked", "exhausted"):
         logger.warning(
             "Visitor hit a %s invite link for challenge %s", reason, challenge.pk
         )
@@ -532,6 +534,7 @@ def invite_link_view(request, token):
             challenge.pk,
         )
         _notify_user_joined(challenge, request.user)
+        record_invite_link_use(link)
         request.session.pop("invite_token", None)
         return _hx_redirect(
             request, reverse("challenges:goal-setup", args=[challenge.pk])
@@ -548,6 +551,7 @@ def invite_link_view(request, token):
         "User %s joined challenge %s via invite link", request.user.id, challenge.pk
     )
     _notify_user_joined(challenge, request.user)
+    record_invite_link_use(link)
     request.session.pop("invite_token", None)
     return _hx_redirect(request, reverse("challenges:goal-setup", args=[challenge.pk]))
 
@@ -1539,6 +1543,7 @@ def _participants_section_context(challenge):
         "participant_rows": participant_rows,
         "is_locked": challenge.is_terminal,
         "current_invite_link": current_invite_link(challenge),
+        "invite_link_form": InviteLinkOptionsForm(),
     }
 
 
@@ -1806,6 +1811,10 @@ def regenerate_invite_link_view(request, pk):
     like rename_challenge_view/history_window_view: an htmx request gets the
     invite-link section back (with an out-of-band success message); a plain
     request PRG-redirects to Settings.
+
+    Accepts optional ``expires_at``/``max_uses`` overrides via
+    InviteLinkOptionsForm — both blank means the plain default behaviour
+    (end-of-day of the challenge's end_date, unlimited uses).
     """
     challenge = _get_challenge_for_creator(request, pk)
 
@@ -1818,7 +1827,28 @@ def regenerate_invite_link_view(request, pk):
     if response is not None:
         return response
 
-    regenerate_invite_link(challenge, request.user)
+    form = InviteLinkOptionsForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, gettext("Could not generate a new invite link."))
+        if is_htmx(request):
+            return render(
+                request,
+                "challenges/_invite_link_section.html",
+                {
+                    "challenge": challenge,
+                    "current_invite_link": current_invite_link(challenge),
+                    "invite_link_form": form,
+                    "oob_messages": True,
+                },
+            )
+        return redirect(reverse("challenges:settings", args=[pk]))
+
+    regenerate_invite_link(
+        challenge,
+        request.user,
+        expires_at=form.cleaned_data["expires_at"],
+        max_uses=form.cleaned_data["max_uses"],
+    )
     logger.info(
         "User %s regenerated the invite link for challenge %s", request.user.id, pk
     )
@@ -1831,6 +1861,7 @@ def regenerate_invite_link_view(request, pk):
             {
                 "challenge": challenge,
                 "current_invite_link": current_invite_link(challenge),
+                "invite_link_form": InviteLinkOptionsForm(),
                 "oob_messages": True,
             },
         )
@@ -1859,6 +1890,7 @@ def share_challenge_view(request, pk):
         {
             "challenge": challenge,
             "current_invite_link": current_invite_link(challenge),
+            "invite_link_form": InviteLinkOptionsForm(),
         },
     )
 

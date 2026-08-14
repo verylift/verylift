@@ -120,6 +120,13 @@ class ChallengeInviteLink(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
     revoked_at = models.DateTimeField(null=True, blank=True)
+    # Null = unlimited uses. Owner-facing override at generation time
+    # (challenges.forms.InviteLinkOptionsForm); independent of expires_at.
+    max_uses = models.PositiveIntegerField(null=True, blank=True)
+    # Always starts at 0 for a fresh row -- never carried over from a revoked
+    # incumbent (challenges.services.regenerate_invite_link), and incremented
+    # only on an actual join (challenges.services.record_invite_link_use).
+    use_count = models.PositiveIntegerField(default=0)
 
     class Meta:
         db_table = "challenges_challengeinvitelink"
@@ -140,8 +147,12 @@ class ChallengeInviteLink(models.Model):
         return timezone.now() >= self.expires_at
 
     @property
+    def is_exhausted(self) -> bool:
+        return self.max_uses is not None and self.use_count >= self.max_uses
+
+    @property
     def is_usable(self) -> bool:
-        return self.revoked_at is None and not self.is_expired
+        return self.revoked_at is None and not self.is_expired and not self.is_exhausted
 
 
 class ChallengeLift(models.Model):

@@ -1,4 +1,6 @@
-"""Tests for the owner-facing invite-link regenerate action (TASK-249)."""
+"""Tests for the owner-facing invite-link regenerate action (TASK-249, TASK-300)."""
+
+from datetime import timedelta
 
 import pytest
 from django.test import Client
@@ -86,3 +88,52 @@ class TestRegenerateInviteLinkView:
         url = reverse("challenges:regenerate-invite-link", args=[challenge.pk])
         response = creator_client.get(url)
         assert response.status_code == 405
+
+    def test_custom_expiry_and_max_uses_are_applied(self, creator_client, challenge):
+        url = reverse("challenges:regenerate-invite-link", args=[challenge.pk])
+        custom_expiry = timezone.now() + timedelta(days=2)
+        response = creator_client.post(
+            url,
+            {
+                "expires_at": custom_expiry.strftime("%Y-%m-%dT%H:%M"),
+                "max_uses": "10",
+            },
+        )
+        assert response.status_code == 302
+        link = current_invite_link(challenge)
+        assert link.max_uses == 10
+        assert abs((link.expires_at - custom_expiry).total_seconds()) < 60
+
+    def test_blank_overrides_use_the_default_behaviour(self, creator_client, challenge):
+        url = reverse("challenges:regenerate-invite-link", args=[challenge.pk])
+        response = creator_client.post(url, {"expires_at": "", "max_uses": ""})
+        assert response.status_code == 302
+        link = current_invite_link(challenge)
+        assert link.max_uses is None
+
+    def test_past_expiry_is_rejected(self, creator_client, challenge):
+        old = ChallengeInviteLinkFactory(
+            challenge=challenge,
+            revoked_at=None,
+            expires_at=timezone.now() + timezone.timedelta(days=7),
+        )
+        url = reverse("challenges:regenerate-invite-link", args=[challenge.pk])
+        past = timezone.now() - timedelta(days=1)
+        response = creator_client.post(
+            url, {"expires_at": past.strftime("%Y-%m-%dT%H:%M"), "max_uses": ""}
+        )
+        assert response.status_code == 302
+        old.refresh_from_db()
+        assert old.revoked_at is None
+        assert current_invite_link(challenge) == old
+
+    def test_past_expiry_rejected_htmx_shows_error(self, creator_client, challenge):
+        url = reverse("challenges:regenerate-invite-link", args=[challenge.pk])
+        past = timezone.now() - timedelta(days=1)
+        response = creator_client.post(
+            url,
+            {"expires_at": past.strftime("%Y-%m-%dT%H:%M"), "max_uses": ""},
+            HTTP_HX_REQUEST="true",
+        )
+        assert response.status_code == 200
+        assert b"future" in response.content
