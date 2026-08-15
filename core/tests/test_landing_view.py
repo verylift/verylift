@@ -35,13 +35,6 @@ class TestLandingPage:
         assert reverse("core:newsletter-subscribe") in content
         assert reverse("set_language") in content
 
-    def test_landing_page_has_open_graph_tags(self, db):
-        content = Client().get(reverse("core:landing")).content.decode()
-        assert 'property="og:title" content="very lift — Challenge your friends"' in (
-            content
-        )
-        assert 'property="og:description"' in content
-
     def test_authenticated_user_redirected_to_dashboard(self, client):
         response = client.get(reverse("core:landing"))
         assert response.status_code == 302

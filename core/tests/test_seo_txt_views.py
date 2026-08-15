@@ -5,7 +5,7 @@ from django.urls import reverse
 
 
 class TestRobotsTxt:
-    def test_denies_by_default_and_allows_public_pages(self, db):
+    def test_denies_by_default_and_allows_public_pages(self):
         response = Client().get(reverse("robots-txt"))
 
         assert response.status_code == 200
@@ -20,7 +20,7 @@ class TestRobotsTxt:
 
 
 class TestLlmsTxt:
-    def test_lists_the_public_docs_and_site_links(self, db):
+    def test_lists_the_public_docs_and_site_links(self):
         response = Client().get(reverse("llms-txt"))
 
         assert response.status_code == 200
