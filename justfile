@@ -61,6 +61,13 @@ release ver="":
 # which needs an unlocked vault session -- unlock up front so the master-
 # password prompt happens here instead of getting buried under kamal's
 # deploy output later on (see scripts/release.sh for the same pattern).
+#
+# `bw sync` always runs, even with a session already exported: a local vault
+# item added/edited elsewhere (e.g. another machine, the web UI) isn't visible
+# to this CLI's cache until synced, and `bw get password` on a stale cache
+# either 404s on a brand-new item or silently resolves to whatever the cache
+# last had -- Kamal doesn't treat that as a fatal error, so a secret can go
+# out empty with no failed command to point at.
 deploy ver:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -68,6 +75,8 @@ deploy ver:
         echo ">> Unlocking Bitwarden vault..."
         export BW_SESSION="$(bw unlock --raw)"
     fi
+    echo ">> Syncing Bitwarden vault..."
+    bw sync
     VERSION="{{ver}}" kamal deploy --skip-push --version="{{ver}}"
 
 # Run a given django management command

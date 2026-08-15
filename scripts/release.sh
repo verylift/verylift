@@ -74,6 +74,13 @@ if [ -z "${BW_SESSION:-}" ]; then
     echo ">> Unlocking Bitwarden vault..."
     export BW_SESSION="$(bw unlock --raw)"
 fi
+# Sync even with a session already exported: a vault item added/edited
+# elsewhere isn't visible to this CLI's cache until synced, and `bw get
+# password` on a stale cache either 404s on a brand-new item or silently
+# resolves to a stale value -- Kamal doesn't treat that as fatal, so a secret
+# can go out wrong with no failed command to point at.
+echo ">> Syncing Bitwarden vault..."
+bw sync
 
 # --- Collect merged-PR changelog bullets into ## Unreleased ---
 
