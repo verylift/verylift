@@ -35,6 +35,16 @@ urlpatterns = [
         TemplateView.as_view(template_name="legal/privacy.html"),
         name="privacy",
     ),
+    path(
+        "robots.txt",
+        TemplateView.as_view(template_name="robots.txt", content_type="text/plain"),
+        name="robots-txt",
+    ),
+    path(
+        "llms.txt",
+        TemplateView.as_view(template_name="llms.txt", content_type="text/plain"),
+        name="llms-txt",
+    ),
     path("", include("core.urls")),
     path("", include("accounts.urls")),
     path("", include("challenges.urls")),
