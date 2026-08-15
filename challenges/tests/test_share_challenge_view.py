@@ -89,3 +89,12 @@ class TestShareChallengeViewContent:
         content = creator_client.get(share_url(challenge)).content.decode()
         assert reverse("challenges:goal-setup", args=[challenge.pk]) in content
         assert "Continue to your chart" in content
+
+    def test_includes_open_graph_title_with_challenge_name(
+        self, creator_client, challenge
+    ):
+        content = creator_client.get(share_url(challenge)).content.decode()
+        assert (
+            f'property="og:title" content="Join {challenge.name} on very lift"'
+            in content
+        )

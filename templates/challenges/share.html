@@ -3,6 +3,9 @@
 
 {% block title %}{% blocktrans with name=challenge.name %}Share {{ name }}{% endblocktrans %} — very lift{% endblock %}
 
+{% block og_title %}{% blocktrans with name=challenge.name %}Join {{ name }} on very lift{% endblocktrans %}{% endblock %}
+{% block og_description %}{% trans "Friendly lifting challenges where everyone chases their own goals." %}{% endblock %}
+
 {% block wizard_body %}
     <header class="mb-6">
       <h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "Your challenge is ready" %}</h1>

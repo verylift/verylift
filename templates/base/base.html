@@ -5,6 +5,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>{% block title %}very lift{% endblock %}</title>
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="very lift">
+  <meta property="og:url" content="{{ request.build_absolute_uri }}">
+  <meta property="og:title" content="{% block og_title %}very lift{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}{% blocktrans %}Friendly lifting challenges where everyone chases their own goals.{% endblocktrans %}{% endblock %}">
+  <meta name="twitter:card" content="summary">
   <script>
     // Apply the saved theme before paint to avoid a flash. "system" (and the
     // absence of a saved choice, i.e. a new user) follows the OS preference via

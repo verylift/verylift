@@ -50,6 +50,17 @@ class TestAcceptPageContent:
         assert "you, probably" in content
         assert "???" in content
 
+    def test_includes_open_graph_title_with_challenge_name(self, challenge, link):
+        c = Client()
+        c.force_login(UserFactory())
+        content = c.get(
+            reverse("challenges:invite-link", args=[link.token])
+        ).content.decode()
+        assert (
+            f'property="og:title" content="Join {challenge.name} on very lift"'
+            in content
+        )
+
     def test_participant_count_reflects_real_accepted_participants(
         self, challenge, link
     ):
