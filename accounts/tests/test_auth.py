@@ -175,6 +175,15 @@ class TestOIDCBackendRegistrationGate:
 
         assert request.oidc_registration_closed is True
 
+    def test_create_user_flags_request_as_just_created_on_success(self, settings):
+        settings.REGISTRATION_OPEN = True
+        request = RequestFactory().get("/oidc/callback/")
+        self.backend.request = request
+
+        self.backend.create_user({"email": "leo@example.com", "sub": "sub-leo"})
+
+        assert request.oidc_user_just_created is True
+
     def test_create_user_does_not_crash_without_a_request_attribute(self, settings):
         settings.REGISTRATION_OPEN = False
         settings.OIDC_AUTO_ENROLL_GROUP = ""
@@ -393,6 +402,52 @@ class TestOIDCCallbackView:
             response = view.login_success()
 
         assert response is default_response
+
+    @pytest.mark.django_db
+    def test_login_success_sends_brand_new_oidc_user_into_onboarding(self):
+        """A just-created OIDC account (flagged by OIDCBackend.create_user)
+        must go through onboarding, not straight to its normal destination."""
+        request = RequestFactory().get("/oidc/callback/")
+        request.session = SessionStore()
+        request.oidc_user_just_created = True
+        view = OIDCCallbackView()
+        view.request = request
+
+        with patch(
+            "mozilla_django_oidc.views.OIDCAuthenticationCallbackView.login_success",
+            return_value=HttpResponseRedirect("/dashboard/"),
+        ):
+            response = view.login_success()
+
+        assert response.status_code == 302
+        assert response.url == reverse("accounts:onboarding-tracking-method")
+
+    @pytest.mark.django_db
+    def test_login_success_ignores_invite_token_for_a_just_created_user(self):
+        """Invite-link continuity for a brand-new OIDC signup is handled at
+        the end of onboarding (onboarding_units_view), not here -- applying
+        both overrides at once would just discard the onboarding redirect."""
+        challenge = ChallengeFactory(status=Challenge.Status.ACTIVE)
+        link = ChallengeInviteLinkFactory(
+            challenge=challenge,
+            revoked_at=None,
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+        request = RequestFactory().get("/oidc/callback/")
+        request.session = SessionStore()
+        request.session["invite_token"] = link.token
+        request.session.save()
+        request.oidc_user_just_created = True
+        view = OIDCCallbackView()
+        view.request = request
+
+        with patch(
+            "mozilla_django_oidc.views.OIDCAuthenticationCallbackView.login_success",
+            return_value=HttpResponseRedirect("/dashboard/"),
+        ):
+            response = view.login_success()
+
+        assert response.url == reverse("accounts:onboarding-tracking-method")
 
 
 @pytest.mark.django_db

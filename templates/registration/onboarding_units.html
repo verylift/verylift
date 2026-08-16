@@ -1,0 +1,38 @@
+{% extends "base/wizard.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Display Units" %} — very lift{% endblock %}
+
+{% block wizard_body %}
+<div class="mb-6">
+  <p class="text-sm text-content-muted mb-2">
+    {% blocktrans %}Step 3 of 3{% endblocktrans %}
+  </p>
+  <div class="h-1.5 w-full bg-surface-sunken rounded-full overflow-hidden">
+    <div class="h-full bg-accent" style="width: 100%"></div>
+  </div>
+</div>
+
+<h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "Which unit do you lift in?" %}</h1>
+<p class="text-sm text-content-muted mb-6">{% trans "Weights across the app are shown in this unit. You can change it anytime from Settings." %}</p>
+
+<form method="post" class="bg-surface-card border border-line-subtle rounded p-6">
+  {% csrf_token %}
+  <div class="mb-6">
+    <div class="flex gap-4">
+      <label class="flex items-center gap-2 text-sm">
+        <input type="radio" name="unit_preference" value="kg" {% if unit_preference != 'lb' %}checked{% endif %}> {% trans "Kilograms (kg)" %}
+      </label>
+      <label class="flex items-center gap-2 text-sm">
+        <input type="radio" name="unit_preference" value="lb" {% if unit_preference == 'lb' %}checked{% endif %}> {% trans "Pounds (lb)" %}
+      </label>
+    </div>
+  </div>
+
+  <button
+    type="submit"
+    class="w-full bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
+    {% trans "Finish setup" %}
+  </button>
+</form>
+{% endblock %}

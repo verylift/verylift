@@ -1,0 +1,51 @@
+{% extends "base/wizard.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Track Your Lifts" %} — very lift{% endblock %}
+
+{% block wizard_body %}
+<div class="mb-6">
+  <p class="text-sm text-content-muted mb-2">
+    {% blocktrans %}Step 1 of 3{% endblocktrans %}
+  </p>
+  <div class="h-1.5 w-full bg-surface-sunken rounded-full overflow-hidden">
+    <div class="h-full bg-accent" style="width: 33%"></div>
+  </div>
+</div>
+
+<h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "How do you want to track your lifts?" %}</h1>
+<p class="text-sm text-content-muted mb-6">{% trans "You can change this anytime from Settings." %}</p>
+
+<form method="post" class="bg-surface-card border border-line-subtle rounded p-6">
+  {% csrf_token %}
+  <div class="space-y-2 mb-6">
+    <label class="flex items-start gap-2 border border-line rounded px-3 py-2 cursor-pointer has-[:checked]:border-accent">
+      <input type="radio" name="tracking_method_choice" value="liftosaur" class="mt-0.5">
+      <span>
+        <span class="block text-sm font-medium text-content-body">{% trans "Liftosaur" %}</span>
+        <span class="block text-xs text-content-subtle">{% trans "Connect your API key now to sync automatically." %}</span>
+      </span>
+    </label>
+    <label class="flex items-start gap-2 border border-line rounded px-3 py-2 cursor-pointer has-[:checked]:border-accent">
+      <input type="radio" name="tracking_method_choice" value="manual" class="mt-0.5">
+      <span>
+        <span class="block text-sm font-medium text-content-body">{% trans "Manual entry" %}</span>
+        <span class="block text-xs text-content-subtle">{% trans "Self-report lifts as you go — no setup needed." %}</span>
+      </span>
+    </label>
+    <label class="flex items-start gap-2 border border-line rounded px-3 py-2 cursor-pointer has-[:checked]:border-accent">
+      <input type="radio" name="tracking_method_choice" value="csv" class="mt-0.5">
+      <span>
+        <span class="block text-sm font-medium text-content-body">{% trans "Workout CSV" %}</span>
+        <span class="block text-xs text-content-subtle">{% trans "Upload an export (e.g. Hevy) anytime from Settings." %}</span>
+      </span>
+    </label>
+  </div>
+
+  <button
+    type="submit"
+    class="w-full bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
+    {% trans "Continue" %}
+  </button>
+</form>
+{% endblock %}
