@@ -85,12 +85,22 @@ class TestExpiredOrRevokedToken:
 
 
 class TestAnonymousVisitor:
-    def test_stashes_token_in_session_and_redirects_to_register(self, challenge, link):
+    def test_stashes_token_in_session_and_renders_og_tagged_welcome_page(
+        self, challenge, link
+    ):
         c = Client()
         response = c.get(reverse("challenges:invite-link", args=[link.token]))
-        assert response.status_code == 302
-        assert response["Location"] == reverse("accounts:register")
+        assert response.status_code == 200
         assert c.session["invite_token"] == link.token
+        assert b"You've been invited to very lift!" in response.content
+        assert challenge.name.encode() in response.content
+        assert str(link.created_by).encode() in response.content
+
+    def test_welcome_page_links_to_register_login_and_landing(self, challenge, link):
+        response = Client().get(reverse("challenges:invite-link", args=[link.token]))
+        assert reverse("accounts:register").encode() in response.content
+        assert reverse("accounts:login").encode() in response.content
+        assert reverse("core:landing").encode() in response.content
 
     def test_does_not_auto_create_an_account(self, challenge, link):
         from django.contrib.auth import get_user_model

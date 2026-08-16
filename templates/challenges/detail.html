@@ -5,6 +5,9 @@
 
 {% block title %}{{ challenge.name }} — very lift{% endblock %}
 
+{% block og_title %}{{ challenge.name }} — very lift{% endblock %}
+{% block og_description %}{% trans "Friendly lifting challenges where everyone chases their own goals." %}{% endblock %}
+
 {% block main %}
     <header class="mb-8">
       <div class="flex flex-wrap items-start justify-between gap-4">

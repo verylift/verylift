@@ -3,6 +3,9 @@
 
 {% block title %}{{ challenge.name }} — very lift{% endblock %}
 
+{% block og_title %}{% blocktrans with name=challenge.name %}Join {{ name }} on very lift{% endblocktrans %}{% endblock %}
+{% block og_description %}{% trans "Friendly lifting challenges where everyone chases their own goals." %}{% endblock %}
+
 {% block header_max_width %}max-w-5xl{% endblock %}
 
 {% block body_extra_classes %} pb-28 md:pb-0{% endblock %}

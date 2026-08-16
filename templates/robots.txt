@@ -1,0 +1,15 @@
+User-agent: *
+Disallow: /
+
+# Deny-by-default: almost every page here requires a login, and /join/<token>/
+# is a bearer-capability URL (possessing it is what grants access to a
+# challenge) that must never be crawled or indexed. Everything not explicitly
+# allowed below stays disallowed, including any private route added later.
+
+Allow: /$
+Allow: /terms/
+Allow: /privacy/
+Allow: /accounts/login/
+Allow: /accounts/register/
+Allow: /policies/
+Disallow: /policies/consent/

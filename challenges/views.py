@@ -452,10 +452,19 @@ def invite_link_view(request, token):
     """Landing page for a challenge's shareable invite link (TASK-249, AC#1/#2).
 
     Deliberately NOT @login_required: this is the public landing surface for a
-    bearer link, so anonymous visitors must be able to reach it (they're sent
-    on to register). An unknown token 404s with no information leaked; an
-    expired/revoked one renders an explanatory page naming the challenge (the
-    bearer already held a valid-format link for it, so that's not a leak).
+    bearer link, so anonymous visitors must be able to reach it. An unknown
+    token 404s with no information leaked; an expired/revoked one renders an
+    explanatory page naming the challenge (the bearer already held a
+    valid-format link for it, so that's not a leak).
+
+    An anonymous visitor gets a real, OG-tagged welcome page naming the
+    challenge and inviter (with links on to register/login, and back out to
+    the landing page) rather than an immediate redirect. This used to redirect
+    straight through, but link-preview fetchers need an actual rendered
+    response to read OG tags from, and some of them (notably iMessage's) don't
+    self-identify via User-Agent, so detecting "is this a bot" server-side
+    isn't reliable enough to special-case -- every anonymous visitor, human or
+    fetcher, sees the same page (invite_link_preview.html).
 
     Per-IP rate limited (TASK-300): tokens are now Discord-length (8 chars,
     48 bits of entropy) rather than the original 43-char/256-bit ones, which
@@ -494,7 +503,15 @@ def invite_link_view(request, token):
 
     if not request.user.is_authenticated:
         request.session["invite_token"] = token
-        return redirect("accounts:register")
+        return render(
+            request,
+            "challenges/invite_link_preview.html",
+            {
+                "challenge": challenge,
+                "link": link,
+                "discord_invite_url": SiteSettings.load().discord_invite_url,
+            },
+        )
 
     if challenge.is_terminal:
         logger.warning(

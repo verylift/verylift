@@ -466,7 +466,7 @@ def resolve_invite_token(token):
     ``link`` is ``None`` only when ``reason == "unknown"``.
     """
     link = (
-        ChallengeInviteLink.objects.select_related("challenge")
+        ChallengeInviteLink.objects.select_related("challenge", "created_by")
         .filter(token=token)
         .first()
     )

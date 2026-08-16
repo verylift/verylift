@@ -37,7 +37,7 @@ class TestInviteLinkJoinThrottling:
         client = Client()
         url = reverse("challenges:invite-link", args=[link.token])
         for _ in range(3):
-            assert client.get(url).status_code == 302
+            assert client.get(url).status_code == 200
         assert client.get(url).status_code == 429
 
     @override_settings(RATELIMIT_INVITE_LINK_IP="3/m")

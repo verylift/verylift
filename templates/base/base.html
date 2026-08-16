@@ -3,8 +3,39 @@
 <html lang="{{ LANGUAGE_CODE }}" class="h-full">
 <head>
   <meta charset="UTF-8">
+  {% comment %}
+  Tells the browser what background to paint before any CSS loads or the
+  theme script runs, using the OS preference -- avoids a white flash in
+  dark mode on the very first paint of a fresh navigation. The
+  saved-preference theme script still overrides this once it runs, for a
+  visitor who chose a theme opposite their OS setting.
+  {% endcomment %}
+  <meta name="color-scheme" content="light dark">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>{% block title %}very lift{% endblock %}</title>
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="very lift">
+  {% comment %}
+  Django's built-in 500 handler (django.views.defaults.server_error) renders
+  templates/500.html -- which extends this file -- with template.render()
+  called with no context and no request at all (unlike the 400/403/404/429
+  handlers, which all pass request=request). Guarding on {% if request %}
+  keeps that page from emitting a malformed og:url="" / og:image="://..."
+  instead of silently rendering broken meta tags on the one page most likely
+  to get screenshotted when something breaks.
+  {% endcomment %}
+  {% if request %}
+  <meta property="og:url" content="{{ request.build_absolute_uri }}">
+  {% endif %}
+  <meta property="og:title" content="{% block og_title %}very lift{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}{% blocktrans %}Friendly lifting challenges where everyone chases their own goals.{% endblocktrans %}{% endblock %}">
+  {% if request %}
+  <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'og-image.png' %}">
+  {% endif %}
+  <meta name="twitter:card" content="summary">
+  {% if request %}
+  <meta name="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'og-image.png' %}">
+  {% endif %}
   <script>
     // Apply the saved theme before paint to avoid a flash. "system" (and the
     // absence of a saved choice, i.e. a new user) follows the OS preference via

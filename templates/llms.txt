@@ -1,0 +1,30 @@
+# very lift
+
+> A strength-challenge platform for friend groups. Connects to your Liftosaur
+> workout log and automatically scores your lifts against the goal chart you
+> set for yourself, so everyone tracks progress against their own targets
+> without double-entering data.
+
+very lift is open source (PolyForm Shield License) and self-hostable via
+Docker. Most pages require a logged-in account, so this file points at what's
+actually reachable without one: the marketing site, legal pages, and the
+public docs on GitHub.
+
+## Docs
+
+- [Welcome & overview](https://raw.githubusercontent.com/verylift/verylift/main/docs/index.md)
+- [How scoring works](https://raw.githubusercontent.com/verylift/verylift/main/docs/scoring.md)
+- [Running a challenge](https://raw.githubusercontent.com/verylift/verylift/main/docs/challenges.md)
+- [Keeping your data fresh](https://raw.githubusercontent.com/verylift/verylift/main/docs/sync-and-data-freshness.md)
+- [Units & added-weight lifts](https://raw.githubusercontent.com/verylift/verylift/main/docs/bodyweight-and-units.md)
+- [Self-hosting guide](https://raw.githubusercontent.com/verylift/verylift/main/docs/self-hosting.md)
+
+## Site
+
+- [Home]({{ request.scheme }}://{{ request.get_host }}{% url 'core:landing' %})
+- [Terms]({{ request.scheme }}://{{ request.get_host }}{% url 'terms' %})
+- [Privacy]({{ request.scheme }}://{{ request.get_host }}{% url 'privacy' %})
+
+## Repo
+
+- [Source (GitHub)](https://github.com/verylift/verylift)
