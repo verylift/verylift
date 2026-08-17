@@ -85,13 +85,13 @@
 <!-- Backdrop below the dropdown panel; tapping it closes the menu. -->
 <div id="mobile-nav-backdrop" class="hidden md:hidden fixed inset-0 bg-black/40 z-40"></div>
 
-<!-- Desktop sidebar: always visible at md+, collapsible between a labeled w-64 layout and a w-[100px] icon rail. -->
+<!-- Desktop sidebar: always visible at md+, collapsible between a labeled w-56 layout and a w-24 icon rail. -->
 <nav id="app-sidebar"
-  class="hidden md:flex md:flex-col md:static md:w-64 min-h-dvh bg-surface-card border-r border-line-subtle px-3 py-6 overflow-y-auto">
+  class="hidden md:flex md:flex-col md:static md:w-56 min-h-dvh bg-surface-card border-r border-line-subtle px-3 py-6 overflow-y-auto">
 
   <!-- Expanded layout -->
   <div id="sidebar-expanded" class="flex flex-col h-full w-full space-y-1">
-    <div class="mb-6 px-1 flex items-center justify-between gap-2">
+    <div class="mb-6 flex items-center justify-between gap-2">
       <div class="flex items-center gap-2">
         <a href="{% url 'challenges:dashboard' %}" aria-label="{% trans 'very lift, go to dashboard' %}">
           <img src="{% static 'logo.svg' %}" alt="" class="w-8 h-8 rounded-md" width="32" height="32">
@@ -99,7 +99,7 @@
         <span class="text-content-strong font-bold text-lg tracking-tight">very lift</span>
       </div>
       <button type="button" id="sidebar-collapse-btn" title="{% trans 'Collapse sidebar' %}" aria-label="{% trans 'Collapse sidebar' %}"
-        class="flex items-center justify-center w-9 h-9 rounded text-content-muted hover:bg-surface-hover">
+        class="flex items-center justify-center w-8 h-8 rounded text-content-muted hover:bg-surface-hover">
         {% icon "chevron-left" css_class="h-5 w-5" %}
       </button>
     </div>
@@ -155,7 +155,7 @@
       <div class="flex items-center gap-2">
         <!-- Avatar + name trigger -->
         <button id="user-menu-btn" type="button"
-          class="flex items-center gap-2 flex-1 min-w-0 px-2 py-3 md:py-2 rounded hover:bg-surface-hover text-left">
+          class="flex items-center gap-2 flex-1 min-w-0 py-3 md:py-2 rounded hover:bg-surface-hover text-left">
           <!-- Avatar -->
           {% include "components/_avatar.html" with avatar_user=request.user size_classes="w-8 h-8 text-xs" %}
           <!-- Name -->
@@ -203,12 +203,12 @@
   <!-- Collapsed icon rail: left-aligned (not centered) so icons sit at the same x-offset as their
        counterparts in the expanded layout, instead of re-centering in the narrower rail. -->
   <div id="sidebar-collapsed" class="hidden flex-col items-start h-full w-full space-y-1">
-    <div class="mb-6 px-1 flex items-center gap-2">
+    <div class="mb-6 flex items-center gap-2">
       <a href="{% url 'challenges:dashboard' %}" aria-label="{% trans 'very lift, go to dashboard' %}">
         <img src="{% static 'logo.svg' %}" alt="" class="w-8 h-8 rounded-md" width="32" height="32">
       </a>
       <button type="button" id="sidebar-expand-btn" title="{% trans 'Expand sidebar' %}" aria-label="{% trans 'Expand sidebar' %}"
-        class="flex items-center justify-center w-9 h-9 rounded text-content-muted hover:bg-surface-hover">
+        class="flex items-center justify-center w-8 h-8 rounded text-content-muted hover:bg-surface-hover">
         {% icon "chevron-right" css_class="h-5 w-5" %}
       </button>
     </div>
@@ -228,7 +228,7 @@
 
     <div class="pt-3 mt-3 pb-[env(safe-area-inset-bottom)] border-t border-line-subtle">
       <div class="flex items-center gap-2">
-        <div class="px-2 py-2" title="{{ request.user.display_name|default:request.user.username }}">
+        <div class="py-2" title="{{ request.user.display_name|default:request.user.username }}">
           {% include "components/_avatar.html" with avatar_user=request.user size_classes="w-8 h-8 text-xs" %}
         </div>
 
@@ -236,7 +236,7 @@
         <form method="post" action="{% url 'oidc_logout' %}">
           {% csrf_token %}
           <button type="submit" title="{% trans 'Logout' %}" aria-label="{% trans 'Logout' %}"
-            class="flex items-center justify-center w-9 h-9 rounded text-content-muted hover:bg-surface-hover hover:text-content-body">
+            class="flex items-center justify-center w-8 h-8 rounded text-content-muted hover:bg-surface-hover hover:text-content-body">
             {% icon "log-out" css_class="h-5 w-5" %}
           </button>
         </form>
@@ -244,7 +244,7 @@
         <form method="post" action="{% url 'logout' %}">
           {% csrf_token %}
           <button type="submit" title="{% trans 'Logout' %}" aria-label="{% trans 'Logout' %}"
-            class="flex items-center justify-center w-9 h-9 rounded text-content-muted hover:bg-surface-hover hover:text-content-body">
+            class="flex items-center justify-center w-8 h-8 rounded text-content-muted hover:bg-surface-hover hover:text-content-body">
             {% icon "log-out" css_class="h-5 w-5" %}
           </button>
         </form>
@@ -275,15 +275,15 @@
       // a flash of the wrong layout, same spirit as the pp-theme script.
       function applyCollapsed(collapsed) {
         if (collapsed) {
-          nav.classList.remove('md:w-64');
-          nav.classList.add('md:w-[100px]');
+          nav.classList.remove('md:w-56');
+          nav.classList.add('md:w-24');
           expanded.classList.add('hidden');
           expanded.classList.remove('flex');
           collapsedRail.classList.remove('hidden');
           collapsedRail.classList.add('flex');
         } else {
-          nav.classList.remove('md:w-[100px]');
-          nav.classList.add('md:w-64');
+          nav.classList.remove('md:w-24');
+          nav.classList.add('md:w-56');
           collapsedRail.classList.add('hidden');
           collapsedRail.classList.remove('flex');
           expanded.classList.remove('hidden');
