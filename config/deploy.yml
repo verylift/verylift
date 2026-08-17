@@ -154,6 +154,11 @@ env:
     GUNICORN_WORKERS: "5"
     # Not a secret, just an operational policy toggle.
     REGISTRATION_OPEN: "True"
+    # Shared floor for every app logger (root/settings.py's LOGGING config) --
+    # bump to DEBUG here and `just deploy` (no `just release`/rebuild needed,
+    # since this is just an injected env var) to temporarily get more signal
+    # out of a running service, then set back to WARNING once done.
+    APP_LOG_LEVEL: "WARNING"
     # Rollout gate for FitnessVolt strength standards (see root/settings.py) —
     # after deploying with this on, run `refresh_fitnessvolt_cache` once to
     # warm the first snapshot; that command isn't part of the automatic
