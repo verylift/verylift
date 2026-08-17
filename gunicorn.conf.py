@@ -24,7 +24,10 @@ timeout = 60
 # a write path and an attack surface rather than mounting a tmpfs to support it.
 control_socket_disable = True
 
-# Access and error logs to stdout/stderr so Docker captures them.
-accesslog = "-"
+# No access log: kamal-proxy sits in front of every request and already logs
+# it (status, path, duration, method) as structured JSON with a real level --
+# gunicorn's own combined-log-format access line would just duplicate that,
+# minus the level. Error log still goes to stdout so Docker captures it.
+accesslog = None
 errorlog = "-"
 loglevel = os.environ.get("GUNICORN_LOG_LEVEL", "info")
