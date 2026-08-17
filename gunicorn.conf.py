@@ -3,6 +3,8 @@
 import multiprocessing
 import os
 
+import structlog
+
 bind = "0.0.0.0:8000"
 
 # Worker count formula: (2 x CPU cores) + 1. multiprocessing.cpu_count() reports
@@ -31,3 +33,50 @@ control_socket_disable = True
 accesslog = None
 errorlog = "-"
 loglevel = os.environ.get("GUNICORN_LOG_LEVEL", "info")
+
+# Gunicorn boots this file directly, well before Django's own settings module
+# (and its structlog.configure() call) is ever imported, so this can't share
+# that config -- it rebuilds the same JSON-in-prod/console-in-dev formatter
+# gunicorn-side instead, keeping this the one log source left that wasn't
+# structured. `config.update(logconfig_dict)` on gunicorn's side is a shallow
+# top-level dict update, not a deep merge, so "handlers" here must redefine
+# both of gunicorn's default handlers (not just error_console) or "console"
+# -- still referenced by its own "root"/"gunicorn.access" logger entries --
+# would vanish and dictConfig would fail at boot.
+_gunicorn_log_is_debug = (
+    os.environ.get("DJANGO_SETTINGS_MODULE", "root.settings") != "root.settings_prod"
+)
+logconfig_dict = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "structlog": {
+            "()": structlog.stdlib.ProcessorFormatter,
+            "processors": [
+                structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+                structlog.dev.ConsoleRenderer()
+                if _gunicorn_log_is_debug
+                else structlog.processors.JSONRenderer(),
+            ],
+            "foreign_pre_chain": [
+                structlog.stdlib.add_logger_name,
+                structlog.stdlib.add_log_level,
+                structlog.processors.TimeStamper(fmt="iso"),
+                structlog.processors.StackInfoRenderer(),
+                structlog.processors.format_exc_info,
+            ],
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "structlog",
+            "stream": "ext://sys.stdout",
+        },
+        "error_console": {
+            "class": "logging.StreamHandler",
+            "formatter": "structlog",
+            "stream": "ext://sys.stderr",
+        },
+    },
+}
