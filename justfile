@@ -68,6 +68,12 @@ release ver="":
 # either 404s on a brand-new item or silently resolves to whatever the cache
 # last had -- Kamal doesn't treat that as a fatal error, so a secret can go
 # out empty with no failed command to point at.
+#
+# Kamal never streams a locally-run hook's own stdout to the terminal, success
+# or failure -- .kamal/hooks/pre-deploy writes its timestamped progress to
+# TIMING_LOG instead, and the trap below prints it once `kamal deploy` returns
+# (or dies) so the per-step breakdown is visible without digging through
+# Kamal's internals or re-running the hook by hand.
 deploy ver:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -77,6 +83,8 @@ deploy ver:
     fi
     echo ">> Syncing Bitwarden vault..."
     bw sync
+    export TIMING_LOG="$(mktemp)"
+    trap 'echo ">> pre-deploy hook timing:"; cat "$TIMING_LOG"; rm -f "$TIMING_LOG"' EXIT
     VERSION="{{ver}}" kamal deploy --skip-push --version="{{ver}}"
 
 # Run a given django management command
