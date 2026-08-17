@@ -24,7 +24,6 @@
     <a href="{% url 'challenges:dashboard' %}"
       class="flex items-center gap-3 px-4 py-3 text-sm font-medium
         {% if url_name == 'dashboard' %}bg-accent-subtle text-accent{% else %}text-content-body hover:bg-surface-hover{% endif %}">
-      {% icon "layout-dashboard" css_class="h-5 w-5 flex-shrink-0" %}
       <span class="flex-1">{% trans "Dashboard" %}</span>
       {% if unread_notification_count %}
       <span class="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-accent text-accent-on text-xs font-semibold font-mono">
@@ -35,7 +34,6 @@
     <a href="{% url 'challenges:find' %}"
       class="flex items-center gap-3 px-4 py-3 text-sm font-medium
         {% if url_name == 'find' %}bg-accent-subtle text-accent{% else %}text-content-body hover:bg-surface-hover{% endif %}">
-      {% icon "trophy" css_class="h-5 w-5 flex-shrink-0" %}
       {% trans "Challenges" %}
     </a>
 
@@ -68,8 +66,7 @@
     <form method="post" action="{% url 'oidc_logout' %}">
       {% csrf_token %}
       <button type="submit"
-        class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-content-body hover:bg-surface-hover">
-        {% icon "log-out" css_class="h-5 w-5" %}
+        class="w-full flex items-center gap-3 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] text-sm font-medium text-content-body hover:bg-surface-hover">
         {% trans "Logout" %}
       </button>
     </form>
@@ -77,26 +74,11 @@
     <form method="post" action="{% url 'logout' %}">
       {% csrf_token %}
       <button type="submit"
-        class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-content-body hover:bg-surface-hover">
-        {% icon "log-out" css_class="h-5 w-5" %}
+        class="w-full flex items-center gap-3 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] text-sm font-medium text-content-body hover:bg-surface-hover">
         {% trans "Logout" %}
       </button>
     </form>
     {% endif %}
-
-    <div class="border-t border-line-subtle"></div>
-
-    <div class="flex items-center gap-3 px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-      {% include "components/_avatar.html" with avatar_user=request.user size_classes="w-10 h-10 text-sm" %}
-      <div class="min-w-0 flex-1">
-        <div class="text-sm font-semibold text-content-strong truncate">
-          {{ request.user.display_name|default:request.user.username }}
-        </div>
-        {% if request.user.email %}
-        <div class="text-xs text-content-muted truncate">{{ request.user.email }}</div>
-        {% endif %}
-      </div>
-    </div>
   </div>
 </div>
 
