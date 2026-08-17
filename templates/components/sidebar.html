@@ -87,21 +87,25 @@
 
 <!-- Desktop sidebar: always visible at md+, collapsible between a labeled w-64 layout and a w-[76px] icon rail. -->
 <nav id="app-sidebar"
-  class="hidden md:flex md:flex-col md:static md:w-64 min-h-dvh bg-surface-card border-r border-line-subtle px-3 py-6 overflow-y-auto">
+  class="hidden md:flex md:flex-col md:static md:w-64 min-h-dvh bg-surface-card border-r border-line-subtle px-3 py-6 overflow-y-auto relative">
+
+  <!-- Shared collapse/expand toggle: an edge tab that sits outside both layouts' flow so the
+       header block above the nav icons is the same height in both states (no vertical jump). -->
+  <button type="button" id="sidebar-toggle-btn"
+    data-label-collapse="{% trans 'Collapse sidebar' %}" data-label-expand="{% trans 'Expand sidebar' %}"
+    title="{% trans 'Collapse sidebar' %}" aria-label="{% trans 'Collapse sidebar' %}"
+    class="absolute top-6 -right-3 z-10 flex items-center justify-center w-6 h-6 rounded-full border border-line-subtle bg-surface-card text-content-muted hover:bg-surface-hover hover:text-content-body">
+    <span id="sidebar-toggle-icon-collapse">{% icon "chevron-left" css_class="h-3.5 w-3.5" %}</span>
+    <span id="sidebar-toggle-icon-expand" class="hidden">{% icon "chevron-right" css_class="h-3.5 w-3.5" %}</span>
+  </button>
 
   <!-- Expanded layout -->
   <div id="sidebar-expanded" class="flex flex-col h-full w-full space-y-1">
-    <div class="mb-6 px-1 flex items-center justify-between gap-2">
-      <div class="flex items-center gap-2">
-        <a href="{% url 'challenges:dashboard' %}" aria-label="{% trans 'very lift, go to dashboard' %}">
-          <img src="{% static 'logo.svg' %}" alt="" class="w-8 h-8 rounded-md" width="32" height="32">
-        </a>
-        <span class="text-content-strong font-bold text-lg tracking-tight">very lift</span>
-      </div>
-      <button type="button" id="sidebar-collapse-btn" title="{% trans 'Collapse sidebar' %}" aria-label="{% trans 'Collapse sidebar' %}"
-        class="flex items-center justify-center w-9 h-9 rounded text-content-muted hover:bg-surface-hover">
-        {% icon "chevron-left" css_class="h-5 w-5" %}
-      </button>
+    <div class="mb-6 px-1 flex items-center gap-2">
+      <a href="{% url 'challenges:dashboard' %}" aria-label="{% trans 'very lift, go to dashboard' %}">
+        <img src="{% static 'logo.svg' %}" alt="" class="w-8 h-8 rounded-md" width="32" height="32">
+      </a>
+      <span class="text-content-strong font-bold text-lg tracking-tight">very lift</span>
     </div>
 
     <a href="{% url 'challenges:dashboard' %}"
@@ -202,15 +206,9 @@
 
   <!-- Collapsed icon rail -->
   <div id="sidebar-collapsed" class="hidden flex-col items-center h-full w-full">
-    <a href="{% url 'challenges:dashboard' %}" aria-label="{% trans 'very lift, go to dashboard' %}" class="mb-4">
+    <a href="{% url 'challenges:dashboard' %}" aria-label="{% trans 'very lift, go to dashboard' %}" class="mb-6">
       <img src="{% static 'logo.svg' %}" alt="" class="w-8 h-8 rounded-md" width="32" height="32">
     </a>
-    <button type="button" id="sidebar-expand-btn" title="{% trans 'Expand sidebar' %}" aria-label="{% trans 'Expand sidebar' %}"
-      class="flex items-center justify-center w-9 h-9 rounded text-content-muted hover:bg-surface-hover mb-4">
-      {% icon "chevron-right" css_class="h-5 w-5" %}
-    </button>
-
-    <div class="w-8 border-t border-line-subtle mb-4"></div>
 
     <a href="{% url 'challenges:dashboard' %}" title="{% trans 'Dashboard' %}" aria-label="{% trans 'Dashboard' %}"
       class="flex items-center justify-center w-11 h-11 rounded mb-1
@@ -255,9 +253,10 @@
       var nav = document.getElementById('app-sidebar');
       var expanded = document.getElementById('sidebar-expanded');
       var collapsedRail = document.getElementById('sidebar-collapsed');
-      var collapseBtn = document.getElementById('sidebar-collapse-btn');
-      var expandBtn = document.getElementById('sidebar-expand-btn');
-      if (!nav || !expanded || !collapsedRail) return;
+      var toggleBtn = document.getElementById('sidebar-toggle-btn');
+      var iconCollapse = document.getElementById('sidebar-toggle-icon-collapse');
+      var iconExpand = document.getElementById('sidebar-toggle-icon-expand');
+      if (!nav || !expanded || !collapsedRail || !toggleBtn) return;
 
       function isCollapsed() {
         try {
@@ -278,6 +277,10 @@
           expanded.classList.remove('flex');
           collapsedRail.classList.remove('hidden');
           collapsedRail.classList.add('flex');
+          iconCollapse.classList.add('hidden');
+          iconExpand.classList.remove('hidden');
+          toggleBtn.title = toggleBtn.dataset.labelExpand;
+          toggleBtn.setAttribute('aria-label', toggleBtn.dataset.labelExpand);
         } else {
           nav.classList.remove('md:w-[76px]');
           nav.classList.add('md:w-64');
@@ -285,6 +288,10 @@
           collapsedRail.classList.remove('flex');
           expanded.classList.remove('hidden');
           expanded.classList.add('flex');
+          iconExpand.classList.add('hidden');
+          iconCollapse.classList.remove('hidden');
+          toggleBtn.title = toggleBtn.dataset.labelCollapse;
+          toggleBtn.setAttribute('aria-label', toggleBtn.dataset.labelCollapse);
         }
       }
 
@@ -301,8 +308,9 @@
         applyCollapsed(collapsed);
       }
 
-      if (collapseBtn) collapseBtn.addEventListener('click', function () { setCollapsed(true); });
-      if (expandBtn) expandBtn.addEventListener('click', function () { setCollapsed(false); });
+      toggleBtn.addEventListener('click', function () {
+        setCollapsed(!isCollapsed());
+      });
     })();
   </script>
 </nav>
