@@ -4,6 +4,18 @@
 # Postgres role, never the scoped app role `web` runs with.
 set -euo pipefail
 
+# Kamal captures a locally-run hook's stdout/stderr internally and never
+# streams it to the terminal (even on success, not just failure) -- so
+# progress echoes here are otherwise invisible until you go dig in Kamal's own
+# internals. Write timestamped lines to a fixed file rather than fighting
+# that: `just deploy` tails it back out after the kamal command returns
+# (success or failure), which is a path we control end to end.
+TIMING_LOG="${TIMING_LOG:-/tmp/verylift-predeploy-timing.log}"
+: >"$TIMING_LOG"
+log_step() {
+  echo ">> [$(date +%T)] $*" | tee -a "$TIMING_LOG"
+}
+
 # Kamal sets KAMAL_DESTINATION for hooks when the parent command used -d, but
 # does NOT propagate it to subprocesses automatically — without re-passing it
 # here, these `kamal` calls silently fall back to the destination-less
@@ -19,10 +31,10 @@ fi
 # run AFTER pre-deploy hooks. Since this hook needs all three to exist before
 # it can run migrations, stand them up explicitly first. Each call is
 # idempotent, so this is a no-op on every deploy after the first.
-echo ">> Ensuring the kamal Docker network exists..."
+log_step "Ensuring the kamal Docker network exists..."
 kamal server exec "${destination_flag[@]}" "docker network create kamal || true"
 
-echo ">> Ensuring the db accessory is running..."
+log_step "Ensuring the db accessory is running..."
 kamal accessory boot "${destination_flag[@]}" db
 
 # `kamal app exec` never uploads a role's env file itself — it only reads one
@@ -38,14 +50,14 @@ kamal accessory boot "${destination_flag[@]}" db
 # release included, with no way to opt a role out — so there is no way to
 # make this genuinely exec-only/ephemeral. Stopping it here would only be
 # undone seconds later when app:boot reboots it anyway.
-echo ">> Booting release role (version ${KAMAL_VERSION})..."
+log_step "Booting release role (version ${KAMAL_VERSION})..."
 kamal app boot "${destination_flag[@]}" --roles=release --version="${KAMAL_VERSION}"
 
-echo ">> Running migrations as owner role (version ${KAMAL_VERSION})..."
+log_step "Running migrations as owner role (version ${KAMAL_VERSION})..."
 kamal app exec "${destination_flag[@]}" --roles=release --version="${KAMAL_VERSION}" \
   "python manage.py migrate --noinput"
 
-echo ">> Collecting static files (version ${KAMAL_VERSION})..."
+log_step "Collecting static files (version ${KAMAL_VERSION})..."
 kamal app exec "${destination_flag[@]}" --roles=release --version="${KAMAL_VERSION}" \
   "python manage.py collectstatic --noinput"
 
@@ -55,6 +67,8 @@ kamal app exec "${destination_flag[@]}" --roles=release --version="${KAMAL_VERSI
 # alias in this release stops matching and scoring goes quiet with no error.
 # seed_all's sub-commands are idempotent upserts, so this is safe to run on
 # every deploy regardless of whether the fixtures actually changed.
-echo ">> Seeding reference data (version ${KAMAL_VERSION})..."
+log_step "Seeding reference data (version ${KAMAL_VERSION})..."
 kamal app exec "${destination_flag[@]}" --roles=release --version="${KAMAL_VERSION}" \
   "python manage.py seed_all"
+
+log_step "pre-deploy hook done."
