@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+## 2026.8.10 — 2026-08-17
+
+### Added
+- New accounts (including SSO) are asked for their kg/lb display preference during onboarding, defaulting to lb.
+- `APP_LOG_LEVEL` env var lets the app-wide log level be raised for a live investigation via redeploy alone, no rebuild required
+
+### Changed
+- Signup now walks new users through a short setup: choosing how they'll track lifts, connecting Liftosaur if chosen, and picking kg/lb display units.
+- Production logs are now emitted as structured JSON instead of plain text
+- Gunicorn's own error log now renders as structured JSON in production, matching every other log source
+
+### Security
+- Bumped sqlparse to 0.6.0, fixing 4 known CVEs in this transitive dependency.
+- Bumped Django to 6.0.8.
+- Docker image now applies latest Debian security patches at build time, fixing a Trivy-flagged util-linux CVE baked into the base image.
+
+### Removed
+- Gunicorn's per-request access log, now redundant with kamal-proxy's structured request logs
+
 ## 2026.8.9 — 2026-08-14
 
 ### Added
