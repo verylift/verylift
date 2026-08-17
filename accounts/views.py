@@ -324,11 +324,10 @@ def onboarding_liftosaur_view(request):
 def onboarding_units_view(request):
     """Onboarding step 3: kg/lb display preference.
 
-    Reuses the same UnitPreferenceForm/save() as Settings. GET always
-    pre-checks "lb" here regardless of the account's stored preference --
-    the model's own default stays kg for anyone who never passes through
-    onboarding (admin-created accounts, etc.); this page's default is purely
-    which radio starts checked.
+    Reuses the same UnitPreferenceForm/save() as Settings. GET pre-checks
+    request.user.unit_preference -- the model default is lb, matching this
+    step's own default, so a fresh account already shows lb here without
+    needing to hardcode it.
 
     Ends the onboarding flow with the exact invite-link/dashboard redirect
     register_view used to end with.
@@ -346,7 +345,9 @@ def onboarding_units_view(request):
         return redirect("challenges:dashboard")
 
     return render(
-        request, "registration/onboarding_units.html", {"unit_preference": "lb"}
+        request,
+        "registration/onboarding_units.html",
+        {"unit_preference": request.user.unit_preference},
     )
 
 

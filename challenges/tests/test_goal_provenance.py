@@ -42,7 +42,7 @@ def _no_sync():
 
 @pytest.fixture
 def user():
-    return UserFactory()
+    return UserFactory(unit_preference="kg")
 
 
 @pytest.fixture

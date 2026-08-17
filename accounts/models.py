@@ -52,10 +52,13 @@ class User(AbstractBaseUser, PermissionsMixin):
         KG = "kg", _("Kilograms (kg)")
         LB = "lb", _("Pounds (lb)")
 
+    # Defaults to lb, matching the onboarding wizard's own unit step, so an
+    # account that never finishes onboarding still lands on a wizard-consistent
+    # value instead of a silent kg fallback.
     unit_preference = models.CharField(
         max_length=2,
         choices=UnitPreference.choices,
-        default=UnitPreference.KG,
+        default=UnitPreference.LB,
     )
 
     class AcquisitionSource(models.TextChoices):

@@ -150,7 +150,8 @@ class TestPointTotals:
 
 
 class TestLiftComparison:
-    def test_first_vs_latest_per_lift(self, user):
+    def test_first_vs_latest_per_lift(self, db):
+        user = UserFactory(unit_preference="kg")
         challenge = ChallengeFactory(status=Challenge.Status.ACTIVE)
         _accepted(user, challenge)
         PointEarnEventFactory(
@@ -212,7 +213,8 @@ class TestLiftComparison:
         assert stats["lifts"] == []
         assert stats["points_per_week"] is None
 
-    def test_merges_same_lift_across_challenges(self, user):
+    def test_merges_same_lift_across_challenges(self, db):
+        user = UserFactory(unit_preference="kg")
         first = ChallengeFactory(status=Challenge.Status.COMPLETED)
         second = ChallengeFactory(status=Challenge.Status.ACTIVE)
         _accepted(user, first)

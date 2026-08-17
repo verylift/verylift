@@ -24,17 +24,23 @@ class TestOnboardingUnitsView:
         assert response.status_code == 302
         assert response["Location"].startswith(reverse("accounts:login"))
 
-    def test_get_defaults_to_lb_pre_checked_regardless_of_stored_preference(
-        self, client
-    ):
+    def test_get_shows_lb_for_a_fresh_account(self, client):
         user = UserFactory()
-        assert user.unit_preference == "kg"
         client.force_login(user)
 
         response = client.get(reverse("accounts:onboarding-units"))
 
         assert response.status_code == 200
         assert response.context["unit_preference"] == "lb"
+
+    def test_get_shows_stored_kg_preference_instead_of_hardcoded_lb(self, client):
+        user = UserFactory(unit_preference="kg")
+        client.force_login(user)
+
+        response = client.get(reverse("accounts:onboarding-units"))
+
+        assert response.status_code == 200
+        assert response.context["unit_preference"] == "kg"
 
     def test_post_saves_lb_preference(self, client):
         user = UserFactory()
