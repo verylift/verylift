@@ -304,8 +304,8 @@ class TestValidateLiftosaurKeyView:
 
 
 class TestUnitPreferenceForm:
-    def test_unit_preference_defaults_to_kg(self, authed_client, user, db):
-        assert user.unit_preference == "kg"
+    def test_unit_preference_defaults_to_lb(self, authed_client, user, db):
+        assert user.unit_preference == "lb"
 
     def test_saving_lb_unit_preference_persists(self, authed_client, user, db):
         url = reverse("accounts:settings")
@@ -339,14 +339,16 @@ class TestUnitPreferenceForm:
         response = authed_client.get(url)
         assert response.context["unit_preference"] == "lb"
 
-    def test_invalid_unit_preference_falls_back_to_kg(self, authed_client, user, db):
+    def test_invalid_unit_preference_falls_back_to_lb(self, authed_client, user, db):
+        user.unit_preference = "kg"
+        user.save(update_fields=["unit_preference"])
         url = reverse("accounts:settings")
         authed_client.post(
             url,
             {"form_name": "unit_preference", "unit_preference": "stone"},
         )
         user.refresh_from_db()
-        assert user.unit_preference == "kg"
+        assert user.unit_preference == "lb"
 
     def test_plain_post_redirects(self, authed_client, user, db):
         url = reverse("accounts:settings")

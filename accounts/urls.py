@@ -10,6 +10,21 @@ urlpatterns = [
     path("accounts/login/", views.LocalLoginView.as_view(), name="login"),
     path("accounts/register/", views.register_view, name="register"),
     path(
+        "accounts/onboarding/tracking-method/",
+        views.onboarding_tracking_method_view,
+        name="onboarding-tracking-method",
+    ),
+    path(
+        "accounts/onboarding/liftosaur/",
+        views.onboarding_liftosaur_view,
+        name="onboarding-liftosaur",
+    ),
+    path(
+        "accounts/onboarding/units/",
+        views.onboarding_units_view,
+        name="onboarding-units",
+    ),
+    path(
         "accounts/password-reset/",
         views.password_reset_view,
         name="password-reset",

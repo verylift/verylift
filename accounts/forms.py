@@ -165,7 +165,7 @@ class UnitPreferenceForm(forms.Form):
 
     Governs the display unit (kg/lb) for weights across the whole app, so it
     lives in its own section rather than bundled with bodyweight-specific
-    fields. An unrecognised value falls back to the model default (kg).
+    fields. An unrecognised value falls back to the model default (lb).
     """
 
     unit_preference = forms.CharField(required=False)
@@ -173,9 +173,9 @@ class UnitPreferenceForm(forms.Form):
     def save(self, user):
         User = get_user_model()
         user.unit_preference = (
-            User.UnitPreference.LB
-            if self.cleaned_data["unit_preference"] == "lb"
-            else User.UnitPreference.KG
+            User.UnitPreference.KG
+            if self.cleaned_data["unit_preference"] == "kg"
+            else User.UnitPreference.LB
         )
         user.save(update_fields=["unit_preference"])
 

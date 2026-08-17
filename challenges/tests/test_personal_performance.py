@@ -109,7 +109,7 @@ def _expected_gap(
 
 @pytest.fixture
 def user(db):
-    return UserFactory()
+    return UserFactory(unit_preference="kg")
 
 
 @pytest.fixture

@@ -131,6 +131,8 @@ class OIDCBackend(OIDCAuthenticationBackend):
             user.id,
             acquisition_source,
         )
+        if request is not None:
+            request.oidc_user_just_created = True
         return user
 
     def _has_auto_enroll_group(self, claims):
@@ -238,10 +240,19 @@ class OIDCCallbackView(OIDCAuthenticationCallbackView):
         then substitutes the invite-link redirect when a usable token is
         present -- the session token itself is left in place, cleared by
         challenges.views.invite_link_view once the join actually succeeds.
+
+        A brand-new OIDC account (OIDCBackend.create_user flagged this
+        request via oidc_user_just_created) is sent into onboarding instead,
+        before the invite-link override -- invite-link continuity is still
+        honoured, just at the end of onboarding (onboarding_units_view)
+        rather than here. A returning user never sets that flag and keeps
+        this method's existing behavior.
         """
         from accounts.views import _invite_token_link
 
         response = super().login_success()
+        if getattr(self.request, "oidc_user_just_created", False):
+            return redirect("accounts:onboarding-tracking-method")
         invite_link = _invite_token_link(self.request)
         if invite_link is not None:
             return redirect("challenges:invite-link", token=invite_link.token)

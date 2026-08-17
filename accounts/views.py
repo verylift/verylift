@@ -151,20 +151,19 @@ def _invite_token_link(request):
 
 @ratelimit(group="register_ip", key=client_ip, rate=register_ip_rate, method="POST")
 def register_view(request):
-    """Self-serve registration: validate, create account, log in.
+    """Self-serve registration: validate credentials, create account, log in.
 
-    The Liftosaur API key is optional (TASK-250): it's a barrier-free signup so
-    someone arriving with zero context, e.g. via a challenge invite, isn't
-    blocked. When a key is submitted it's validated against the live API before
-    any account is created. On success the user is logged in; if a key was
-    given, their 12-month LiftHistory pool is seeded off the request cycle. The
-    key is optional throughout -- joining a challenge with no key at all is
-    fully supported via manual self-report or a Hevy CSV import from Settings.
+    Creates the account and records ToS/Privacy consent, then hands off to the
+    onboarding flow (accounts:onboarding-tracking-method) for everything else
+    -- choosing a tracking method, connecting Liftosaur, and setting a unit
+    preference. Registration itself asks for nothing beyond credentials and
+    terms acceptance so a barrier-free signup (e.g. via a challenge invite)
+    isn't blocked on anything else.
 
     A visitor arriving with a usable challenge invite-link token in their
     session (TASK-249) bypasses REGISTRATION_OPEN=False — the invite doubles
-    as a beta invite — and lands back in the invite-link join flow on success
-    instead of the dashboard.
+    as a beta invite. The invite-link join redirect itself now happens at the
+    end of onboarding (accounts:onboarding-units), not here.
     """
     User = get_user_model()
     if request.user.is_authenticated:
@@ -190,7 +189,6 @@ def register_view(request):
         email = request.POST.get("email", "").strip()
         password = request.POST.get("password", "")
         password_confirm = request.POST.get("password_confirm", "")
-        api_key = request.POST.get("liftosaur_api_key", "").strip()
         accept_terms = bool(request.POST.get("accept_terms"))
         values = {"username": username, "email": email, "accept_terms": accept_terms}
 
@@ -221,14 +219,6 @@ def register_view(request):
                 "You must accept the Terms of Service and Privacy Policy."
             )
 
-        # The key is optional at signup (TASK-250) and stays optional forever --
-        # joining a challenge never requires one, since manual self-report and
-        # Hevy CSV import are equally valid ways to log lifts.
-        if api_key and not errors and not validate_liftosaur_key(api_key):
-            errors["liftosaur_api_key"] = gettext(
-                "Could not validate this Liftosaur API key."
-            )
-
         if not errors:
             acquisition_source = (
                 User.AcquisitionSource.INVITE_LINK
@@ -239,7 +229,6 @@ def register_view(request):
                 username=username,
                 email=email,
                 password=password,
-                liftosaur_api_key=api_key or None,
                 tos_accepted_at=timezone.now(),
                 acquisition_source=acquisition_source,
             )
@@ -265,17 +254,7 @@ def register_view(request):
                 PolicyConsent.Method.SIGNUP,
             )
 
-            if api_key:
-                # Seed the lifter's 12-month LiftHistory pool off the request
-                # cycle so goal-setup and challenge joins later only need
-                # delta syncs.
-                trigger_lift_history_backfill(user)
-
-            if invite_link:
-                # Leave the session token in place — invite_link_view clears
-                # it once the join itself succeeds.
-                return redirect("challenges:invite-link", token=invite_link.token)
-            return redirect("challenges:dashboard")
+            return redirect("accounts:onboarding-tracking-method")
 
     return render(
         request,
@@ -285,6 +264,90 @@ def register_view(request):
             "values": values,
             "invite_challenge": invite_link.challenge if invite_link else None,
         },
+    )
+
+
+@login_required
+def onboarding_tracking_method_view(request):
+    """Onboarding step 1: "How do you want to track your lifts?"
+
+    Routing-only -- the choice itself is never persisted anywhere, matching
+    the pre-onboarding UI where this radio only decided which panel to show.
+    Choosing Liftosaur goes on to collect a key; manual/CSV have nothing else
+    to collect here (self-report and CSV import both live in Settings) so
+    they skip straight to the units step.
+    """
+    if request.method == "POST":
+        if request.POST.get("tracking_method_choice") == "liftosaur":
+            return redirect("accounts:onboarding-liftosaur")
+        return redirect("accounts:onboarding-units")
+
+    return render(request, "registration/onboarding_tracking_method.html")
+
+
+@login_required
+def onboarding_liftosaur_view(request):
+    """Onboarding step 2 (only reached via the Liftosaur choice): connect a key.
+
+    The key is optional here too -- a blank submission just moves on. When a
+    key is submitted it's validated against the live API before saving, same
+    as registration used to do. The 12-month LiftHistory backfill only fires
+    when the account didn't already have a key, so revisiting/resubmitting
+    this step (e.g. after bookmarking it) doesn't re-seed history that's
+    already been pulled.
+    """
+    errors = {}
+
+    if request.method == "POST":
+        api_key = request.POST.get("liftosaur_api_key", "").strip()
+
+        if api_key and not validate_liftosaur_key(api_key):
+            errors["liftosaur_api_key"] = gettext(
+                "Could not validate this Liftosaur API key."
+            )
+        else:
+            if api_key:
+                had_key_before = bool(request.user.liftosaur_api_key)
+                request.user.liftosaur_api_key = api_key
+                request.user.save(update_fields=["liftosaur_api_key"])
+                if not had_key_before:
+                    # Seed the lifter's 12-month LiftHistory pool off the
+                    # request cycle so goal-setup and challenge joins later
+                    # only need delta syncs.
+                    trigger_lift_history_backfill(request.user)
+            return redirect("accounts:onboarding-units")
+
+    return render(request, "registration/onboarding_liftosaur.html", {"errors": errors})
+
+
+@login_required
+def onboarding_units_view(request):
+    """Onboarding step 3: kg/lb display preference.
+
+    Reuses the same UnitPreferenceForm/save() as Settings. GET pre-checks
+    request.user.unit_preference -- the model default is lb, matching this
+    step's own default, so a fresh account already shows lb here without
+    needing to hardcode it.
+
+    Ends the onboarding flow with the exact invite-link/dashboard redirect
+    register_view used to end with.
+    """
+    if request.method == "POST":
+        form = UnitPreferenceForm(request.POST)
+        form.is_valid()
+        form.save(request.user)
+
+        invite_link = _invite_token_link(request)
+        if invite_link:
+            # Leave the session token in place — invite_link_view clears
+            # it once the join itself succeeds.
+            return redirect("challenges:invite-link", token=invite_link.token)
+        return redirect("challenges:dashboard")
+
+    return render(
+        request,
+        "registration/onboarding_units.html",
+        {"unit_preference": request.user.unit_preference},
     )
 
 

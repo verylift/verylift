@@ -1,7 +1,6 @@
 """Tests for User.acquisition_source across every account-creation site (TASK-249)."""
 
 from datetime import timedelta
-from unittest.mock import patch
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -23,7 +22,6 @@ def _register_data(**overrides):
         "username": "newlifter",
         "password": "s3cret-pass",
         "password_confirm": "s3cret-pass",
-        "liftosaur_api_key": "",
         "accept_terms": "on",
     }
     data.update(overrides)
@@ -32,16 +30,18 @@ def _register_data(**overrides):
 
 @pytest.mark.django_db
 class TestRegisterViewAcquisitionSource:
-    @patch("accounts.views.validate_liftosaur_key")
-    def test_direct_registration_records_direct(self, mock_validate):
+    def test_direct_registration_records_direct(self):
         c = Client()
         c.post(reverse("accounts:register"), _register_data())
         user = User.objects.get(username="newlifter")
         assert user.acquisition_source == User.AcquisitionSource.DIRECT
 
-    def test_invite_link_registration_records_invite_link_and_redirects_to_join(
+    def test_invite_link_registration_records_invite_link_and_goes_to_onboarding(
         self,
     ):
+        """The invite-link join redirect now happens at the end of onboarding
+        (onboarding_units_view), not right after registration itself -- but
+        acquisition_source is still recorded immediately at account creation."""
         challenge = ChallengeFactory(status=Challenge.Status.ACTIVE)
         link = ChallengeInviteLinkFactory(
             challenge=challenge,
@@ -56,9 +56,7 @@ class TestRegisterViewAcquisitionSource:
         response = c.post(reverse("accounts:register"), _register_data())
 
         assert response.status_code == 302
-        assert response["Location"] == reverse(
-            "challenges:invite-link", args=[link.token]
-        )
+        assert response["Location"] == reverse("accounts:onboarding-tracking-method")
         user = User.objects.get(username="newlifter")
         assert user.acquisition_source == User.AcquisitionSource.INVITE_LINK
 

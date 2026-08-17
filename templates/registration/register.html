@@ -85,54 +85,6 @@
         </div>
 
         <div class="mb-6">
-          <p class="block text-sm font-medium text-content-body mb-2">{% trans "How do you want to track your lifts?" %} <span class="font-normal text-content-subtle">({% trans "optional, decide later if you like" %})</span></p>
-
-          <div class="space-y-2" id="tracking-method-choices">
-            <label class="flex items-start gap-2 border border-line rounded px-3 py-2 cursor-pointer has-[:checked]:border-accent">
-              <input
-                type="radio"
-                name="tracking_method_choice"
-                value="liftosaur"
-                class="mt-0.5"
-                {% if errors.liftosaur_api_key %}checked{% endif %}
-              >
-              <span>
-                <span class="block text-sm font-medium text-content-body">{% trans "Liftosaur" %}</span>
-                <span class="block text-xs text-content-subtle">{% trans "Connect your API key now to sync automatically." %}</span>
-              </span>
-            </label>
-            <label class="flex items-start gap-2 border border-line rounded px-3 py-2 cursor-pointer has-[:checked]:border-accent">
-              <input type="radio" name="tracking_method_choice" value="manual" class="mt-0.5">
-              <span>
-                <span class="block text-sm font-medium text-content-body">{% trans "Manual entry" %}</span>
-                <span class="block text-xs text-content-subtle">{% trans "Self-report lifts as you go — no setup needed." %}</span>
-              </span>
-            </label>
-            <label class="flex items-start gap-2 border border-line rounded px-3 py-2 cursor-pointer has-[:checked]:border-accent">
-              <input type="radio" name="tracking_method_choice" value="csv" class="mt-0.5">
-              <span>
-                <span class="block text-sm font-medium text-content-body">{% trans "Workout CSV" %}</span>
-                <span class="block text-xs text-content-subtle">{% trans "Upload an export (e.g. Hevy) anytime from Settings." %}</span>
-              </span>
-            </label>
-          </div>
-
-          <div id="tracking-method-liftosaur-fields" class="{% if not errors.liftosaur_api_key %}hidden{% endif %} mt-3">
-            <label for="id_liftosaur_api_key" class="block text-sm font-medium text-content-body mb-1">{% trans "Liftosaur API key" %}</label>
-            <input
-              type="text"
-              id="id_liftosaur_api_key"
-              name="liftosaur_api_key"
-              autocomplete="off"
-              class="w-full border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent"
-            >
-            {% if errors.liftosaur_api_key %}<p class="mt-1 text-xs text-danger-dark">{{ errors.liftosaur_api_key }}</p>{% endif %}
-          </div>
-          <p id="tracking-method-manual-note" class="hidden mt-3 text-xs text-content-subtle">{% trans "Nothing to set up — log completed sets yourself from the dashboard whenever you finish a workout." %}</p>
-          <p id="tracking-method-csv-note" class="hidden mt-3 text-xs text-content-subtle">{% trans "Nothing to set up now — import a CSV export any time from Settings." %}</p>
-        </div>
-
-        <div class="mb-6">
           <label for="id_accept_terms" class="flex items-start gap-2 text-sm text-content-body">
             <input
               type="checkbox"
@@ -170,31 +122,6 @@
         <a href="{% url 'privacy' %}" class="hover:underline">{% trans "Privacy" %}</a>
       </p>
     </section>
-    <script>
-    (function () {
-      // Purely presentational: which panel is shown alongside the tracking-method
-      // radios below. Not persisted anywhere -- the form only ever submits
-      // liftosaur_api_key (blank unless the Liftosaur option was chosen and filled
-      // in), exactly as before this chooser existed.
-      var radios = document.querySelectorAll('input[name="tracking_method_choice"]');
-      var panels = {
-        liftosaur: document.getElementById('tracking-method-liftosaur-fields'),
-        manual: document.getElementById('tracking-method-manual-note'),
-        csv: document.getElementById('tracking-method-csv-note'),
-      };
-      if (!radios.length) return;
-
-      function update() {
-        var selected = document.querySelector('input[name="tracking_method_choice"]:checked');
-        var value = selected ? selected.value : null;
-        Object.keys(panels).forEach(function (key) {
-          panels[key].classList.toggle('hidden', key !== value);
-        });
-      }
-      radios.forEach(function (radio) { radio.addEventListener('change', update); });
-      update();
-    })();
-    </script>
     {% endif %}
   </div>
 </div>

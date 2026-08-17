@@ -1,7 +1,6 @@
 """Tests for the self-serve registration view (TASK-68)."""
 
 from datetime import timedelta
-from unittest.mock import patch
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -28,7 +27,6 @@ def _post_data(**overrides):
         "username": "newlifter",
         "password": "s3cret-pass",
         "password_confirm": "s3cret-pass",
-        "liftosaur_api_key": "valid-key",
         "accept_terms": "on",
     }
     data.update(overrides)
@@ -60,30 +58,19 @@ class TestRegistrationGet:
 
 @pytest.mark.django_db
 class TestRegistrationSuccess:
-    @patch("accounts.views.trigger_lift_history_backfill")
-    @patch("accounts.views.validate_liftosaur_key", return_value=True)
-    def test_valid_registration_with_key_triggers_backfill(
-        self, mock_validate, mock_backfill, client
-    ):
+    def test_valid_registration_redirects_to_onboarding(self, client):
         response = client.post(reverse("accounts:register"), _post_data())
 
         assert response.status_code == 302
-        assert response["Location"] == reverse("challenges:dashboard")
-        mock_validate.assert_called_once_with("valid-key")
+        assert response["Location"] == reverse("accounts:onboarding-tracking-method")
         user = User.objects.get(username="newlifter")
-        mock_backfill.assert_called_once_with(user)
-        assert user.liftosaur_api_key == "valid-key"
         assert user.check_password("s3cret-pass")
         # Accepting the terms during registration stamps the acknowledgement time.
         assert user.tos_accepted_at is not None
         # User is logged in automatically.
         assert client.session["_auth_user_id"] == str(user.id)
 
-    @patch("accounts.views.trigger_lift_history_backfill")
-    @patch("accounts.views.validate_liftosaur_key", return_value=True)
-    def test_agreeing_at_signup_satisfies_the_policy_consent_gate(
-        self, mock_validate, mock_backfill, client
-    ):
+    def test_agreeing_at_signup_satisfies_the_policy_consent_gate(self, client):
         """The registration checkbox must not leave the new user immediately
         redirected to /policies/consent/ on their very next request."""
         tos_version = PolicyVersionFactory(
@@ -107,38 +94,8 @@ class TestRegistrationSuccess:
             method=PolicyConsent.Method.SIGNUP,
         ).exists()
 
-        response = client.get(reverse("challenges:dashboard"))
+        response = client.get(reverse("accounts:onboarding-tracking-method"))
         assert response.status_code == 200
-
-
-@pytest.mark.django_db
-class TestRegistrationWithoutKey:
-    """The Liftosaur API key is optional at signup (TASK-250)."""
-
-    @patch("accounts.views.trigger_lift_history_backfill")
-    @patch("accounts.views.validate_liftosaur_key")
-    def test_registration_completes_without_a_key(
-        self, mock_validate, mock_backfill, client
-    ):
-        response = client.post(
-            reverse("accounts:register"), _post_data(liftosaur_api_key="")
-        )
-
-        assert response.status_code == 302
-        assert response["Location"] == reverse("challenges:dashboard")
-        user = User.objects.get(username="newlifter")
-        assert user.liftosaur_api_key is None
-        assert client.session["_auth_user_id"] == str(user.id)
-        # No external call and no backfill attempted without a key.
-        mock_validate.assert_not_called()
-        mock_backfill.assert_not_called()
-
-    def test_keyless_registration_shows_no_error(self, client):
-        response = client.post(
-            reverse("accounts:register"), _post_data(liftosaur_api_key="")
-        )
-        assert b"Liftosaur API key is required" not in response.content
-        assert response.status_code == 302
 
 
 @pytest.mark.django_db
@@ -149,21 +106,19 @@ class TestRegistrationEmail:
     def test_email_is_persisted(self, client):
         client.post(
             reverse("accounts:register"),
-            _post_data(liftosaur_api_key="", email="lifter@example.com"),
+            _post_data(email="lifter@example.com"),
         )
         assert User.objects.get(username="newlifter").email == "lifter@example.com"
 
     def test_registration_still_succeeds_without_an_email(self, client):
-        response = client.post(
-            reverse("accounts:register"), _post_data(liftosaur_api_key="")
-        )
+        response = client.post(reverse("accounts:register"), _post_data())
         assert response.status_code == 302
         assert User.objects.get(username="newlifter").email == ""
 
     def test_malformed_email_blocks_account_creation(self, client):
         response = client.post(
             reverse("accounts:register"),
-            _post_data(liftosaur_api_key="", email="notanemail"),
+            _post_data(email="notanemail"),
         )
         assert response.status_code == 200
         assert response.context["errors"]["email"]
@@ -172,9 +127,7 @@ class TestRegistrationEmail:
     def test_rejected_submission_keeps_the_typed_email(self, client):
         response = client.post(
             reverse("accounts:register"),
-            _post_data(
-                liftosaur_api_key="", email="lifter@example.com", accept_terms=""
-            ),
+            _post_data(email="lifter@example.com", accept_terms=""),
         )
         assert response.context["values"]["email"] == "lifter@example.com"
 
@@ -185,16 +138,7 @@ class TestRegistrationEmail:
 
 @pytest.mark.django_db
 class TestRegistrationValidation:
-    @patch("accounts.views.validate_liftosaur_key", return_value=False)
-    def test_invalid_liftosaur_key_blocks_account_creation(self, mock_validate, client):
-        response = client.post(reverse("accounts:register"), _post_data())
-
-        assert response.status_code == 200
-        assert b"Could not validate this Liftosaur API key." in response.content
-        assert not User.objects.filter(username="newlifter").exists()
-
-    @patch("accounts.views.validate_liftosaur_key")
-    def test_duplicate_username_rejected(self, mock_validate, client):
+    def test_duplicate_username_rejected(self, client):
         UserFactory(username="taken")
         response = client.post(
             reverse("accounts:register"), _post_data(username="taken")
@@ -202,12 +146,9 @@ class TestRegistrationValidation:
 
         assert response.status_code == 200
         assert b"already taken" in response.content
-        # The Liftosaur API is never hit when cheap validation fails.
-        mock_validate.assert_not_called()
         assert User.objects.filter(username="taken").count() == 1
 
-    @patch("accounts.views.validate_liftosaur_key")
-    def test_password_mismatch_rejected(self, mock_validate, client):
+    def test_password_mismatch_rejected(self, client):
         response = client.post(
             reverse("accounts:register"),
             _post_data(password_confirm="different"),
@@ -215,11 +156,9 @@ class TestRegistrationValidation:
 
         assert response.status_code == 200
         assert b"Passwords do not match." in response.content
-        mock_validate.assert_not_called()
         assert not User.objects.filter(username="newlifter").exists()
 
-    @patch("accounts.views.validate_liftosaur_key")
-    def test_unaccepted_terms_rejected(self, mock_validate, client):
+    def test_unaccepted_terms_rejected(self, client):
         response = client.post(
             reverse("accounts:register"), _post_data(accept_terms="")
         )
@@ -227,16 +166,13 @@ class TestRegistrationValidation:
         assert response.status_code == 200
         assert b"must accept the Terms of Service" in response.content
         assert not User.objects.filter(username="newlifter").exists()
-        # The acknowledgement is checked before the (expensive) Liftosaur key check.
-        mock_validate.assert_not_called()
 
     def test_register_page_links_to_legal_pages(self, client):
         response = client.get(reverse("accounts:register"))
         assert reverse("terms").encode() in response.content
         assert reverse("privacy").encode() in response.content
 
-    @patch("accounts.views.validate_liftosaur_key")
-    def test_short_password_rejected_by_validator(self, mock_validate, client):
+    def test_short_password_rejected_by_validator(self, client):
         response = client.post(
             reverse("accounts:register"),
             _post_data(password="ab1", password_confirm="ab1"),
@@ -245,11 +181,8 @@ class TestRegistrationValidation:
         assert response.status_code == 200
         assert b"too short" in response.content
         assert not User.objects.filter(username="newlifter").exists()
-        # The password is rejected before the (expensive) Liftosaur key check.
-        mock_validate.assert_not_called()
 
-    @patch("accounts.views.validate_liftosaur_key")
-    def test_all_numeric_password_rejected_by_validator(self, mock_validate, client):
+    def test_all_numeric_password_rejected_by_validator(self, client):
         response = client.post(
             reverse("accounts:register"),
             _post_data(password="24681012", password_confirm="24681012"),
@@ -258,7 +191,6 @@ class TestRegistrationValidation:
         assert response.status_code == 200
         assert b"entirely numeric" in response.content
         assert not User.objects.filter(username="newlifter").exists()
-        mock_validate.assert_not_called()
 
 
 @pytest.mark.django_db
@@ -271,15 +203,13 @@ class TestRegistrationClosed:
         assert b"Registration is currently closed" in response.content
         assert b"Create your account" not in response.content
 
-    @patch("accounts.views.validate_liftosaur_key")
-    def test_post_does_not_create_account(self, mock_validate, client, settings):
+    def test_post_does_not_create_account(self, client, settings):
         settings.REGISTRATION_OPEN = False
         response = client.post(reverse("accounts:register"), _post_data())
 
         assert response.status_code == 200
         assert b"Registration is currently closed" in response.content
         assert not User.objects.filter(username="newlifter").exists()
-        mock_validate.assert_not_called()
 
     def test_authenticated_user_still_redirected_away_when_closed(
         self, client, settings
@@ -297,16 +227,12 @@ class TestRegistrationClosed:
 
         assert reverse("accounts:login").encode() in response.content
 
-    @patch("accounts.views.trigger_lift_history_backfill")
-    @patch("accounts.views.validate_liftosaur_key", return_value=True)
-    def test_registration_open_true_preserves_current_behavior(
-        self, mock_validate, mock_backfill, client, settings
-    ):
+    def test_registration_open_true_preserves_current_behavior(self, client, settings):
         settings.REGISTRATION_OPEN = True
         response = client.post(reverse("accounts:register"), _post_data())
 
         assert response.status_code == 302
-        assert response["Location"] == reverse("challenges:dashboard")
+        assert response["Location"] == reverse("accounts:onboarding-tracking-method")
         assert User.objects.filter(username="newlifter").exists()
 
     def test_existing_local_user_can_log_in_when_registration_closed(
@@ -369,9 +295,8 @@ class TestRegistrationClosedByOIDCOnlyLogin:
         assert b"Registration is currently closed" in response.content
         assert b"Create your account" not in response.content
 
-    @patch("accounts.views.validate_liftosaur_key")
     def test_post_does_not_create_account_even_when_registration_open(
-        self, mock_validate, client, settings
+        self, client, settings
     ):
         settings.REGISTRATION_OPEN = True
         settings.OIDC_ONLY_LOGIN = True
@@ -379,4 +304,3 @@ class TestRegistrationClosedByOIDCOnlyLogin:
 
         assert response.status_code == 200
         assert not User.objects.filter(username="newlifter").exists()
-        mock_validate.assert_not_called()
