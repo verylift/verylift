@@ -27,6 +27,14 @@ FROM python:3.12-slim
 # pullable, but it never shows up on the repo's own Packages tab.
 LABEL org.opencontainers.image.source="https://github.com/verylift/verylift"
 
+# python:3.12-slim's baked-in Debian packages lag behind Debian's own security
+# repo between upstream image rebuilds (Trivy caught util-linux/CVE-2026-53615
+# this way) -- pulling latest package versions at build time closes that gap
+# without waiting on/pinning to a fresher upstream base image tag.
+RUN apt-get update \
+ && apt-get upgrade -y \
+ && rm -rf /var/lib/apt/lists/*
+
 RUN groupadd --system --gid 999 nonroot \
  && useradd --system --gid 999 --uid 999 --create-home nonroot
 
