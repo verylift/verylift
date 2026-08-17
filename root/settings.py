@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import environ
+import structlog
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -473,19 +474,78 @@ EMAIL_BACKEND = env(
 # the bigger risk. Env-tunable if an operator wants it looser.
 PASSWORD_RESET_TIMEOUT = env.int("PASSWORD_RESET_TIMEOUT", default=3600)
 
+# Shared floor for every first-party app logger below. Env-tunable so it can
+# be raised for a live investigation via a deploy.yml env change alone: that
+# only changes what gets injected into the container at start, so
+# `just deploy` (no `just release`, no rebuild) is enough to flip it, and to
+# flip it back after.
+#
+# Deliberately applied per-logger (below), not on root: root stays at a fixed
+# WARNING regardless of DEBUG/APP_LOG_LEVEL so third-party libraries (factory
+# boy, faker, etc.) don't get dragged into DEBUG-level noise in local dev --
+# they did, briefly, when this was tried on root directly, and it inflated
+# caplog record counts in tests that don't scope their capture window.
+APP_LOG_LEVEL = env("APP_LOG_LEVEL", default="DEBUG" if DEBUG else "WARNING")
+
+# Every first-party Django app with its own logger calls. `core` (below) is
+# excluded since it deliberately stays louder than the shared floor in prod.
+_APP_LOGGER_NAMES = [
+    "accounts",
+    "challenges",
+    "fitnessvolt",
+    "guide",
+    "liftosaur",
+    "notifications",
+    "policies",
+    "scoring",
+    "workout_imports",
+]
+
+# Every call site in the codebase uses stdlib `logging.getLogger(__name__)`,
+# not structlog's own `get_logger()` -- structlog.configure() here only sets
+# up its processor chain to run on top of that via ProcessorFormatter below,
+# so no call site needs to change. In prod this renders each record as one
+# JSON object (level, logger name, message, exception as real fields) instead
+# of a plain-text line SigNoz's pipelines have to regex apart; locally it
+# renders as readable, colored console output instead.
+structlog.configure(
+    processors=[
+        structlog.contextvars.merge_contextvars,
+        structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+    ],
+    logger_factory=structlog.stdlib.LoggerFactory(),
+    wrapper_class=structlog.stdlib.BoundLogger,
+    cache_logger_on_first_use=True,
+)
+
+_structlog_shared_processors = [
+    structlog.stdlib.add_logger_name,
+    structlog.stdlib.add_log_level,
+    structlog.processors.TimeStamper(fmt="iso"),
+    structlog.processors.StackInfoRenderer(),
+    structlog.processors.format_exc_info,
+]
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
-        "simple": {
-            "format": "%(levelname)s %(name)s %(message)s",
+        "structlog": {
+            "()": structlog.stdlib.ProcessorFormatter,
+            "processors": [
+                structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+                structlog.dev.ConsoleRenderer()
+                if DEBUG
+                else structlog.processors.JSONRenderer(),
+            ],
+            "foreign_pre_chain": _structlog_shared_processors,
         },
     },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
             "stream": "ext://sys.stdout",
-            "formatter": "simple",
+            "formatter": "structlog",
         },
     },
     "root": {
@@ -493,16 +553,11 @@ LOGGING = {
         "level": "WARNING",
     },
     "loggers": {
+        # Deliberately louder than the shared floor in prod.
         "core": {"level": "DEBUG" if DEBUG else "INFO", "propagate": True},
-        "accounts": {"level": "DEBUG" if DEBUG else "WARNING", "propagate": True},
-        "challenges": {"level": "DEBUG" if DEBUG else "WARNING", "propagate": True},
-        "liftosaur": {"level": "DEBUG" if DEBUG else "WARNING", "propagate": True},
-        "scoring": {"level": "DEBUG" if DEBUG else "WARNING", "propagate": True},
-        "notifications": {"level": "DEBUG" if DEBUG else "WARNING", "propagate": True},
-        "workout_imports": {
-            "level": "DEBUG" if DEBUG else "WARNING",
-            "propagate": True,
+        **{
+            name: {"level": APP_LOG_LEVEL, "propagate": True}
+            for name in _APP_LOGGER_NAMES
         },
-        "policies": {"level": "DEBUG" if DEBUG else "WARNING", "propagate": True},
     },
 }
