@@ -9,7 +9,7 @@
 
     <section class="bg-surface-card border border-danger rounded p-6">
       <p class="text-sm text-content-body mb-2">
-        {% trans "This permanently signs you out and anonymizes your account: your username, display name, and email are replaced with a randomly generated placeholder, your profile photo is deleted, and any connected Liftosaur API key or single sign-on link is removed." %}
+        {% trans "This permanently signs you out and anonymizes your account: your username, display name, and email are replaced with a randomly generated placeholder, your profile photo is deleted, and any connected Liftosaur, Wger, or Hevy API key or single sign-on link is removed." %}
       </p>
       <p class="text-sm text-content-body mb-6">
         {% trans 'Challenges you have participated in keep their past scores and entries, but you will show up as "Former Participant" instead of your name. This action cannot be undone.' %}
@@ -17,6 +17,44 @@
 
       <form method="post">
         {% csrf_token %}
+
+        {% if ownership_rows %}
+        <details class="group mb-6 border border-line-subtle rounded">
+          <summary class="flex items-center justify-between cursor-pointer select-none px-4 py-3 list-none">
+            <span>
+              <span class="text-sm font-medium text-content-strong">
+                {% blocktrans count counter=ownership_rows|length %}
+                You own {{ counter }} challenge that needs a new owner
+                {% plural %}
+                You own {{ counter }} challenges that need a new owner
+                {% endblocktrans %}
+              </span>
+              <p class="text-xs text-content-muted mt-1">
+                {% trans "By default, each goes to whoever has been in it the longest. Open this to pick someone else." %}
+              </p>
+            </span>
+            <svg class="w-5 h-5 text-content-muted shrink-0 transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+            </svg>
+          </summary>
+          <div class="px-4 pb-4 space-y-3">
+            {% for row in ownership_rows %}
+            <div>
+              <label for="id_{{ row.field_name }}" class="block text-xs font-medium text-content-body mb-1">
+                {{ row.challenge.name }}
+              </label>
+              <select name="{{ row.field_name }}" id="id_{{ row.field_name }}"
+                      class="w-full bg-surface-card text-content-body border border-line rounded px-2 py-1.5 text-sm focus:outline-none focus:border-accent">
+                {% for candidate in row.candidates %}
+                <option value="{{ candidate.id }}">{{ candidate.display_name|default:candidate.username }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            {% endfor %}
+          </div>
+        </details>
+        {% endif %}
+
         <label for="id_confirmation" class="block text-sm font-medium text-content-body mb-2">
           {% blocktrans %}Type <code class="font-mono bg-surface-hover px-1 rounded">delete my account</code> below to confirm{% endblocktrans %}
         </label>

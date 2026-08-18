@@ -565,6 +565,54 @@ def transfer_ownership(challenge, new_owner) -> None:
     )
 
 
+def challenges_needing_new_owner(user):
+    """Non-terminal challenges ``user`` created, paired with eligible successors.
+
+    Used by the self-serve account-deletion flow (accounts.views.delete_account_view)
+    to offer an optional ownership-reassignment picker before anonymizing the
+    account, since deletion would otherwise silently strand any challenge
+    ``user`` still owns behind a creator who can never log back in.
+
+    Each row's ``candidates`` are ordered by ``joined_at`` ascending -- the
+    same eligibility as ``transfer_ownership_view`` (ACCEPTED, non-bailed,
+    active, not the creator) -- so ``candidates[0]`` is the longest-tenured
+    participant, the default the picker preselects and what a submission
+    falls back to if the user never opens the picker at all.
+
+    Challenges with no eligible successor are omitted entirely: there's no
+    choice to offer, and they're left exactly as today (owned by the
+    soon-to-be-anonymized creator, rescuable only by staff) rather than
+    inventing a fallback owner from nothing.
+    """
+    rows = []
+    challenges = Challenge.objects.filter(creator=user).exclude(
+        status__in=Challenge.TERMINAL_STATUSES
+    )
+    for challenge in challenges:
+        candidates = [
+            participant.user
+            for participant in ChallengeParticipant.objects.filter(
+                challenge=challenge,
+                invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+                is_bailed=False,
+                user__is_active=True,
+            )
+            .exclude(user=user)
+            .select_related("user")
+            .order_by("joined_at")
+        ]
+        if not candidates:
+            continue
+        rows.append(
+            {
+                "challenge": challenge,
+                "candidates": candidates,
+                "field_name": f"new_owner__{challenge.pk}",
+            }
+        )
+    return rows
+
+
 def create_challenge(creator, cleaned_data) -> Challenge:
     """Create a challenge with its creator's participant row and invite link.
 
