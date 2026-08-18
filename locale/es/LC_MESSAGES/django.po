@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-18 08:37+0000\n"
+"POT-Creation-Date: 2026-08-18 08:41+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -31,101 +31,109 @@ msgstr "La contraseña es obligatoria."
 msgid "That username is already taken."
 msgstr "Ese nombre de usuario ya está en uso."
 
-#: accounts/forms.py:143
+#: accounts/forms.py:158
 msgid "Image is too large (max 10 MB)."
 msgstr "La imagen es demasiado grande (máximo 10 MB)."
 
-#: accounts/forms.py:147
+#: accounts/forms.py:162
 msgid "Image dimensions are too large (max 25 megapixels)."
 msgstr ""
 "Las dimensiones de la imagen son demasiado grandes (máximo 25 megapíxeles)."
 
-#: accounts/forms.py:257
+#: accounts/forms.py:272
 msgid "Type \"delete my account\" exactly to confirm."
 msgstr "Escribe \"delete my account\" exactamente para confirmar."
 
-#: accounts/models.py:59 challenges/models.py:14
+#: accounts/models.py:62 challenges/models.py:14
 #: templates/accounts/_unit_preference_section.html:19
 #: templates/registration/onboarding_units.html:24
 msgid "Kilograms (kg)"
 msgstr "Kilogramos (kg)"
 
-#: accounts/models.py:60 challenges/models.py:13
+#: accounts/models.py:63 challenges/models.py:13
 #: templates/accounts/_unit_preference_section.html:22
 #: templates/registration/onboarding_units.html:27
 msgid "Pounds (lb)"
 msgstr "Libras (lb)"
 
-#: accounts/models.py:72
+#: accounts/models.py:75
 msgid "Unknown"
 msgstr "Desconocido"
 
-#: accounts/models.py:73
+#: accounts/models.py:76
 msgid "Challenge invite link"
 msgstr "Enlace de invitación a un reto"
 
-#: accounts/models.py:74
+#: accounts/models.py:77
 msgid "Direct signup"
 msgstr "Registro directo"
 
-#: accounts/models.py:75
+#: accounts/models.py:78
 msgid "Single sign-on"
 msgstr "Inicio de sesión único"
 
-#: accounts/models.py:76
+#: accounts/models.py:79
 msgid "Created by an operator"
 msgstr "Creado por un operador"
 
-#: accounts/ratelimit.py:103
+#: accounts/ratelimit.py:105
 msgid "Too many attempts. Try again in a minute."
 msgstr "Demasiados intentos. Inténtalo de nuevo en un minuto."
 
-#: accounts/views.py:230
+#: accounts/views.py:234
 msgid "You must accept the Terms of Service and Privacy Policy."
 msgstr "Debes aceptar los Términos de Servicio y la Política de Privacidad."
 
-#: accounts/views.py:317 challenges/views.py:133
+#: accounts/views.py:321 challenges/views.py:133
 msgid "Could not validate this Liftosaur API key."
 msgstr "No se pudo validar esta clave de API de Liftosaur."
 
-#: accounts/views.py:549
+#: accounts/views.py:553
 msgid "Your password has been updated. Sign in with your new password."
 msgstr ""
 "Tu contraseña se ha actualizado. Inicia sesión con tu contraseña nueva."
 
-#: accounts/views.py:599
+#: accounts/views.py:605
 msgid "Profile photo updated."
 msgstr "Foto de perfil actualizada."
 
-#: accounts/views.py:608
+#: accounts/views.py:614
 msgid "Display name updated."
 msgstr "Nombre para mostrar actualizado."
 
-#: accounts/views.py:618
+#: accounts/views.py:624
 msgid "Email address saved."
 msgstr "Correo electrónico guardado."
 
-#: accounts/views.py:629
+#: accounts/views.py:635
 msgid "Liftosaur API key saved."
 msgstr "Clave de API de Liftosaur guardada."
 
-#: accounts/views.py:634
+#: accounts/views.py:640
 msgid "Liftosaur API key removed."
 msgstr "Clave de API de Liftosaur eliminada."
 
-#: accounts/views.py:641
+#: accounts/views.py:647
 msgid "Wger connected."
 msgstr "Wger conectado."
 
-#: accounts/views.py:647
+#: accounts/views.py:653
 msgid "Wger disconnected."
 msgstr "Wger desconectado."
 
-#: accounts/views.py:673
+#: accounts/views.py:659
+msgid "Hevy API key saved."
+msgstr "Clave de API de Hevy guardada."
+
+#: accounts/views.py:664
+msgid "Hevy API key removed."
+msgstr "Clave de API de Hevy eliminada."
+
+#: accounts/views.py:690
 msgid "Couldn't import right now. Please try again in a moment."
 msgstr "No se pudo importar ahora mismo. Inténtalo de nuevo en un momento."
 
-#: accounts/views.py:680
+#: accounts/views.py:697
 #, python-format
 msgid ""
 "Imported %(count)s set(s) from %(source)s. %(scored)s challenge(s) rescored."
@@ -133,56 +141,60 @@ msgstr ""
 "Se importaron %(count)s serie(s) de %(source)s. Se recalcularon %(scored)s "
 "reto(s)."
 
-#: accounts/views.py:699
+#: accounts/views.py:716
 msgid "Unit preference saved."
 msgstr "Preferencia de unidad guardada."
 
-#: accounts/views.py:705
+#: accounts/views.py:722
 msgid "Timezone saved."
 msgstr "Zona horaria guardada."
 
-#: accounts/views.py:711
+#: accounts/views.py:728
 msgid "Language saved."
 msgstr "Idioma guardado."
 
-#: accounts/views.py:781
+#: accounts/views.py:801
 msgid "Your account has been deleted."
 msgstr "Tu cuenta ha sido eliminada."
 
-#: accounts/views.py:838
+#: accounts/views.py:858
 msgid "Connect a Liftosaur API key first."
 msgstr "Conecta primero una clave de API de Liftosaur."
 
-#: accounts/views.py:862 accounts/views.py:909
+#: accounts/views.py:882 accounts/views.py:929 accounts/views.py:979
 msgid "Couldn't sync right now. Please try again in a moment."
 msgstr "No se pudo sincronizar ahora mismo. Inténtalo de nuevo en un momento."
 
-#: accounts/views.py:868 accounts/views.py:915
+#: accounts/views.py:888 accounts/views.py:935 accounts/views.py:985
 #, python-format
 msgid "Sync triggered for %(count)s challenge(s)."
 msgstr "Sincronización iniciada para %(count)s reto(s)."
 
-#: accounts/views.py:889
+#: accounts/views.py:909
 msgid "Connect your Wger account first."
 msgstr "Primero conecta tu cuenta de Wger."
 
-#: accounts/views.py:951
+#: accounts/views.py:959
+msgid "Connect a Hevy API key first."
+msgstr "Conecta primero una clave de API de Hevy."
+
+#: accounts/views.py:1021 accounts/views.py:1092
 msgid "No API key provided."
 msgstr "No se proporcionó ninguna clave de API."
 
-#: accounts/views.py:959
+#: accounts/views.py:1029 accounts/views.py:1100
 msgid "Invalid API key or connection error."
 msgstr "Clave de API no válida o error de conexión."
 
-#: accounts/views.py:963 accounts/views.py:1001
+#: accounts/views.py:1033 accounts/views.py:1071 accounts/views.py:1104
 msgid "Connection successful."
 msgstr "Conexión exitosa."
 
-#: accounts/views.py:989
+#: accounts/views.py:1059
 msgid "No Wger credentials provided."
 msgstr "No se proporcionaron credenciales de Wger."
 
-#: accounts/views.py:997
+#: accounts/views.py:1067
 msgid "Invalid credentials or connection error."
 msgstr "Credenciales no válidas o error de conexión."
 
@@ -377,7 +389,7 @@ msgstr "Entrada manual"
 msgid "Paste JSON"
 msgstr "Pegar JSON"
 
-#: challenges/services.py:1518
+#: challenges/services.py:1524
 #, python-format, python-brace-format
 msgid ""
 "Suggested from history: +{percent}% uplift, based on the last {days} days"
@@ -385,12 +397,12 @@ msgstr ""
 "Sugerido a partir del historial: +{percent}% de incremento, basado en los "
 "últimos {days} días"
 
-#: challenges/services.py:1524
+#: challenges/services.py:1530
 #, python-brace-format
 msgid "(rounded to the nearest {amount} {unit})"
 msgstr "(redondeado al {amount} {unit} más cercano)"
 
-#: challenges/services.py:1633
+#: challenges/services.py:1639
 msgid ""
 "Recent history for this lift is entirely machine-assisted, which can't be "
 "converted into a target."
@@ -398,7 +410,7 @@ msgstr ""
 "El historial reciente de este ejercicio es completamente asistido por "
 "máquina y no puede convertirse en un objetivo."
 
-#: challenges/services.py:1638
+#: challenges/services.py:1644
 msgid "No recent history or published standard for this lift yet."
 msgstr ""
 "Todavía no hay historial reciente ni un estándar publicado para este "
@@ -766,26 +778,30 @@ msgstr "Mantener tus datos actualizados"
 msgid "Units & added-weight lifts"
 msgstr "Unidades y ejercicios con peso añadido"
 
-#: liftosaur/models.py:25
+#: liftosaur/models.py:32
 #: templates/registration/onboarding_tracking_method.html:25
 msgid "Liftosaur"
 msgstr "Liftosaur"
 
-#: liftosaur/models.py:26
+#: liftosaur/models.py:33
 msgid "Manual"
 msgstr "Manual"
 
-#: liftosaur/models.py:27
+#: liftosaur/models.py:34
 msgid "Hevy"
 msgstr "Hevy"
 
-#: liftosaur/models.py:28
+#: liftosaur/models.py:35
 msgid "Strong"
 msgstr "Strong"
 
-#: liftosaur/models.py:29 templates/accounts/_wger_section.html:4
+#: liftosaur/models.py:36 templates/accounts/_wger_section.html:4
 msgid "Wger"
 msgstr "Wger"
+
+#: liftosaur/models.py:37
+msgid "Hevy (live sync)"
+msgstr "Hevy (sincronización en vivo)"
 
 #: notifications/models.py:10
 msgid "Challenge Closed"
@@ -1013,6 +1029,101 @@ msgstr ""
 msgid "Save Email"
 msgstr "Guardar correo"
 
+#: templates/accounts/_hevy_section.html:4
+msgid "Hevy API Key"
+msgstr "Clave de API de Hevy"
+
+#: templates/accounts/_hevy_section.html:6
+msgid ""
+"Connect your Hevy account to import your exercise data. Requires an active "
+"Hevy Pro subscription."
+msgstr ""
+"Conecta tu cuenta de Hevy para importar tus datos de ejercicio. Requiere una "
+"suscripción activa a Hevy Pro."
+
+#: templates/accounts/_hevy_section.html:13
+#: templates/accounts/_liftosaur_section.html:13
+msgid "Saved API key"
+msgstr "Clave de API guardada"
+
+#: templates/accounts/_hevy_section.html:16
+#: templates/accounts/_liftosaur_section.html:16
+#: templates/accounts/_wger_section.html:18
+msgid "Connected"
+msgstr "Conectado"
+
+#: templates/accounts/_hevy_section.html:22
+#: templates/accounts/_liftosaur_section.html:22
+#: templates/accounts/_wger_section.html:24
+msgid "Testing…"
+msgstr "Probando…"
+
+#: templates/accounts/_hevy_section.html:23
+#: templates/accounts/_hevy_section.html:25
+#: templates/accounts/_liftosaur_section.html:23
+#: templates/accounts/_liftosaur_section.html:25
+#: templates/accounts/_wger_section.html:25
+#: templates/accounts/_wger_section.html:27
+msgid "Test Connection"
+msgstr "Probar Conexión"
+
+#: templates/accounts/_hevy_section.html:34
+msgid "Syncing with Hevy…"
+msgstr "Sincronizando con Hevy…"
+
+#: templates/accounts/_hevy_section.html:39
+#: templates/accounts/_liftosaur_section.html:39
+#: templates/accounts/_wger_section.html:41
+msgid "Sync now"
+msgstr "Sincronizar ahora"
+
+#: templates/accounts/_hevy_section.html:49
+msgid "Remove your Hevy API key? This cannot be undone."
+msgstr "¿Eliminar tu clave de API de Hevy? Esto no se puede deshacer."
+
+#: templates/accounts/_hevy_section.html:50
+#: templates/accounts/_liftosaur_section.html:50
+msgid "Removing API key…"
+msgstr "Eliminando clave de API…"
+
+#: templates/accounts/_hevy_section.html:56
+#: templates/accounts/_liftosaur_section.html:56
+msgid "Remove Key"
+msgstr "Eliminar Clave"
+
+#: templates/accounts/_hevy_section.html:96
+#: templates/accounts/_liftosaur_section.html:96
+#: templates/accounts/_wger_section.html:97
+msgid "Connection error. Please try again."
+msgstr "Error de conexión. Inténtalo de nuevo."
+
+#: templates/accounts/_hevy_section.html:110
+#: templates/accounts/_liftosaur_section.html:110
+msgid "API Key"
+msgstr "Clave de API"
+
+#: templates/accounts/_hevy_section.html:116
+msgid "Enter your Hevy API key"
+msgstr "Introduce tu clave de API de Hevy"
+
+#: templates/accounts/_hevy_section.html:128
+#: templates/accounts/_liftosaur_section.html:128
+msgid "Saving API key…"
+msgstr "Guardando clave de API…"
+
+#: templates/accounts/_hevy_section.html:136
+#: templates/accounts/_liftosaur_section.html:136
+msgid "Save Key"
+msgstr "Guardar Clave"
+
+#: templates/accounts/_hevy_sync_status.html:4
+#: templates/accounts/_liftosaur_sync_status.html:4
+#: templates/accounts/_wger_sync_status.html:4
+#: templates/challenges/detail.html:58
+#, python-format
+msgid "Last synced %(when)s"
+msgstr "Última sincronización %(when)s"
+
 #: templates/accounts/_language_section.html:4
 msgid "Language"
 msgstr "Idioma"
@@ -1041,75 +1152,17 @@ msgstr "Clave de API de Liftosaur"
 msgid "Connect your Liftosaur account to import your exercise data."
 msgstr "Conecta tu cuenta de Liftosaur para importar tus datos de ejercicio."
 
-#: templates/accounts/_liftosaur_section.html:13
-msgid "Saved API key"
-msgstr "Clave de API guardada"
-
-#: templates/accounts/_liftosaur_section.html:16
-#: templates/accounts/_wger_section.html:18
-msgid "Connected"
-msgstr "Conectado"
-
-#: templates/accounts/_liftosaur_section.html:22
-#: templates/accounts/_wger_section.html:24
-msgid "Testing…"
-msgstr "Probando…"
-
-#: templates/accounts/_liftosaur_section.html:23
-#: templates/accounts/_liftosaur_section.html:25
-#: templates/accounts/_wger_section.html:25
-#: templates/accounts/_wger_section.html:27
-msgid "Test Connection"
-msgstr "Probar Conexión"
-
 #: templates/accounts/_liftosaur_section.html:34
 msgid "Syncing with Liftosaur…"
 msgstr "Sincronizando con Liftosaur…"
-
-#: templates/accounts/_liftosaur_section.html:39
-#: templates/accounts/_wger_section.html:41
-msgid "Sync now"
-msgstr "Sincronizar ahora"
 
 #: templates/accounts/_liftosaur_section.html:49
 msgid "Remove your Liftosaur API key? This cannot be undone."
 msgstr "¿Eliminar tu clave de API de Liftosaur? Esto no se puede deshacer."
 
-#: templates/accounts/_liftosaur_section.html:50
-msgid "Removing API key…"
-msgstr "Eliminando clave de API…"
-
-#: templates/accounts/_liftosaur_section.html:56
-msgid "Remove Key"
-msgstr "Eliminar Clave"
-
-#: templates/accounts/_liftosaur_section.html:96
-#: templates/accounts/_wger_section.html:97
-msgid "Connection error. Please try again."
-msgstr "Error de conexión. Inténtalo de nuevo."
-
-#: templates/accounts/_liftosaur_section.html:110
-msgid "API Key"
-msgstr "Clave de API"
-
 #: templates/accounts/_liftosaur_section.html:116
 msgid "Enter your Liftosaur API key"
 msgstr "Introduce tu clave de API de Liftosaur"
-
-#: templates/accounts/_liftosaur_section.html:128
-msgid "Saving API key…"
-msgstr "Guardando clave de API…"
-
-#: templates/accounts/_liftosaur_section.html:136
-msgid "Save Key"
-msgstr "Guardar Clave"
-
-#: templates/accounts/_liftosaur_sync_status.html:4
-#: templates/accounts/_wger_sync_status.html:4
-#: templates/challenges/detail.html:58
-#, python-format
-msgid "Last synced %(when)s"
-msgstr "Última sincronización %(when)s"
 
 #: templates/accounts/_nickname_section.html:4
 msgid "Display Name"
@@ -1283,7 +1336,7 @@ msgid "Last imported %(when)s"
 msgstr "Última importación %(when)s"
 
 #: templates/accounts/delete_account.html:4
-#: templates/accounts/delete_account.html:8 templates/accounts/settings.html:60
+#: templates/accounts/delete_account.html:8 templates/accounts/settings.html:61
 msgid "Delete Account"
 msgstr "Eliminar cuenta"
 
@@ -1343,11 +1396,11 @@ msgstr "Claro"
 msgid "Dark"
 msgstr "Oscuro"
 
-#: templates/accounts/settings.html:53
+#: templates/accounts/settings.html:54
 msgid "Danger Zone"
 msgstr "Zona de peligro"
 
-#: templates/accounts/settings.html:55
+#: templates/accounts/settings.html:56
 msgid "Permanently anonymize your account and sign out. This cannot be undone."
 msgstr ""
 "Anonimiza tu cuenta permanentemente y cierra tu sesión. Esto no se puede "
