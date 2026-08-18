@@ -118,7 +118,11 @@ class ChallengeInviteLink(models.Model):
         related_name="created_invite_links",
     )
     created_at = models.DateTimeField(auto_now_add=True)
-    expires_at = models.DateTimeField()
+    # Null = never expires (an explicit owner opt-in via
+    # challenges.forms.InviteLinkOptionsForm's "Never expires" checkbox) --
+    # independent of a blank expiry date, which instead means "use the
+    # challenge's default" (challenges.services._default_invite_link_expiry).
+    expires_at = models.DateTimeField(null=True, blank=True)
     revoked_at = models.DateTimeField(null=True, blank=True)
     # Null = unlimited uses. Owner-facing override at generation time
     # (challenges.forms.InviteLinkOptionsForm); independent of expires_at.
@@ -144,6 +148,8 @@ class ChallengeInviteLink(models.Model):
 
     @property
     def is_expired(self) -> bool:
+        if self.expires_at is None:
+            return False
         return timezone.now() >= self.expires_at
 
     @property

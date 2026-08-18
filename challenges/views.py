@@ -1780,8 +1780,11 @@ def _invite_link_form_for(link):
         return InviteLinkOptionsForm()
     return InviteLinkOptionsForm(
         initial={
-            "expires_at": timezone.localtime(link.expires_at),
+            "expires_at": (
+                timezone.localtime(link.expires_at) if link.expires_at else None
+            ),
             "max_uses": link.max_uses,
+            "never_expires": link.expires_at is None,
         },
         challenge=link.challenge,
     )
@@ -2145,6 +2148,7 @@ def regenerate_invite_link_view(request, pk):
         request.user,
         expires_at=incumbent.expires_at if incumbent else None,
         max_uses=incumbent.max_uses if incumbent else None,
+        never_expires=(incumbent.expires_at is None) if incumbent else False,
     )
     logger.info(
         "User %s regenerated the invite link for challenge %s", request.user.id, pk
@@ -2215,6 +2219,7 @@ def update_invite_link_view(request, pk):
                 link,
                 expires_at=form.cleaned_data["expires_at"],
                 max_uses=form.cleaned_data["max_uses"],
+                never_expires=form.cleaned_data["never_expires"],
             )
             logger.info(
                 "User %s updated the invite link for challenge %s",
