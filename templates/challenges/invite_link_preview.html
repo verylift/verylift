@@ -3,12 +3,12 @@
 
 {% block title %}{% blocktrans with name=challenge.name %}Join {{ name }}{% endblocktrans %} — very lift{% endblock %}
 
-{% block og_title %}{% trans "You've been invited to very lift!" %}{% endblock %}
+{% block og_title %}{% blocktrans with name=challenge.name %}Join {{ name }} on very lift{% endblocktrans %}{% endblock %}
 {% block og_description %}{% blocktrans with name=challenge.name %}Join {{ name }} and chase your own lifting goals alongside friends.{% endblocktrans %}{% endblock %}
 
 {% block page_body %}
   <main class="flex-1 flex items-center justify-center max-w-4xl mx-auto w-full px-4 py-8">
-    <div class="max-w-md mx-auto text-center">
+    <div class="max-w-md mx-auto text-center bg-surface-card border border-line-subtle rounded p-8">
       <div class="flex items-center justify-center gap-2 mb-4">
         {% include "components/_avatar.html" with avatar_user=link.created_by size_classes="w-8 h-8 text-xs" hide_photo=True %}
         <span class="text-sm text-content-subtle">
@@ -16,6 +16,12 @@
         </span>
       </div>
       <h1 class="text-2xl md:text-3xl font-bold text-content-strong">{{ challenge.name }}</h1>
+
+      {% if participant_count %}
+      <p class="mt-2 text-sm text-content-subtle">
+        {% blocktrans count counter=participant_count %}{{ counter }} person already lifting{% plural %}{{ counter }} people already lifting{% endblocktrans %}
+      </p>
+      {% endif %}
 
       <p class="mt-4 text-sm text-content-subtle">
         {% trans "very lift exists to help you keep your sights on your strength goals and challenge friends to do the same. You've been invited to one such challenge!" %}

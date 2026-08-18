@@ -11,7 +11,7 @@
       value="{{ request.scheme }}://{{ request.get_host }}{% url 'challenges:invite-link' current_invite_link.token %}"
       class="flex-1 min-w-0 border border-line rounded px-3 py-2 text-sm bg-surface-sunken text-content-body"
       onclick="this.select()">
-    {% if challenge.creator_id == request.user.id %}
+    {% if challenge.creator_id == request.user.id and not invite_link_locked %}
     <button
       type="button"
       hx-post="{% url 'challenges:regenerate-invite-link' challenge.pk %}"
@@ -100,6 +100,7 @@
           {% trans "Unlimited uses" %}
         {% endif %}
       </span>
+      {% if not invite_link_locked %}
       <button
         type="button"
         hx-get="{% url 'challenges:update-invite-link' challenge.pk %}?edit=1"
@@ -109,12 +110,13 @@
         aria-label="{% trans 'Edit invite link expiry and max uses' %}">
         {% icon "pencil" %}
       </button>
+      {% endif %}
     </div>
     {% endif %}
   {% endif %}
   {% else %}
   <p class="text-sm text-content-muted italic mb-4">{% trans "No active invite link. Generate one to invite people." %}</p>
-  {% if challenge.creator_id == request.user.id %}
+  {% if challenge.creator_id == request.user.id and not invite_link_locked %}
   <button
     type="button"
     hx-post="{% url 'challenges:regenerate-invite-link' challenge.pk %}"

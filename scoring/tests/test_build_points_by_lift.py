@@ -4,6 +4,7 @@ from datetime import date
 
 import pytest
 
+from accounts.services import anonymize_account
 from accounts.tests.factories import UserFactory
 from challenges.models import Challenge, ChallengeParticipant
 from challenges.tests.factories import (
@@ -177,6 +178,29 @@ class TestBuildPointsByLift:
             points_earned=5,
             is_current_best=True,
         )
+
+        data = build_points_by_lift(challenge)
+
+        assert data["datasets"][0]["label"] == "Former Participant"
+
+    def test_anonymized_account_labelled_former_participant(self, challenge):
+        """Regression for TASK-308 (#46): accounts.services.anonymize_account
+        must make this convention true at the data level (is_active=False plus
+        a scrubbed display_name), not rely on a second display-time mechanism
+        -- see test_deactivated_user_labelled_former_participant above for the
+        same assertion driven by a manually-set is_active=False.
+        """
+        former = UserFactory(display_name="Former")
+        _accept(challenge, former)
+        PointEarnEventFactory(
+            user=former,
+            challenge=challenge,
+            lift="Squat",
+            points_earned=5,
+            is_current_best=True,
+        )
+
+        anonymize_account(former)
 
         data = build_points_by_lift(challenge)
 

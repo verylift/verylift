@@ -327,11 +327,6 @@ CHALLENGES_GOAL_SUGGESTION_LOOKBACK_DAYS = env.int(
     "CHALLENGES_GOAL_SUGGESTION_LOOKBACK_DAYS", default=182
 )
 
-# Shareable challenge invite link lifetime (TASK-249, AC#1). A challenge's
-# single live link expires this many days after it was (re)generated; the
-# owner can regenerate at any time, which revokes the incumbent.
-CHALLENGES_INVITE_LINK_TTL_DAYS = env.int("CHALLENGES_INVITE_LINK_TTL_DAYS", default=7)
-
 # Seconds past each half-hour tick the close_challenges scheduler fires (e.g.
 # 30 -> :00:30/:30:30 instead of exactly :00:00/:30:00). Challenge end
 # instants are always an exact end-of-day instant in the creator's timezone,
@@ -521,6 +516,12 @@ structlog.configure(
 _structlog_shared_processors = [
     structlog.stdlib.add_logger_name,
     structlog.stdlib.add_log_level,
+    # Merges stdlib logging's `extra={...}` kwarg into the rendered event as
+    # real top-level fields instead of silently dropping it -- every call
+    # site up to now has only ever passed %s-style message args, so this is
+    # additive (no existing log line's shape changes), but it's what lets a
+    # call site opt into structured, SigNoz-filterable fields going forward.
+    structlog.stdlib.ExtraAdder(),
     structlog.processors.TimeStamper(fmt="iso"),
     structlog.processors.StackInfoRenderer(),
     structlog.processors.format_exc_info,

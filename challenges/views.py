@@ -1,5 +1,6 @@
 """Views for the challenges app."""
 
+import json
 import logging
 from datetime import UTC, date, datetime
 from decimal import Decimal
@@ -46,6 +47,7 @@ from challenges.services import (
     build_custom_goal_context,
     build_participant_chart,
     build_personal_data,
+    challenge_end_instant,
     close_challenge,
     create_challenge,
     current_invite_link,
@@ -503,12 +505,17 @@ def invite_link_view(request, token):
 
     if not request.user.is_authenticated:
         request.session["invite_token"] = token
+        participant_count = challenge.participants.filter(
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+            is_bailed=False,
+        ).count()
         return render(
             request,
             "challenges/invite_link_preview.html",
             {
                 "challenge": challenge,
                 "link": link,
+                "participant_count": participant_count,
                 "discord_invite_url": SiteSettings.load().discord_invite_url,
             },
         )
@@ -774,9 +781,10 @@ def _goal_setup_needs_bodyweight(challenge, data):
 def goal_setup_view(request, pk):
     """One-time, per-participant goal-setting wizard (TASK-248).
 
-    Three methods — strength standards, suggested from Liftosaur history, or
-    fully custom — all materialise into the same flat CustomGoal/
-    CustomGoalTarget shape (challenges.goal_builders; TASK-248 plan §3), so
+    Four methods — strength standards, suggested from Liftosaur history,
+    manual entry, or JSON paste (TASK-306) — all materialise into the same
+    flat CustomGoal/CustomGoalTarget shape (challenges.goal_builders;
+    TASK-248 plan §3), so
     scoring never has to know which method produced a chart. Session-tracked,
     and every step shares this one URL -- @never_cache (UAT feedback: after
     using the in-wizard "Back" link then editing a field, "Continue" could
@@ -977,6 +985,82 @@ def goal_setup_view(request, pk):
     )
 
 
+_COMPUTE_LOG_MAX_ENTRIES = 200
+
+
+@login_required
+@require_POST
+def goal_setup_compute_log_view(request, pk):
+    """Fire-and-forget sink for the manual-grid Compute button's own stats.
+
+    The multi-formula, multi-anchor blend it runs (TASK-306 follow-up) is
+    entirely client-side JS -- this endpoint exists purely so that math has
+    somewhere to land as structured, SigNoz-queryable log lines, so a future
+    "my numbers looked wrong" report has raw anchors and per-formula results
+    to reconstruct from, not just a bug report with no data behind it. It
+    does not read or write anything else -- no DB row, no response body
+    beyond the status code -- so a malformed or truncated payload is a
+    logging gap, not a broken request; failures here must never surface to
+    the user or block their goal-setup flow.
+
+    Only requires participation (not the fuller goal_setup_view guard
+    ladder -- no terminal-challenge/has_goal_configured checks) since this
+    never mutates challenge state; it only observes math a participant just
+    ran on their own screen.
+    """
+    challenge = get_object_or_404(Challenge, pk=pk)
+    participant_exists = ChallengeParticipant.objects.filter(
+        challenge=challenge, user=request.user
+    ).exists()
+    if not participant_exists:
+        logger.warning(
+            "User %s attempted to log Compute stats for challenge %s without "
+            "participating",
+            request.user.id,
+            pk,
+        )
+        raise PermissionDenied
+
+    try:
+        entries = json.loads(request.body)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        logger.warning(
+            "Discarding unparsable Compute-log payload for challenge %s from user %s",
+            pk,
+            request.user.id,
+        )
+        return HttpResponse(status=204)
+
+    if not isinstance(entries, list):
+        logger.warning(
+            "Discarding non-list Compute-log payload for challenge %s from user %s",
+            pk,
+            request.user.id,
+        )
+        return HttpResponse(status=204)
+
+    for entry in entries[:_COMPUTE_LOG_MAX_ENTRIES]:
+        if not isinstance(entry, dict):
+            continue
+        logger.info(
+            "Goal-setup compute run",
+            extra={
+                "challenge_id": pk,
+                "lift_name": entry.get("lift_name"),
+                "target_rep": entry.get("target_rep"),
+                "method": entry.get("method"),
+                "anchors": entry.get("anchors"),
+                "formula_spread_kg": entry.get("formula_spread_kg"),
+                "anchor_spread_kg": entry.get("anchor_spread_kg"),
+                "pre_clamp_kg": entry.get("pre_clamp_kg"),
+                "blended_kg": entry.get("blended_kg"),
+                "rounding_increment_kg": entry.get("rounding_increment_kg"),
+                "rounded_kg": entry.get("rounded_kg"),
+            },
+        )
+    return HttpResponse(status=204)
+
+
 def _goal_setup_method_step(request, data, *, on_valid, step_context):
     standards_available = standards_method_available()
     if request.method == "POST":
@@ -1152,6 +1236,11 @@ def _goal_setup_chart_step(request, challenge, participant, data, *, step_contex
             targets_json=form.data.get("targets_json", ""),
             targets=form.targets,
             errors=form.banner_errors(),
+            unknown_lifts=form.unknown_lifts,
+            acknowledge_unknown_lifts=bool(form.data.get("acknowledge_unknown_lifts")),
+            computed_fields=set(
+                filter(None, form.data.get("computed_fields", "").split(","))
+            ),
         )
         context.update(step_context)
         return render(request, "challenges/custom_goal_setup.html", context)
@@ -1630,6 +1719,28 @@ def _terminal_status_response(request, challenge, message, *, action):
     return HttpResponseBadRequest(message)
 
 
+def _ended_invite_link_response(request, challenge, message, *, action):
+    """400 + warning log once ``challenge.end_date`` has actually passed, else None.
+
+    Additional to (not a replacement for) ``_terminal_status_response``: status
+    only flips to COMPLETED/CANCELLED once close_challenges actually runs, and
+    there's a real window where end_date has passed but status is still
+    ACTIVE. Invite-link creation/regeneration/update must be blocked for that
+    window too, so this checks the live instant directly rather than trusting
+    ``is_terminal``.
+    """
+    if timezone.now() < challenge_end_instant(challenge):
+        return None
+    logger.warning(
+        "User %s tried to %s challenge %s after its end_date (%s) had passed",
+        request.user.id,
+        action,
+        challenge.pk,
+        challenge.end_date,
+    )
+    return HttpResponseBadRequest(message)
+
+
 def _render_confirm_action(
     request,
     challenge,
@@ -1730,6 +1841,9 @@ def _participants_section_context(challenge):
         "challenge": challenge,
         "participant_rows": participant_rows,
         "is_locked": challenge.is_terminal,
+        "invite_link_locked": (
+            challenge.is_terminal or timezone.now() >= challenge_end_instant(challenge)
+        ),
         "current_invite_link": link,
         "invite_link_form": _invite_link_form_for(link),
         "invite_link_editing": False,
@@ -2021,6 +2135,15 @@ def regenerate_invite_link_view(request, pk):
     if response is not None:
         return response
 
+    response = _ended_invite_link_response(
+        request,
+        challenge,
+        gettext("This challenge can no longer accept invites."),
+        action="regenerate the invite link for",
+    )
+    if response is not None:
+        return response
+
     incumbent = current_invite_link(challenge)
     new_link = regenerate_invite_link(
         challenge,
@@ -2042,6 +2165,7 @@ def regenerate_invite_link_view(request, pk):
                 "current_invite_link": new_link,
                 "invite_link_form": _invite_link_form_for(new_link),
                 "invite_link_editing": False,
+                "invite_link_locked": False,
                 "oob_messages": True,
             },
         )
@@ -2067,6 +2191,15 @@ def update_invite_link_view(request, pk):
     challenge = _get_challenge_for_creator(request, pk)
 
     response = _terminal_status_response(
+        request,
+        challenge,
+        gettext("This challenge can no longer accept invites."),
+        action="update the invite link for",
+    )
+    if response is not None:
+        return response
+
+    response = _ended_invite_link_response(
         request,
         challenge,
         gettext("This challenge can no longer accept invites."),
@@ -2113,6 +2246,7 @@ def update_invite_link_view(request, pk):
                 "current_invite_link": link,
                 "invite_link_form": form,
                 "invite_link_editing": editing,
+                "invite_link_locked": False,
                 "oob_messages": True,
             },
         )

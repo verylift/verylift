@@ -359,17 +359,14 @@ def challenge_display_end_of_day(challenge, day):
 
 
 def _default_invite_link_expiry(challenge):
-    """End-of-day expiry for ``challenge.end_date``, with a safety-net fallback.
+    """End-of-day expiry for ``challenge.end_date``.
 
-    CHALLENGES_INVITE_LINK_TTL_DAYS used to be the *only* expiry rule; now it
-    only backstops the rare case where end_date is bad data (e.g. already in
-    the past), so a fresh link is never minted pre-expired. Kept as a setting
-    deliberately for that reason rather than dropped.
+    Callers (regenerate_invite_link, update_invite_link) are only ever
+    reached for a challenge that hasn't ended yet -- both views reject the
+    request outright once challenge_end_instant has passed -- so end_of_day
+    is always still in the future here.
     """
-    end_of_day = challenge_display_end_of_day(challenge, challenge.end_date)
-    if end_of_day <= timezone.now():
-        return timezone.now() + timedelta(days=settings.CHALLENGES_INVITE_LINK_TTL_DAYS)
-    return end_of_day
+    return challenge_display_end_of_day(challenge, challenge.end_date)
 
 
 def regenerate_invite_link(
@@ -1568,6 +1565,9 @@ def build_custom_goal_context(
     unavailable_lifts=None,
     assisted_only_lifts=None,
     source_note="",
+    unknown_lifts=None,
+    acknowledge_unknown_lifts=False,
+    computed_fields=None,
 ) -> dict:
     """Build the render context for the goal-setup wizard's "chart" step.
 
@@ -1582,16 +1582,39 @@ def build_custom_goal_context(
     so it will never score) both mark rows the participant must decide on
     explicitly rather than receiving a silent computed default.
 
-    The JSON-paste path (``allow_json``) is offered only for the CUSTOM
-    method: pasting JSON over a standards/history-prefilled grid would let
-    the saved targets diverge from what ``source_detail`` claims produced
-    them, silently mislabelling the goal's provenance. ``CustomGoalForm``
-    enforces this server-side too (§ its ``clean``), so this is belt only.
+    JSON-paste (``is_json_method``) is its own top-level goal-setup method
+    (TASK-306), not a toggle inside the manual-entry screen: pasting JSON
+    over a standards/history-prefilled grid would let the saved targets
+    diverge from what ``source_detail`` claims produced them, silently
+    mislabelling the goal's provenance. ``CustomGoalForm`` enforces this
+    server-side too (§ its ``clean``), so this is belt only. The Compute
+    calculator (``show_calculator``) is offered only on the manual-entry
+    (CUSTOM) grid — the standards/history grids are already fully prefilled,
+    and JSON has no grid at all.
+
+    ``unknown_lifts`` (TASK-314) names lift(s) present in a JSON-pasted
+    payload but not configured for the challenge -- passed through from
+    ``CustomGoalForm.unknown_lifts`` on a failed submit so the template can
+    offer an explicit "ignore and continue" checkbox rather than silently
+    dropping them or always blocking the save. ``acknowledge_unknown_lifts``
+    echoes back whatever the checkbox's raw POST value was, so a re-render
+    (e.g. because acknowledging alone wasn't enough -- another error was
+    also present) doesn't reset a checkbox the user already ticked.
+
+    ``computed_fields`` (a set of grid field names, e.g. ``{"target__0__1"}``)
+    is which cells the Compute calculator filled in on the client, echoed
+    back from the hidden ``computed_fields`` POST field so a failed submit
+    (e.g. a non-monotonic table) can re-render each cell's "computed" vs.
+    "pinned" styling correctly instead of the client-side JS defaulting
+    every non-blank cell to "pinned" on a fresh page load -- that distinction
+    only ever lived in transient DOM state before this, so a server
+    round-trip used to silently erase it.
     """
     unit = user.unit_preference
     targets = targets or {}
     unavailable_lifts = unavailable_lifts or set()
     assisted_only_lifts = assisted_only_lifts or set()
+    computed_fields = computed_fields or set()
     lifts = []
     for lift_index, lift in enumerate(sorted(covered_lift_names(challenge))):
         lift_targets = targets.get(lift) or {}
@@ -1604,11 +1627,13 @@ def build_custom_goal_context(
             if kg is not None:
                 display, _ = to_display_weight(kg, unit)
                 value = display
+            field = grid_field_name(lift_index, rep)
             cells.append(
                 {
                     "rep": rep,
-                    "field": grid_field_name(lift_index, rep),
+                    "field": field,
                     "value": value,
+                    "is_computed": field in computed_fields,
                 }
             )
         needs_decision = lift in unavailable_lifts
@@ -1633,21 +1658,23 @@ def build_custom_goal_context(
                 "needs_decision_reason": needs_decision_reason,
             }
         )
-    allow_json = method == CustomGoal.SourceMethod.CUSTOM
     return {
         "challenge": challenge,
+        "method": method,
+        "is_json_method": method == CustomGoal.SourceMethod.JSON,
+        "show_calculator": method == CustomGoal.SourceMethod.CUSTOM,
         "display_unit": unit,
         "rep_range": list(range(10, 0, -1)),
         "lifts": lifts,
         "goal_name": goal_name,
         "targets_json": targets_json,
-        "json_active": allow_json and bool(targets_json.strip()),
-        "allow_json": allow_json,
         "llm_prompt": _custom_goal_llm_prompt(challenge, lifts, unit),
         "errors": errors or [],
         "unavailable_lifts": sorted(unavailable_lifts),
         "assisted_only_lifts": sorted(assisted_only_lifts),
         "source_note": source_note,
+        "unknown_lifts": unknown_lifts or [],
+        "acknowledge_unknown_lifts": acknowledge_unknown_lifts,
     }
 
 

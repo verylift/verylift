@@ -67,6 +67,20 @@ def _number_error(lift_name: str, rep: int) -> str:
     }
 
 
+def unknown_lift_error(lift_name: str) -> str:
+    """Message for a JSON-pasted lift name not configured for the challenge.
+
+    Exposed (not module-private) so :class:`~challenges.forms.CustomGoalForm`
+    can reuse the exact same wording when it decides to surface these as
+    fatal, rather than duplicating the string.
+    """
+    return gettext(
+        'Unknown lift "%(lift_name)s" — not configured for this challenge.'
+    ) % {
+        "lift_name": lift_name,
+    }
+
+
 def _bodyweight_added_lift_names(configured: set[str]) -> set[str]:
     """Names among ``configured`` whose targets are authored as added weight.
 
@@ -99,14 +113,19 @@ def _to_kg(raw, unit: str, *, allow_non_positive: bool = False) -> Decimal | Non
 
 def parse_custom_goal_json(
     payload_text: str, challenge, default_unit: str
-) -> tuple[str, dict[str, dict[int, Decimal]], list[str]]:
+) -> tuple[str, dict[str, dict[int, Decimal]], list[str], list[str]]:
     """Parse a pasted JSON goal payload into a name and a ``{lift: {rep: kg}}`` table.
 
-    Returns ``(name, targets, errors)``: the payload's goal name, whatever cells
-    parsed cleanly, plus a list of human-readable error messages. Missing rep
+    Returns ``(name, targets, errors, unknown_lifts)``: the payload's goal
+    name, whatever cells parsed cleanly, a list of human-readable error
+    messages, and a separate list of lift names present in the payload but
+    not configured for this challenge. Unknown lift names are deliberately
+    NOT folded into ``errors`` — TASK-314 lets the form/view decide whether
+    they're fatal (blocked outright) or skippable-with-acknowledgment,
+    unlike every other problem here, which is always fatal. Missing rep
     counts are NOT reported here — completeness is a separate concern
     (:func:`custom_goal_is_complete`) shared with the grid path — but malformed
-    JSON, a missing/blank name, an unknown/mis-shaped lift, a bad unit, and
+    JSON, a missing/blank name, a mis-shaped lift, a bad unit, and
     non-numeric weights all surface as errors. Non-positive weights are rejected
     too, except for bodyweight-added lifts whose targets are added weight (0 =
     bodyweight-only, negative = machine-assisted).
@@ -118,6 +137,7 @@ def parse_custom_goal_json(
             "",
             {},
             [gettext("Could not parse JSON. Please paste a valid JSON object.")],
+            [],
         )
 
     if not isinstance(data, dict):
@@ -125,6 +145,7 @@ def parse_custom_goal_json(
             "",
             {},
             [gettext('JSON payload must be an object with "name" and "targets" keys.')],
+            [],
         )
 
     errors: list[str] = []
@@ -148,19 +169,15 @@ def parse_custom_goal_json(
                 "rep-max weights."
             )
         )
-        return name, {}, errors
+        return name, {}, errors, []
 
     configured = covered_lift_names(challenge)
     bw_added = _bodyweight_added_lift_names(configured)
     targets: dict[str, dict[int, Decimal]] = {}
+    unknown_lifts: list[str] = []
     for lift_name, cells in raw_targets.items():
         if lift_name not in configured:
-            errors.append(
-                gettext(
-                    'Unknown lift "%(lift_name)s" — not configured for this challenge.'
-                )
-                % {"lift_name": lift_name}
-            )
+            unknown_lifts.append(lift_name)
             continue
         if not isinstance(cells, dict):
             errors.append(
@@ -190,7 +207,7 @@ def parse_custom_goal_json(
             lift_targets[rep] = weight_kg
         if lift_targets:
             targets[lift_name] = lift_targets
-    return name, targets, errors
+    return name, targets, errors, unknown_lifts
 
 
 def parse_custom_goal_grid(
@@ -226,6 +243,50 @@ def parse_custom_goal_grid(
         if lift_targets:
             targets[lift_name] = lift_targets
     return targets, errors
+
+
+def _rep_max_order_error(lift_name: str, lower_rep: int, higher_rep: int) -> str:
+    return gettext(
+        '"%(lift_name)s" %(higher_rep)sRM target can\'t be heavier than its '
+        "%(lower_rep)sRM target — lifting more reps can never require more "
+        "weight than fewer reps."
+    ) % {
+        "lift_name": lift_name,
+        "higher_rep": higher_rep,
+        "lower_rep": lower_rep,
+    }
+
+
+def validate_rep_max_monotonicity(
+    targets: dict[str, dict[int, Decimal]], challenge
+) -> list[str]:
+    """Reject a lift whose weight rises as rep count increases.
+
+    A valid rep-max ladder is non-increasing 1RM..10RM (equal is fine — a
+    genuinely rep-independent max, e.g. 5RM == 6RM). Comparing each present
+    cell against the nearest lower-rep cell that is also present (not
+    strictly N vs N-1) is sufficient to catch any ordering violation even
+    across gaps, since non-increasing over every present pair implies
+    non-increasing overall. Applied uniformly regardless of source — grid,
+    JSON paste, or calculator-assisted — since none of parse_custom_goal_grid
+    or parse_custom_goal_json cross-validate adjacent rep columns themselves.
+    Only the first violation per lift is reported, matching
+    custom_goal_is_complete's one-error-per-lift shape.
+    """
+    errors: list[str] = []
+    for lift_name in sorted(covered_lift_names(challenge)):
+        lift_targets = targets.get(lift_name) or {}
+        previous_rep = None
+        previous_weight = None
+        for rep in REP_COUNTS:
+            weight = lift_targets.get(rep)
+            if weight is None:
+                continue
+            if previous_weight is not None and weight > previous_weight:
+                errors.append(_rep_max_order_error(lift_name, previous_rep, rep))
+                break
+            previous_rep, previous_weight = rep, weight
+    return errors
 
 
 def custom_goal_is_complete(

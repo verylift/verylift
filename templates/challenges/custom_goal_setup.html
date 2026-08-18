@@ -1,5 +1,5 @@
 {% extends "base/wizard.html" %}
-{% load static i18n %}
+{% load static i18n icons %}
 
 {% block title %}{% blocktrans with name=challenge.name %}Set Your Goal — {{ name }}{% endblocktrans %}{% endblock %}
 
@@ -21,11 +21,10 @@
       {% trans "Review your chart" %}
     </h1>
     <p class="text-sm text-content-muted mb-2 max-w-2xl">
-      {% if allow_json %}
+      {% if is_json_method %}
       {% blocktrans with name=challenge.name unit=display_unit %}
       Your 1RM–10RM target weight for each lift in
-      <strong>{{ name }}</strong>, in {{ unit }}. You can paste a
-      JSON payload or fill the grid in by hand — either works.
+      <strong>{{ name }}</strong>, in {{ unit }}. Paste a JSON payload below.
       {% endblocktrans %}
       {% else %}
       {% blocktrans with name=challenge.name unit=display_unit %}
@@ -57,36 +56,19 @@
           data-loading-message="{% trans 'Scoring your workout history…' %}">
       {% csrf_token %}
       <input type="hidden" name="wizard_step" value="{{ step }}">
+      {% if show_calculator %}
+      <input type="hidden" name="computed_fields" data-computed-fields-input value="">
+      {% endif %}
 
-      {% if allow_json %}
-      <div class="mb-4">
-        <span class="block text-sm font-medium text-content-body mb-1">{% trans "How do you want to enter targets?" %}</span>
-        <div class="flex gap-2">
-          <label class="flex items-center gap-2 text-sm text-content-body cursor-pointer border border-line-subtle rounded px-3 py-2">
-            <input type="radio" name="input_mode" value="grid" data-input-mode
-                   {% if not json_active %}checked{% endif %}>
-            {% trans "Fill in grid" %}
-          </label>
-          <label class="flex items-center gap-2 text-sm text-content-body cursor-pointer border border-line-subtle rounded px-3 py-2">
-            <input type="radio" name="input_mode" value="json" data-input-mode
-                   {% if json_active %}checked{% endif %}>
-            {% trans "Paste JSON" %}
-          </label>
-        </div>
-      </div>
-
-      <section class="bg-surface-card border border-line-subtle rounded p-6 mb-6 {% if not json_active %}hidden{% endif %}"
-               data-input-panel="json">
+      {% if is_json_method %}
+      <section class="bg-surface-card border border-line-subtle rounded p-6 mb-6"
+                data-input-panel="json">
         <h2 class="text-lg font-semibold text-content-strong mb-2">{% trans "Paste JSON" %}</h2>
         <p class="text-sm text-content-muted mb-3">
-          {% blocktrans with unit=display_unit %}
-          Include a <span class="font-mono">name</span> for the goal — the JSON
-          is self-contained and needs no separate name field. Weights are read
-          in the payload's <span class="font-mono">unit</span> ("kg" or "lb",
-          defaulting to {{ unit }}). Don't want to write the JSON by
-          hand? Copy a ready-made prompt and paste it into any AI chat — it will
-          ask you for a name and your weights and hand back the JSON to paste
-          here.
+          {% blocktrans %}
+          Don't know JSON? Copy the prompt below into any AI chat — it'll ask
+          for your weights and hand you back JSON to paste here. Already
+          comfortable with JSON? Paste it in the shape shown below.
           {% endblocktrans %}
         </p>
         <div class="mb-3">
@@ -102,10 +84,30 @@
         <textarea name="targets_json" rows="6"
                   class="w-full min-h-[55vh] bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm font-mono focus:outline-none focus:border-accent"
                   placeholder='{&#10;  "name": "Spring targets",&#10;  "unit": "{{ display_unit }}",&#10;  "targets": {&#10;    "Bench Press": {"1": 100, "2": 95, "...": "...", "10": 70}&#10;  }&#10;}'>{{ targets_json }}</textarea>
+        {% if unknown_lifts %}
+        <div class="mt-3 px-4 py-3 rounded bg-warning-light text-warning-dark text-sm">
+          <p class="font-medium mb-1">
+            {% blocktrans count counter=unknown_lifts|length %}
+            This lift name isn't configured for this challenge and will be skipped:
+            {% plural %}
+            These lift names aren't configured for this challenge and will be skipped:
+            {% endblocktrans %}
+          </p>
+          <ul class="list-disc list-inside mb-2">
+            {% for lift_name in unknown_lifts %}
+            <li>{{ lift_name }}</li>
+            {% endfor %}
+          </ul>
+          <label class="flex items-center gap-2 font-medium">
+            <input type="checkbox" name="acknowledge_unknown_lifts" value="1"
+                   {% if acknowledge_unknown_lifts %}checked{% endif %}>
+            {% trans "Ignore these and continue with the rest" %}
+          </label>
+        </div>
+        {% endif %}
       </section>
-      {% endif %}
-
-      <section class="bg-surface-card border border-line-subtle rounded p-6 mb-6 {% if json_active %}hidden{% endif %}"
+      {% else %}
+      <section class="bg-surface-card border border-line-subtle rounded p-6 mb-6"
                data-input-panel="grid">
         <h2 class="text-lg font-semibold text-content-strong mb-4">{% blocktrans with unit=display_unit %}Target Grid ({{ unit }}){% endblocktrans %}</h2>
         <div class="mb-4 max-w-sm">
@@ -116,6 +118,49 @@
                  placeholder="{% trans 'e.g. Spring targets' %}"
                  class="w-full bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent">
         </div>
+        {% if show_calculator and lifts %}
+        <div class="mb-4 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap">
+          <div class="flex justify-center sm:items-center sm:border sm:border-line-subtle sm:rounded sm:px-3 sm:py-2 sm:bg-surface-sunken/40">
+            <button type="button" data-compute-button
+                    class="bg-surface-card text-accent text-sm font-semibold px-5 py-2 rounded border-2 border-accent hover:bg-accent hover:text-accent-on focus:outline-none focus:ring-2 focus:ring-accent">
+              {% trans "Compute" %}
+            </button>
+          </div>
+          <div class="border border-line-subtle rounded px-3 py-2 bg-surface-sunken/40">
+            <label for="id_compute_rounding" class="block text-xs font-medium text-content-body mb-1">
+              {% trans "Rounding precision" %}
+            </label>
+            <select id="id_compute_rounding" data-compute-rounding
+                    class="bg-surface-card text-content-body border border-line rounded px-2 py-1.5 text-sm focus:outline-none focus:border-accent">
+              <option value="0">{% trans "No rounding (exact)" %}</option>
+              {% if display_unit == "lb" %}
+              <option value="2.5">2.5 lb</option>
+              <option value="5" selected>5 lb</option>
+              <option value="10">10 lb</option>
+              {% else %}
+              <option value="1">1 kg</option>
+              <option value="2.5" selected>2.5 kg</option>
+              <option value="5">5 kg</option>
+              {% endif %}
+            </select>
+          </div>
+          <div class="flex items-center flex-1 min-w-[12rem] border border-line-subtle rounded px-3 py-2 bg-surface-sunken/40">
+            <p class="text-xs text-content-muted">
+              {% blocktrans %}
+              Clicking compute fills in blank cells for rows that have at
+              least one goal already entered, rounded to the chosen
+              precision. Suggestions blend the Epley, Brzycki, Lander,
+              Lombardi, and Marzagao formulas, and assume each entered
+              weight reflects a true near-maximal effort.
+              {% endblocktrans %}
+            </p>
+          </div>
+        </div>
+        <div data-compute-warning
+             class="hidden mb-4 px-4 py-3 rounded bg-warning-light text-warning-dark text-sm"
+             data-warning-prefix="{% trans 'Compute skipped these lifts because their pinned weights increase with reps — fix the pinned values first: ' %}">
+        </div>
+        {% endif %}
         {% if lifts %}
         <div class="overflow-x-auto">
           <table class="text-sm text-left table-auto w-full">
@@ -129,14 +174,26 @@
             </thead>
             <tbody>
               {% for lift in lifts %}
-              <tr class="text-content-body {% if not lift.needs_decision %}border-b border-line-subtle{% endif %}">
+              <tr class="text-content-body {% if not lift.needs_decision %}border-b border-line-subtle{% endif %}"
+                  {% if show_calculator %}data-lift-row data-lift-name="{{ lift.name }}"{% endif %}>
                 <td class="py-2 pr-4 font-medium text-content-strong align-top {% if lift.needs_decision %}border-l-4 border-warning pl-2{% endif %}">
-                  {{ lift.name }}
+                  <div class="flex items-center justify-between gap-1.5 w-full">
+                    <span>{{ lift.name }}</span>
+                    {% if show_calculator %}
+                    <button type="button" data-clear-row
+                            class="shrink-0 text-content-muted hover:text-danger focus:outline-none"
+                            title="{% trans "Clear this row" %}"
+                            aria-label="{% trans "Clear this row" %}">
+                      {% icon "trash-2" css_class="h-3.5 w-3.5" %}
+                    </button>
+                    {% endif %}
+                  </div>
                 </td>
                 {% for cell in lift.cells %}
                 <td class="py-1 px-0.5">
                   <input type="text" inputmode="decimal" name="{{ cell.field }}"
                          value="{{ cell.value }}"
+                         {% if show_calculator %}data-rep="{{ cell.rep }}" data-source="{% if cell.is_computed %}computed{% else %}typed{% endif %}"{% endif %}
                          class="w-full min-w-[3.75rem] bg-surface-card text-content-body border border-line rounded px-1 py-1 text-sm text-right font-mono focus:outline-none focus:border-accent">
                 </td>
                 {% endfor %}
@@ -158,6 +215,7 @@
         </p>
         {% endif %}
       </section>
+      {% endif %}
 
       <div class="flex items-center gap-4">
         {% if step_number and step_number > 1 %}
@@ -177,27 +235,6 @@
 
 {% block after_main %}
 <script>
-  // Show one input panel at a time based on the selected entry mode. Both the
-  // JSON textarea and the grid stay in the DOM and submit together; the server
-  // dispatches on whether targets_json is non-empty, so this is purely a
-  // presentation toggle.
-  (function () {
-    const radios = document.querySelectorAll("[data-input-mode]");
-    if (!radios.length) return;
-    const panels = document.querySelectorAll("[data-input-panel]");
-    function sync() {
-      const selected = document.querySelector("[data-input-mode]:checked");
-      const mode = selected ? selected.value : "grid";
-      panels.forEach(function (panel) {
-        panel.classList.toggle("hidden", panel.dataset.inputPanel !== mode);
-      });
-    }
-    radios.forEach(function (radio) {
-      radio.addEventListener("change", sync);
-    });
-    sync();
-  })();
-
   // Copy the pre-built LLM prompt (which names this challenge's lifts and the
   // expected JSON schema) to the clipboard.
   (function () {
@@ -219,6 +256,423 @@
         label.textContent = original;
       }, 2000);
     });
+  })();
+
+  // Global "Compute" for the manual-entry grid (TASK-306, later extended):
+  // fills every currently blank cell in every lift row from that row's own
+  // currently non-blank ("pinned") cells. Two distinct code paths:
+  //
+  //  - A target rep BETWEEN two real pinned anchors is plain linear
+  //    interpolation in weight-space -- both endpoints are real numbers the
+  //    user typed, so no formula/model is needed or used here at all.
+  //  - A target rep BEYOND every anchor on one side is a distance-weighted
+  //    blend across an ensemble of five 1RM formulas (Epley, Brzycki,
+  //    Lander, Lombardi, Marzagao), using EVERY pinned anchor on that side
+  //    rather than only the nearest one -- discarding the other anchors
+  //    would throw away real data the user already entered. Closer anchors
+  //    are weighted more heavily (1 / rep-distance) since extrapolation
+  //    error compounds with distance from the anchor.
+  //
+  // Explicit button press only -- no recompute on blur/keystroke -- and a
+  // pure function of what's in the cells right now, so clicking Compute
+  // again only touches cells that are blank at that moment. Rounding to the
+  // chosen precision is always the LAST step; every intermediate value
+  // (per-formula projection, per-anchor blend, distance-weighted average)
+  // stays at full float precision until then.
+  //
+  // Deliberately client-side (no schema change for the math itself), but
+  // each extrapolated cell's inputs/outputs are sent to a small logging
+  // endpoint afterward (goal-setup-compute-log) purely so a future "my
+  // numbers looked wrong" report has real data to reconstruct from.
+  (function () {
+    var computeButton = document.querySelector("[data-compute-button]");
+    if (!computeButton) return;
+    var roundingSelect = document.querySelector("[data-compute-rounding]");
+    var COMPUTED_CLASSES = ["text-content-muted", "bg-surface-sunken"];
+    var COMPUTE_LOG_URL = "{% url 'challenges:goal-setup-compute-log' challenge.pk %}";
+    var FORMULA_NAMES = ["epley", "brzycki", "lander", "lombardi", "marzagao"];
+
+    // Each formula converts a real (weight, reps) anchor to an estimated
+    // 1RM, and projects an estimated 1RM back to a weight at some target
+    // rep count. Every formula treats reps === 1 as the trivial identity
+    // (1RM by definition IS the weight for 1 rep) rather than running its
+    // own raw algebra there -- Epley (1 + 1/30) and Lander (101.3 -
+    // 2.67123) both drift a percent or two off 1.0 at r=1 otherwise, which
+    // would leak a formula-specific quirk into the ensemble at exactly the
+    // rep count that should never disagree.
+    var FORMULAS = {
+      epley: {
+        toOneRm: function (weight, reps) {
+          return reps === 1 ? weight : weight * (1 + reps / 30);
+        },
+        fromOneRm: function (oneRm, targetReps) {
+          return targetReps === 1 ? oneRm : oneRm / (1 + targetReps / 30);
+        }
+      },
+      brzycki: {
+        toOneRm: function (weight, reps) {
+          return reps === 1 ? weight : (weight * 36) / (37 - reps);
+        },
+        fromOneRm: function (oneRm, targetReps) {
+          return targetReps === 1 ? oneRm : (oneRm * (37 - targetReps)) / 36;
+        }
+      },
+      lander: {
+        toOneRm: function (weight, reps) {
+          return reps === 1 ? weight : (100 * weight) / (101.3 - 2.67123 * reps);
+        },
+        fromOneRm: function (oneRm, targetReps) {
+          return targetReps === 1
+            ? oneRm
+            : (oneRm * (101.3 - 2.67123 * targetReps)) / 100;
+        }
+      },
+      lombardi: {
+        toOneRm: function (weight, reps) {
+          return reps === 1 ? weight : weight * Math.pow(reps, 0.1);
+        },
+        fromOneRm: function (oneRm, targetReps) {
+          return targetReps === 1 ? oneRm : oneRm / Math.pow(targetReps, 0.1);
+        }
+      },
+      // Weight-dependent conversion factor (Marzagao, T. (2026), "A
+      // Weight-Dependent 1RM Prediction Equation Optimized on 303,494
+      // Near-Failure Sets Across 388 Exercises," arXiv:2603.17495, CC BY
+      // 4.0). Unlike the other four, its conversion factor depends on the
+      // load itself via ln(weight) -- there's no closed-form inverse for
+      // "given a 1RM, find the weight at N reps", since the unknown target
+      // weight would appear on both sides of its own ln(). We reuse the
+      // ANCHOR's own weight in that ln() term instead of solving
+      // self-consistently for the (unknown) target weight -- a deliberate
+      // approximation, reasonable since the anchor and target are both
+      // near-max loads for the same lift and rarely far apart in absolute
+      // weight, but real, and it's why this formula's fromOneRm (unlike the
+      // other four) takes the anchor weight as a third argument.
+      marzagao: {
+        conversionFactor: function (reps, anchorWeight) {
+          return (
+            1 +
+            Math.pow(reps - 1, 0.85) / (-2.55 + 4.58 * Math.log(anchorWeight))
+          );
+        },
+        toOneRm: function (weight, reps) {
+          return reps === 1 ? weight : weight * this.conversionFactor(reps, weight);
+        },
+        fromOneRm: function (oneRm, targetReps, anchorWeight) {
+          return targetReps === 1
+            ? oneRm
+            : oneRm / this.conversionFactor(targetReps, anchorWeight);
+        }
+      }
+    };
+
+    function round2(value) {
+      return Math.round(value * 100) / 100;
+    }
+
+    function roundTo(value, increment) {
+      if (!increment) return value;
+      return Math.round(value / increment) * increment;
+    }
+
+    function formatWeight(value) {
+      return round2(value).toString();
+    }
+
+    // Pinned cells get a colored border, not just "not muted" -- text-body
+    // vs. text-muted (and surface-card vs. surface-sunken) are both subtle,
+    // same-family greys, and once Compute fills most of a row the few
+    // remaining pinned cells stop reading as "look here, you entered this"
+    // and just look like the unremarkable default among a sea of muted
+    // ones. A positive marker on pinned cells survives that regardless of
+    // how many computed cells surround them.
+    var PINNED_BORDER_CLASS = "border-accent";
+
+    function applyComputedStyle(input) {
+      input.dataset.source = "computed";
+      input.classList.remove("text-content-body", PINNED_BORDER_CLASS);
+      COMPUTED_CLASSES.forEach(function (cls) { input.classList.add(cls); });
+    }
+
+    function markComputed(input, value) {
+      input.value = formatWeight(value);
+      applyComputedStyle(input);
+    }
+
+    function markTyped(input) {
+      input.dataset.source = "typed";
+      COMPUTED_CLASSES.forEach(function (cls) { input.classList.remove(cls); });
+      input.classList.add("text-content-body");
+      input.classList.toggle(PINNED_BORDER_CLASS, input.value.trim() !== "");
+    }
+
+    function findAnchors(cells) {
+      var anchors = [];
+      cells.forEach(function (cell) {
+        var weight = parseFloat(cell.el.value);
+        if (cell.el.value.trim() !== "" && !isNaN(weight)) {
+          anchors.push({ reps: cell.reps, weight: weight });
+        }
+      });
+      anchors.sort(function (a, b) { return a.reps - b.reps; });
+      return anchors;
+    }
+
+    // A valid rep-max ladder never increases as rep count rises (equal is
+    // fine -- a genuinely rep-independent max). Checking only consecutive
+    // pairs of a reps-sorted list is sufficient to catch a violation even
+    // across a gap, since non-increasing over every consecutive pair implies
+    // non-increasing overall. Mirrors
+    // challenges.custom_goals.validate_rep_max_monotonicity's server-side
+    // check (run at save time) -- Compute must not build an extrapolation on
+    // top of anchors that are already self-contradictory, since whatever it
+    // produces would fail that same check the moment the user tries to save.
+    function anchorsAreMonotonic(anchors) {
+      for (var i = 1; i < anchors.length; i++) {
+        if (anchors[i].weight > anchors[i - 1].weight) return false;
+      }
+      return true;
+    }
+
+    // Every formula's ensemble projection for a single anchor at a target
+    // rep count -- returns the blended (averaged) result, the per-formula
+    // breakdown (for logging), and the spread (max - min) across formulas.
+    function projectAnchor(anchor, targetReps) {
+      var perFormula = {};
+      FORMULA_NAMES.forEach(function (name) {
+        var formula = FORMULAS[name];
+        var oneRm = formula.toOneRm(anchor.weight, anchor.reps);
+        perFormula[name] = formula.fromOneRm(oneRm, targetReps, anchor.weight);
+      });
+      var values = FORMULA_NAMES.map(function (name) { return perFormula[name]; });
+      var blended = values.reduce(function (sum, v) { return sum + v; }, 0) / values.length;
+      var spread = Math.max.apply(null, values) - Math.min.apply(null, values);
+      return { blended: blended, perFormula: perFormula, spread: spread };
+    }
+
+    // Distance-weighted blend across every anchor on one side of the target
+    // rep count -- closer anchors (fewer reps of extrapolation distance)
+    // count more, since extrapolation error compounds with distance.
+    function blendAnchors(anchors, targetReps) {
+      var totalWeight = 0;
+      var weightedSum = 0;
+      var formulaSpread = 0;
+      var projections = [];
+      anchors.forEach(function (anchor) {
+        var projection = projectAnchor(anchor, targetReps);
+        var weight = 1 / Math.abs(anchor.reps - targetReps);
+        totalWeight += weight;
+        weightedSum += weight * projection.blended;
+        formulaSpread = Math.max(formulaSpread, projection.spread);
+        projections.push({
+          anchor: anchor,
+          blended: projection.blended,
+          perFormula: projection.perFormula
+        });
+      });
+      var blendedValues = projections.map(function (p) { return p.blended; });
+      var anchorSpread = Math.max.apply(null, blendedValues) - Math.min.apply(null, blendedValues);
+      return {
+        value: weightedSum / totalWeight,
+        formulaSpread: formulaSpread,
+        anchorSpread: anchorSpread,
+        projections: projections
+      };
+    }
+
+    // Returns {value, stats} where stats.method is "interpolation" (a plain
+    // straight line between two real anchors, no formula involved) or
+    // "extrapolation" (the multi-formula, distance-weighted blend) -- both
+    // are always logged now, tagged by method, so a Compute click's full
+    // picture is visible, not just the cells that needed the ensemble.
+    function fillValue(cell, anchors) {
+      var lowerAll = anchors.filter(function (a) { return a.reps < cell.reps; });
+      var upperAll = anchors.filter(function (a) { return a.reps > cell.reps; });
+      if (lowerAll.length && upperAll.length) {
+        var lower = lowerAll.reduce(function (a, b) { return b.reps > a.reps ? b : a; });
+        var upper = upperAll.reduce(function (a, b) { return b.reps < a.reps ? b : a; });
+        var t = (cell.reps - lower.reps) / (upper.reps - lower.reps);
+        var value = lower.weight + t * (upper.weight - lower.weight);
+        return {
+          value: value,
+          stats: { method: "interpolation", anchors: [lower, upper] }
+        };
+      }
+      var side = lowerAll.length ? lowerAll : upperAll;
+      if (!side.length) return null;
+      var blend = blendAnchors(side, cell.reps);
+      var clampedValue = blend.value;
+      if (lowerAll.length) {
+        // Extrapolating to MORE reps than every anchor -- weight must not
+        // exceed the nearest (highest-rep) anchor's own weight.
+        clampedValue = Math.min(clampedValue, side[side.length - 1].weight);
+      } else {
+        // Extrapolating to FEWER reps than every anchor (e.g. projecting
+        // 1RM) -- weight must not fall below the nearest (lowest-rep)
+        // anchor's own weight.
+        clampedValue = Math.max(clampedValue, side[0].weight);
+      }
+      return {
+        value: clampedValue,
+        stats: {
+          method: "extrapolation",
+          anchors: blend.projections,
+          formulaSpread: blend.formulaSpread,
+          anchorSpread: blend.anchorSpread,
+          preClamp: blend.value
+        }
+      };
+    }
+
+    function computeRow(cells, increment, liftName, logEntries, brokenLifts) {
+      var anchors = findAnchors(cells);
+      if (!anchors.length) return;
+      if (!anchorsAreMonotonic(anchors)) {
+        // Refuse to extrapolate/interpolate on top of anchors that already
+        // contradict each other -- whatever Compute produced would fail
+        // validate_rep_max_monotonicity the moment the user tried to save
+        // anyway, so filling the row would just be confidently wrong.
+        brokenLifts.push(liftName);
+        return;
+      }
+      cells.forEach(function (cell) {
+        if (cell.el.value.trim() !== "") return;
+        var result = fillValue(cell, anchors);
+        if (result === null) return;
+        var rounded = roundTo(result.value, increment);
+        markComputed(cell.el, rounded);
+        var stats = result.stats;
+        var isExtrapolation = stats.method === "extrapolation";
+        logEntries.push({
+          lift_name: liftName,
+          target_rep: cell.reps,
+          method: stats.method,
+          anchors: stats.anchors.map(function (a) {
+            if (!isExtrapolation) {
+              return { reps: a.reps, weight_kg: round2(a.weight) };
+            }
+            var formulaResults = {};
+            FORMULA_NAMES.forEach(function (name) {
+              formulaResults[name] = round2(a.perFormula[name]);
+            });
+            return {
+              reps: a.anchor.reps,
+              weight_kg: round2(a.anchor.weight),
+              formula_results_kg: formulaResults
+            };
+          }),
+          formula_spread_kg: isExtrapolation ? round2(stats.formulaSpread) : null,
+          anchor_spread_kg: isExtrapolation ? round2(stats.anchorSpread) : null,
+          // pre_clamp_kg is the raw distance-weighted blend before the
+          // monotonicity clamp below is applied -- null for interpolation,
+          // which is never clamped (a straight line between two real
+          // anchors can't overshoot them). Differing from blended_kg means
+          // the clamp actually changed the result for this cell.
+          pre_clamp_kg: isExtrapolation ? Math.round(stats.preClamp * 10000) / 10000 : null,
+          blended_kg: Math.round(result.value * 10000) / 10000,
+          rounding_increment_kg: increment,
+          rounded_kg: round2(rounded)
+        });
+      });
+    }
+
+    function sendComputeLog(logEntries) {
+      if (!logEntries.length) return;
+      var csrfInput = document.querySelector('[name="csrfmiddlewaretoken"]');
+      if (!csrfInput) return;
+      fetch(COMPUTE_LOG_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrfInput.value
+        },
+        body: JSON.stringify(logEntries),
+        keepalive: true
+      }).catch(function () {
+        // Fire-and-forget: a failed beacon must never surface to the user
+        // or block goal-setup, it's only a missed logging opportunity.
+      });
+    }
+
+    var warningEl = document.querySelector("[data-compute-warning]");
+
+    function showBrokenLiftsWarning(brokenLifts) {
+      if (!warningEl) return;
+      if (!brokenLifts.length) {
+        warningEl.classList.add("hidden");
+        warningEl.textContent = "";
+        return;
+      }
+      warningEl.textContent = warningEl.dataset.warningPrefix + brokenLifts.join(", ");
+      warningEl.classList.remove("hidden");
+    }
+
+    computeButton.addEventListener("click", function () {
+      var increment = roundingSelect ? parseFloat(roundingSelect.value) : 0;
+      var logEntries = [];
+      var brokenLifts = [];
+      document.querySelectorAll("[data-lift-row]").forEach(function (row) {
+        var cells = Array.prototype.map.call(
+          row.querySelectorAll("[data-rep]"),
+          function (el) { return { reps: parseInt(el.dataset.rep, 10), el: el }; }
+        );
+        computeRow(cells, increment, row.dataset.liftName || "", logEntries, brokenLifts);
+      });
+      showBrokenLiftsWarning(brokenLifts);
+      sendComputeLog(logEntries);
+    });
+
+    // A direct edit on a cell (typed or computed) means the user is now
+    // pinning it themselves -- clear its "computed" marker back to "typed"
+    // so a later Compute click treats it as a fresh anchor, not something to
+    // recalculate. On page load, a cell already tagged data-source="computed"
+    // (the server echoing back computed_fields after a failed submit --
+    // see sendComputeLog/the hidden computed_fields input below) keeps its
+    // computed styling instead of defaulting to "pinned"; every other
+    // non-blank cell (freshly typed, or prefilled from a saved goal) gets
+    // the pinned border immediately rather than only after its first edit.
+    document.querySelectorAll("[data-rep]").forEach(function (el) {
+      if (el.dataset.source === "computed") {
+        applyComputedStyle(el);
+      } else {
+        markTyped(el);
+      }
+      el.addEventListener("input", function () { markTyped(el); });
+    });
+
+    // Per-row clear (recovery from a bad Compute without redoing every row):
+    // blanks every cell in that lift's row and drops it back to "typed" so
+    // the emptied cells are ordinary blanks, not stale "computed" ones.
+    document.querySelectorAll("[data-clear-row]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        var row = button.closest("[data-lift-row]");
+        if (!row) return;
+        row.querySelectorAll("[data-rep]").forEach(function (el) {
+          el.value = "";
+          markTyped(el);
+        });
+      });
+    });
+
+    // Which cells are currently "computed" only ever lived in this page's
+    // DOM -- a failed submit (e.g. a non-monotonic table) re-renders the
+    // whole grid from scratch server-side, with no memory of which cells
+    // Compute filled versus which the user typed. Sync that set into a
+    // hidden field right before submit so the server can echo it back into
+    // computed_fields on re-render (see build_custom_goal_context), instead
+    // of every non-blank cell coming back looking "pinned".
+    var computedFieldsInput = document.querySelector("[data-computed-fields-input]");
+    var form = computeButton.closest("form");
+    if (computedFieldsInput && form) {
+      form.addEventListener("submit", function () {
+        var computedNames = Array.prototype.filter
+          .call(document.querySelectorAll("[data-rep]"), function (el) {
+            return el.dataset.source === "computed";
+          })
+          .map(function (el) { return el.name; });
+        computedFieldsInput.value = computedNames.join(",");
+      });
+    }
   })();
 </script>
 {% endblock %}

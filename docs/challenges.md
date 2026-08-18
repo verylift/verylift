@@ -54,11 +54,12 @@ per-person invitation to send, accept, or decline.
 - The link is created with the challenge and shown to you on the share
   screen straight after the wizard. You can always find it again on the
   challenge's **Settings** page.
-- Links **expire after 7 days** (configurable per install via
-  `CHALLENGES_INVITE_LINK_TTL_DAYS`).
-- The owner can generate a fresh link at any time from Settings. Doing so
-  immediately **invalidates the old one**, which is how you cut off a link
-  that's gotten out further than you meant.
+- Links **expire at the end of the challenge's end date** by default (the
+  owner can set a custom expiry/use-cap instead).
+- The owner can generate a fresh link at any time from Settings, as long as
+  the challenge hasn't ended yet. Doing so immediately **invalidates the old
+  one**, which is how you cut off a link that's gotten out further than you
+  meant.
 - Opening the link takes you straight into the challenge: you're added as a
   participant and sent on to goal setup (see below). A brand-new visitor with
   no account can register through the link and land in the same join flow.
@@ -69,19 +70,28 @@ per-person invitation to send, accept, or decline.
 
 Before any of your lifts can be scored, you have to complete **goal
 setup** — a one-time step, done separately by every participant. You pick
-one of three ways to build your chart:
+one of four ways to build your chart:
 
 - **Strength standards** — pull published FitnessVolt numbers for a
   population, sex, bodyweight, and tier, and use them as your starting
   targets.
 - **Suggested from history** — the app proposes targets based on your own
   recent Liftosaur lift history, with a bit of stretch built in.
-- **Fully custom** — type in your own target for each lift, from scratch.
+- **Manual entry** — type in your own target for each lift, from scratch.
+- **Paste JSON** — paste a JSON goal payload (e.g. one an AI chat generated
+  for you) instead of typing into the grid.
 
 Whichever method you pick prefills the same editable chart — one target
 per lift, per rep count from 1 to 10 — and you can adjust any number before
 confirming. Any lift with no usable history or standard needs an explicit
 number from you; the app never guesses one for you.
+
+On the manual-entry grid, you don't have to fill in every cell by hand: pick
+a rounding precision and click **Compute** to fill every blank cell in a row
+from whatever weights you've already typed for that lift — interpolating
+between two known points, or extrapolating from a single one. Every rep-max
+chart, however it's built, also has to be non-increasing as reps go up (your
+5RM can't be heavier than your 1RM) — the app rejects a chart that isn't.
 
 That chart is **permanent** — once you confirm it, it can't be changed for
 the rest of the challenge. If you try to revisit goal setup afterward, it

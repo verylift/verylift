@@ -211,3 +211,29 @@ class TimezoneForm(forms.Form):
         value = self.cleaned_data["timezone"]
         user.timezone = value if is_valid_timezone(value) else ""
         user.save(update_fields=["timezone"])
+
+
+class DeleteAccountConfirmationForm(forms.Form):
+    """Typed-phrase confirmation for self-serve account deletion (#46).
+
+    Password re-entry -- the usual "confirm this destructive action" pattern
+    -- doesn't work here: OIDC-only accounts have no local password
+    (``has_usable_password()`` is False). A typed confirmation phrase works
+    identically for both auth methods, so this is used instead for every
+    account regardless of how it authenticates. The phrase itself is left
+    untranslated on purpose (matching e.g. GitHub's "type the repo name to
+    confirm"): translating it would mean the template's displayed instruction
+    and the value actually required could drift out of sync per-locale.
+    """
+
+    CONFIRMATION_PHRASE = "delete my account"
+
+    confirmation = forms.CharField(required=False)
+
+    def clean_confirmation(self):
+        value = self.cleaned_data.get("confirmation", "").strip().lower()
+        if value != self.CONFIRMATION_PHRASE:
+            raise forms.ValidationError(
+                _('Type "delete my account" exactly to confirm.')
+            )
+        return value

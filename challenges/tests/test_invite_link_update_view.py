@@ -87,6 +87,23 @@ class TestUpdateInviteLinkView:
         response = c.post(url, {"expires_at": "", "max_uses": ""})
         assert response.status_code == 400
 
+    def test_ended_but_still_active_challenge_rejects_update(self, db):
+        """end_date has passed but close_challenges hasn't flipped status yet
+        (a real window: the scheduler runs on a ~30-minute cadence) -- the
+        guard must reject on its own live instant check, not on is_terminal."""
+        challenge = ChallengeFactory(
+            status=Challenge.Status.ACTIVE,
+            end_date=(timezone.now() - timedelta(days=1)).date(),
+        )
+        link = ChallengeInviteLinkFactory(challenge=challenge, revoked_at=None)
+        c = Client()
+        c.force_login(challenge.creator)
+        url = reverse("challenges:update-invite-link", args=[challenge.pk])
+        response = c.post(url, {"expires_at": "", "max_uses": "5"})
+        assert response.status_code == 400
+        link.refresh_from_db()
+        assert link.max_uses is None
+
     def test_get_without_edit_param_renders_display_mode(
         self, creator_client, challenge
     ):

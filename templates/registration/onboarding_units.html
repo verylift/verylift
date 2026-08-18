@@ -1,4 +1,4 @@
-{% extends "base/wizard.html" %}
+{% extends "base/onboarding.html" %}
 {% load i18n %}
 
 {% block title %}{% trans "Display Units" %} — very lift{% endblock %}
@@ -32,7 +32,7 @@
   <button
     type="submit"
     class="w-full bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
-    {% trans "Finish setup" %}
+    {% trans "Continue" %}
   </button>
 </form>
 {% endblock %}

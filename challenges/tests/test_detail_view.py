@@ -9,6 +9,7 @@ import pytest
 from django.test import Client
 from django.urls import reverse
 
+from accounts.services import anonymize_account
 from accounts.tests.factories import UserFactory
 from challenges.custom_goals import save_custom_goal
 from challenges.models import Challenge, ChallengeParticipant
@@ -347,6 +348,32 @@ class TestLeaderboard:
         PointEarnEventFactory(
             user=gone, challenge=challenge, lift="Squat", points_earned=7
         )
+        url = reverse("challenges:detail", args=[challenge.pk])
+        resp = authed_client.get(url)
+        content = resp.content.decode()
+        assert "Former Participant" in content
+        assert "Gone User" not in content
+
+    def test_anonymized_account_shows_placeholder(
+        self, authed_client, participant, challenge, user, mock_sync
+    ):
+        """Regression for TASK-308 (#46): accounts.services.anonymize_account
+        must make the Former Participant convention true at the data level
+        (is_active=False plus a scrubbed display_name), not rely on a second
+        display-time mechanism -- see test_deactivated_user_shows_placeholder
+        above for the same assertion driven by a manually-set is_active=False.
+        """
+        gone = UserFactory(display_name="Gone User")
+        ChallengeParticipantFactory(
+            challenge=challenge,
+            user=gone,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        )
+        PointEarnEventFactory(
+            user=gone, challenge=challenge, lift="Squat", points_earned=7
+        )
+        anonymize_account(gone)
+
         url = reverse("challenges:detail", args=[challenge.pk])
         resp = authed_client.get(url)
         content = resp.content.decode()
