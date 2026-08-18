@@ -16,14 +16,17 @@ class LiftSource(models.TextChoices):
     is a lifter self-reporting a completed set with no tracker connected
     (TASK-25); HEVY is a one-shot CSV upload, dispatched by the generic
     workout_imports.services.import_workout_csv importer registry rather than
-    a tracker-specific service function (#11). Left open for future importers
-    (Wger/Strong, #8-#10) — a new source is a new choice here, never a second
-    boolean field.
+    a tracker-specific service function (#11); WGER is a live-sync integration
+    (wger.services.sync_wger_lifts), mirroring Liftosaur's own sync pattern
+    rather than a one-shot upload (#9). Left open for future importers
+    (Strong, #10) — a new source is a new choice here, never a second boolean
+    field.
     """
 
     LIFTOSAUR = "liftosaur", _("Liftosaur")
     MANUAL = "manual", _("Manual")
     HEVY = "hevy", _("Hevy")
+    WGER = "wger", _("Wger")
 
 
 class Lift(models.Model):

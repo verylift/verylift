@@ -49,6 +49,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     # 255-char plaintext with headroom. The column cannot be filtered on.
     liftosaur_api_key = EncryptedCharField(max_length=600, null=True, blank=True)
 
+    # Wger is self-hostable, so (unlike Liftosaur) there is no single fixed
+    # API base URL -- each user supplies their own instance's URL alongside
+    # their API token.
+    wger_instance_url = models.URLField(max_length=500, null=True, blank=True)
+    # Fernet-encrypted at rest, same rationale as liftosaur_api_key above.
+    wger_api_token = EncryptedCharField(max_length=600, null=True, blank=True)
+
     class UnitPreference(models.TextChoices):
         KG = "kg", _("Kilograms (kg)")
         LB = "lb", _("Pounds (lb)")

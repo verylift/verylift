@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "accounts",
     "challenges",
     "liftosaur",
+    "wger",
     "fitnessvolt",
     "workout_imports",
     "scoring",
@@ -274,6 +275,13 @@ LIFTOSAUR_API_BASE = env("LIFTOSAUR_API_BASE", default="https://www.liftosaur.co
 LIFTOSAUR_API_TIMEOUT = env.int("LIFTOSAUR_API_TIMEOUT", default=10)
 # Cooldown (minutes) between automatic Liftosaur syncs for a given user+challenge.
 LIFTOSAUR_SYNC_COOLDOWN_MINUTES = env.int("LIFTOSAUR_SYNC_COOLDOWN_MINUTES", default=10)
+
+# Per-request timeout (seconds) for outbound Wger API calls. Unlike Liftosaur,
+# Wger has no single fixed base URL -- each user supplies their own
+# self-hosted instance's URL alongside their API token.
+WGER_API_TIMEOUT = env.int("WGER_API_TIMEOUT", default=10)
+# Cooldown (minutes) between automatic Wger syncs for a given user+challenge.
+WGER_SYNC_COOLDOWN_MINUTES = env.int("WGER_SYNC_COOLDOWN_MINUTES", default=10)
 
 # FitnessVolt strength standards (TASK-104). Enabled by default; the
 # FitnessVolt options still never appear in the challenge-creation picker
