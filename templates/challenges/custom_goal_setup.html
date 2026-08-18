@@ -95,8 +95,14 @@
                  class="w-full bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent">
         </div>
         {% if show_calculator and lifts %}
-        <div class="mb-4 flex items-end gap-3 flex-wrap border border-line-subtle rounded px-3 py-2 bg-surface-sunken/40">
-          <div>
+        <div class="mb-4 flex items-end gap-3 flex-wrap">
+          <div class="border border-line-subtle rounded px-3 py-2 bg-surface-sunken/40">
+            <button type="button" data-compute-button
+                    class="bg-warning text-warning-dark text-sm font-semibold px-5 py-2 rounded hover:bg-warning-light focus:outline-none focus:ring-2 focus:ring-warning">
+              {% trans "Compute" %}
+            </button>
+          </div>
+          <div class="border border-line-subtle rounded px-3 py-2 bg-surface-sunken/40">
             <label for="id_compute_rounding" class="block text-xs font-medium text-content-body mb-1">
               {% trans "Rounding precision" %}
             </label>
@@ -114,12 +120,8 @@
               {% endif %}
             </select>
           </div>
-          <button type="button" data-compute-button
-                  class="bg-warning text-warning-dark text-sm font-semibold px-5 py-2 rounded hover:bg-warning-light focus:outline-none focus:ring-2 focus:ring-warning">
-            {% trans "Compute" %}
-          </button>
           <p class="text-xs text-content-muted basis-full">
-            {% trans "Fills every blank cell in each row from that row's own filled-in weights — interpolating between two, extrapolating from one. Computed cells are shown muted; clear a cell to recompute it." %}
+            {% trans "Fills in blank cells for rows that have at least one goal already entered." %}
           </p>
         </div>
         {% endif %}

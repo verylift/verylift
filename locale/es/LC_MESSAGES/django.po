@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-18 08:15+0000\n"
+"POT-Creation-Date: 2026-08-18 08:16+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -244,7 +244,7 @@ msgid "Enter a stretch percentage (e.g. 10)."
 msgstr "Introduce un porcentaje de incremento (por ejemplo, 10)."
 
 #: challenges/forms.py:235 challenges/forms.py:243
-#: templates/challenges/custom_goal_setup.html:105
+#: templates/challenges/custom_goal_setup.html:111
 msgid "No rounding (exact)"
 msgstr "Sin redondeo (exacto)"
 
@@ -486,7 +486,7 @@ msgstr ""
 #: templates/challenges/_summary_card.html:76
 #: templates/challenges/create.html:42 templates/challenges/create.html:76
 #: templates/challenges/create.html:136
-#: templates/challenges/custom_goal_setup.html:193
+#: templates/challenges/custom_goal_setup.html:195
 #: templates/challenges/goal_setup_inputs.html:147
 #: templates/challenges/key_required.html:38
 msgid "Cancel"
@@ -1368,7 +1368,7 @@ msgid "No points yet"
 msgstr "Sin puntos todavía"
 
 #: templates/challenges/_participant_chart.html:57
-#: templates/challenges/custom_goal_setup.html:131
+#: templates/challenges/custom_goal_setup.html:133
 #: templates/challenges/detail.html:166 templates/challenges/detail.html:326
 msgid "Lift"
 msgstr "Ejercicio"
@@ -1545,7 +1545,7 @@ msgid "End Date"
 msgstr "Fecha de Finalización"
 
 #: templates/challenges/create.html:72 templates/challenges/create.html:132
-#: templates/challenges/custom_goal_setup.html:184
+#: templates/challenges/custom_goal_setup.html:186
 #: templates/challenges/goal_setup_inputs.html:141
 #: templates/policies/policy_list.html:10
 msgid "Back"
@@ -1667,38 +1667,35 @@ msgstr "Cuadrícula de Objetivos (%(unit)s)"
 msgid "Goal Name"
 msgstr "Nombre del Objetivo"
 
-#: templates/challenges/custom_goal_setup.html:101
-msgid "Rounding precision"
-msgstr "Precisión de redondeo"
-
-#: templates/challenges/custom_goal_setup.html:119
+#: templates/challenges/custom_goal_setup.html:102
 msgid "Compute"
 msgstr "Calcular"
 
-#: templates/challenges/custom_goal_setup.html:122
-msgid ""
-"Fills every blank cell in each row from that row's own filled-in weights — "
-"interpolating between two, extrapolating from one. Computed cells are shown "
-"muted; clear a cell to recompute it."
-msgstr ""
-"Rellena cada celda vacía de cada fila a partir de los pesos ya introducidos "
-"en esa fila — interpolando entre dos, extrapolando desde uno. Las celdas "
-"calculadas se muestran atenuadas; borra una celda para volver a calcularla."
+#: templates/challenges/custom_goal_setup.html:107
+msgid "Rounding precision"
+msgstr "Precisión de redondeo"
 
-#: templates/challenges/custom_goal_setup.html:147
-#: templates/challenges/custom_goal_setup.html:148
+#: templates/challenges/custom_goal_setup.html:124
+msgid ""
+"Fills in blank cells for rows that have at least one goal already entered."
+msgstr ""
+"Rellena las celdas vacías de las filas que ya tienen al menos un objetivo "
+"ingresado."
+
+#: templates/challenges/custom_goal_setup.html:149
+#: templates/challenges/custom_goal_setup.html:150
 msgid "Clear this row"
 msgstr "Borrar esta fila"
 
-#: templates/challenges/custom_goal_setup.html:176
+#: templates/challenges/custom_goal_setup.html:178
 msgid "This challenge has no lifts configured."
 msgstr "Este reto no tiene ejercicios configurados."
 
-#: templates/challenges/custom_goal_setup.html:189
+#: templates/challenges/custom_goal_setup.html:191
 msgid "Confirm Goal"
 msgstr "Confirmar Objetivo"
 
-#: templates/challenges/custom_goal_setup.html:192
+#: templates/challenges/custom_goal_setup.html:194
 #: templates/challenges/goal_setup_inputs.html:146
 msgid "Cancel and discard everything entered so far?"
 msgstr "¿Cancelar y descartar todo lo introducido hasta ahora?"
