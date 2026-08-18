@@ -31,8 +31,10 @@
   <meta property="og:description" content="{% block og_description %}{% blocktrans %}Friendly lifting challenges where everyone chases their own goals.{% endblocktrans %}{% endblock %}">
   {% if request %}
   <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'og-image.png' %}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
   {% endif %}
-  <meta name="twitter:card" content="summary">
+  <meta name="twitter:card" content="summary_large_image">
   {% if request %}
   <meta name="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'og-image.png' %}">
   {% endif %}

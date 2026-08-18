@@ -102,9 +102,14 @@ class TestAnonymousVisitor:
         response = c.get(reverse("challenges:invite-link", args=[link.token]))
         assert response.status_code == 200
         assert c.session["invite_token"] == link.token
-        assert b"You've been invited to very lift!" in response.content
         assert challenge.name.encode() in response.content
         assert str(link.created_by).encode() in response.content
+
+    def test_og_title_contains_the_challenge_name(self, challenge, link):
+        response = Client().get(reverse("challenges:invite-link", args=[link.token]))
+        assert (
+            f'<meta property="og:title" content="Join {challenge.name} on very lift">'
+        ).encode() in response.content
 
     def test_welcome_page_links_to_register_login_and_landing(self, challenge, link):
         response = Client().get(reverse("challenges:invite-link", args=[link.token]))
@@ -134,6 +139,48 @@ class TestAnonymousVisitor:
 
         assert f'src="{link.created_by.avatar.url}"'.encode() not in response.content
         assert str(link.created_by).encode() in response.content
+
+
+class TestLinkPreviewCrawlerAndPrivacy:
+    """TASK-38 remainder: the anonymous preview must be reachable by link-
+    preview crawlers (no Django-level UA blocking) and must never leak
+    another participant's identity or performance data."""
+
+    def test_facebook_crawler_user_agent_gets_200(self, challenge, link):
+        response = Client().get(
+            reverse("challenges:invite-link", args=[link.token]),
+            HTTP_USER_AGENT="facebookexternalhit/1.1 Facebook",
+        )
+        assert response.status_code == 200
+
+    def test_anonymous_visit_is_200_with_no_redirect(self, challenge, link):
+        response = Client().get(reverse("challenges:invite-link", args=[link.token]))
+        assert response.status_code == 200
+
+    def test_no_participant_identity_or_lift_data_leaks(self, challenge, link):
+        from liftosaur.tests.factories import LiftHistoryFactory
+
+        secret_lift_weight = "313.37"
+        participants = [
+            ChallengeParticipantFactory(
+                challenge=challenge,
+                invite_status=InviteStatus.ACCEPTED,
+                joined_at=datetime.now(tz=UTC),
+            )
+            for _ in range(2)
+        ]
+        LiftHistoryFactory(
+            user=participants[0].user,
+            weight_kg=secret_lift_weight,
+        )
+
+        response = Client().get(reverse("challenges:invite-link", args=[link.token]))
+        body = response.content
+
+        for participant in participants:
+            assert participant.user.username.encode() not in body
+            assert str(participant.user).encode() not in body
+        assert secret_lift_weight.encode() not in body
 
 
 @pytest.mark.django_db
