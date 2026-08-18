@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-18 08:33+0000\n"
+"POT-Creation-Date: 2026-08-18 08:37+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -31,48 +31,48 @@ msgstr "La contraseña es obligatoria."
 msgid "That username is already taken."
 msgstr "Ese nombre de usuario ya está en uso."
 
-#: accounts/forms.py:123
+#: accounts/forms.py:143
 msgid "Image is too large (max 10 MB)."
 msgstr "La imagen es demasiado grande (máximo 10 MB)."
 
-#: accounts/forms.py:127
+#: accounts/forms.py:147
 msgid "Image dimensions are too large (max 25 megapixels)."
 msgstr ""
 "Las dimensiones de la imagen son demasiado grandes (máximo 25 megapíxeles)."
 
-#: accounts/forms.py:237
+#: accounts/forms.py:257
 msgid "Type \"delete my account\" exactly to confirm."
 msgstr "Escribe \"delete my account\" exactamente para confirmar."
 
-#: accounts/models.py:52 challenges/models.py:14
+#: accounts/models.py:59 challenges/models.py:14
 #: templates/accounts/_unit_preference_section.html:19
 #: templates/registration/onboarding_units.html:24
 msgid "Kilograms (kg)"
 msgstr "Kilogramos (kg)"
 
-#: accounts/models.py:53 challenges/models.py:13
+#: accounts/models.py:60 challenges/models.py:13
 #: templates/accounts/_unit_preference_section.html:22
 #: templates/registration/onboarding_units.html:27
 msgid "Pounds (lb)"
 msgstr "Libras (lb)"
 
-#: accounts/models.py:65
+#: accounts/models.py:72
 msgid "Unknown"
 msgstr "Desconocido"
 
-#: accounts/models.py:66
+#: accounts/models.py:73
 msgid "Challenge invite link"
 msgstr "Enlace de invitación a un reto"
 
-#: accounts/models.py:67
+#: accounts/models.py:74
 msgid "Direct signup"
 msgstr "Registro directo"
 
-#: accounts/models.py:68
+#: accounts/models.py:75
 msgid "Single sign-on"
 msgstr "Inicio de sesión único"
 
-#: accounts/models.py:69
+#: accounts/models.py:76
 msgid "Created by an operator"
 msgstr "Creado por un operador"
 
@@ -80,44 +80,52 @@ msgstr "Creado por un operador"
 msgid "Too many attempts. Try again in a minute."
 msgstr "Demasiados intentos. Inténtalo de nuevo en un minuto."
 
-#: accounts/views.py:221
+#: accounts/views.py:230
 msgid "You must accept the Terms of Service and Privacy Policy."
 msgstr "Debes aceptar los Términos de Servicio y la Política de Privacidad."
 
-#: accounts/views.py:308 challenges/views.py:133
+#: accounts/views.py:317 challenges/views.py:133
 msgid "Could not validate this Liftosaur API key."
 msgstr "No se pudo validar esta clave de API de Liftosaur."
 
-#: accounts/views.py:540
+#: accounts/views.py:549
 msgid "Your password has been updated. Sign in with your new password."
 msgstr ""
 "Tu contraseña se ha actualizado. Inicia sesión con tu contraseña nueva."
 
-#: accounts/views.py:588
+#: accounts/views.py:599
 msgid "Profile photo updated."
 msgstr "Foto de perfil actualizada."
 
-#: accounts/views.py:597
+#: accounts/views.py:608
 msgid "Display name updated."
 msgstr "Nombre para mostrar actualizado."
 
-#: accounts/views.py:607
+#: accounts/views.py:618
 msgid "Email address saved."
 msgstr "Correo electrónico guardado."
 
-#: accounts/views.py:618
+#: accounts/views.py:629
 msgid "Liftosaur API key saved."
 msgstr "Clave de API de Liftosaur guardada."
 
-#: accounts/views.py:623
+#: accounts/views.py:634
 msgid "Liftosaur API key removed."
 msgstr "Clave de API de Liftosaur eliminada."
 
-#: accounts/views.py:649
+#: accounts/views.py:641
+msgid "Wger connected."
+msgstr "Wger conectado."
+
+#: accounts/views.py:647
+msgid "Wger disconnected."
+msgstr "Wger desconectado."
+
+#: accounts/views.py:673
 msgid "Couldn't import right now. Please try again in a moment."
 msgstr "No se pudo importar ahora mismo. Inténtalo de nuevo en un momento."
 
-#: accounts/views.py:656
+#: accounts/views.py:680
 #, python-format
 msgid ""
 "Imported %(count)s set(s) from %(source)s. %(scored)s challenge(s) rescored."
@@ -125,46 +133,58 @@ msgstr ""
 "Se importaron %(count)s serie(s) de %(source)s. Se recalcularon %(scored)s "
 "reto(s)."
 
-#: accounts/views.py:675
+#: accounts/views.py:699
 msgid "Unit preference saved."
 msgstr "Preferencia de unidad guardada."
 
-#: accounts/views.py:681
+#: accounts/views.py:705
 msgid "Timezone saved."
 msgstr "Zona horaria guardada."
 
-#: accounts/views.py:687
+#: accounts/views.py:711
 msgid "Language saved."
 msgstr "Idioma guardado."
 
-#: accounts/views.py:753
+#: accounts/views.py:781
 msgid "Your account has been deleted."
 msgstr "Tu cuenta ha sido eliminada."
 
-#: accounts/views.py:810
+#: accounts/views.py:838
 msgid "Connect a Liftosaur API key first."
 msgstr "Conecta primero una clave de API de Liftosaur."
 
-#: accounts/views.py:834
+#: accounts/views.py:862 accounts/views.py:909
 msgid "Couldn't sync right now. Please try again in a moment."
 msgstr "No se pudo sincronizar ahora mismo. Inténtalo de nuevo en un momento."
 
-#: accounts/views.py:840
+#: accounts/views.py:868 accounts/views.py:915
 #, python-format
 msgid "Sync triggered for %(count)s challenge(s)."
 msgstr "Sincronización iniciada para %(count)s reto(s)."
 
-#: accounts/views.py:876
+#: accounts/views.py:889
+msgid "Connect your Wger account first."
+msgstr "Primero conecta tu cuenta de Wger."
+
+#: accounts/views.py:951
 msgid "No API key provided."
 msgstr "No se proporcionó ninguna clave de API."
 
-#: accounts/views.py:884
+#: accounts/views.py:959
 msgid "Invalid API key or connection error."
 msgstr "Clave de API no válida o error de conexión."
 
-#: accounts/views.py:888
+#: accounts/views.py:963 accounts/views.py:1001
 msgid "Connection successful."
 msgstr "Conexión exitosa."
+
+#: accounts/views.py:989
+msgid "No Wger credentials provided."
+msgstr "No se proporcionaron credenciales de Wger."
+
+#: accounts/views.py:997
+msgid "Invalid credentials or connection error."
+msgstr "Credenciales no válidas o error de conexión."
 
 #: challenges/custom_goals.py:57
 #, python-format
@@ -696,12 +716,19 @@ msgid ""
 "invite step entirely -- clear this once the invite window closes rather than "
 "leaving a dead link live."
 msgstr ""
+"Enlace de invitación al Very Open de este año. Si se deja en blanco, se "
+"oculta por completo el paso de invitación durante la incorporación -- "
+"bórralo cuando se cierre la ventana de invitación en lugar de dejar un "
+"enlace muerto activo."
 
 #: core/models.py:32
 msgid ""
 "Displayed name for the current year's Very Open, e.g. \"The Very Open '26\". "
 "Only shown when the invite URL above is also set."
 msgstr ""
+"Nombre mostrado del Very Open de este año, p. ej. \"The Very Open '26\". "
+"Solo se muestra cuando también se ha configurado el enlace de invitación "
+"anterior."
 
 #: core/models.py:38 core/models.py:39
 msgid "Site Settings"
@@ -739,22 +766,26 @@ msgstr "Mantener tus datos actualizados"
 msgid "Units & added-weight lifts"
 msgstr "Unidades y ejercicios con peso añadido"
 
-#: liftosaur/models.py:24
+#: liftosaur/models.py:25
 #: templates/registration/onboarding_tracking_method.html:25
 msgid "Liftosaur"
 msgstr "Liftosaur"
 
-#: liftosaur/models.py:25
+#: liftosaur/models.py:26
 msgid "Manual"
 msgstr "Manual"
 
-#: liftosaur/models.py:26
+#: liftosaur/models.py:27
 msgid "Hevy"
 msgstr "Hevy"
 
-#: liftosaur/models.py:27
+#: liftosaur/models.py:28
 msgid "Strong"
 msgstr "Strong"
+
+#: liftosaur/models.py:29 templates/accounts/_wger_section.html:4
+msgid "Wger"
+msgstr "Wger"
 
 #: notifications/models.py:10
 msgid "Challenge Closed"
@@ -1015,15 +1046,19 @@ msgid "Saved API key"
 msgstr "Clave de API guardada"
 
 #: templates/accounts/_liftosaur_section.html:16
+#: templates/accounts/_wger_section.html:18
 msgid "Connected"
 msgstr "Conectado"
 
 #: templates/accounts/_liftosaur_section.html:22
+#: templates/accounts/_wger_section.html:24
 msgid "Testing…"
 msgstr "Probando…"
 
 #: templates/accounts/_liftosaur_section.html:23
 #: templates/accounts/_liftosaur_section.html:25
+#: templates/accounts/_wger_section.html:25
+#: templates/accounts/_wger_section.html:27
 msgid "Test Connection"
 msgstr "Probar Conexión"
 
@@ -1032,6 +1067,7 @@ msgid "Syncing with Liftosaur…"
 msgstr "Sincronizando con Liftosaur…"
 
 #: templates/accounts/_liftosaur_section.html:39
+#: templates/accounts/_wger_section.html:41
 msgid "Sync now"
 msgstr "Sincronizar ahora"
 
@@ -1048,6 +1084,7 @@ msgid "Remove Key"
 msgstr "Eliminar Clave"
 
 #: templates/accounts/_liftosaur_section.html:96
+#: templates/accounts/_wger_section.html:97
 msgid "Connection error. Please try again."
 msgstr "Error de conexión. Inténtalo de nuevo."
 
@@ -1068,6 +1105,7 @@ msgid "Save Key"
 msgstr "Guardar Clave"
 
 #: templates/accounts/_liftosaur_sync_status.html:4
+#: templates/accounts/_wger_sync_status.html:4
 #: templates/challenges/detail.html:58
 #, python-format
 msgid "Last synced %(when)s"
@@ -1163,6 +1201,57 @@ msgstr ""
 msgid "Save Unit"
 msgstr "Guardar Unidad"
 
+#: templates/accounts/_wger_section.html:6
+msgid "Connect your self-hosted Wger instance to import your exercise data."
+msgstr ""
+"Conecta tu instancia autoalojada de Wger para importar tus datos de "
+"ejercicio."
+
+#: templates/accounts/_wger_section.html:13
+#: templates/accounts/_wger_section.html:111
+msgid "Instance URL"
+msgstr "URL de la instancia"
+
+#: templates/accounts/_wger_section.html:15
+msgid "Saved API token"
+msgstr "Token de API guardado"
+
+#: templates/accounts/_wger_section.html:36
+msgid "Syncing with Wger…"
+msgstr "Sincronizando con Wger…"
+
+#: templates/accounts/_wger_section.html:51
+msgid "Disconnect Wger? This cannot be undone."
+msgstr "¿Desconectar Wger? Esta acción no se puede deshacer."
+
+#: templates/accounts/_wger_section.html:52
+msgid "Disconnecting…"
+msgstr "Desconectando…"
+
+#: templates/accounts/_wger_section.html:58
+msgid "Disconnect"
+msgstr "Desconectar"
+
+#: templates/accounts/_wger_section.html:117
+msgid "e.g. https://my-wger-instance.example.com"
+msgstr "p. ej. https://my-wger-instance.example.com"
+
+#: templates/accounts/_wger_section.html:121
+msgid "API Token"
+msgstr "Token de API"
+
+#: templates/accounts/_wger_section.html:127
+msgid "Enter your Wger API token"
+msgstr "Introduce tu token de API de Wger"
+
+#: templates/accounts/_wger_section.html:139
+msgid "Saving Wger connection…"
+msgstr "Guardando conexión con Wger…"
+
+#: templates/accounts/_wger_section.html:148
+msgid "Connect"
+msgstr "Conectar"
+
 #: templates/accounts/_workout_import_section.html:10
 msgid "Import workout CSV"
 msgstr "Importar CSV de entrenamiento"
@@ -1194,7 +1283,7 @@ msgid "Last imported %(when)s"
 msgstr "Última importación %(when)s"
 
 #: templates/accounts/delete_account.html:4
-#: templates/accounts/delete_account.html:8 templates/accounts/settings.html:58
+#: templates/accounts/delete_account.html:8 templates/accounts/settings.html:60
 msgid "Delete Account"
 msgstr "Eliminar cuenta"
 
@@ -1254,11 +1343,11 @@ msgstr "Claro"
 msgid "Dark"
 msgstr "Oscuro"
 
-#: templates/accounts/settings.html:51
+#: templates/accounts/settings.html:53
 msgid "Danger Zone"
 msgstr "Zona de peligro"
 
-#: templates/accounts/settings.html:53
+#: templates/accounts/settings.html:55
 msgid "Permanently anonymize your account and sign out. This cannot be undone."
 msgstr ""
 "Anonimiza tu cuenta permanentemente y cierra tu sesión. Esto no se puede "
@@ -3188,3 +3277,44 @@ msgstr "Crear cuenta"
 #: workout_imports/forms.py:37
 msgid "Please upload a .csv file."
 msgstr "Sube un archivo .csv."
+
+#, python-format
+#~ msgid ""
+#~ "\n"
+#~ "          Include a <span class=\"font-mono\">name</span> for the goal — "
+#~ "the JSON\n"
+#~ "          is self-contained and needs no separate name field. Weights are "
+#~ "read\n"
+#~ "          in the payload's <span class=\"font-mono\">unit</span> (\"kg\" "
+#~ "or \"lb\",\n"
+#~ "          defaulting to %(unit)s). Don't want to write the JSON by\n"
+#~ "          hand? Copy a ready-made prompt and paste it into any AI chat — "
+#~ "it will\n"
+#~ "          ask you for a name and your weights and hand back the JSON to "
+#~ "paste\n"
+#~ "          here.\n"
+#~ "          "
+#~ msgstr ""
+#~ "\n"
+#~ "          Incluye un <span class=\"font-mono\">name</span> para el "
+#~ "objetivo — el JSON\n"
+#~ "          es autónomo y no necesita un campo de nombre separado. Los "
+#~ "pesos se leen\n"
+#~ "          en la <span class=\"font-mono\">unit</span> del payload (\"kg\" "
+#~ "o \"lb\",\n"
+#~ "          por defecto %(unit)s). ¿No quieres escribir el JSON a\n"
+#~ "          mano? Copia un prompt ya preparado y pégalo en cualquier chat "
+#~ "de IA — te\n"
+#~ "          pedirá un nombre y tus pesos y te devolverá el JSON para pegar\n"
+#~ "          aquí.\n"
+#~ "          "
+
+#~ msgid ""
+#~ "Fills every blank cell in each row from that row's own filled-in weights "
+#~ "— interpolating between two, extrapolating from one. Computed cells are "
+#~ "shown muted; clear a cell to recompute it."
+#~ msgstr ""
+#~ "Rellena cada celda vacía de cada fila a partir de los pesos ya "
+#~ "introducidos en esa fila — interpolando entre dos, extrapolando desde "
+#~ "uno. Las celdas calculadas se muestran atenuadas; borra una celda para "
+#~ "volver a calcularla."
