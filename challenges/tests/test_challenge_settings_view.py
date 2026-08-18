@@ -421,7 +421,7 @@ class TestParticipantsSectionVisibility:
         assert response.status_code == 200
         assert b"Participants" in response.content
 
-    def test_deactivated_participant_masked_in_section(
+    def test_deactivated_participant_shown_with_deleted_suffix(
         self, configured_creator_challenge, mock_sync
     ):
         challenge = configured_creator_challenge
@@ -438,8 +438,7 @@ class TestParticipantsSectionVisibility:
         response = c.get(url)
 
         content = response.content.decode()
-        assert "Former Participant" in content
-        assert "Gone User" not in content
+        assert "Gone User (deleted)" in content
 
     def test_non_creator_does_not_see_participants_section(
         self, configured_creator_challenge, mock_sync

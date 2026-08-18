@@ -6,6 +6,7 @@ from django.contrib.auth.models import (
     PermissionsMixin,
 )
 from django.db import models
+from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 
 from core.fields import EncryptedCharField
@@ -128,3 +129,23 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.display_name or self.username
+
+    @property
+    def effective_display_name(self) -> str:
+        """The name to show this user under anywhere participant-facing.
+
+        Deactivated accounts (self-serve deletion -- the only path that ever
+        sets ``is_active=False``) already have their real username/
+        display_name replaced with a random pseudonym by
+        ``accounts.services.anonymize_account``. Appending "(deleted)" marks
+        that clearly instead of leaving a departed member looking like an
+        unexplained stranger next to real names on the same leaderboard or
+        chart. Every leaderboard/chart/participant-list display site should
+        use this instead of ``__str__``/``display_name or username`` directly,
+        so a deactivated account is annotated the same way everywhere rather
+        than each call site re-deciding whether and how to flag it.
+        """
+        name = self.display_name or self.username
+        if self.is_active:
+            return name
+        return gettext("%(name)s (deleted)") % {"name": name}

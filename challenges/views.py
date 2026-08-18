@@ -1432,16 +1432,19 @@ def challenge_detail_view(request, pk):
         entry_user = entry["user"]
         is_self = entry_user.pk == request.user.pk
         chart_url = None
+        name = entry_user.effective_display_name
         if entry_user.is_active:
-            name = entry_user.display_name or entry_user.username
             entry_participant = participant_by_user_id.get(entry_user.pk)
             if entry_participant is not None and not is_self:
                 chart_url = reverse(
                     "challenges:participant-chart",
                     args=[challenge.pk, entry_participant.pk],
                 )
-        else:
-            name = "Former Participant"
+        # else: no chart_url -- participant_chart_view itself requires
+        # user__is_active=True, so a link here would just 404. Deactivated
+        # (self-serve-deleted) users already show under their generated
+        # pseudonym with a "(deleted)" suffix (name computed above via
+        # effective_display_name); there's no separate identity left to mask.
         leaderboard.append(
             {
                 "rank": entry["rank"] if show_ranks else "-",
@@ -1828,9 +1831,9 @@ def _participants_section_context(challenge):
     erased from this list once they leave (TASK-199). Legacy INVITED/DECLINED
     rows can still appear (nothing creates them any more, but old rows survive),
     which is why this builds its own list rather than reusing the detail view's
-    accepted-only ``others`` queryset. Deactivated users are masked as "Former
-    Participant", matching the leaderboard's privacy treatment (they must not
-    leak a real name).
+    accepted-only ``others`` queryset. Deactivated (self-serve-deleted) users
+    show under their generated pseudonym with a "(deleted)" suffix
+    (User.effective_display_name), matching the leaderboard.
 
     ``can_remove``/``can_become_owner`` gate the accepted-participant actions.
 
@@ -1844,9 +1847,7 @@ def _participants_section_context(challenge):
     participant_rows = [
         {
             "pk": row.pk,
-            "name": (row.user.display_name or row.user.username)
-            if row.user.is_active
-            else gettext("Former Participant"),
+            "name": row.user.effective_display_name,
             "invite_status": row.invite_status,
             "user_id": row.user_id,
             "can_remove": (
@@ -1929,11 +1930,7 @@ def remove_participant_view(request, pk, participant_pk):
         )
         return HttpResponseBadRequest(gettext("This participant cannot be removed."))
 
-    name = (
-        (participant.user.display_name or participant.user.username)
-        if participant.user.is_active
-        else gettext("Former Participant")
-    )
+    name = participant.user.effective_display_name
 
     if request.method == "POST":
         remove_participant(participant)

@@ -336,7 +336,7 @@ class TestLeaderboard:
         assert len(self_rows) == 1
         assert "(you)" in resp.content.decode()
 
-    def test_deactivated_user_shows_placeholder(
+    def test_deactivated_user_shows_deleted_suffix(
         self, authed_client, participant, challenge, user, mock_sync
     ):
         gone = UserFactory(display_name="Gone User", is_active=False)
@@ -351,14 +351,13 @@ class TestLeaderboard:
         url = reverse("challenges:detail", args=[challenge.pk])
         resp = authed_client.get(url)
         content = resp.content.decode()
-        assert "Former Participant" in content
-        assert "Gone User" not in content
+        assert "Gone User (deleted)" in content
 
     def test_anonymized_account_shows_placeholder(
         self, authed_client, participant, challenge, user, mock_sync
     ):
         """Regression for TASK-308 (#46): accounts.services.anonymize_account
-        must make the Former Participant convention true at the data level
+        must make the "(deleted)" convention true at the data level
         (is_active=False plus a scrubbed display_name), not rely on a second
         display-time mechanism -- see test_deactivated_user_shows_placeholder
         above for the same assertion driven by a manually-set is_active=False.
@@ -377,8 +376,7 @@ class TestLeaderboard:
         url = reverse("challenges:detail", args=[challenge.pk])
         resp = authed_client.get(url)
         content = resp.content.decode()
-        assert "Former Participant" in content
-        assert "Gone User" not in content
+        assert f"{gone.display_name} (deleted)" in content
 
     def test_bailed_participant_excluded_and_ranks_recompute(
         self, authed_client, participant, challenge, user, mock_sync

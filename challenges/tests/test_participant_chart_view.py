@@ -403,7 +403,7 @@ class TestDetailPageLink:
         expected_url = chart_url(challenge, subject_participant)
         assert f'hx-get="{expected_url}"' in body
 
-    def test_former_participant_row_has_no_link(
+    def test_deactivated_participant_row_has_no_link(
         self, viewer_client, challenge, subject, subject_participant
     ):
         PointEarnEventFactory(
@@ -419,7 +419,7 @@ class TestDetailPageLink:
         subject.save(update_fields=["is_active"])
         resp = viewer_client.get(reverse("challenges:detail", args=[challenge.pk]))
         body = resp.content.decode()
-        assert "Former Participant" in body
+        assert subject.effective_display_name in body
         assert chart_url(challenge, subject_participant) not in body
 
     def test_own_row_has_no_chart_link(

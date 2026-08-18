@@ -279,10 +279,15 @@ def anonymize_account(user) -> None:
     This is the self-serve "Delete account" flow's entire effect -- there is no
     accompanying hard delete. ``ChallengeParticipant``, scoring rows, and
     ``PolicyConsent`` are untouched; only identity fields on the ``User`` row
-    itself change. The "Former Participant" display convention
-    (scoring/services.py, challenges/views.py) already renders any
-    ``is_active=False`` user that way -- this makes that convention true at the
-    data level instead of adding a second, display-time hiding mechanism.
+    itself change. Every display site that used to special-case
+    ``is_active=False`` with a separate "Former Participant" placeholder
+    (scoring/services.py, challenges/views.py) now calls
+    ``User.effective_display_name`` instead, which shows the pseudonym below
+    with a "(deleted)" suffix -- a bare pseudonym without that suffix read as
+    an unexplained stranger next to real names on the same leaderboard/chart,
+    and the two pages disagreeing with each other (one showing the pseudonym,
+    the other "Former Participant") was the actual bug report that prompted
+    unifying on a single property.
 
     ``username``/``display_name`` become a random adjective-noun pseudonym
     (re-rolled on a uniqueness collision), deliberately not an obviously
@@ -299,10 +304,9 @@ def anonymize_account(user) -> None:
     ``wger_instance_url``/``wger_api_token``, ``hevy_api_key``) are cleared so
     the row can never re-authenticate or resume a sync -- matching what each
     tracker's own manual "disconnect" view already clears (accounts/views.py).
-    ``is_active=False`` both blocks login (Django's ``ModelBackend`` already
-    refuses inactive users) and flips the Former Participant convention on;
-    ``deactivated_at`` is stamped for the first time this field has ever been
-    populated by anything other than admin action.
+    ``is_active=False`` blocks login (Django's ``ModelBackend`` already
+    refuses inactive users); ``deactivated_at`` is stamped for the first time
+    this field has ever been populated by anything other than admin action.
 
     Session invalidation is the caller's responsibility (``django.contrib.
     auth.logout`` in the view) -- this function only touches the row.

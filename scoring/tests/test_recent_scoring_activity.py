@@ -274,8 +274,14 @@ class TestBuildRecentScoringActivity:
         # 100 kg -> ~220.5 lb
         assert activity[0]["weight"] == Decimal("220.5")
 
-    def test_deactivated_user_labelled_former_participant(self, challenge, viewer):
-        former = UserFactory(display_name="Former", is_active=False)
+    def test_deactivated_user_shown_under_their_current_display_name(
+        self, challenge, viewer
+    ):
+        # Deactivated users only ever get there via anonymize_account, which
+        # already replaced their real name with a pseudonym -- there's no
+        # separate "Former Participant" masking layer on top of that anymore
+        # (it disagreed with other pages that already showed the pseudonym).
+        former = UserFactory(display_name="PseudonymName", is_active=False)
         _accept(challenge, former)
         PointEarnEventFactory(
             user=former, challenge=challenge, lift="Squat", points_earned=5
@@ -283,7 +289,7 @@ class TestBuildRecentScoringActivity:
 
         activity = build_recent_scoring_activity(challenge, viewer)
 
-        assert activity[0]["name"] == "Former Participant"
+        assert activity[0]["name"] == "PseudonymName (deleted)"
 
     def test_superseded_event_excluded_from_feed(self, challenge, viewer):
         # TASK-240: a lift already at its max scoreable tier can be performed
