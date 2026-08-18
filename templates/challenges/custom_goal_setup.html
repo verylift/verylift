@@ -62,14 +62,10 @@
                 data-input-panel="json">
         <h2 class="text-lg font-semibold text-content-strong mb-2">{% trans "Paste JSON" %}</h2>
         <p class="text-sm text-content-muted mb-3">
-          {% blocktrans with unit=display_unit %}
-          Include a <span class="font-mono">name</span> for the goal — the JSON
-          is self-contained and needs no separate name field. Weights are read
-          in the payload's <span class="font-mono">unit</span> ("kg" or "lb",
-          defaulting to {{ unit }}). Don't want to write the JSON by
-          hand? Copy a ready-made prompt and paste it into any AI chat — it will
-          ask you for a name and your weights and hand back the JSON to paste
-          here.
+          {% blocktrans %}
+          Don't know JSON? Copy the prompt below into any AI chat — it'll ask
+          for your weights and hand you back JSON to paste here. Already
+          comfortable with JSON? Paste it in the shape shown below.
           {% endblocktrans %}
         </p>
         <div class="mb-3">
