@@ -1,0 +1,44 @@
+{% extends "base/app.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Delete Account" %} — very lift{% endblock %}
+
+{% block main %}
+  <div class="max-w-lg mx-auto">
+    <h1 class="text-2xl font-bold text-content-strong mb-8">{% trans "Delete Account" %}</h1>
+
+    <section class="bg-surface-card border border-danger rounded p-6">
+      <p class="text-sm text-content-body mb-2">
+        {% trans "This permanently signs you out and anonymizes your account: your username, display name, and email are replaced with a randomly generated placeholder, your profile photo is deleted, and any connected Liftosaur API key or single sign-on link is removed." %}
+      </p>
+      <p class="text-sm text-content-body mb-6">
+        {% trans 'Challenges you have participated in keep their past scores and entries, but you will show up as "Former Participant" instead of your name. This action cannot be undone.' %}
+      </p>
+
+      <form method="post">
+        {% csrf_token %}
+        <label for="id_confirmation" class="block text-sm font-medium text-content-body mb-2">
+          {% blocktrans %}Type <code class="font-mono bg-surface-hover px-1 rounded">delete my account</code> below to confirm{% endblocktrans %}
+        </label>
+        <input
+          type="text"
+          name="confirmation"
+          id="id_confirmation"
+          autocomplete="off"
+          class="w-full border border-line rounded px-3 py-2 mb-2 bg-surface-card text-content-body">
+        {% if errors.confirmation %}
+          <p class="text-xs text-danger-dark mb-4">{{ errors.confirmation }}</p>
+        {% endif %}
+
+        <div class="flex items-center gap-4 mt-4">
+          <button
+            type="submit"
+            class="bg-danger text-white text-sm font-medium px-6 py-2 rounded hover:bg-danger-dark">
+            {% trans "Permanently Delete Account" %}
+          </button>
+          <a href="{% url 'accounts:settings' %}" class="text-sm text-content-muted hover:text-content-strong">{% trans "Go Back" %}</a>
+        </div>
+      </form>
+    </section>
+  </div>
+{% endblock %}

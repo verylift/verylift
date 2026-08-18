@@ -47,6 +47,11 @@ urlpatterns = [
         name="password-reset-confirm",
     ),
     path("settings/", views.settings_view, name="settings"),
+    path(
+        "settings/delete-account/",
+        views.delete_account_view,
+        name="delete-account",
+    ),
     path("settings/sync-now/", views.sync_now_view, name="sync_now"),
     path(
         "settings/validate-liftosaur-key/",
