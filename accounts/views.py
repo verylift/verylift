@@ -5,7 +5,7 @@ from urllib.parse import urlencode
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import get_user_model, login
+from django.contrib.auth import get_user_model, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import SetPasswordForm
 from django.contrib.auth.tokens import default_token_generator
@@ -25,6 +25,7 @@ from django_ratelimit.decorators import ratelimit
 
 from accounts.forms import (
     AvatarForm,
+    DeleteAccountConfirmationForm,
     EmailForm,
     LanguageForm,
     LiftosaurKeyForm,
@@ -43,7 +44,7 @@ from accounts.ratelimit import (
     register_ip_rate,
     validate_key_user_rate,
 )
-from accounts.services import mask_api_key, send_password_reset_email
+from accounts.services import anonymize_account, mask_api_key, send_password_reset_email
 from accounts.timezones import (
     DETECT_COOKIE_MAX_AGE,
     DETECT_COOKIE_NAME,
@@ -727,6 +728,33 @@ def settings_view(request):
         return render(request, _SETTINGS_SECTION_PARTIALS[posted_form_name], context)
 
     return render(request, "accounts/settings.html", context)
+
+
+@login_required
+def delete_account_view(request):
+    """Danger Zone "Delete account" flow (#46, TASK-308).
+
+    GET renders a typed-confirmation page (matching the cancel/leave/transfer
+    confirm-page pattern in challenges.views); POST anonymizes the account in
+    place (accounts.services.anonymize_account -- no hard delete, no data
+    export) and logs the session out. There is no HTMX partial swap here on
+    purpose, unlike every other settings section: the outcome ends the
+    session, so a full PRG to the login page is the only response that makes
+    sense.
+    """
+    errors = {}
+    if request.method == "POST":
+        form = DeleteAccountConfirmationForm(request.POST)
+        if form.is_valid():
+            user = request.user
+            anonymize_account(user)
+            logger.info("Account %s deleted (self-serve) by its own owner", user.id)
+            logout(request)
+            messages.success(request, gettext("Your account has been deleted."))
+            return redirect("accounts:login")
+        errors["confirmation"] = form.errors["confirmation"][0]
+
+    return render(request, "accounts/delete_account.html", {"errors": errors})
 
 
 @never_cache

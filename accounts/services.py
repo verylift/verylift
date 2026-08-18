@@ -1,6 +1,7 @@
 """Service functions for the accounts app."""
 
 import logging
+import secrets
 import uuid
 from io import BytesIO
 
@@ -11,7 +12,7 @@ from django.core.files.base import ContentFile
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.urls import reverse
-from django.utils import translation
+from django.utils import timezone, translation
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from PIL import Image, ImageOps
@@ -160,3 +161,173 @@ def mask_api_key(key: str | None) -> str | None:
         return None
     visible = key[-6:] if len(key) >= 6 else key
     return "•" * 8 + visible
+
+
+# Deliberately a "SwiftFalcon"-style pool (GitHub/Slack/Docker convention), not
+# an obviously-synthetic value like "deleted-user-8f2a1c" -- see
+# anonymize_account's docstring for why that distinction matters for TASK-308.
+_PSEUDONYM_ADJECTIVES = [
+    "Amber",
+    "Bold",
+    "Brave",
+    "Bright",
+    "Calm",
+    "Clever",
+    "Cosmic",
+    "Crimson",
+    "Daring",
+    "Eager",
+    "Fleet",
+    "Frosty",
+    "Gentle",
+    "Golden",
+    "Happy",
+    "Hardy",
+    "Jolly",
+    "Keen",
+    "Lively",
+    "Lucky",
+    "Merry",
+    "Mighty",
+    "Nimble",
+    "Northern",
+    "Proud",
+    "Quick",
+    "Quiet",
+    "Rapid",
+    "Sleek",
+    "Silent",
+    "Steady",
+    "Sunny",
+    "Swift",
+    "Tidy",
+    "Vivid",
+    "Witty",
+    "Zesty",
+]
+_PSEUDONYM_NOUNS = [
+    "Badger",
+    "Beetle",
+    "Cougar",
+    "Dolphin",
+    "Egret",
+    "Falcon",
+    "Ferret",
+    "Gopher",
+    "Heron",
+    "Ibis",
+    "Jackal",
+    "Kestrel",
+    "Lynx",
+    "Loon",
+    "Mantis",
+    "Marten",
+    "Newt",
+    "Osprey",
+    "Otter",
+    "Panda",
+    "Quokka",
+    "Raven",
+    "Sparrow",
+    "Tapir",
+    "Urchin",
+    "Viper",
+    "Walrus",
+    "Wombat",
+    "Yak",
+    "Zebra",
+]
+
+ANONYMIZED_EMAIL_DOMAIN = "deleted.invalid"
+
+# 36 adjectives x 30 nouns already gives 1,080 combinations; this many misses
+# in a row would mean the account pool has grown enormous, at which point
+# falling through to an entropy-padded value is the right degrade rather than
+# looping forever.
+_MAX_PSEUDONYM_ATTEMPTS = 50
+
+
+def _pseudonym_candidate() -> tuple[str, str]:
+    return secrets.choice(_PSEUDONYM_ADJECTIVES), secrets.choice(_PSEUDONYM_NOUNS)
+
+
+def _unique_username(user) -> str:
+    User = get_user_model()
+    for _ in range(_MAX_PSEUDONYM_ATTEMPTS):
+        adjective, noun = _pseudonym_candidate()
+        candidate = f"{adjective}{noun}"
+        if not User.objects.exclude(pk=user.pk).filter(username=candidate).exists():
+            return candidate
+    adjective, noun = _pseudonym_candidate()
+    return f"{adjective}{noun}{secrets.token_hex(4)}"
+
+
+def _unique_email(user, username: str) -> str:
+    User = get_user_model()
+    slug = username.lower()
+    for _ in range(_MAX_PSEUDONYM_ATTEMPTS):
+        candidate = f"{slug}-{secrets.token_hex(3)}@{ANONYMIZED_EMAIL_DOMAIN}"
+        taken = User.objects.exclude(pk=user.pk).filter(email__iexact=candidate)
+        if not taken.exists():
+            return candidate
+    return f"{slug}-{secrets.token_hex(8)}@{ANONYMIZED_EMAIL_DOMAIN}"
+
+
+def anonymize_account(user) -> None:
+    """Anonymize ``user`` in place and mark the account inactive (#46, TASK-308).
+
+    This is the self-serve "Delete account" flow's entire effect -- there is no
+    accompanying hard delete. ``ChallengeParticipant``, scoring rows, and
+    ``PolicyConsent`` are untouched; only identity fields on the ``User`` row
+    itself change. The "Former Participant" display convention
+    (scoring/services.py, challenges/views.py) already renders any
+    ``is_active=False`` user that way -- this makes that convention true at the
+    data level instead of adding a second, display-time hiding mechanism.
+
+    ``username``/``display_name`` become a random adjective-noun pseudonym
+    (re-rolled on a uniqueness collision), deliberately not an obviously
+    synthetic value like ``deleted-user-8f2a1c``: a normal-looking name blends
+    into any leaderboard/challenge history it still appears in, where a
+    visibly-synthetic one still flags "this used to be someone" and invites
+    the reader to wonder who. ``email`` is derived from the same pseudonym so
+    a support/audit trail can still associate a placeholder with the row it
+    replaced, without being identifying itself.
+
+    ``avatar`` is deleted from storage (not just cleared from the field --
+    matching AvatarForm.save's ``.delete(save=False)`` convention). ``oidc_sub``
+    and ``liftosaur_api_key`` are cleared so the row can never re-authenticate
+    or resume a sync. ``is_active=False`` both blocks login (Django's
+    ``ModelBackend`` already refuses inactive users) and flips the Former
+    Participant convention on; ``deactivated_at`` is stamped for the first time
+    this field has ever been populated by anything other than admin action.
+
+    Session invalidation is the caller's responsibility (``django.contrib.
+    auth.logout`` in the view) -- this function only touches the row.
+    """
+    username = _unique_username(user)
+    email = _unique_email(user, username)
+
+    if user.avatar:
+        user.avatar.delete(save=False)
+
+    user.username = username
+    user.display_name = username
+    user.email = email
+    user.avatar = None
+    user.oidc_sub = None
+    user.liftosaur_api_key = None
+    user.is_active = False
+    user.deactivated_at = timezone.now()
+    user.save(
+        update_fields=[
+            "username",
+            "display_name",
+            "email",
+            "avatar",
+            "oidc_sub",
+            "liftosaur_api_key",
+            "is_active",
+            "deactivated_at",
+        ]
+    )
+    logger.info("Account %s anonymized and deactivated", user.id)

@@ -126,6 +126,14 @@ class PolicyConsent(models.Model):
         PolicyVersion, on_delete=models.CASCADE, related_name="consents"
     )
     consented_at = models.DateTimeField(auto_now_add=True)
+    # Deliberately NOT scrubbed by accounts.services.anonymize_account (#46,
+    # TASK-308): these two fields are the evidentiary value of a consent
+    # record -- proof of who agreed to what, from where, and with what client
+    # -- and on_delete=PROTECT above already signals this model is meant to
+    # survive account anonymization intact. Neither field is rendered
+    # anywhere in the UI, so retaining them carries none of the "still
+    # visibly someone" risk that motivated anonymizing username/display_name/
+    # email/avatar instead of just flagging the User row inactive.
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)
     method = models.CharField(max_length=20, choices=Method.choices)
