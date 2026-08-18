@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     "challenges",
     "liftosaur",
     "wger",
+    "hevy_api",
     "fitnessvolt",
     "workout_imports",
     "scoring",
@@ -282,6 +283,14 @@ LIFTOSAUR_SYNC_COOLDOWN_MINUTES = env.int("LIFTOSAUR_SYNC_COOLDOWN_MINUTES", def
 WGER_API_TIMEOUT = env.int("WGER_API_TIMEOUT", default=10)
 # Cooldown (minutes) between automatic Wger syncs for a given user+challenge.
 WGER_SYNC_COOLDOWN_MINUTES = env.int("WGER_SYNC_COOLDOWN_MINUTES", default=10)
+
+# Base URL for the Hevy REST API (TASK-312, #8). Access requires an active
+# Hevy Pro subscription -- there is no free tier for this API.
+HEVY_API_BASE = env("HEVY_API_BASE", default="https://api.hevyapp.com")
+# Per-request timeout (seconds) for outbound Hevy API calls.
+HEVY_API_TIMEOUT = env.int("HEVY_API_TIMEOUT", default=10)
+# Cooldown (minutes) between automatic Hevy syncs for a given user+challenge.
+HEVY_SYNC_COOLDOWN_MINUTES = env.int("HEVY_SYNC_COOLDOWN_MINUTES", default=10)
 
 # FitnessVolt strength standards (TASK-104). Enabled by default; the
 # FitnessVolt options still never appear in the challenge-creation picker

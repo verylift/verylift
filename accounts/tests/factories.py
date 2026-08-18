@@ -13,3 +13,4 @@ class UserFactory(factory.django.DjangoModelFactory):
     display_name = factory.Sequence(lambda n: f"Test User {n}")
     is_active = True
     liftosaur_api_key = None
+    hevy_api_key = None

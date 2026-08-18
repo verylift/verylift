@@ -25,7 +25,9 @@ from django.utils.translation import gettext
 
 logger = logging.getLogger(__name__)
 
-_JSON_VIEW_NAMES = frozenset({"accounts:validate_liftosaur_key"})
+_JSON_VIEW_NAMES = frozenset(
+    {"accounts:validate_liftosaur_key", "accounts:validate_hevy_key"}
+)
 
 
 def client_ip(group, request):
@@ -76,10 +78,10 @@ def password_reset_email_rate(group, request):
 def _wants_json(request):
     """True when the throttled request expects a JSON body, not an HTML page.
 
-    The Liftosaur key-validation endpoint is consumed by ``fetch()`` and always
-    parses the response as JSON, so a rendered 429 page would surface as an
-    opaque parse error. Match it by resolved view name; also honour an explicit
-    ``Accept: application/json``.
+    The Liftosaur and Hevy key-validation endpoints are consumed by
+    ``fetch()`` and always parse the response as JSON, so a rendered 429 page
+    would surface as an opaque parse error. Match it by resolved view name;
+    also honour an explicit ``Accept: application/json``.
     """
     view_name = getattr(request.resolver_match, "view_name", None)
     if view_name in _JSON_VIEW_NAMES:
