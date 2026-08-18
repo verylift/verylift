@@ -54,11 +54,12 @@ per-person invitation to send, accept, or decline.
 - The link is created with the challenge and shown to you on the share
   screen straight after the wizard. You can always find it again on the
   challenge's **Settings** page.
-- Links **expire after 7 days** (configurable per install via
-  `CHALLENGES_INVITE_LINK_TTL_DAYS`).
-- The owner can generate a fresh link at any time from Settings. Doing so
-  immediately **invalidates the old one**, which is how you cut off a link
-  that's gotten out further than you meant.
+- Links **expire at the end of the challenge's end date** by default (the
+  owner can set a custom expiry/use-cap instead).
+- The owner can generate a fresh link at any time from Settings, as long as
+  the challenge hasn't ended yet. Doing so immediately **invalidates the old
+  one**, which is how you cut off a link that's gotten out further than you
+  meant.
 - Opening the link takes you straight into the challenge: you're added as a
   participant and sent on to goal setup (see below). A brand-new visitor with
   no account can register through the link and land in the same join flow.

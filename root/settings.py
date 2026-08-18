@@ -327,11 +327,6 @@ CHALLENGES_GOAL_SUGGESTION_LOOKBACK_DAYS = env.int(
     "CHALLENGES_GOAL_SUGGESTION_LOOKBACK_DAYS", default=182
 )
 
-# Shareable challenge invite link lifetime (TASK-249, AC#1). A challenge's
-# single live link expires this many days after it was (re)generated; the
-# owner can regenerate at any time, which revokes the incumbent.
-CHALLENGES_INVITE_LINK_TTL_DAYS = env.int("CHALLENGES_INVITE_LINK_TTL_DAYS", default=7)
-
 # Seconds past each half-hour tick the close_challenges scheduler fires (e.g.
 # 30 -> :00:30/:30:30 instead of exactly :00:00/:30:00). Challenge end
 # instants are always an exact end-of-day instant in the creator's timezone,
