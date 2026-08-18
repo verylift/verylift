@@ -1047,6 +1047,7 @@ def goal_setup_compute_log_view(request, pk):
                 "anchors": entry.get("anchors"),
                 "formula_spread_kg": entry.get("formula_spread_kg"),
                 "anchor_spread_kg": entry.get("anchor_spread_kg"),
+                "pre_clamp_kg": entry.get("pre_clamp_kg"),
                 "blended_kg": entry.get("blended_kg"),
                 "rounding_increment_kg": entry.get("rounding_increment_kg"),
                 "rounded_kg": entry.get("rounded_kg"),

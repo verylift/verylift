@@ -623,6 +623,7 @@ class TestGoalSetupComputeLogView:
             ],
             "formula_spread_kg": 5.73,
             "anchor_spread_kg": 7.08,
+            "pre_clamp_kg": 106.9,
             "blended_kg": 106.5234,
             "rounding_increment_kg": 2.5,
             "rounded_kg": 105.0,
@@ -644,6 +645,7 @@ class TestGoalSetupComputeLogView:
                 "anchors": entry["anchors"],
                 "formula_spread_kg": 5.73,
                 "anchor_spread_kg": 7.08,
+                "pre_clamp_kg": 106.9,
                 "blended_kg": 106.5234,
                 "rounding_increment_kg": 2.5,
                 "rounded_kg": 105.0,
@@ -663,6 +665,7 @@ class TestGoalSetupComputeLogView:
             ],
             "formula_spread_kg": None,
             "anchor_spread_kg": None,
+            "pre_clamp_kg": None,
             "blended_kg": 92.0,
             "rounding_increment_kg": 2.5,
             "rounded_kg": 92.5,
@@ -678,6 +681,7 @@ class TestGoalSetupComputeLogView:
         assert kwargs["extra"]["method"] == "interpolation"
         assert kwargs["extra"]["formula_spread_kg"] is None
         assert kwargs["extra"]["anchor_spread_kg"] is None
+        assert kwargs["extra"]["pre_clamp_kg"] is None
 
     def test_multiple_entries_log_once_each(
         self, authed_client, challenge, participant
