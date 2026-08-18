@@ -26,7 +26,8 @@
         hx-encoding="multipart/form-data"
         hx-target="closest section"
         hx-swap="outerHTML"
-        data-loading-message="{% trans 'Importing workout CSV…' %}">
+        data-loading-message="{% trans 'Uploading workout CSV…' %}"
+        data-processing-message="{% trans 'Processing your import — this can take a moment for larger files…' %}">
         {% csrf_token %}
         <input type="hidden" name="form_name" value="workout_csv_import">
         <label

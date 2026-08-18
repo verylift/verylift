@@ -12,6 +12,16 @@ Driven from two places:
 
 A pageshow listener force-hides on bfcache restore so the Back button never
 leaves a stuck overlay after a full-page navigation.
+
+setProgress(fraction) drives an optional byte-upload progress bar (base.html's
+htmx:xhr:progress wiring, real upload bytes via htmx's XHR event passthrough
+-- lengthComputable-gated there, not fabricated). It's only ever a fraction of
+the truth for something like a file import: it tracks bytes reaching the
+server, not the server then parsing/scoring them, which has no client-visible
+signal at all. show()'s optional processingMessage is what covers that gap --
+base.html swaps to it once the upload itself finishes (htmx:xhr:loadend) but
+the response hasn't arrived yet, so the message doesn't keep implying "upload"
+progress for a phase that isn't upload anymore.
 {% endcomment %}
 <div id="loading-overlay"
   class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40"
@@ -19,20 +29,42 @@ leaves a stuck overlay after a full-page navigation.
   <div class="flex flex-col items-center gap-4 rounded-lg bg-surface-card px-8 py-6 shadow-md">
     <div class="h-8 w-8 animate-spin rounded-full border-4 border-line-subtle border-t-accent"></div>
     <p id="loading-overlay-message" class="text-sm font-medium text-content-strong"></p>
+    <div id="loading-overlay-progress-track" class="hidden w-48 h-1.5 rounded-full bg-surface-sunken overflow-hidden">
+      <div id="loading-overlay-progress-bar" class="h-full bg-accent" style="width: 0%"></div>
+    </div>
   </div>
 </div>
 <script>
   (function () {
     var overlay = document.getElementById("loading-overlay");
     var messageEl = document.getElementById("loading-overlay-message");
+    var progressTrack = document.getElementById("loading-overlay-progress-track");
+    var progressBar = document.getElementById("loading-overlay-progress-bar");
+
+    function setProgress(fraction) {
+      if (!progressTrack || !progressBar) return;
+      if (fraction === null || fraction === undefined) {
+        progressTrack.classList.add("hidden");
+        progressBar.style.width = "0%";
+        return;
+      }
+      progressTrack.classList.remove("hidden");
+      progressBar.style.width = Math.max(0, Math.min(100, fraction * 100)) + "%";
+    }
 
     window.ppLoading = {
       show: function (msg) {
         if (messageEl) messageEl.textContent = msg || "{% trans 'Working…' %}";
         if (overlay) overlay.classList.remove("hidden");
+        setProgress(null);
       },
       hide: function () {
         if (overlay) overlay.classList.add("hidden");
+        setProgress(null);
+      },
+      setProgress: setProgress,
+      setMessage: function (msg) {
+        if (messageEl && msg) messageEl.textContent = msg;
       },
     };
 
