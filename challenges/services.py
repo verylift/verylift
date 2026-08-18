@@ -504,7 +504,10 @@ def remove_participant(participant) -> None:
     notification). Removal is permanent for V1 — nothing clears the flag, and no
     invite link readmits a removed user. The removed user's PointEarnEvent
     history is left untouched, so their scored entries stay on the leaderboard
-    exactly like a voluntarily-bailed lifter.
+    exactly like a voluntarily-bailed lifter. custom_goal is detached (not
+    deleted) same as bail_view -- moot for this V1 since a removed user can
+    never rejoin to trigger the resurrection bail_view's own detach guards
+    against, but kept consistent in case that ever changes.
 
     State validation (ACCEPTED, not already bailed, challenge not locked) is
     the caller's responsibility — the view owns those guards, matching bail_view.
@@ -513,7 +516,15 @@ def remove_participant(participant) -> None:
         participant.is_bailed = True
         participant.bailed_at = datetime.now(tz=UTC)
         participant.removed_by_creator = True
-        participant.save(update_fields=["is_bailed", "bailed_at", "removed_by_creator"])
+        participant.custom_goal = None
+        participant.save(
+            update_fields=[
+                "is_bailed",
+                "bailed_at",
+                "removed_by_creator",
+                "custom_goal",
+            ]
+        )
         Notification.objects.create(
             user=participant.user,
             event_type=Notification.EventType.REMOVED_FROM_CHALLENGE,
