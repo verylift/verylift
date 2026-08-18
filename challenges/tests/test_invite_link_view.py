@@ -1,11 +1,14 @@
 """Tests for the invite-link landing/join view (TASK-249)."""
 
 from datetime import UTC, datetime, timedelta
+from io import BytesIO
 
 import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
+from PIL import Image
 
 from accounts.tests.factories import UserFactory
 from challenges.models import Challenge, ChallengeParticipant
@@ -14,6 +17,13 @@ from challenges.tests.factories import (
     ChallengeInviteLinkFactory,
     ChallengeParticipantFactory,
 )
+
+
+def _tiny_png(name="avatar.png"):
+    buffer = BytesIO()
+    Image.new("RGB", (10, 10), "blue").save(buffer, format="PNG")
+    return SimpleUploadedFile(name, buffer.getvalue(), content_type="image/png")
+
 
 InviteStatus = ChallengeParticipant.InviteStatus
 
@@ -109,6 +119,21 @@ class TestAnonymousVisitor:
         before = User.objects.count()
         Client().get(reverse("challenges:invite-link", args=[link.token]))
         assert User.objects.count() == before
+
+    def test_inviter_photo_falls_back_to_initials_for_an_anonymous_visitor(
+        self, challenge, link
+    ):
+        """Uploaded photos are served from /media/, which is gated behind
+        request.user.is_authenticated with no per-resource exception -- an
+        anonymous visitor can't fetch the real image, so this page must not
+        try to render it (it would just be a broken <img>)."""
+        link.created_by.avatar = _tiny_png()
+        link.created_by.save()
+
+        response = Client().get(reverse("challenges:invite-link", args=[link.token]))
+
+        assert f'src="{link.created_by.avatar.url}"'.encode() not in response.content
+        assert str(link.created_by).encode() in response.content
 
 
 @pytest.mark.django_db
