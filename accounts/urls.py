@@ -58,5 +58,11 @@ urlpatterns = [
         views.validate_liftosaur_key_view,
         name="validate_liftosaur_key",
     ),
+    path("settings/wger-sync-now/", views.wger_sync_now_view, name="wger_sync_now"),
+    path(
+        "settings/validate-wger-credentials/",
+        views.validate_wger_credentials_view,
+        name="validate_wger_credentials",
+    ),
     path("tz/detect/", views.timezone_detect_view, name="timezone-detect"),
 ]
