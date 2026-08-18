@@ -100,6 +100,14 @@ proxy:
   run:
     bind_ips:
       - 127.0.0.1            # loopback-only; cloudflared is the only forwarder
+    options:
+      # kamal-proxy is booted by Kamal's own proxy-management path, not
+      # config.logging_args like every other role/accessory here — its
+      # docker-run only ever gets `--log-opt max-size` from Proxy::Run's
+      # own log_max_size default. This is the one place Kamal lets you
+      # pass through arbitrary extra docker options for it, so this is
+      # the only way to also get the container.name tag onto its logs.
+      log-opt: "tag={{.Name}}"
 
 registry:
   server: ghcr.io
@@ -135,6 +143,37 @@ accessories:
       # Not cap-drop: ALL — postgres's entrypoint starts as root and needs
       # SETUID/SETGID/CHOWN/DAC_OVERRIDE/FOWNER to drop to the postgres user
       # and fix volume ownership (same reasoning as docker-compose.selfhost.yml).
+
+  # Ships host metrics and container logs to a privately-hosted SigNoz
+  # instance over a WireGuard tunnel. Outbound only — not published/proxied.
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    host: verylift-prod
+    cmd: --config=/etc/otel-collector-config.yaml
+    files:
+      - config/otel/hostmetrics-collector-config.yaml:/etc/otel-collector-config.yaml
+    volumes:
+      # rslave propagates the host's live /proc, /sys, etc. sub-mounts into
+      # the bind, per the hostmetrics receiver's documented Docker setup —
+      # root_path in hostmetrics-collector-config.yaml points at /hostfs.
+      - "/:/hostfs:ro,rslave"
+    options:
+      pid: host
+      # Image defaults to a non-root UID, which can't read the root-owned
+      # /var/lib/docker/containers/*/*-json.log files the filelog receiver
+      # needs for log collection — standard trade-off for a host-log
+      # sidecar. cap-drop isn't set here for the same reason (root still
+      # needs its default capabilities to open those files).
+      user: "0:0"
+      # Without this, Docker gives the container a random hostname equal
+      # to its own short container ID, and resourcedetection's `os`
+      # hostname_source (hostmetrics-collector-config.yaml) reports THAT
+      # as host.name — so every accessory reboot looked like a brand-new
+      # host in SigNoz instead of the same verylift-prod host reappearing.
+      hostname: verylift-prod
+      security-opt: "no-new-privileges:true"
+      memory: "256m"
+      cpus: "0.5"
 
 volumes:
   # Kamal's `volumes:` key is service-wide, not per-role (confirmed: `servers.<role>`
@@ -191,5 +230,15 @@ env:
 logging:
   options:
     max-size: "10m"
+    # Embeds the container name into each json-file log line's "attrs.tag"
+    # field (verified: Docker's json-file driver does support tag, despite
+    # docs historically implying otherwise) — otel-collector's filelog
+    # receiver reads this to attach a human-readable container.name
+    # resource attribute instead of just the container ID from the file
+    # path. Applies to every role/accessory (web, scheduler, release, db,
+    # otel-collector) via Kamal's shared logging_args, EXCEPT kamal-proxy,
+    # which Kamal boots without config.logging_args — its logs still ship,
+    # just tagged by container.id only.
+    tag: "{{.Name}}"
 
 hooks_path: .kamal/hooks
