@@ -54,6 +54,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     wger_instance_url = models.URLField(max_length=500, null=True, blank=True)
     # Fernet-encrypted at rest, same rationale as liftosaur_api_key above.
     wger_api_token = EncryptedCharField(max_length=600, null=True, blank=True)
+    # Fernet-encrypted at rest, same rationale as liftosaur_api_key above
+    # (TASK-312).
+    hevy_api_key = EncryptedCharField(max_length=600, null=True, blank=True)
 
     class UnitPreference(models.TextChoices):
         KG = "kg", _("Kilograms (kg)")
