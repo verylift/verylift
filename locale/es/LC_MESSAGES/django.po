@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-18 17:12+0000\n"
+"POT-Creation-Date: 2026-08-18 21:52+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -305,8 +305,8 @@ msgid ""
 "Some lift names in your JSON weren't recognized. Review them below and "
 "confirm to continue, or edit the JSON."
 msgstr ""
-"Algunos nombres de ejercicios en tu JSON no fueron reconocidos. Revísalos "
-"a continuación y confirma para continuar, o edita el JSON."
+"Algunos nombres de ejercicios en tu JSON no fueron reconocidos. Revísalos a "
+"continuación y confirma para continuar, o edita el JSON."
 
 #: challenges/models.py:17 templates/challenges/detail.html:16
 #: templates/challenges/find.html:50 templates/challenges/find.html:104
@@ -706,8 +706,8 @@ msgid ""
 msgstr ""
 "Enlace de invitación al Very Open de este año. Si se deja en blanco, se "
 "oculta por completo el paso de invitación durante la incorporación -- "
-"bórralo una vez que se cierre la ventana de invitación en lugar de dejar "
-"un enlace inactivo."
+"bórralo una vez que se cierre la ventana de invitación en lugar de dejar un "
+"enlace inactivo."
 
 #: core/models.py:32
 msgid ""
@@ -1191,8 +1191,11 @@ msgid "Drop a CSV file here, or click to choose one"
 msgstr "Suelta un archivo CSV aquí, o haz clic para elegir uno"
 
 #: templates/accounts/_workout_import_section.html:45
-msgid "Currently supports: Hevy exports. More tracker apps coming."
-msgstr "Actualmente admite: exportaciones de Hevy. Próximamente más apps."
+msgid ""
+"Currently supports: Hevy and Liftosaur exports. More tracker apps coming."
+msgstr ""
+"Actualmente admite: exportaciones de Hevy y Liftosaur. Próximamente más "
+"apps."
 
 #: templates/accounts/_workout_import_section.html:50
 msgid "Import CSV"
