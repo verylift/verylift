@@ -422,9 +422,11 @@
       };
     }
 
-    // Returns {value, stats} where stats is null for direct interpolation
-    // (nothing to log -- no formula was involved) and the full ensemble
-    // breakdown for an extrapolated cell.
+    // Returns {value, stats} where stats.method is "interpolation" (a plain
+    // straight line between two real anchors, no formula involved) or
+    // "extrapolation" (the multi-formula, distance-weighted blend) -- both
+    // are always logged now, tagged by method, so a Compute click's full
+    // picture is visible, not just the cells that needed the ensemble.
     function fillValue(cell, anchors) {
       var lowerAll = anchors.filter(function (a) { return a.reps < cell.reps; });
       var upperAll = anchors.filter(function (a) { return a.reps > cell.reps; });
@@ -432,12 +434,24 @@
         var lower = lowerAll.reduce(function (a, b) { return b.reps > a.reps ? b : a; });
         var upper = upperAll.reduce(function (a, b) { return b.reps < a.reps ? b : a; });
         var t = (cell.reps - lower.reps) / (upper.reps - lower.reps);
-        return { value: lower.weight + t * (upper.weight - lower.weight), stats: null };
+        var value = lower.weight + t * (upper.weight - lower.weight);
+        return {
+          value: value,
+          stats: { method: "interpolation", anchors: [lower, upper] }
+        };
       }
       var side = lowerAll.length ? lowerAll : upperAll;
       if (!side.length) return null;
       var blend = blendAnchors(side, cell.reps);
-      return { value: blend.value, stats: blend };
+      return {
+        value: blend.value,
+        stats: {
+          method: "extrapolation",
+          anchors: blend.projections,
+          formulaSpread: blend.formulaSpread,
+          anchorSpread: blend.anchorSpread
+        }
+      };
     }
 
     function computeRow(cells, increment, liftName, logEntries) {
@@ -449,28 +463,32 @@
         if (result === null) return;
         var rounded = roundTo(result.value, increment);
         markComputed(cell.el, rounded);
-        if (result.stats) {
-          logEntries.push({
-            lift_name: liftName,
-            target_rep: cell.reps,
-            anchors: result.stats.projections.map(function (p) {
-              var formulaResults = {};
-              FORMULA_NAMES.forEach(function (name) {
-                formulaResults[name] = round2(p.perFormula[name]);
-              });
-              return {
-                reps: p.anchor.reps,
-                weight_kg: round2(p.anchor.weight),
-                formula_results_kg: formulaResults
-              };
-            }),
-            formula_spread_kg: round2(result.stats.formulaSpread),
-            anchor_spread_kg: round2(result.stats.anchorSpread),
-            blended_kg: Math.round(result.value * 10000) / 10000,
-            rounding_increment_kg: increment,
-            rounded_kg: round2(rounded)
-          });
-        }
+        var stats = result.stats;
+        var isExtrapolation = stats.method === "extrapolation";
+        logEntries.push({
+          lift_name: liftName,
+          target_rep: cell.reps,
+          method: stats.method,
+          anchors: stats.anchors.map(function (a) {
+            if (!isExtrapolation) {
+              return { reps: a.reps, weight_kg: round2(a.weight) };
+            }
+            var formulaResults = {};
+            FORMULA_NAMES.forEach(function (name) {
+              formulaResults[name] = round2(a.perFormula[name]);
+            });
+            return {
+              reps: a.anchor.reps,
+              weight_kg: round2(a.anchor.weight),
+              formula_results_kg: formulaResults
+            };
+          }),
+          formula_spread_kg: isExtrapolation ? round2(stats.formulaSpread) : null,
+          anchor_spread_kg: isExtrapolation ? round2(stats.anchorSpread) : null,
+          blended_kg: Math.round(result.value * 10000) / 10000,
+          rounding_increment_kg: increment,
+          rounded_kg: round2(rounded)
+        });
       });
     }
 
