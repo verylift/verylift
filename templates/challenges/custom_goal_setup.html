@@ -1,5 +1,5 @@
 {% extends "base/wizard.html" %}
-{% load static i18n %}
+{% load static i18n icons %}
 
 {% block title %}{% blocktrans with name=challenge.name %}Set Your Goal — {{ name }}{% endblocktrans %}{% endblock %}
 
@@ -115,7 +115,7 @@
             </select>
           </div>
           <button type="button" data-compute-button
-                  class="bg-surface-card text-content-body text-sm font-medium px-4 py-1.5 rounded border border-line hover:border-accent focus:outline-none focus:border-accent">
+                  class="bg-warning text-warning-dark text-sm font-semibold px-5 py-2 rounded hover:bg-warning-light focus:outline-none focus:ring-2 focus:ring-warning">
             {% trans "Compute" %}
           </button>
           <p class="text-xs text-content-muted basis-full">
@@ -139,7 +139,17 @@
               <tr class="text-content-body {% if not lift.needs_decision %}border-b border-line-subtle{% endif %}"
                   {% if show_calculator %}data-lift-row{% endif %}>
                 <td class="py-2 pr-4 font-medium text-content-strong align-top {% if lift.needs_decision %}border-l-4 border-warning pl-2{% endif %}">
-                  {{ lift.name }}
+                  <div class="flex items-center gap-1.5">
+                    <span>{{ lift.name }}</span>
+                    {% if show_calculator %}
+                    <button type="button" data-clear-row
+                            class="text-content-muted hover:text-danger focus:outline-none"
+                            title="{% trans "Clear this row" %}"
+                            aria-label="{% trans "Clear this row" %}">
+                      {% icon "trash-2" css_class="h-3.5 w-3.5" %}
+                    </button>
+                    {% endif %}
+                  </div>
                 </td>
                 {% for cell in lift.cells %}
                 <td class="py-1 px-0.5">
@@ -321,6 +331,20 @@
     // recalculate.
     document.querySelectorAll("[data-rep]").forEach(function (el) {
       el.addEventListener("input", function () { markTyped(el); });
+    });
+
+    // Per-row clear (recovery from a bad Compute without redoing every row):
+    // blanks every cell in that lift's row and drops it back to "typed" so
+    // the emptied cells are ordinary blanks, not stale "computed" ones.
+    document.querySelectorAll("[data-clear-row]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        var row = button.closest("[data-lift-row]");
+        if (!row) return;
+        row.querySelectorAll("[data-rep]").forEach(function (el) {
+          el.value = "";
+          markTyped(el);
+        });
+      });
     });
   })();
 </script>

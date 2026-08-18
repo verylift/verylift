@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-18 08:14+0000\n"
+"POT-Creation-Date: 2026-08-18 08:15+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -486,7 +486,7 @@ msgstr ""
 #: templates/challenges/_summary_card.html:76
 #: templates/challenges/create.html:42 templates/challenges/create.html:76
 #: templates/challenges/create.html:136
-#: templates/challenges/custom_goal_setup.html:183
+#: templates/challenges/custom_goal_setup.html:193
 #: templates/challenges/goal_setup_inputs.html:147
 #: templates/challenges/key_required.html:38
 msgid "Cancel"
@@ -1545,7 +1545,7 @@ msgid "End Date"
 msgstr "Fecha de Finalización"
 
 #: templates/challenges/create.html:72 templates/challenges/create.html:132
-#: templates/challenges/custom_goal_setup.html:174
+#: templates/challenges/custom_goal_setup.html:184
 #: templates/challenges/goal_setup_inputs.html:141
 #: templates/policies/policy_list.html:10
 msgid "Back"
@@ -1642,8 +1642,8 @@ msgid ""
 "          "
 msgstr ""
 "\n"
-"          ¿No sabes qué es JSON? Copia el mensaje de abajo en cualquier "
-"chat de IA:\n"
+"          ¿No sabes qué es JSON? Copia el mensaje de abajo en cualquier chat "
+"de IA:\n"
 "          te pedirá tus pesos y te devolverá el JSON para pegar aquí. ¿Ya "
 "sabes\n"
 "          usar JSON? Pégalo con la forma que se muestra abajo.\n"
@@ -1685,15 +1685,20 @@ msgstr ""
 "en esa fila — interpolando entre dos, extrapolando desde uno. Las celdas "
 "calculadas se muestran atenuadas; borra una celda para volver a calcularla."
 
-#: templates/challenges/custom_goal_setup.html:166
+#: templates/challenges/custom_goal_setup.html:147
+#: templates/challenges/custom_goal_setup.html:148
+msgid "Clear this row"
+msgstr "Borrar esta fila"
+
+#: templates/challenges/custom_goal_setup.html:176
 msgid "This challenge has no lifts configured."
 msgstr "Este reto no tiene ejercicios configurados."
 
-#: templates/challenges/custom_goal_setup.html:179
+#: templates/challenges/custom_goal_setup.html:189
 msgid "Confirm Goal"
 msgstr "Confirmar Objetivo"
 
-#: templates/challenges/custom_goal_setup.html:182
+#: templates/challenges/custom_goal_setup.html:192
 #: templates/challenges/goal_setup_inputs.html:146
 msgid "Cancel and discard everything entered so far?"
 msgstr "¿Cancelar y descartar todo lo introducido hasta ahora?"
