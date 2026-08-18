@@ -26,10 +26,18 @@ class TestChallengeInviteLinkModel:
         )
         assert link.is_expired is True
 
+    def test_is_expired_false_when_expires_at_is_null(self):
+        link = ChallengeInviteLinkFactory(expires_at=None)
+        assert link.is_expired is False
+
     def test_is_usable_true_when_live(self):
         link = ChallengeInviteLinkFactory(
             expires_at=timezone.now() + timedelta(days=1), revoked_at=None
         )
+        assert link.is_usable is True
+
+    def test_is_usable_true_when_never_expires(self):
+        link = ChallengeInviteLinkFactory(expires_at=None, revoked_at=None)
         assert link.is_usable is True
 
     def test_is_usable_false_when_expired(self):

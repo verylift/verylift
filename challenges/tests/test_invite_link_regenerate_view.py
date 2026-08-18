@@ -138,3 +138,17 @@ class TestRegenerateInviteLinkView:
         assert new_link.max_uses == 5
         assert new_link.expires_at == custom_expiry
         assert new_link.use_count == 0
+
+    def test_regenerate_carries_forward_never_expires(self, creator_client, challenge):
+        old = ChallengeInviteLinkFactory(
+            challenge=challenge, revoked_at=None, expires_at=None
+        )
+        url = reverse("challenges:regenerate-invite-link", args=[challenge.pk])
+        response = creator_client.post(url)
+
+        assert response.status_code == 302
+        old.refresh_from_db()
+        assert old.revoked_at is not None
+        new_link = current_invite_link(challenge)
+        assert new_link.pk != old.pk
+        assert new_link.expires_at is None

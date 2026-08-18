@@ -86,6 +86,13 @@ class TestCurrentInviteLink:
         )
         assert current_invite_link(challenge) is None
 
+    def test_returns_a_never_expiring_link(self):
+        challenge = ChallengeFactory()
+        link = ChallengeInviteLinkFactory(
+            challenge=challenge, revoked_at=None, expires_at=None
+        )
+        assert current_invite_link(challenge) == link
+
 
 @pytest.mark.django_db
 class TestUpdateInviteLink:
@@ -134,6 +141,30 @@ class TestUpdateInviteLink:
         updated = update_invite_link(link, expires_at=None, max_uses=10)
 
         assert updated.use_count == 4
+
+    def test_never_expires_forces_expires_at_to_none(self):
+        challenge = ChallengeFactory()
+        link = ChallengeInviteLinkFactory(
+            challenge=challenge,
+            revoked_at=None,
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+
+        updated = update_invite_link(link, never_expires=True)
+
+        assert updated.expires_at is None
+
+    def test_never_expires_wins_even_with_an_explicit_expires_at(self):
+        challenge = ChallengeFactory()
+        link = ChallengeInviteLinkFactory(challenge=challenge, revoked_at=None)
+
+        updated = update_invite_link(
+            link,
+            expires_at=timezone.now() + timedelta(days=3),
+            never_expires=True,
+        )
+
+        assert updated.expires_at is None
 
 
 @pytest.mark.django_db
@@ -216,6 +247,23 @@ class TestRegenerateInviteLink:
         fresh = regenerate_invite_link(challenge, user, max_uses=5)
         assert fresh.use_count == 0
 
+    def test_never_expires_forces_expires_at_to_none(self):
+        challenge = ChallengeFactory()
+        user = UserFactory()
+        link = regenerate_invite_link(challenge, user, never_expires=True)
+        assert link.expires_at is None
+
+    def test_never_expires_wins_over_an_explicit_expires_at(self):
+        challenge = ChallengeFactory()
+        user = UserFactory()
+        link = regenerate_invite_link(
+            challenge,
+            user,
+            expires_at=timezone.now() + timedelta(days=3),
+            never_expires=True,
+        )
+        assert link.expires_at is None
+
     def test_token_is_reasonably_long_and_unique(self):
         challenge = ChallengeFactory()
         user = UserFactory()
@@ -283,6 +331,12 @@ class TestResolveInviteToken:
         link, reason = resolve_invite_token(expected.token)
         assert link == expected
         assert reason == "expired"
+
+    def test_never_expiring_token_returns_no_reason(self):
+        expected = ChallengeInviteLinkFactory(revoked_at=None, expires_at=None)
+        link, reason = resolve_invite_token(expected.token)
+        assert link == expected
+        assert reason is None
 
     def test_below_max_uses_returns_no_reason(self):
         expected = ChallengeInviteLinkFactory(
