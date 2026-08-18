@@ -1565,6 +1565,7 @@ def build_custom_goal_context(
     unavailable_lifts=None,
     assisted_only_lifts=None,
     source_note="",
+    computed_fields=None,
 ) -> dict:
     """Build the render context for the goal-setup wizard's "chart" step.
 
@@ -1588,11 +1589,21 @@ def build_custom_goal_context(
     calculator (``show_calculator``) is offered only on the manual-entry
     (CUSTOM) grid — the standards/history grids are already fully prefilled,
     and JSON has no grid at all.
+
+    ``computed_fields`` (a set of grid field names, e.g. ``{"target__0__1"}``)
+    is which cells the Compute calculator filled in on the client, echoed
+    back from the hidden ``computed_fields`` POST field so a failed submit
+    (e.g. a non-monotonic table) can re-render each cell's "computed" vs.
+    "pinned" styling correctly instead of the client-side JS defaulting
+    every non-blank cell to "pinned" on a fresh page load -- that distinction
+    only ever lived in transient DOM state before this, so a server
+    round-trip used to silently erase it.
     """
     unit = user.unit_preference
     targets = targets or {}
     unavailable_lifts = unavailable_lifts or set()
     assisted_only_lifts = assisted_only_lifts or set()
+    computed_fields = computed_fields or set()
     lifts = []
     for lift_index, lift in enumerate(sorted(covered_lift_names(challenge))):
         lift_targets = targets.get(lift) or {}
@@ -1605,11 +1616,13 @@ def build_custom_goal_context(
             if kg is not None:
                 display, _ = to_display_weight(kg, unit)
                 value = display
+            field = grid_field_name(lift_index, rep)
             cells.append(
                 {
                     "rep": rep,
-                    "field": grid_field_name(lift_index, rep),
+                    "field": field,
                     "value": value,
+                    "is_computed": field in computed_fields,
                 }
             )
         needs_decision = lift in unavailable_lifts
