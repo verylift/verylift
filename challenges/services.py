@@ -18,7 +18,7 @@ from django.utils.translation import gettext
 
 from accounts.timezones import is_valid_timezone
 from accounts.units import to_display_weight
-from challenges.custom_goals import grid_field_name
+from challenges.custom_goals import detach_active_goal, grid_field_name
 from challenges.models import (
     Challenge,
     ChallengeInviteLink,
@@ -516,7 +516,7 @@ def remove_participant(participant) -> None:
         participant.is_bailed = True
         participant.bailed_at = datetime.now(tz=UTC)
         participant.removed_by_creator = True
-        participant.custom_goal = None
+        detach_active_goal(participant)
         participant.save(
             update_fields=[
                 "is_bailed",

@@ -15,6 +15,7 @@ from django.urls import NoReverseMatch, reverse
 from accounts.tests.factories import UserFactory
 from challenges.custom_goals import (
     custom_goal_is_complete,
+    detach_active_goal,
     grid_field_name,
     parse_custom_goal_grid,
     parse_custom_goal_json,
@@ -285,6 +286,45 @@ class TestSaveCustomGoal:
         assert CustomGoalTarget.objects.get(goal=goal, rep_count=1).target_weight == (
             Decimal("99.00")
         )
+
+
+class TestDetachActiveGoal:
+    def test_clears_the_pointer_and_renames_without_deleting(
+        self, participant, challenge
+    ):
+        _name, targets, _, *_ = parse_custom_goal_json(full_json(), challenge, "kg")
+        goal = save_custom_goal(participant, "My Goal", targets)
+
+        detach_active_goal(participant)
+        participant.save(update_fields=["custom_goal"])
+
+        participant.refresh_from_db()
+        goal.refresh_from_db()
+        assert participant.custom_goal_id is None
+        assert CustomGoal.objects.filter(pk=goal.pk).exists()
+        assert goal.name != "My Goal"
+
+    def test_freeing_the_name_lets_a_new_goal_reuse_it(self, participant, challenge):
+        # Regression: CustomGoal has a unique constraint on (participant,
+        # name) -- without renaming the detached goal, a second goal reusing
+        # the same name for the same participant raises IntegrityError.
+        _name, targets, _, *_ = parse_custom_goal_json(full_json(), challenge, "kg")
+        save_custom_goal(participant, "My Goal", targets)
+
+        detach_active_goal(participant)
+        participant.save(update_fields=["custom_goal"])
+        participant.refresh_from_db()
+
+        _name, targets, _, *_ = parse_custom_goal_json(full_json(), challenge, "kg")
+        new_goal = save_custom_goal(participant, "My Goal", targets)
+
+        participant.refresh_from_db()
+        assert participant.custom_goal_id == new_goal.id
+        assert CustomGoal.objects.filter(participant=participant).count() == 2
+
+    def test_noop_when_no_goal_configured(self, participant):
+        detach_active_goal(participant)
+        assert participant.custom_goal_id is None
 
 
 def test_grid_columns_render_10rm_to_1rm_left_to_right(user, challenge):

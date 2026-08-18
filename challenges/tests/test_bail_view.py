@@ -58,7 +58,7 @@ class TestBail:
         rather than creating a fresh one -- if custom_goal weren't cleared
         here, has_goal_configured would stay True and silently resurrect
         the old goal instead of prompting a new one."""
-        goal = CustomGoalFactory(participant=participant)
+        goal = CustomGoalFactory(participant=participant, name="My Goal")
         participant.custom_goal = goal
         participant.save(update_fields=["custom_goal"])
 
@@ -66,9 +66,33 @@ class TestBail:
         member_client.post(url)
 
         participant.refresh_from_db()
+        goal.refresh_from_db()
         assert participant.custom_goal_id is None
         assert participant.has_goal_configured is False
         assert CustomGoal.objects.filter(pk=goal.pk).exists()
+        assert goal.name != "My Goal"
+
+    def test_rejoining_can_reuse_the_same_goal_name_after_bailing(
+        self, member_client, participant, challenge
+    ):
+        """Regression: CustomGoal has a unique constraint on (participant,
+        name), and the same participant row persists across a leave/rejoin
+        cycle -- without renaming the detached goal, picking the same name
+        again (e.g. the "My Goal" default) hit an IntegrityError against the
+        participant's own archived goal."""
+        goal = CustomGoalFactory(participant=participant, name="My Goal")
+        participant.custom_goal = goal
+        participant.save(update_fields=["custom_goal"])
+
+        url = reverse("challenges:bail", args=[challenge.pk])
+        member_client.post(url)
+
+        participant.refresh_from_db()
+        new_goal = CustomGoalFactory(participant=participant, name="My Goal")
+        participant.custom_goal = new_goal
+        participant.save(update_fields=["custom_goal"])
+
+        assert CustomGoal.objects.filter(participant=participant).count() == 2
 
     def test_get_renders_confirmation_page(self, member_client, participant, challenge):
         url = reverse("challenges:bail", args=[challenge.pk])

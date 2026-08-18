@@ -22,7 +22,7 @@ from django_ratelimit.decorators import ratelimit
 
 from accounts.ratelimit import client_ip
 from accounts.units import to_display_weight
-from challenges.custom_goals import save_custom_goal
+from challenges.custom_goals import detach_active_goal, save_custom_goal
 from challenges.forms import (
     CreateChallengeDatesForm,
     CreateChallengeLiftsForm,
@@ -1655,14 +1655,7 @@ def bail_view(request, pk):
     if request.method == "POST":
         participant.is_bailed = True
         participant.bailed_at = datetime.now(tz=UTC)
-        # Detach (not delete) the goal -- the CustomGoal row itself is
-        # untouched and still reachable via participant.custom_goals for
-        # history, but clearing the "active" pointer makes
-        # has_goal_configured False again. Without this, rejoining via
-        # invite link (which un-bails this same participant row rather than
-        # creating a fresh one) would silently resurrect the old goal
-        # instead of routing back through goal setup for a new one.
-        participant.custom_goal = None
+        detach_active_goal(participant)
         participant.save(update_fields=["is_bailed", "bailed_at", "custom_goal"])
         logger.info("User %s bailed from challenge %s", request.user.id, pk)
         messages.success(request, gettext("You have left the challenge."))
