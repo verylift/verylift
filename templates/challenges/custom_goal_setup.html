@@ -132,6 +132,10 @@
             </p>
           </div>
         </div>
+        <div data-compute-warning
+             class="hidden mb-4 px-4 py-3 rounded bg-warning-light text-warning-dark text-sm"
+             data-warning-prefix="{% trans 'Compute skipped these lifts because their pinned weights increase with reps — fix the pinned values first: ' %}">
+        </div>
         {% endif %}
         {% if lifts %}
         <div class="overflow-x-auto">
@@ -376,6 +380,22 @@
       return anchors;
     }
 
+    // A valid rep-max ladder never increases as rep count rises (equal is
+    // fine -- a genuinely rep-independent max). Checking only consecutive
+    // pairs of a reps-sorted list is sufficient to catch a violation even
+    // across a gap, since non-increasing over every consecutive pair implies
+    // non-increasing overall. Mirrors
+    // challenges.custom_goals.validate_rep_max_monotonicity's server-side
+    // check (run at save time) -- Compute must not build an extrapolation on
+    // top of anchors that are already self-contradictory, since whatever it
+    // produces would fail that same check the moment the user tries to save.
+    function anchorsAreMonotonic(anchors) {
+      for (var i = 1; i < anchors.length; i++) {
+        if (anchors[i].weight > anchors[i - 1].weight) return false;
+      }
+      return true;
+    }
+
     // Every formula's ensemble projection for a single anchor at a target
     // rep count -- returns the blended (averaged) result, the per-formula
     // breakdown (for logging), and the spread (max - min) across formulas.
@@ -443,20 +463,40 @@
       var side = lowerAll.length ? lowerAll : upperAll;
       if (!side.length) return null;
       var blend = blendAnchors(side, cell.reps);
+      var clampedValue = blend.value;
+      if (lowerAll.length) {
+        // Extrapolating to MORE reps than every anchor -- weight must not
+        // exceed the nearest (highest-rep) anchor's own weight.
+        clampedValue = Math.min(clampedValue, side[side.length - 1].weight);
+      } else {
+        // Extrapolating to FEWER reps than every anchor (e.g. projecting
+        // 1RM) -- weight must not fall below the nearest (lowest-rep)
+        // anchor's own weight.
+        clampedValue = Math.max(clampedValue, side[0].weight);
+      }
       return {
-        value: blend.value,
+        value: clampedValue,
         stats: {
           method: "extrapolation",
           anchors: blend.projections,
           formulaSpread: blend.formulaSpread,
-          anchorSpread: blend.anchorSpread
+          anchorSpread: blend.anchorSpread,
+          preClamp: blend.value
         }
       };
     }
 
-    function computeRow(cells, increment, liftName, logEntries) {
+    function computeRow(cells, increment, liftName, logEntries, brokenLifts) {
       var anchors = findAnchors(cells);
       if (!anchors.length) return;
+      if (!anchorsAreMonotonic(anchors)) {
+        // Refuse to extrapolate/interpolate on top of anchors that already
+        // contradict each other -- whatever Compute produced would fail
+        // validate_rep_max_monotonicity the moment the user tried to save
+        // anyway, so filling the row would just be confidently wrong.
+        brokenLifts.push(liftName);
+        return;
+      }
       cells.forEach(function (cell) {
         if (cell.el.value.trim() !== "") return;
         var result = fillValue(cell, anchors);
@@ -485,6 +525,12 @@
           }),
           formula_spread_kg: isExtrapolation ? round2(stats.formulaSpread) : null,
           anchor_spread_kg: isExtrapolation ? round2(stats.anchorSpread) : null,
+          // pre_clamp_kg is the raw distance-weighted blend before the
+          // monotonicity clamp below is applied -- null for interpolation,
+          // which is never clamped (a straight line between two real
+          // anchors can't overshoot them). Differing from blended_kg means
+          // the clamp actually changed the result for this cell.
+          pre_clamp_kg: isExtrapolation ? Math.round(stats.preClamp * 10000) / 10000 : null,
           blended_kg: Math.round(result.value * 10000) / 10000,
           rounding_increment_kg: increment,
           rounded_kg: round2(rounded)
@@ -510,16 +556,31 @@
       });
     }
 
+    var warningEl = document.querySelector("[data-compute-warning]");
+
+    function showBrokenLiftsWarning(brokenLifts) {
+      if (!warningEl) return;
+      if (!brokenLifts.length) {
+        warningEl.classList.add("hidden");
+        warningEl.textContent = "";
+        return;
+      }
+      warningEl.textContent = warningEl.dataset.warningPrefix + brokenLifts.join(", ");
+      warningEl.classList.remove("hidden");
+    }
+
     computeButton.addEventListener("click", function () {
       var increment = roundingSelect ? parseFloat(roundingSelect.value) : 0;
       var logEntries = [];
+      var brokenLifts = [];
       document.querySelectorAll("[data-lift-row]").forEach(function (row) {
         var cells = Array.prototype.map.call(
           row.querySelectorAll("[data-rep]"),
           function (el) { return { reps: parseInt(el.dataset.rep, 10), el: el }; }
         );
-        computeRow(cells, increment, row.dataset.liftName || "", logEntries);
+        computeRow(cells, increment, row.dataset.liftName || "", logEntries, brokenLifts);
       });
+      showBrokenLiftsWarning(brokenLifts);
       sendComputeLog(logEntries);
     });
 
