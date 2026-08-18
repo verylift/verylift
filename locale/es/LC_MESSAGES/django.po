@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-18 08:30+0000\n"
+"POT-Creation-Date: 2026-08-18 08:33+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -39,6 +39,10 @@ msgstr "La imagen es demasiado grande (máximo 10 MB)."
 msgid "Image dimensions are too large (max 25 megapixels)."
 msgstr ""
 "Las dimensiones de la imagen son demasiado grandes (máximo 25 megapíxeles)."
+
+#: accounts/forms.py:237
+msgid "Type \"delete my account\" exactly to confirm."
+msgstr "Escribe \"delete my account\" exactamente para confirmar."
 
 #: accounts/models.py:52 challenges/models.py:14
 #: templates/accounts/_unit_preference_section.html:19
@@ -76,44 +80,44 @@ msgstr "Creado por un operador"
 msgid "Too many attempts. Try again in a minute."
 msgstr "Demasiados intentos. Inténtalo de nuevo en un minuto."
 
-#: accounts/views.py:220
+#: accounts/views.py:221
 msgid "You must accept the Terms of Service and Privacy Policy."
 msgstr "Debes aceptar los Términos de Servicio y la Política de Privacidad."
 
-#: accounts/views.py:307 challenges/views.py:133
+#: accounts/views.py:308 challenges/views.py:133
 msgid "Could not validate this Liftosaur API key."
 msgstr "No se pudo validar esta clave de API de Liftosaur."
 
-#: accounts/views.py:539
+#: accounts/views.py:540
 msgid "Your password has been updated. Sign in with your new password."
 msgstr ""
 "Tu contraseña se ha actualizado. Inicia sesión con tu contraseña nueva."
 
-#: accounts/views.py:587
+#: accounts/views.py:588
 msgid "Profile photo updated."
 msgstr "Foto de perfil actualizada."
 
-#: accounts/views.py:596
+#: accounts/views.py:597
 msgid "Display name updated."
 msgstr "Nombre para mostrar actualizado."
 
-#: accounts/views.py:606
+#: accounts/views.py:607
 msgid "Email address saved."
 msgstr "Correo electrónico guardado."
 
-#: accounts/views.py:617
+#: accounts/views.py:618
 msgid "Liftosaur API key saved."
 msgstr "Clave de API de Liftosaur guardada."
 
-#: accounts/views.py:622
+#: accounts/views.py:623
 msgid "Liftosaur API key removed."
 msgstr "Clave de API de Liftosaur eliminada."
 
-#: accounts/views.py:648
+#: accounts/views.py:649
 msgid "Couldn't import right now. Please try again in a moment."
 msgstr "No se pudo importar ahora mismo. Inténtalo de nuevo en un momento."
 
-#: accounts/views.py:655
+#: accounts/views.py:656
 #, python-format
 msgid ""
 "Imported %(count)s set(s) from %(source)s. %(scored)s challenge(s) rescored."
@@ -121,40 +125,44 @@ msgstr ""
 "Se importaron %(count)s serie(s) de %(source)s. Se recalcularon %(scored)s "
 "reto(s)."
 
-#: accounts/views.py:674
+#: accounts/views.py:675
 msgid "Unit preference saved."
 msgstr "Preferencia de unidad guardada."
 
-#: accounts/views.py:680
+#: accounts/views.py:681
 msgid "Timezone saved."
 msgstr "Zona horaria guardada."
 
-#: accounts/views.py:686
+#: accounts/views.py:687
 msgid "Language saved."
 msgstr "Idioma guardado."
 
-#: accounts/views.py:782
+#: accounts/views.py:753
+msgid "Your account has been deleted."
+msgstr "Tu cuenta ha sido eliminada."
+
+#: accounts/views.py:810
 msgid "Connect a Liftosaur API key first."
 msgstr "Conecta primero una clave de API de Liftosaur."
 
-#: accounts/views.py:806
+#: accounts/views.py:834
 msgid "Couldn't sync right now. Please try again in a moment."
 msgstr "No se pudo sincronizar ahora mismo. Inténtalo de nuevo en un momento."
 
-#: accounts/views.py:812
+#: accounts/views.py:840
 #, python-format
 msgid "Sync triggered for %(count)s challenge(s)."
 msgstr "Sincronización iniciada para %(count)s reto(s)."
 
-#: accounts/views.py:848
+#: accounts/views.py:876
 msgid "No API key provided."
 msgstr "No se proporcionó ninguna clave de API."
 
-#: accounts/views.py:856
+#: accounts/views.py:884
 msgid "Invalid API key or connection error."
 msgstr "Clave de API no válida o error de conexión."
 
-#: accounts/views.py:860
+#: accounts/views.py:888
 msgid "Connection successful."
 msgstr "Conexión exitosa."
 
@@ -664,7 +672,7 @@ msgstr ""
 "cierre. El reto se elimina de la lista de Buscar Retos. Esta acción no se "
 "puede deshacer."
 
-#: challenges/views.py:2406
+#: challenges/views.py:2406 templates/accounts/delete_account.html:39
 msgid "Go Back"
 msgstr "Volver"
 
@@ -1173,7 +1181,8 @@ msgstr "Suelta un archivo CSV aquí, o haz clic para elegir uno"
 
 #: templates/accounts/_workout_import_section.html:45
 msgid "Currently supports: Hevy and Strong exports. More tracker apps coming."
-msgstr "Actualmente admite: exportaciones de Hevy y Strong. Próximamente más apps."
+msgstr ""
+"Actualmente admite: exportaciones de Hevy y Strong. Próximamente más apps."
 
 #: templates/accounts/_workout_import_section.html:50
 msgid "Import CSV"
@@ -1183,6 +1192,46 @@ msgstr "Importar CSV"
 #, python-format
 msgid "Last imported %(when)s"
 msgstr "Última importación %(when)s"
+
+#: templates/accounts/delete_account.html:4
+#: templates/accounts/delete_account.html:8 templates/accounts/settings.html:58
+msgid "Delete Account"
+msgstr "Eliminar cuenta"
+
+#: templates/accounts/delete_account.html:12
+msgid ""
+"This permanently signs you out and anonymizes your account: your username, "
+"display name, and email are replaced with a randomly generated placeholder, "
+"your profile photo is deleted, and any connected Liftosaur API key or single "
+"sign-on link is removed."
+msgstr ""
+"Esto cierra tu sesión de forma permanente y anonimiza tu cuenta: tu nombre "
+"de usuario, nombre para mostrar y correo electrónico se reemplazan por un "
+"marcador de posición generado aleatoriamente, tu foto de perfil se elimina, "
+"y cualquier clave de API de Liftosaur o enlace de inicio de sesión único "
+"conectado se elimina."
+
+#: templates/accounts/delete_account.html:15
+msgid ""
+"Challenges you have participated in keep their past scores and entries, but "
+"you will show up as \"Former Participant\" instead of your name. This action "
+"cannot be undone."
+msgstr ""
+"Los retos en los que has participado conservan sus puntuaciones y entradas "
+"pasadas, pero aparecerás como \"Antiguo Participante\" en lugar de tu "
+"nombre. Esta acción no se puede deshacer."
+
+#: templates/accounts/delete_account.html:21
+msgid ""
+"Type <code class=\"font-mono bg-surface-hover px-1 rounded\">delete my "
+"account</code> below to confirm"
+msgstr ""
+"Escribe <code class=\"font-mono bg-surface-hover px-1 rounded\">delete my "
+"account</code> a continuación para confirmar"
+
+#: templates/accounts/delete_account.html:37
+msgid "Permanently Delete Account"
+msgstr "Eliminar cuenta permanentemente"
 
 #: templates/accounts/settings.html:6 templates/accounts/settings.html:10
 #: templates/components/sidebar.html:45 templates/components/sidebar.html:135
@@ -1204,6 +1253,16 @@ msgstr "Claro"
 #: templates/accounts/settings.html:34
 msgid "Dark"
 msgstr "Oscuro"
+
+#: templates/accounts/settings.html:51
+msgid "Danger Zone"
+msgstr "Zona de peligro"
+
+#: templates/accounts/settings.html:53
+msgid "Permanently anonymize your account and sign out. This cannot be undone."
+msgstr ""
+"Anonimiza tu cuenta permanentemente y cierra tu sesión. Esto no se puede "
+"deshacer."
 
 #: templates/accounts/timezone_detect.html:6
 msgid "One moment…"
