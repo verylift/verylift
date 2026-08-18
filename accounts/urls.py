@@ -64,5 +64,11 @@ urlpatterns = [
         views.validate_wger_credentials_view,
         name="validate_wger_credentials",
     ),
+    path("settings/hevy-sync-now/", views.hevy_sync_now_view, name="hevy_sync_now"),
+    path(
+        "settings/validate-hevy-key/",
+        views.validate_hevy_key_view,
+        name="validate_hevy_key",
+    ),
     path("tz/detect/", views.timezone_detect_view, name="timezone-detect"),
 ]
