@@ -1,0 +1,18 @@
+{
+  "aliases": [
+    {"from_name": "Squat (Barbell)", "to_name": "Back Squat"},
+    {"from_name": "Front Squat (Barbell)", "to_name": "Front Squat"},
+    {"from_name": "Deadlift (Barbell)", "to_name": "Deadlift"},
+    {"from_name": "Sumo Deadlift (Barbell)", "to_name": "Sumo Deadlift"},
+    {"from_name": "Romanian Deadlift (Barbell)", "to_name": "Romanian Deadlift"},
+    {"from_name": "Snatch (Barbell)", "to_name": "Snatch"},
+    {"from_name": "Clean and Jerk (Barbell)", "to_name": "Clean and Jerk"},
+    {"from_name": "Bench Press (Barbell)", "to_name": "Bench Press"},
+    {"from_name": "Incline Bench Press (Barbell)", "to_name": "Incline Bench Press"},
+    {"from_name": "Overhead Press (Barbell)", "to_name": "Overhead Press"},
+    {"from_name": "Pull Up", "to_name": "Pull-up"},
+    {"from_name": "Chin Up", "to_name": "Chin-up"},
+    {"from_name": "Bent Over Row (Barbell)", "to_name": "Bent Over Row"},
+    {"from_name": "Hip Thrust (Barbell)", "to_name": "Hip Thrust"}
+  ]
+}

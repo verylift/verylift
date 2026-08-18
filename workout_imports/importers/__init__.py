@@ -17,6 +17,7 @@ from workout_imports.importers.base import (
     decode_csv_text,
 )
 from workout_imports.importers.hevy import HevyImporter
+from workout_imports.importers.strong import StrongImporter
 
 __all__ = [
     "REGISTRY",
@@ -28,7 +29,7 @@ __all__ = [
     "get_importer_for_header",
 ]
 
-REGISTRY: list[CsvImporter] = [HevyImporter()]
+REGISTRY: list[CsvImporter] = [HevyImporter(), StrongImporter()]
 
 
 def csv_header(file_obj) -> list[str]:
