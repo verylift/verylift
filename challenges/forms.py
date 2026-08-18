@@ -14,6 +14,7 @@ from challenges.custom_goals import (
     custom_goal_is_complete,
     parse_custom_goal_grid,
     parse_custom_goal_json,
+    unknown_lift_error,
     validate_rep_max_monotonicity,
 )
 from challenges.goal_builders import default_goal_name
@@ -440,6 +441,17 @@ class CustomGoalForm(forms.Form):
     prefilled with whatever parsed cleanly, and completeness (every configured
     lift × reps 1–10) plus rep-max monotonicity are enforced before the form
     validates.
+
+    JSON-pasted lift names not configured for the challenge (TASK-314) are an
+    acknowledge-and-proceed case rather than an always-fatal one: when they're
+    the ONLY problem with the payload, the form re-renders invalid but exposes
+    them on ``self.unknown_lifts`` so the view/template can offer an explicit
+    "ignore and continue" checkbox (``acknowledge_unknown_lifts``) instead of
+    silently dropping them or permanently blocking the save. Checking that box
+    and resubmitting saves using whatever targets DID parse. Any OTHER error
+    (malformed JSON, bad unit, non-numeric weight, incompleteness) still
+    blocks the whole payload regardless of the checkbox — it only ever waives
+    the unknown-lift complaint, never a real one.
     """
 
     name = forms.CharField(
@@ -455,6 +467,7 @@ class CustomGoalForm(forms.Form):
         required=False,
         widget=forms.Textarea(attrs={"class": _INPUT_CSS, "rows": 6}),
     )
+    acknowledge_unknown_lifts = forms.BooleanField(required=False)
 
     def __init__(
         self,
@@ -472,6 +485,7 @@ class CustomGoalForm(forms.Form):
         self.method_kwargs = method_kwargs or {}
         self.targets: dict = {}
         self.name = ""
+        self.unknown_lifts: list[str] = []
 
     def clean(self):
         cleaned_data = super().clean()
@@ -486,8 +500,9 @@ class CustomGoalForm(forms.Form):
             if self.method == CustomGoal.SourceMethod.JSON
             else ""
         )
+        unknown_lifts: list[str] = []
         if payload:
-            name, targets, errors = parse_custom_goal_json(
+            name, targets, errors, unknown_lifts = parse_custom_goal_json(
                 payload, self.challenge, self.unit
             )
         else:
@@ -501,12 +516,36 @@ class CustomGoalForm(forms.Form):
                 name = default_goal_name(self.method, **self.method_kwargs)
         self.targets = targets
         self.name = name
-        for error in (
+        self.unknown_lifts = unknown_lifts
+
+        other_errors = (
             errors
             + custom_goal_is_complete(targets, self.challenge)
             + validate_rep_max_monotonicity(targets, self.challenge)
-        ):
-            self.add_error(None, error)
+        )
+        if unknown_lifts and not other_errors:
+            # TASK-314: unknown lift names are the ONLY problem — an
+            # acknowledge-and-proceed case, not an always-fatal one. Unrecognized
+            # targets are already excluded from ``targets`` by the parser, so
+            # once acknowledged there's nothing left to do here; the save just
+            # proceeds with whatever parsed cleanly.
+            if not cleaned_data.get("acknowledge_unknown_lifts"):
+                self.add_error(
+                    None,
+                    gettext(
+                        "Some lift names in your JSON weren't recognized. Review "
+                        "them below and confirm to continue, or edit the JSON."
+                    ),
+                )
+        else:
+            # Any other error type still blocks the whole payload even if the
+            # acknowledgment checkbox is set (AC#4) -- surface the unknown-lift
+            # complaints too in that case, since checking the box doesn't mean
+            # the user has seen them yet.
+            for lift_name in unknown_lifts:
+                self.add_error(None, unknown_lift_error(lift_name))
+            for error in other_errors:
+                self.add_error(None, error)
         return cleaned_data
 
     def banner_errors(self) -> list[str]:

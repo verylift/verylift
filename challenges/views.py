@@ -1231,6 +1231,8 @@ def _goal_setup_chart_step(request, challenge, participant, data, *, step_contex
             targets_json=form.data.get("targets_json", ""),
             targets=form.targets,
             errors=form.banner_errors(),
+            unknown_lifts=form.unknown_lifts,
+            acknowledge_unknown_lifts=bool(form.data.get("acknowledge_unknown_lifts")),
             computed_fields=set(
                 filter(None, form.data.get("computed_fields", "").split(","))
             ),

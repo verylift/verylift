@@ -1565,6 +1565,8 @@ def build_custom_goal_context(
     unavailable_lifts=None,
     assisted_only_lifts=None,
     source_note="",
+    unknown_lifts=None,
+    acknowledge_unknown_lifts=False,
     computed_fields=None,
 ) -> dict:
     """Build the render context for the goal-setup wizard's "chart" step.
@@ -1589,6 +1591,15 @@ def build_custom_goal_context(
     calculator (``show_calculator``) is offered only on the manual-entry
     (CUSTOM) grid — the standards/history grids are already fully prefilled,
     and JSON has no grid at all.
+
+    ``unknown_lifts`` (TASK-314) names lift(s) present in a JSON-pasted
+    payload but not configured for the challenge -- passed through from
+    ``CustomGoalForm.unknown_lifts`` on a failed submit so the template can
+    offer an explicit "ignore and continue" checkbox rather than silently
+    dropping them or always blocking the save. ``acknowledge_unknown_lifts``
+    echoes back whatever the checkbox's raw POST value was, so a re-render
+    (e.g. because acknowledging alone wasn't enough -- another error was
+    also present) doesn't reset a checkbox the user already ticked.
 
     ``computed_fields`` (a set of grid field names, e.g. ``{"target__0__1"}``)
     is which cells the Compute calculator filled in on the client, echoed
@@ -1662,6 +1673,8 @@ def build_custom_goal_context(
         "unavailable_lifts": sorted(unavailable_lifts),
         "assisted_only_lifts": sorted(assisted_only_lifts),
         "source_note": source_note,
+        "unknown_lifts": unknown_lifts or [],
+        "acknowledge_unknown_lifts": acknowledge_unknown_lifts,
     }
 
 
