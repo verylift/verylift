@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+## 2026.8.12 — 2026-08-18
+
+### Added
+- Pasting a JSON goal is now its own option when setting up your chart, instead of a hidden toggle inside manual entry
+- The manual-entry goal grid has a Compute button: fill in a 1RM, a 5RM, or several known rep-maxes and it blends five rep-max formulas across every entered weight to fill in the rest
+- New users are invited to join the current year's Very Open at the end of onboarding, when an operator has configured an invite link
+- Users can permanently delete their own account from Settings → Danger Zone
+
+### Changed
+- The onboarding wizard no longer shows the app's nav sidebar or mobile menu, keeping focus on setup steps
+- Deleted accounts are anonymized (pseudonymous name/email, photo removed) and deactivated rather than hard-deleted, preserving challenge/leaderboard history as "Former Participant"
+- JSON-pasted goal charts with an unrecognized lift name no longer block the whole save — you can review and confirm to skip just that lift and keep the rest
+- Sharing a challenge invite link now shows a proper link preview naming the challenge and participant count, with a correctly-sized image for Discord/Slack/iMessage
+
+### Fixed
+- The join-link preview page no longer shows a broken image for the inviter's avatar to signed-out visitors
+- The invite-link preview page's content is now wrapped in a card, matching the rest of the app's visual style
+- Invite links can no longer be created, regenerated, or edited for a challenge that has already ended, even in the window before its status formally flips
+- Goal targets are now validated so a lift's weight can't increase as rep count goes up (e.g. a 10RM heavier than its 5RM), and Compute itself refuses to extrapolate from a lift's own contradictory pinned weights
+
+### Removed
+- `CHALLENGES_INVITE_LINK_TTL_DAYS` setting — no longer needed now that ended challenges reject invite-link mutations outright
+
 ## 2026.8.11 — 2026-08-17
 
 ### Added
