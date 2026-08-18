@@ -15,6 +15,24 @@ class SiteSettings(models.Model):
         default="https://discord.gg/DH5ZWDXJdH",
         help_text=_("Community Discord invite link, shown on the landing page."),
     )
+    very_open_invite_url = models.URLField(
+        blank=True,
+        default="",
+        help_text=_(
+            "Join link for the current year's Very Open. Blank hides the "
+            "onboarding invite step entirely -- clear this once the invite "
+            "window closes rather than leaving a dead link live."
+        ),
+    )
+    very_open_label = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        help_text=_(
+            "Displayed name for the current year's Very Open, e.g. \"The Very "
+            "Open '26\". Only shown when the invite URL above is also set."
+        ),
+    )
 
     class Meta:
         verbose_name = _("Site Settings")

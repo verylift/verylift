@@ -25,6 +25,11 @@ urlpatterns = [
         name="onboarding-units",
     ),
     path(
+        "accounts/onboarding/very-open/",
+        views.onboarding_very_open_view,
+        name="onboarding-very-open",
+    ),
+    path(
         "accounts/password-reset/",
         views.password_reset_view,
         name="password-reset",

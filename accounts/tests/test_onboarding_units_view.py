@@ -1,15 +1,10 @@
-"""Tests for the onboarding units step (final onboarding step)."""
-
-from datetime import timedelta
+"""Tests for the onboarding units step."""
 
 import pytest
 from django.test import Client
 from django.urls import reverse
-from django.utils import timezone
 
 from accounts.tests.factories import UserFactory
-from challenges.models import Challenge
-from challenges.tests.factories import ChallengeFactory, ChallengeInviteLinkFactory
 
 
 @pytest.fixture
@@ -60,7 +55,7 @@ class TestOnboardingUnitsView:
         user.refresh_from_db()
         assert user.unit_preference == "kg"
 
-    def test_post_redirects_to_dashboard_without_invite_token(self, client):
+    def test_post_redirects_to_very_open_step(self, client):
         client.force_login(UserFactory())
 
         response = client.post(
@@ -68,7 +63,7 @@ class TestOnboardingUnitsView:
         )
 
         assert response.status_code == 302
-        assert response["Location"] == reverse("challenges:dashboard")
+        assert response["Location"] == reverse("accounts:onboarding-very-open")
 
     def test_get_does_not_render_app_sidebar_or_mobile_nav(self, client):
         user = UserFactory()
@@ -79,24 +74,3 @@ class TestOnboardingUnitsView:
         content = response.content.decode()
         assert 'id="app-sidebar"' not in content
         assert 'id="mobile-nav-panel"' not in content
-
-    def test_post_redirects_to_invite_link_when_session_has_usable_token(self, client):
-        challenge = ChallengeFactory(status=Challenge.Status.ACTIVE)
-        link = ChallengeInviteLinkFactory(
-            challenge=challenge,
-            revoked_at=None,
-            expires_at=timezone.now() + timedelta(days=7),
-        )
-        client.force_login(UserFactory())
-        session = client.session
-        session["invite_token"] = link.token
-        session.save()
-
-        response = client.post(
-            reverse("accounts:onboarding-units"), {"unit_preference": "lb"}
-        )
-
-        assert response.status_code == 302
-        assert response["Location"] == reverse(
-            "challenges:invite-link", args=[link.token]
-        )

@@ -53,6 +53,7 @@ from accounts.timezones import (
 from challenges.models import Challenge, ChallengeParticipant
 from challenges.services import resolve_invite_token
 from core.http import is_htmx
+from core.models import SiteSettings
 from liftosaur.services import (
     last_synced_at,
     sync_user_lifts,
@@ -329,25 +330,58 @@ def onboarding_units_view(request):
     step's own default, so a fresh account already shows lb here without
     needing to hardcode it.
 
-    Ends the onboarding flow with the exact invite-link/dashboard redirect
-    register_view used to end with.
+    Always hands off to onboarding_very_open_view next, which itself decides
+    whether to show anything or fall straight through to the invite-link/
+    dashboard redirect register_view used to end with.
     """
     if request.method == "POST":
         form = UnitPreferenceForm(request.POST)
         form.is_valid()
         form.save(request.user)
 
-        invite_link = _invite_token_link(request)
-        if invite_link:
-            # Leave the session token in place — invite_link_view clears
-            # it once the join itself succeeds.
-            return redirect("challenges:invite-link", token=invite_link.token)
-        return redirect("challenges:dashboard")
+        return redirect("accounts:onboarding-very-open")
 
     return render(
         request,
         "registration/onboarding_units.html",
         {"unit_preference": request.user.unit_preference},
+    )
+
+
+def _finish_onboarding(request):
+    invite_link = _invite_token_link(request)
+    if invite_link:
+        # Leave the session token in place — invite_link_view clears
+        # it once the join itself succeeds.
+        return redirect("challenges:invite-link", token=invite_link.token)
+    return redirect("challenges:dashboard")
+
+
+@login_required
+def onboarding_very_open_view(request):
+    """Onboarding step 4 (final): optional invite to join the current Very Open.
+
+    Only rendered when an operator has configured
+    SiteSettings.very_open_invite_url for the season -- when it's blank (not
+    yet set, or cleared once the invite window closed) this step is skipped
+    entirely rather than showing a dead link, and both GET and POST fall
+    straight through to the same invite-link/dashboard redirect that used to
+    end onboarding_units_view. On POST (the user clicking through, whether
+    they used the join link or not) it also falls through -- there's nothing
+    to persist here, the join link is just an external link.
+    """
+    site_settings = SiteSettings.load()
+
+    if request.method == "POST" or not site_settings.very_open_invite_url:
+        return _finish_onboarding(request)
+
+    return render(
+        request,
+        "registration/onboarding_very_open.html",
+        {
+            "very_open_invite_url": site_settings.very_open_invite_url,
+            "very_open_label": site_settings.very_open_label,
+        },
     )
 
 
