@@ -8,6 +8,7 @@ from django.contrib.auth.forms import UserChangeForm as BaseUserChangeForm
 
 from accounts.services import mask_api_key
 from liftosaur.services import sync_user_lifts
+from wger.services import sync_wger_lifts
 
 logger = logging.getLogger(__name__)
 
@@ -45,13 +46,24 @@ class UserAdmin(DjangoUserAdmin):
         "last_login",
         "acquisition_source",
         "liftosaur_api_key_masked",
+        "wger_api_token_masked",
     )
-    actions = ("backfill_lift_history",)
+    actions = ("backfill_lift_history", "backfill_wger_lift_history")
 
     fieldsets = (
         (None, {"fields": ("username", "password")}),
         ("Profile", {"fields": ("email", "display_name", "acquisition_source")}),
-        ("Integrations", {"fields": ("oidc_sub", "liftosaur_api_key_masked")}),
+        (
+            "Integrations",
+            {
+                "fields": (
+                    "oidc_sub",
+                    "liftosaur_api_key_masked",
+                    "wger_instance_url",
+                    "wger_api_token_masked",
+                )
+            },
+        ),
         (
             "Permissions",
             {
@@ -96,6 +108,11 @@ class UserAdmin(DjangoUserAdmin):
         """
         return mask_api_key(obj.liftosaur_api_key) or "—"
 
+    @admin.display(description="Wger API token")
+    def wger_api_token_masked(self, obj):
+        """Masked stand-in for the token, mirroring liftosaur_api_key_masked."""
+        return mask_api_key(obj.wger_api_token) or "—"
+
     @admin.action(description="Backfill lift history (last 12 months)")
     def backfill_lift_history(self, request, queryset):
         """Synchronously force a 12-month LiftHistory backfill for each user.
@@ -123,5 +140,31 @@ class UserAdmin(DjangoUserAdmin):
             self.message_user(
                 request,
                 f"Backfilled lift history for {succeeded} user(s).",
+                level=messages.SUCCESS,
+            )
+
+    @admin.action(description="Backfill Wger lift history (last 12 months)")
+    def backfill_wger_lift_history(self, request, queryset):
+        """Synchronously force a 12-month Wger LiftHistory backfill per user."""
+        succeeded = 0
+        for user in queryset:
+            try:
+                sync_wger_lifts(user, force=True)
+            except Exception:
+                logger.exception(
+                    "Admin Wger lift history backfill failed for user %s", user.id
+                )
+                self.message_user(
+                    request,
+                    f"Wger backfill failed for {user.username}.",
+                    level=messages.ERROR,
+                )
+            else:
+                succeeded += 1
+
+        if succeeded:
+            self.message_user(
+                request,
+                f"Backfilled Wger lift history for {succeeded} user(s).",
                 level=messages.SUCCESS,
             )
