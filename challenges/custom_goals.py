@@ -228,6 +228,50 @@ def parse_custom_goal_grid(
     return targets, errors
 
 
+def _rep_max_order_error(lift_name: str, lower_rep: int, higher_rep: int) -> str:
+    return gettext(
+        '"%(lift_name)s" %(higher_rep)sRM target can\'t be heavier than its '
+        "%(lower_rep)sRM target — lifting more reps can never require more "
+        "weight than fewer reps."
+    ) % {
+        "lift_name": lift_name,
+        "higher_rep": higher_rep,
+        "lower_rep": lower_rep,
+    }
+
+
+def validate_rep_max_monotonicity(
+    targets: dict[str, dict[int, Decimal]], challenge
+) -> list[str]:
+    """Reject a lift whose weight rises as rep count increases.
+
+    A valid rep-max ladder is non-increasing 1RM..10RM (equal is fine — a
+    genuinely rep-independent max, e.g. 5RM == 6RM). Comparing each present
+    cell against the nearest lower-rep cell that is also present (not
+    strictly N vs N-1) is sufficient to catch any ordering violation even
+    across gaps, since non-increasing over every present pair implies
+    non-increasing overall. Applied uniformly regardless of source — grid,
+    JSON paste, or calculator-assisted — since none of parse_custom_goal_grid
+    or parse_custom_goal_json cross-validate adjacent rep columns themselves.
+    Only the first violation per lift is reported, matching
+    custom_goal_is_complete's one-error-per-lift shape.
+    """
+    errors: list[str] = []
+    for lift_name in sorted(covered_lift_names(challenge)):
+        lift_targets = targets.get(lift_name) or {}
+        previous_rep = None
+        previous_weight = None
+        for rep in REP_COUNTS:
+            weight = lift_targets.get(rep)
+            if weight is None:
+                continue
+            if previous_weight is not None and weight > previous_weight:
+                errors.append(_rep_max_order_error(lift_name, previous_rep, rep))
+                break
+            previous_rep, previous_weight = rep, weight
+    return errors
+
+
 def custom_goal_is_complete(
     targets: dict[str, dict[int, Decimal]], challenge
 ) -> list[str]:

@@ -77,10 +77,11 @@ def _user_row(user):
 
 
 def _confirm_targets(authed_client, url, name, lift):
-    """Confirm the chart step via the grid -- not JSON, which is CUSTOM-only
-    (a non-CUSTOM submission ignores targets_json; see test_goal_setup_view's
-    provenance-mismatch regression test). Every fixture challenge here has
-    exactly one configured lift, always at grid index 0."""
+    """Confirm the chart step via the grid -- not JSON, which is its own
+    top-level method (a non-JSON submission ignores targets_json; see
+    test_goal_setup_view's provenance-mismatch regression test). Every
+    fixture challenge here has exactly one configured lift, always at grid
+    index 0."""
     del lift  # kept for call-site readability; grid position is always 0
     fields = {grid_field_name(0, rep): "100" for rep in range(1, 11)}
     return authed_client.post(url, {"name": name, **fields})

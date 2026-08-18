@@ -14,6 +14,7 @@ from challenges.custom_goals import (
     custom_goal_is_complete,
     parse_custom_goal_grid,
     parse_custom_goal_json,
+    validate_rep_max_monotonicity,
 )
 from challenges.goal_builders import default_goal_name
 from challenges.lift_presets import CLASSIC_LIFT_NAMES
@@ -124,7 +125,7 @@ class CreateChallengeLiftsForm(forms.Form):
 
 
 class GoalMethodForm(forms.Form):
-    """Join goal-setup wizard, step 1: which of the three methods to use.
+    """Join goal-setup wizard, step 1: which of the four methods to use.
 
     Permanence is warned about in the template, not here — charts are locked
     once saved (AC#4). ``standards_available`` drops the "strength standards"
@@ -428,14 +429,17 @@ class InviteLinkOptionsForm(forms.Form):
 class CustomGoalForm(forms.Form):
     """Goal name plus a target table sourced from JSON paste OR manual grid.
 
-    The two input paths are equally first-class: a non-empty JSON textarea is
-    parsed as the source, otherwise the manual grid fields are. The name field
-    is only rendered/required for the grid path — a JSON submission carries its
-    own required top-level "name" key instead, so ``self.name`` is resolved from
+    Which path is parsed is keyed off ``method``: JSON parses
+    ``targets_json``, every other method (standards/history/manual) parses
+    the grid fields — the two are peer top-level goal-setup methods, not a
+    toggle within one screen (TASK-306). The name field is only
+    rendered/required for the grid path — a JSON submission carries its own
+    required top-level "name" key instead, so ``self.name`` is resolved from
     whichever path was used. Either way the parsed ``{lift: {rep: kg}}`` table
     is exposed on ``self.targets`` so a failed submit can re-render the grid
     prefilled with whatever parsed cleanly, and completeness (every configured
-    lift × reps 1–10) is enforced before the form validates.
+    lift × reps 1–10) plus rep-max monotonicity are enforced before the form
+    validates.
     """
 
     name = forms.CharField(
@@ -471,15 +475,15 @@ class CustomGoalForm(forms.Form):
 
     def clean(self):
         cleaned_data = super().clean()
-        # Only the CUSTOM method offers JSON-paste in the UI: pasting JSON
-        # over a standards/history-prefilled grid would let the saved
-        # targets diverge from what source_detail claims produced them, so
-        # a targets_json value is ignored (grid path used instead) for any
-        # other method rather than trusted, closing that off even against a
-        # stale tab or a hand-crafted request.
+        # Only the JSON method offers JSON-paste in the UI: pasting JSON
+        # over a standards/history-prefilled (or manual-entry) grid would let
+        # the saved targets diverge from what source_detail claims produced
+        # them, so a targets_json value is ignored (grid path used instead)
+        # for any other method rather than trusted, closing that off even
+        # against a stale tab or a hand-crafted request.
         payload = (
             (cleaned_data.get("targets_json") or "").strip()
-            if self.method == CustomGoal.SourceMethod.CUSTOM
+            if self.method == CustomGoal.SourceMethod.JSON
             else ""
         )
         if payload:
@@ -497,7 +501,11 @@ class CustomGoalForm(forms.Form):
                 name = default_goal_name(self.method, **self.method_kwargs)
         self.targets = targets
         self.name = name
-        for error in errors + custom_goal_is_complete(targets, self.challenge):
+        for error in (
+            errors
+            + custom_goal_is_complete(targets, self.challenge)
+            + validate_rep_max_monotonicity(targets, self.challenge)
+        ):
             self.add_error(None, error)
         return cleaned_data
 

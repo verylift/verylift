@@ -1,8 +1,9 @@
 """Materialisation of goal-setup suggestions into a CustomGoal target table.
 
-Every challenge is CUSTOM (TASK-248 plan §3): the three goal-setting methods
-(strength standards, fully custom, suggested from Liftosaur history) are all
-just prefill strategies that produce the same flat ``{lift: {rep: kg}}``
+Every challenge is CUSTOM (TASK-248 plan §3): the four goal-setting methods
+(strength standards, manual entry, JSON paste, suggested from Liftosaur
+history) are all just prefill strategies that produce the same flat
+``{lift: {rep: kg}}``
 table, which ``save_custom_goal`` then persists verbatim. This module is the
 only place in the codebase where a bodyweight number appears in arithmetic,
 and — since there is no legacy-participant backfill (revision 5) — the only

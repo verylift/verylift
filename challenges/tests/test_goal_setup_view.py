@@ -1,8 +1,9 @@
-"""Tests for the goal-setup wizard (TASK-17, TASK-248).
+"""Tests for the goal-setup wizard (TASK-17, TASK-248, TASK-306).
 
-Three methods — strength standards, suggested from history, fully custom —
-all funnel through the same three-step session wizard (method -> inputs ->
-chart) and materialise into the same CustomGoal/CustomGoalTarget shape.
+Four methods — strength standards, suggested from history, manual entry,
+JSON paste — all funnel through the same three-step session wizard
+(method -> inputs -> chart) and materialise into the same CustomGoal/
+CustomGoalTarget shape.
 """
 
 import json
@@ -17,6 +18,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.tests.factories import UserFactory
+from challenges.custom_goals import grid_field_name
 from challenges.models import Challenge, ChallengeParticipant, CustomGoal
 from challenges.tests.factories import (
     ChallengeParticipantFactory,
@@ -149,9 +151,10 @@ class TestMethodStep:
         assert "standards" not in content
         assert "history" in content
         assert "custom" in content
+        assert "json" in content
         assert "locked" in content.lower()
 
-    def test_renders_three_methods_when_standards_available(
+    def test_renders_four_methods_when_standards_available(
         self, authed_client, participant, challenge, settings
     ):
         settings.FITNESSVOLT_ENABLED = True
@@ -168,6 +171,7 @@ class TestMethodStep:
         assert "standards" in content
         assert "history" in content
         assert "custom" in content
+        assert "json" in content
         assert "locked" in content.lower()
 
     def test_standards_post_rejected_when_unavailable(
@@ -369,7 +373,7 @@ class TestStaleWizardStepResubmission:
 
 
 class TestCustomMethodFullFlow:
-    def test_confirm_creates_goal_with_empty_source_detail(
+    def test_confirm_creates_goal_via_grid_with_empty_source_detail(
         self, authed_client, participant, challenge
     ):
         url = _url(challenge)
@@ -378,13 +382,7 @@ class TestCustomMethodFullFlow:
             url,
             {
                 "name": "My Custom Goal",
-                "targets_json": json.dumps(
-                    {
-                        "name": "My Custom Goal",
-                        "unit": "kg",
-                        "targets": {"Back Squat": {str(r): 100 for r in range(1, 11)}},
-                    }
-                ),
+                **{grid_field_name(0, r): "100" for r in range(1, 11)},
             },
         )
         assert resp.status_code == 302
@@ -417,6 +415,51 @@ class TestCustomMethodFullFlow:
         authed_client.post(url, {"method": "custom"})
         resp = authed_client.get(url + "?back=1")
         assert b"How do you want to set your goal" in resp.content
+
+
+class TestJsonMethodFullFlow:
+    """JSON paste is its own top-level goal-setup method (TASK-306), not a
+    toggle inside the manual-entry (CUSTOM) grid screen."""
+
+    def test_confirm_creates_goal_with_empty_source_detail(
+        self, authed_client, participant, challenge
+    ):
+        url = _url(challenge)
+        authed_client.post(url, {"method": "json"})
+        resp = authed_client.post(
+            url,
+            {
+                "targets_json": json.dumps(
+                    {
+                        "name": "My JSON Goal",
+                        "unit": "kg",
+                        "targets": {"Back Squat": {str(r): 100 for r in range(1, 11)}},
+                    }
+                ),
+            },
+        )
+        assert resp.status_code == 302
+        assert resp.url == f"/challenges/{challenge.pk}/"
+
+        participant.refresh_from_db()
+        goal = participant.custom_goal
+        assert goal is not None
+        assert goal.name == "My JSON Goal"
+        assert goal.source_method == CustomGoal.SourceMethod.JSON
+        assert goal.source_detail == {}
+        assert goal.targets.count() == 10
+
+        challenge.refresh_from_db()
+        assert challenge.status == Challenge.Status.ACTIVE
+
+    def test_custom_method_skips_inputs_straight_to_chart(
+        self, authed_client, participant, challenge
+    ):
+        resp = authed_client.post(_url(challenge), {"method": "json"}, follow=False)
+        assert resp.status_code == 302
+        chart = authed_client.get(_url(challenge))
+        assert b"Paste JSON" in chart.content
+        assert b"Back Squat" in chart.content
 
 
 class TestHistoryMethodFlow:
@@ -929,7 +972,7 @@ class TestStandardsMethodFlow:
     def test_targets_json_ignored_for_standards_method(
         self, authed_client, participant, challenge, settings
     ):
-        """A targets_json payload must never win for a non-CUSTOM method —
+        """A targets_json payload must never win for a non-JSON method —
         otherwise the saved targets could diverge from what source_detail
         claims produced them (the UI no longer offers this; this is the
         server-side backstop against a stale tab or a hand-crafted POST).
@@ -1048,11 +1091,10 @@ class TestBackfillScoring:
             weight_kg=Decimal("120.00"),
         )
         url = _url(challenge)
-        authed_client.post(url, {"method": "custom"})
+        authed_client.post(url, {"method": "json"})
         resp = authed_client.post(
             url,
             {
-                "name": "Goal",
                 "targets_json": json.dumps(
                     {
                         "name": "Goal",

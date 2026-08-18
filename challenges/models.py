@@ -280,7 +280,8 @@ class CustomGoal(models.Model):
     class SourceMethod(models.TextChoices):
         STANDARDS = "standards", _("Strength standards")
         HISTORY = "history", _("Suggested from history")
-        CUSTOM = "custom", _("Fully custom")
+        CUSTOM = "custom", _("Manual entry")
+        JSON = "json", _("Paste JSON")
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     participant = models.ForeignKey(

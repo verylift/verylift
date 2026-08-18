@@ -10,8 +10,9 @@ your next one.
 
 When you join a challenge, you build a goal chart covering every lift the
 challenge is configured on — see [Running a challenge](challenges.md) for
-the three ways to set it up (published strength standards, suggested from
-your Liftosaur history, or fully custom). However you build it, the result
+the four ways to set it up (published strength standards, suggested from
+your Liftosaur history, manual entry, or pasting a JSON payload). However you
+build it, the result
 is the same shape: a target weight for each lift at each rep count from 1
 to 10. Once you confirm it, your chart is locked for the rest of the
 challenge — there's no editing after you join, so if a target turns out
