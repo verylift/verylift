@@ -12,14 +12,15 @@ receivers:
       paging:
 
   # Reads every container's json-file log on this host: kamal-proxy,
-  # verylift-web/scheduler/release, verylift-db, wg-nilou-glitchtip, and
-  # this collector itself (dropped below — no value shipping the log
-  # shipper's own logs to itself). Docker's json-file lines look like:
+  # verylift-web/scheduler/release, verylift-db, the WireGuard tunnel
+  # sidecar (below), and this collector itself (dropped below — no value
+  # shipping the log shipper's own logs to itself). Docker's json-file
+  # lines look like:
   #   {"log":"...\n","stream":"stdout","attrs":{"tag":"verylift-web-2026.8.9"},"time":"..."}
   # attrs.tag is only present for containers booted with a `logging`/
-  # `logging.options.tag` config (config/deploy.yml, or wg-nilou-glitchtip's
-  # own docker-compose.yml on the VPS, outside this repo) — every source
-  # here has one, so container.name is always populated.
+  # `logging.options.tag` config (config/deploy.yml, or the WireGuard
+  # sidecar's own docker-compose.yml on the VPS, outside this repo) —
+  # every source here has one, so container.name is always populated.
   #
   # Deliberately thin: unwrap Docker's envelope, tag with container
   # identity, drop self-ingestion. Per-source severity/field parsing
@@ -81,9 +82,9 @@ processors:
 
 exporters:
   otlp:
-    # SigNoz's ingester on the homelab side (veryinfrastructure-net,
-    # nilou), reached over the wg-glitchtip WireGuard tunnel. Plain TCP
-    # inside that tunnel, so no TLS here.
+    # SigNoz's ingester on the other side of a WireGuard tunnel to a
+    # privately-hosted observability stack. Plain TCP inside that tunnel,
+    # so no TLS here.
     endpoint: 172.19.0.20:4317
     tls:
       insecure: true

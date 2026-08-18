@@ -144,8 +144,8 @@ accessories:
       # SETUID/SETGID/CHOWN/DAC_OVERRIDE/FOWNER to drop to the postgres user
       # and fix volume ownership (same reasoning as docker-compose.selfhost.yml).
 
-  # Ships host metrics and container logs to SigNoz over the wg-glitchtip
-  # WireGuard tunnel. Outbound only — not published/proxied.
+  # Ships host metrics and container logs to a privately-hosted SigNoz
+  # instance over a WireGuard tunnel. Outbound only — not published/proxied.
   otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
     host: verylift-prod
