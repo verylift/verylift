@@ -2,7 +2,7 @@ import factory
 from django.utils import timezone
 
 from accounts.tests.factories import UserFactory
-from liftosaur.models import Lift, LiftHistory, LiftosaurSyncLog
+from liftosaur.models import Lift, LiftAlias, LiftHistory, LiftosaurSyncLog
 
 
 class LiftFactory(factory.django.DjangoModelFactory):
@@ -12,6 +12,14 @@ class LiftFactory(factory.django.DjangoModelFactory):
     name = factory.Sequence(lambda n: f"Lift {n}")
     is_liftosaur_builtin = True
     is_bodyweight_added = False
+
+
+class LiftAliasFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = LiftAlias
+
+    from_name = factory.Sequence(lambda n: f"Liftosaur Exercise {n}")
+    to_name = "Back Squat"
 
 
 class LiftHistoryFactory(factory.django.DjangoModelFactory):

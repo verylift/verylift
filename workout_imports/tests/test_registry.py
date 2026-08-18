@@ -10,6 +10,10 @@ from workout_imports.importers import (
     get_importer_for_header,
 )
 from workout_imports.importers.hevy import REQUIRED_HEADERS, HevyImporter
+from workout_imports.importers.liftosaur import (
+    REQUIRED_HEADERS as LIFTOSAUR_REQUIRED_HEADERS,
+)
+from workout_imports.importers.liftosaur import LiftosaurImporter
 
 HEVY_HEADER = [
     "title",
@@ -26,6 +30,29 @@ HEVY_HEADER = [
     "distance_km",
     "duration_seconds",
     "rpe",
+]
+
+LIFTOSAUR_HEADER = [
+    "Workout DateTime",
+    "Program",
+    "Day Name",
+    "Exercise",
+    "Is Warmup Set?",
+    "Required Reps",
+    "Completed Reps",
+    "Is AMRAP?",
+    "Required RPE",
+    "Completed RPE",
+    "Log RPE?",
+    "Required Weight Value",
+    "Required Weight Unit",
+    "Completed Weight Value",
+    "Completed Weight Unit",
+    "Ask Weight?",
+    "Completed Reps Time",
+    "Target Muscles",
+    "Synergist Muscles",
+    "Notes",
 ]
 
 
@@ -47,10 +74,37 @@ class TestHevyImporterDetect:
         assert HevyImporter().source == LiftSource.HEVY
 
 
+class TestLiftosaurImporterDetect:
+    def test_matches_full_liftosaur_header(self):
+        assert LiftosaurImporter().detect(LIFTOSAUR_HEADER) is True
+
+    def test_does_not_match_unrelated_header(self):
+        assert LiftosaurImporter().detect(["date", "exercise", "sets", "reps"]) is False
+
+    def test_does_not_match_when_one_required_column_is_missing(self):
+        # Detection must be exact, not fuzzy: dropping a single required
+        # column (here, Exercise) must flip the match to False, not still
+        # match on "close enough".
+        header = [h for h in LIFTOSAUR_HEADER if h != "Exercise"]
+        assert LiftosaurImporter().detect(header) is False
+
+    def test_does_not_match_hevy_header(self):
+        # Cross-check: neither tracker's header should accidentally satisfy
+        # the other's detection signature.
+        assert LiftosaurImporter().detect(HEVY_HEADER) is False
+
+    def test_source_is_liftosaur(self):
+        assert LiftosaurImporter().source == LiftSource.LIFTOSAUR
+
+
 class TestGetImporterForHeader:
     def test_hevy_header_resolves_to_hevy_importer(self):
         importer = get_importer_for_header(HEVY_HEADER)
         assert isinstance(importer, HevyImporter)
+
+    def test_liftosaur_header_resolves_to_liftosaur_importer(self):
+        importer = get_importer_for_header(LIFTOSAUR_HEADER)
+        assert isinstance(importer, LiftosaurImporter)
 
     def test_unrecognized_header_returns_none(self):
         assert get_importer_for_header(["foo", "bar", "baz"]) is None
@@ -61,12 +115,20 @@ class TestGetImporterForHeader:
         # accidentally passing on a header that's missing a required column.
         assert set(HEVY_HEADER) >= REQUIRED_HEADERS
 
+    def test_registry_contains_required_liftosaur_headers_subset(self):
+        assert set(LIFTOSAUR_HEADER) >= LIFTOSAUR_REQUIRED_HEADERS
+
 
 class TestDetectImporter:
     def test_recognized_csv_returns_matching_importer(self):
         content = ",".join(HEVY_HEADER) + "\n"
         importer = detect_importer(io.BytesIO(content.encode("utf-8")))
         assert isinstance(importer, HevyImporter)
+
+    def test_recognized_liftosaur_csv_returns_matching_importer(self):
+        content = ",".join(LIFTOSAUR_HEADER) + "\n"
+        importer = detect_importer(io.BytesIO(content.encode("utf-8")))
+        assert isinstance(importer, LiftosaurImporter)
 
     def test_unrecognized_csv_raises_friendly_error(self):
         content = "some,other,columns\na,b,c\n"
