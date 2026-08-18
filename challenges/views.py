@@ -505,12 +505,17 @@ def invite_link_view(request, token):
 
     if not request.user.is_authenticated:
         request.session["invite_token"] = token
+        participant_count = challenge.participants.filter(
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+            is_bailed=False,
+        ).count()
         return render(
             request,
             "challenges/invite_link_preview.html",
             {
                 "challenge": challenge,
                 "link": link,
+                "participant_count": participant_count,
                 "discord_invite_url": SiteSettings.load().discord_invite_url,
             },
         )
