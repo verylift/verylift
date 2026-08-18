@@ -9,14 +9,15 @@ SEED_COMMANDS = (
     "seed_liftosaur_lifts",
     "seed_fitnessvolt_lifts",
     "seed_hevy_lift_aliases",
+    "seed_strong_lift_aliases",
 )
 
 
 class Command(BaseCommand):
     help = (
         "Run every idempotent seed command (Liftosaur lifts, FitnessVolt lift "
-        "aliases, Hevy lift aliases) so the DB matches the fixtures shipped in "
-        "the image. Safe to run on every deploy."
+        "aliases, Hevy lift aliases, Strong lift aliases) so the DB matches "
+        "the fixtures shipped in the image. Safe to run on every deploy."
     )
 
     def handle(self, *args, **options):
