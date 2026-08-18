@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 2026.8.11 — 2026-08-17
+
+### Added
+- Desktop sidebar can now collapse to an icon-only rail, with the choice remembered across visits
+
+### Changed
+- The mobile navigation menu is now a single unified dropdown (profile, nav links, settings, logout) instead of a separate drawer and popover
+
 ## 2026.8.10 — 2026-08-17
 
 ### Added
