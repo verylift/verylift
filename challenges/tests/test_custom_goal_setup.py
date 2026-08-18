@@ -613,6 +613,7 @@ class TestGoalSetupComputeLogView:
         entry = {
             "lift_name": LIFT,
             "target_rep": 1,
+            "method": "extrapolation",
             "anchors": [
                 {
                     "reps": 3,
@@ -639,6 +640,7 @@ class TestGoalSetupComputeLogView:
                 "challenge_id": challenge.pk,
                 "lift_name": LIFT,
                 "target_rep": 1,
+                "method": "extrapolation",
                 "anchors": entry["anchors"],
                 "formula_spread_kg": 5.73,
                 "anchor_spread_kg": 7.08,
@@ -647,6 +649,35 @@ class TestGoalSetupComputeLogView:
                 "rounded_kg": 105.0,
             },
         )
+
+    def test_interpolation_entry_has_null_spreads(
+        self, authed_client, challenge, participant
+    ):
+        entry = {
+            "lift_name": LIFT,
+            "target_rep": 5,
+            "method": "interpolation",
+            "anchors": [
+                {"reps": 3, "weight_kg": 100.0},
+                {"reps": 8, "weight_kg": 80.0},
+            ],
+            "formula_spread_kg": None,
+            "anchor_spread_kg": None,
+            "blended_kg": 92.0,
+            "rounding_increment_kg": 2.5,
+            "rounded_kg": 92.5,
+        }
+        with patch("challenges.views.logger") as mock_logger:
+            response = authed_client.post(
+                self._url(challenge),
+                data=json.dumps([entry]),
+                content_type="application/json",
+            )
+        assert response.status_code == 204
+        _args, kwargs = mock_logger.info.call_args
+        assert kwargs["extra"]["method"] == "interpolation"
+        assert kwargs["extra"]["formula_spread_kg"] is None
+        assert kwargs["extra"]["anchor_spread_kg"] is None
 
     def test_multiple_entries_log_once_each(
         self, authed_client, challenge, participant

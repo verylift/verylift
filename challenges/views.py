@@ -1043,6 +1043,7 @@ def goal_setup_compute_log_view(request, pk):
                 "challenge_id": pk,
                 "lift_name": entry.get("lift_name"),
                 "target_rep": entry.get("target_rep"),
+                "method": entry.get("method"),
                 "anchors": entry.get("anchors"),
                 "formula_spread_kg": entry.get("formula_spread_kg"),
                 "anchor_spread_kg": entry.get("anchor_spread_kg"),
