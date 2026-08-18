@@ -486,7 +486,7 @@ msgstr ""
 #: templates/challenges/_summary_card.html:76
 #: templates/challenges/create.html:42 templates/challenges/create.html:76
 #: templates/challenges/create.html:136
-#: templates/challenges/custom_goal_setup.html:195
+#: templates/challenges/custom_goal_setup.html:197
 #: templates/challenges/goal_setup_inputs.html:147
 #: templates/challenges/key_required.html:38
 msgid "Cancel"
@@ -1368,7 +1368,7 @@ msgid "No points yet"
 msgstr "Sin puntos todavía"
 
 #: templates/challenges/_participant_chart.html:57
-#: templates/challenges/custom_goal_setup.html:133
+#: templates/challenges/custom_goal_setup.html:135
 #: templates/challenges/detail.html:166 templates/challenges/detail.html:326
 msgid "Lift"
 msgstr "Ejercicio"
@@ -1545,7 +1545,7 @@ msgid "End Date"
 msgstr "Fecha de Finalización"
 
 #: templates/challenges/create.html:72 templates/challenges/create.html:132
-#: templates/challenges/custom_goal_setup.html:186
+#: templates/challenges/custom_goal_setup.html:188
 #: templates/challenges/goal_setup_inputs.html:141
 #: templates/policies/policy_list.html:10
 msgid "Back"
@@ -1675,27 +1675,28 @@ msgstr "Calcular"
 msgid "Rounding precision"
 msgstr "Precisión de redondeo"
 
-#: templates/challenges/custom_goal_setup.html:124
+#: templates/challenges/custom_goal_setup.html:125
 msgid ""
-"Fills in blank cells for rows that have at least one goal already entered."
+"Clicking compute fills in blank cells for rows that have at least one goal "
+"already entered."
 msgstr ""
-"Rellena las celdas vacías de las filas que ya tienen al menos un objetivo "
-"ingresado."
+"Al hacer clic en Calcular se rellenan las celdas vacías de las filas que ya "
+"tienen al menos un objetivo ingresado."
 
-#: templates/challenges/custom_goal_setup.html:149
-#: templates/challenges/custom_goal_setup.html:150
+#: templates/challenges/custom_goal_setup.html:151
+#: templates/challenges/custom_goal_setup.html:152
 msgid "Clear this row"
 msgstr "Borrar esta fila"
 
-#: templates/challenges/custom_goal_setup.html:178
+#: templates/challenges/custom_goal_setup.html:180
 msgid "This challenge has no lifts configured."
 msgstr "Este reto no tiene ejercicios configurados."
 
-#: templates/challenges/custom_goal_setup.html:191
+#: templates/challenges/custom_goal_setup.html:193
 msgid "Confirm Goal"
 msgstr "Confirmar Objetivo"
 
-#: templates/challenges/custom_goal_setup.html:194
+#: templates/challenges/custom_goal_setup.html:196
 #: templates/challenges/goal_setup_inputs.html:146
 msgid "Cancel and discard everything entered so far?"
 msgstr "¿Cancelar y descartar todo lo introducido hasta ahora?"
