@@ -1,8 +1,15 @@
 {% comment %}
 Avatar circle. Usage: {% include "components/_avatar.html" with avatar_user=user size_classes="w-20 h-20 text-3xl" %}
 Renders the user's uploaded photo when set, falling back to an initials circle.
+
+Pass hide_photo=True to force the initials circle even when a photo is set --
+for contexts where the viewer may be anonymous (e.g. the public invite-link
+preview page): uploaded photos are served from /media/, which core.views.
+protected_media_view gates behind request.user.is_authenticated with no
+per-resource exception, so an anonymous viewer would otherwise get a broken
+image rather than the photo.
 {% endcomment %}
-{% if avatar_user.avatar %}
+{% if avatar_user.avatar and not hide_photo %}
 <img src="{{ avatar_user.avatar.url }}" alt="{{ avatar_user.display_name|default:avatar_user.username }}"
   class="inline-block {{ size_classes }} rounded-full object-cover shrink-0">
 {% else %}
