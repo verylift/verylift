@@ -35,6 +35,11 @@ urlpatterns = [
         name="goal-setup",
     ),
     path(
+        "challenges/<uuid:pk>/goal-setup/compute-log/",
+        views.goal_setup_compute_log_view,
+        name="goal-setup-compute-log",
+    ),
+    path(
         "challenges/<uuid:pk>/bail/",
         views.bail_view,
         name="bail",

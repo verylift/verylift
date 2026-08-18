@@ -1,5 +1,6 @@
 """Views for the challenges app."""
 
+import json
 import logging
 from datetime import UTC, date, datetime
 from decimal import Decimal
@@ -977,6 +978,80 @@ def goal_setup_view(request, pk):
     return _goal_setup_chart_step(
         request, challenge, participant, data, step_context=step_context
     )
+
+
+_COMPUTE_LOG_MAX_ENTRIES = 200
+
+
+@login_required
+@require_POST
+def goal_setup_compute_log_view(request, pk):
+    """Fire-and-forget sink for the manual-grid Compute button's own stats.
+
+    The multi-formula, multi-anchor blend it runs (TASK-306 follow-up) is
+    entirely client-side JS -- this endpoint exists purely so that math has
+    somewhere to land as structured, SigNoz-queryable log lines, so a future
+    "my numbers looked wrong" report has raw anchors and per-formula results
+    to reconstruct from, not just a bug report with no data behind it. It
+    does not read or write anything else -- no DB row, no response body
+    beyond the status code -- so a malformed or truncated payload is a
+    logging gap, not a broken request; failures here must never surface to
+    the user or block their goal-setup flow.
+
+    Only requires participation (not the fuller goal_setup_view guard
+    ladder -- no terminal-challenge/has_goal_configured checks) since this
+    never mutates challenge state; it only observes math a participant just
+    ran on their own screen.
+    """
+    challenge = get_object_or_404(Challenge, pk=pk)
+    participant_exists = ChallengeParticipant.objects.filter(
+        challenge=challenge, user=request.user
+    ).exists()
+    if not participant_exists:
+        logger.warning(
+            "User %s attempted to log Compute stats for challenge %s without "
+            "participating",
+            request.user.id,
+            pk,
+        )
+        raise PermissionDenied
+
+    try:
+        entries = json.loads(request.body)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        logger.warning(
+            "Discarding unparsable Compute-log payload for challenge %s from user %s",
+            pk,
+            request.user.id,
+        )
+        return HttpResponse(status=204)
+
+    if not isinstance(entries, list):
+        logger.warning(
+            "Discarding non-list Compute-log payload for challenge %s from user %s",
+            pk,
+            request.user.id,
+        )
+        return HttpResponse(status=204)
+
+    for entry in entries[:_COMPUTE_LOG_MAX_ENTRIES]:
+        if not isinstance(entry, dict):
+            continue
+        logger.info(
+            "Goal-setup compute run",
+            extra={
+                "challenge_id": pk,
+                "lift_name": entry.get("lift_name"),
+                "target_rep": entry.get("target_rep"),
+                "anchors": entry.get("anchors"),
+                "formula_spread_kg": entry.get("formula_spread_kg"),
+                "anchor_spread_kg": entry.get("anchor_spread_kg"),
+                "blended_kg": entry.get("blended_kg"),
+                "rounding_increment_kg": entry.get("rounding_increment_kg"),
+                "rounded_kg": entry.get("rounded_kg"),
+            },
+        )
+    return HttpResponse(status=204)
 
 
 def _goal_setup_method_step(request, data, *, on_valid, step_context):

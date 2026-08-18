@@ -125,8 +125,9 @@
               {% blocktrans %}
               Clicking compute fills in blank cells for rows that have at
               least one goal already entered, rounded to the chosen
-              precision. Suggestions use the Epley formula to estimate
-              between and beyond your entered weights.
+              precision. Suggestions blend the Epley, Brzycki, Lander,
+              Lombardi, and Marzagao formulas, and assume each entered
+              weight reflects a true near-maximal effort.
               {% endblocktrans %}
             </p>
           </div>
@@ -146,7 +147,7 @@
             <tbody>
               {% for lift in lifts %}
               <tr class="text-content-body {% if not lift.needs_decision %}border-b border-line-subtle{% endif %}"
-                  {% if show_calculator %}data-lift-row{% endif %}>
+                  {% if show_calculator %}data-lift-row data-lift-name="{{ lift.name }}"{% endif %}>
                 <td class="py-2 pr-4 font-medium text-content-strong align-top {% if lift.needs_decision %}border-l-4 border-warning pl-2{% endif %}">
                   <div class="flex items-center justify-between gap-1.5 w-full">
                     <span>{{ lift.name }}</span>
@@ -229,29 +230,116 @@
     });
   })();
 
-  // Global "Compute" for the manual-entry grid (TASK-306): fills every
-  // currently blank cell in every lift row from that row's own currently
-  // non-blank ("pinned") cells -- linear interpolation between two anchors,
-  // Epley extrapolation beyond the outermost anchor (a single anchor fills
-  // both directions as the degenerate case). Explicit button press only --
-  // no recompute on blur/keystroke -- and a pure function of what's in the
-  // cells right now, so clicking Compute again only touches cells that are
-  // blank at that moment. Mirrors scoring/domain/calculator.py's
-  // estimated_one_rm/threshold_for_reps (Epley); duplicated in JS rather than
-  // round-tripping to the server since this is deliberately a client-side
-  // convenience with no schema change.
+  // Global "Compute" for the manual-entry grid (TASK-306, later extended):
+  // fills every currently blank cell in every lift row from that row's own
+  // currently non-blank ("pinned") cells. Two distinct code paths:
+  //
+  //  - A target rep BETWEEN two real pinned anchors is plain linear
+  //    interpolation in weight-space -- both endpoints are real numbers the
+  //    user typed, so no formula/model is needed or used here at all.
+  //  - A target rep BEYOND every anchor on one side is a distance-weighted
+  //    blend across an ensemble of five 1RM formulas (Epley, Brzycki,
+  //    Lander, Lombardi, Marzagao), using EVERY pinned anchor on that side
+  //    rather than only the nearest one -- discarding the other anchors
+  //    would throw away real data the user already entered. Closer anchors
+  //    are weighted more heavily (1 / rep-distance) since extrapolation
+  //    error compounds with distance from the anchor.
+  //
+  // Explicit button press only -- no recompute on blur/keystroke -- and a
+  // pure function of what's in the cells right now, so clicking Compute
+  // again only touches cells that are blank at that moment. Rounding to the
+  // chosen precision is always the LAST step; every intermediate value
+  // (per-formula projection, per-anchor blend, distance-weighted average)
+  // stays at full float precision until then.
+  //
+  // Deliberately client-side (no schema change for the math itself), but
+  // each extrapolated cell's inputs/outputs are sent to a small logging
+  // endpoint afterward (goal-setup-compute-log) purely so a future "my
+  // numbers looked wrong" report has real data to reconstruct from.
   (function () {
     var computeButton = document.querySelector("[data-compute-button]");
     if (!computeButton) return;
     var roundingSelect = document.querySelector("[data-compute-rounding]");
     var COMPUTED_CLASSES = ["text-content-muted", "bg-surface-sunken"];
+    var COMPUTE_LOG_URL = "{% url 'challenges:goal-setup-compute-log' challenge.pk %}";
+    var FORMULA_NAMES = ["epley", "brzycki", "lander", "lombardi", "marzagao"];
 
-    function estimatedOneRm(weight, reps) {
-      return reps === 1 ? weight : weight * (1 + reps / 30);
-    }
+    // Each formula converts a real (weight, reps) anchor to an estimated
+    // 1RM, and projects an estimated 1RM back to a weight at some target
+    // rep count. Every formula treats reps === 1 as the trivial identity
+    // (1RM by definition IS the weight for 1 rep) rather than running its
+    // own raw algebra there -- Epley (1 + 1/30) and Lander (101.3 -
+    // 2.67123) both drift a percent or two off 1.0 at r=1 otherwise, which
+    // would leak a formula-specific quirk into the ensemble at exactly the
+    // rep count that should never disagree.
+    var FORMULAS = {
+      epley: {
+        toOneRm: function (weight, reps) {
+          return reps === 1 ? weight : weight * (1 + reps / 30);
+        },
+        fromOneRm: function (oneRm, targetReps) {
+          return targetReps === 1 ? oneRm : oneRm / (1 + targetReps / 30);
+        }
+      },
+      brzycki: {
+        toOneRm: function (weight, reps) {
+          return reps === 1 ? weight : (weight * 36) / (37 - reps);
+        },
+        fromOneRm: function (oneRm, targetReps) {
+          return targetReps === 1 ? oneRm : (oneRm * (37 - targetReps)) / 36;
+        }
+      },
+      lander: {
+        toOneRm: function (weight, reps) {
+          return reps === 1 ? weight : (100 * weight) / (101.3 - 2.67123 * reps);
+        },
+        fromOneRm: function (oneRm, targetReps) {
+          return targetReps === 1
+            ? oneRm
+            : (oneRm * (101.3 - 2.67123 * targetReps)) / 100;
+        }
+      },
+      lombardi: {
+        toOneRm: function (weight, reps) {
+          return reps === 1 ? weight : weight * Math.pow(reps, 0.1);
+        },
+        fromOneRm: function (oneRm, targetReps) {
+          return targetReps === 1 ? oneRm : oneRm / Math.pow(targetReps, 0.1);
+        }
+      },
+      // Weight-dependent conversion factor (Marzagao, T. (2026), "A
+      // Weight-Dependent 1RM Prediction Equation Optimized on 303,494
+      // Near-Failure Sets Across 388 Exercises," arXiv:2603.17495, CC BY
+      // 4.0). Unlike the other four, its conversion factor depends on the
+      // load itself via ln(weight) -- there's no closed-form inverse for
+      // "given a 1RM, find the weight at N reps", since the unknown target
+      // weight would appear on both sides of its own ln(). We reuse the
+      // ANCHOR's own weight in that ln() term instead of solving
+      // self-consistently for the (unknown) target weight -- a deliberate
+      // approximation, reasonable since the anchor and target are both
+      // near-max loads for the same lift and rarely far apart in absolute
+      // weight, but real, and it's why this formula's fromOneRm (unlike the
+      // other four) takes the anchor weight as a third argument.
+      marzagao: {
+        conversionFactor: function (reps, anchorWeight) {
+          return (
+            1 +
+            Math.pow(reps - 1, 0.85) / (-2.55 + 4.58 * Math.log(anchorWeight))
+          );
+        },
+        toOneRm: function (weight, reps) {
+          return reps === 1 ? weight : weight * this.conversionFactor(reps, weight);
+        },
+        fromOneRm: function (oneRm, targetReps, anchorWeight) {
+          return targetReps === 1
+            ? oneRm
+            : oneRm / this.conversionFactor(targetReps, anchorWeight);
+        }
+      }
+    };
 
-    function thresholdForReps(oneRm, reps) {
-      return reps === 1 ? oneRm : oneRm / (1 + reps / 30);
+    function round2(value) {
+      return Math.round(value * 100) / 100;
     }
 
     function roundTo(value, increment) {
@@ -260,7 +348,7 @@
     }
 
     function formatWeight(value) {
-      return (Math.round(value * 100) / 100).toString();
+      return round2(value).toString();
     }
 
     function markComputed(input, value) {
@@ -288,50 +376,133 @@
       return anchors;
     }
 
-    function fillValue(cell, anchors) {
-      var lower = null;
-      var upper = null;
-      anchors.forEach(function (anchor) {
-        if (anchor.reps < cell.reps && (!lower || anchor.reps > lower.reps)) {
-          lower = anchor;
-        }
-        if (anchor.reps > cell.reps && (!upper || anchor.reps < upper.reps)) {
-          upper = anchor;
-        }
+    // Every formula's ensemble projection for a single anchor at a target
+    // rep count -- returns the blended (averaged) result, the per-formula
+    // breakdown (for logging), and the spread (max - min) across formulas.
+    function projectAnchor(anchor, targetReps) {
+      var perFormula = {};
+      FORMULA_NAMES.forEach(function (name) {
+        var formula = FORMULAS[name];
+        var oneRm = formula.toOneRm(anchor.weight, anchor.reps);
+        perFormula[name] = formula.fromOneRm(oneRm, targetReps, anchor.weight);
       });
-      if (lower && upper) {
-        var t = (cell.reps - lower.reps) / (upper.reps - lower.reps);
-        return lower.weight + t * (upper.weight - lower.weight);
-      }
-      if (lower) {
-        return thresholdForReps(estimatedOneRm(lower.weight, lower.reps), cell.reps);
-      }
-      if (upper) {
-        return thresholdForReps(estimatedOneRm(upper.weight, upper.reps), cell.reps);
-      }
-      return null;
+      var values = FORMULA_NAMES.map(function (name) { return perFormula[name]; });
+      var blended = values.reduce(function (sum, v) { return sum + v; }, 0) / values.length;
+      var spread = Math.max.apply(null, values) - Math.min.apply(null, values);
+      return { blended: blended, perFormula: perFormula, spread: spread };
     }
 
-    function computeRow(cells, increment) {
+    // Distance-weighted blend across every anchor on one side of the target
+    // rep count -- closer anchors (fewer reps of extrapolation distance)
+    // count more, since extrapolation error compounds with distance.
+    function blendAnchors(anchors, targetReps) {
+      var totalWeight = 0;
+      var weightedSum = 0;
+      var formulaSpread = 0;
+      var projections = [];
+      anchors.forEach(function (anchor) {
+        var projection = projectAnchor(anchor, targetReps);
+        var weight = 1 / Math.abs(anchor.reps - targetReps);
+        totalWeight += weight;
+        weightedSum += weight * projection.blended;
+        formulaSpread = Math.max(formulaSpread, projection.spread);
+        projections.push({
+          anchor: anchor,
+          blended: projection.blended,
+          perFormula: projection.perFormula
+        });
+      });
+      var blendedValues = projections.map(function (p) { return p.blended; });
+      var anchorSpread = Math.max.apply(null, blendedValues) - Math.min.apply(null, blendedValues);
+      return {
+        value: weightedSum / totalWeight,
+        formulaSpread: formulaSpread,
+        anchorSpread: anchorSpread,
+        projections: projections
+      };
+    }
+
+    // Returns {value, stats} where stats is null for direct interpolation
+    // (nothing to log -- no formula was involved) and the full ensemble
+    // breakdown for an extrapolated cell.
+    function fillValue(cell, anchors) {
+      var lowerAll = anchors.filter(function (a) { return a.reps < cell.reps; });
+      var upperAll = anchors.filter(function (a) { return a.reps > cell.reps; });
+      if (lowerAll.length && upperAll.length) {
+        var lower = lowerAll.reduce(function (a, b) { return b.reps > a.reps ? b : a; });
+        var upper = upperAll.reduce(function (a, b) { return b.reps < a.reps ? b : a; });
+        var t = (cell.reps - lower.reps) / (upper.reps - lower.reps);
+        return { value: lower.weight + t * (upper.weight - lower.weight), stats: null };
+      }
+      var side = lowerAll.length ? lowerAll : upperAll;
+      if (!side.length) return null;
+      var blend = blendAnchors(side, cell.reps);
+      return { value: blend.value, stats: blend };
+    }
+
+    function computeRow(cells, increment, liftName, logEntries) {
       var anchors = findAnchors(cells);
       if (!anchors.length) return;
       cells.forEach(function (cell) {
         if (cell.el.value.trim() !== "") return;
-        var value = fillValue(cell, anchors);
-        if (value === null) return;
-        markComputed(cell.el, roundTo(value, increment));
+        var result = fillValue(cell, anchors);
+        if (result === null) return;
+        var rounded = roundTo(result.value, increment);
+        markComputed(cell.el, rounded);
+        if (result.stats) {
+          logEntries.push({
+            lift_name: liftName,
+            target_rep: cell.reps,
+            anchors: result.stats.projections.map(function (p) {
+              var formulaResults = {};
+              FORMULA_NAMES.forEach(function (name) {
+                formulaResults[name] = round2(p.perFormula[name]);
+              });
+              return {
+                reps: p.anchor.reps,
+                weight_kg: round2(p.anchor.weight),
+                formula_results_kg: formulaResults
+              };
+            }),
+            formula_spread_kg: round2(result.stats.formulaSpread),
+            anchor_spread_kg: round2(result.stats.anchorSpread),
+            blended_kg: Math.round(result.value * 10000) / 10000,
+            rounding_increment_kg: increment,
+            rounded_kg: round2(rounded)
+          });
+        }
+      });
+    }
+
+    function sendComputeLog(logEntries) {
+      if (!logEntries.length) return;
+      var csrfInput = document.querySelector('[name="csrfmiddlewaretoken"]');
+      if (!csrfInput) return;
+      fetch(COMPUTE_LOG_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrfInput.value
+        },
+        body: JSON.stringify(logEntries),
+        keepalive: true
+      }).catch(function () {
+        // Fire-and-forget: a failed beacon must never surface to the user
+        // or block goal-setup, it's only a missed logging opportunity.
       });
     }
 
     computeButton.addEventListener("click", function () {
       var increment = roundingSelect ? parseFloat(roundingSelect.value) : 0;
+      var logEntries = [];
       document.querySelectorAll("[data-lift-row]").forEach(function (row) {
         var cells = Array.prototype.map.call(
           row.querySelectorAll("[data-rep]"),
           function (el) { return { reps: parseInt(el.dataset.rep, 10), el: el }; }
         );
-        computeRow(cells, increment);
+        computeRow(cells, increment, row.dataset.liftName || "", logEntries);
       });
+      sendComputeLog(logEntries);
     });
 
     // A direct edit on a cell (typed or computed) means the user is now
