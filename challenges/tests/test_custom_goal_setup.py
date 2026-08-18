@@ -578,3 +578,118 @@ class TestBodyweightAddedTargets:
         assert CustomGoalTarget.objects.get(goal=goal, rep_count=1).target_weight == (
             Decimal("-4.00")
         )
+
+
+class TestGoalSetupComputeLogView:
+    """The manual-grid Compute button's fire-and-forget stats sink.
+
+    Never mutates challenge state -- these tests only check the guard
+    ladder (auth/participation) and that a valid payload reaches the
+    logger with the expected structured fields, not any DB effect (there
+    isn't one).
+    """
+
+    def _url(self, challenge):
+        return reverse("challenges:goal-setup-compute-log", args=[challenge.pk])
+
+    def test_anonymous_request_redirects_to_login(self, challenge):
+        response = Client().post(
+            self._url(challenge), data="[]", content_type="application/json"
+        )
+        assert response.status_code == 302
+
+    def test_non_participant_is_forbidden(self, challenge):
+        other_user = UserFactory(unit_preference="kg")
+        client = Client()
+        client.force_login(other_user)
+        response = client.post(
+            self._url(challenge), data="[]", content_type="application/json"
+        )
+        assert response.status_code == 403
+
+    def test_valid_entry_is_logged_with_structured_fields(
+        self, authed_client, challenge, participant
+    ):
+        entry = {
+            "lift_name": LIFT,
+            "target_rep": 1,
+            "anchors": [
+                {
+                    "reps": 3,
+                    "weight_kg": 100.0,
+                    "formula_results_kg": {"epley": 110.0, "brzycki": 105.88},
+                }
+            ],
+            "formula_spread_kg": 5.73,
+            "anchor_spread_kg": 7.08,
+            "blended_kg": 106.5234,
+            "rounding_increment_kg": 2.5,
+            "rounded_kg": 105.0,
+        }
+        with patch("challenges.views.logger") as mock_logger:
+            response = authed_client.post(
+                self._url(challenge),
+                data=json.dumps([entry]),
+                content_type="application/json",
+            )
+        assert response.status_code == 204
+        mock_logger.info.assert_called_once_with(
+            "Goal-setup compute run",
+            extra={
+                "challenge_id": challenge.pk,
+                "lift_name": LIFT,
+                "target_rep": 1,
+                "anchors": entry["anchors"],
+                "formula_spread_kg": 5.73,
+                "anchor_spread_kg": 7.08,
+                "blended_kg": 106.5234,
+                "rounding_increment_kg": 2.5,
+                "rounded_kg": 105.0,
+            },
+        )
+
+    def test_multiple_entries_log_once_each(
+        self, authed_client, challenge, participant
+    ):
+        entries = [
+            {"lift_name": LIFT, "target_rep": 1},
+            {"lift_name": LIFT, "target_rep": 10},
+        ]
+        with patch("challenges.views.logger") as mock_logger:
+            response = authed_client.post(
+                self._url(challenge),
+                data=json.dumps(entries),
+                content_type="application/json",
+            )
+        assert response.status_code == 204
+        assert mock_logger.info.call_count == 2
+
+    def test_malformed_json_body_is_discarded_not_500(
+        self, authed_client, challenge, participant
+    ):
+        response = authed_client.post(
+            self._url(challenge),
+            data="not json",
+            content_type="application/json",
+        )
+        assert response.status_code == 204
+
+    def test_non_list_body_is_discarded_not_500(
+        self, authed_client, challenge, participant
+    ):
+        response = authed_client.post(
+            self._url(challenge),
+            data=json.dumps({"not": "a list"}),
+            content_type="application/json",
+        )
+        assert response.status_code == 204
+
+    def test_non_dict_entries_are_skipped(self, authed_client, challenge, participant):
+        with patch("challenges.views.logger") as mock_logger:
+            response = authed_client.post(
+                self._url(challenge),
+                data=json.dumps(["not a dict", 42, None]),
+                content_type="application/json",
+            )
+        assert response.status_code == 204
+        mock_logger.info.assert_not_called()

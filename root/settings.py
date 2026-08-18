@@ -516,6 +516,12 @@ structlog.configure(
 _structlog_shared_processors = [
     structlog.stdlib.add_logger_name,
     structlog.stdlib.add_log_level,
+    # Merges stdlib logging's `extra={...}` kwarg into the rendered event as
+    # real top-level fields instead of silently dropping it -- every call
+    # site up to now has only ever passed %s-style message args, so this is
+    # additive (no existing log line's shape changes), but it's what lets a
+    # call site opt into structured, SigNoz-filterable fields going forward.
+    structlog.stdlib.ExtraAdder(),
     structlog.processors.TimeStamper(fmt="iso"),
     structlog.processors.StackInfoRenderer(),
     structlog.processors.format_exc_info,
