@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-18 20:12+0000\n"
+"POT-Creation-Date: 2026-08-18 20:13+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -31,48 +31,48 @@ msgstr "La contraseña es obligatoria."
 msgid "That username is already taken."
 msgstr "Ese nombre de usuario ya está en uso."
 
-#: accounts/forms.py:123
+#: accounts/forms.py:143
 msgid "Image is too large (max 10 MB)."
 msgstr "La imagen es demasiado grande (máximo 10 MB)."
 
-#: accounts/forms.py:127
+#: accounts/forms.py:147
 msgid "Image dimensions are too large (max 25 megapixels)."
 msgstr ""
 "Las dimensiones de la imagen son demasiado grandes (máximo 25 megapíxeles)."
 
-#: accounts/forms.py:237
+#: accounts/forms.py:257
 msgid "Type \"delete my account\" exactly to confirm."
 msgstr "Escribe \"delete my account\" exactamente para confirmar."
 
-#: accounts/models.py:52 challenges/models.py:14
+#: accounts/models.py:59 challenges/models.py:14
 #: templates/accounts/_unit_preference_section.html:19
 #: templates/registration/onboarding_units.html:24
 msgid "Kilograms (kg)"
 msgstr "Kilogramos (kg)"
 
-#: accounts/models.py:53 challenges/models.py:13
+#: accounts/models.py:60 challenges/models.py:13
 #: templates/accounts/_unit_preference_section.html:22
 #: templates/registration/onboarding_units.html:27
 msgid "Pounds (lb)"
 msgstr "Libras (lb)"
 
-#: accounts/models.py:65
+#: accounts/models.py:72
 msgid "Unknown"
 msgstr "Desconocido"
 
-#: accounts/models.py:66
+#: accounts/models.py:73
 msgid "Challenge invite link"
 msgstr "Enlace de invitación a un reto"
 
-#: accounts/models.py:67
+#: accounts/models.py:74
 msgid "Direct signup"
 msgstr "Registro directo"
 
-#: accounts/models.py:68
+#: accounts/models.py:75
 msgid "Single sign-on"
 msgstr "Inicio de sesión único"
 
-#: accounts/models.py:69
+#: accounts/models.py:76
 msgid "Created by an operator"
 msgstr "Creado por un operador"
 
@@ -80,44 +80,52 @@ msgstr "Creado por un operador"
 msgid "Too many attempts. Try again in a minute."
 msgstr "Demasiados intentos. Inténtalo de nuevo en un minuto."
 
-#: accounts/views.py:221
+#: accounts/views.py:230
 msgid "You must accept the Terms of Service and Privacy Policy."
 msgstr "Debes aceptar los Términos de Servicio y la Política de Privacidad."
 
-#: accounts/views.py:308 challenges/views.py:133
+#: accounts/views.py:317 challenges/views.py:133
 msgid "Could not validate this Liftosaur API key."
 msgstr "No se pudo validar esta clave de API de Liftosaur."
 
-#: accounts/views.py:540
+#: accounts/views.py:549
 msgid "Your password has been updated. Sign in with your new password."
 msgstr ""
 "Tu contraseña se ha actualizado. Inicia sesión con tu contraseña nueva."
 
-#: accounts/views.py:588
+#: accounts/views.py:599
 msgid "Profile photo updated."
 msgstr "Foto de perfil actualizada."
 
-#: accounts/views.py:597
+#: accounts/views.py:608
 msgid "Display name updated."
 msgstr "Nombre para mostrar actualizado."
 
-#: accounts/views.py:607
+#: accounts/views.py:618
 msgid "Email address saved."
 msgstr "Correo electrónico guardado."
 
-#: accounts/views.py:618
+#: accounts/views.py:629
 msgid "Liftosaur API key saved."
 msgstr "Clave de API de Liftosaur guardada."
 
-#: accounts/views.py:623
+#: accounts/views.py:634
 msgid "Liftosaur API key removed."
 msgstr "Clave de API de Liftosaur eliminada."
 
-#: accounts/views.py:649
+#: accounts/views.py:641
+msgid "Wger connected."
+msgstr "Wger conectado."
+
+#: accounts/views.py:647
+msgid "Wger disconnected."
+msgstr "Wger desconectado."
+
+#: accounts/views.py:673
 msgid "Couldn't import right now. Please try again in a moment."
 msgstr "No se pudo importar ahora mismo. Inténtalo de nuevo en un momento."
 
-#: accounts/views.py:656
+#: accounts/views.py:680
 #, python-format
 msgid ""
 "Imported %(count)s set(s) from %(source)s. %(scored)s challenge(s) rescored."
@@ -125,46 +133,58 @@ msgstr ""
 "Se importaron %(count)s serie(s) de %(source)s. Se recalcularon %(scored)s "
 "reto(s)."
 
-#: accounts/views.py:675
+#: accounts/views.py:699
 msgid "Unit preference saved."
 msgstr "Preferencia de unidad guardada."
 
-#: accounts/views.py:681
+#: accounts/views.py:705
 msgid "Timezone saved."
 msgstr "Zona horaria guardada."
 
-#: accounts/views.py:687
+#: accounts/views.py:711
 msgid "Language saved."
 msgstr "Idioma guardado."
 
-#: accounts/views.py:753
+#: accounts/views.py:781
 msgid "Your account has been deleted."
 msgstr "Tu cuenta ha sido eliminada."
 
-#: accounts/views.py:810
+#: accounts/views.py:838
 msgid "Connect a Liftosaur API key first."
 msgstr "Conecta primero una clave de API de Liftosaur."
 
-#: accounts/views.py:834
+#: accounts/views.py:862 accounts/views.py:909
 msgid "Couldn't sync right now. Please try again in a moment."
 msgstr "No se pudo sincronizar ahora mismo. Inténtalo de nuevo en un momento."
 
-#: accounts/views.py:840
+#: accounts/views.py:868 accounts/views.py:915
 #, python-format
 msgid "Sync triggered for %(count)s challenge(s)."
 msgstr "Sincronización iniciada para %(count)s reto(s)."
 
-#: accounts/views.py:876
+#: accounts/views.py:889
+msgid "Connect your Wger account first."
+msgstr "Primero conecta tu cuenta de Wger."
+
+#: accounts/views.py:951
 msgid "No API key provided."
 msgstr "No se proporcionó ninguna clave de API."
 
-#: accounts/views.py:884
+#: accounts/views.py:959
 msgid "Invalid API key or connection error."
 msgstr "Clave de API no válida o error de conexión."
 
-#: accounts/views.py:888
+#: accounts/views.py:963 accounts/views.py:1001
 msgid "Connection successful."
 msgstr "Conexión exitosa."
+
+#: accounts/views.py:989
+msgid "No Wger credentials provided."
+msgstr "No se proporcionaron credenciales de Wger."
+
+#: accounts/views.py:997
+msgid "Invalid credentials or connection error."
+msgstr "Credenciales no válidas o error de conexión."
 
 #: challenges/custom_goals.py:57
 #, python-format
@@ -180,8 +200,7 @@ msgstr "El objetivo de %(rep)sRM de \"%(lift_name)s\" debe ser un número."
 #: challenges/custom_goals.py:78
 #, python-format
 msgid "Unknown lift \"%(lift_name)s\" — not configured for this challenge."
-msgstr ""
-"Ejercicio desconocido \"%(lift_name)s\" — no configurado para este reto."
+msgstr "Ejercicio desconocido \"%(lift_name)s\" — no configurado para este reto."
 
 #: challenges/custom_goals.py:139
 msgid "Could not parse JSON. Please paste a valid JSON object."
@@ -202,11 +221,11 @@ msgstr "Unidad desconocida \"%(unit)s\"; usa \"kg\" o \"lb\"."
 
 #: challenges/custom_goals.py:168
 msgid ""
-"JSON payload must contain a \"targets\" object mapping lift names to rep-max "
-"weights."
+"JSON payload must contain a \"targets\" object mapping lift names to rep-max"
+" weights."
 msgstr ""
-"El JSON debe contener un objeto \"targets\" que asocie nombres de ejercicios "
-"con pesos máximos por repetición."
+"El JSON debe contener un objeto \"targets\" que asocie nombres de ejercicios"
+" con pesos máximos por repetición."
 
 #: challenges/custom_goals.py:185
 #, python-format
@@ -222,8 +241,8 @@ msgid ""
 "%(lower_rep)sRM target — lifting more reps can never require more weight "
 "than fewer reps."
 msgstr ""
-"El objetivo de %(higher_rep)sRM de \"%(lift_name)s\" no puede ser más pesado "
-"que su objetivo de %(lower_rep)sRM — levantar más repeticiones nunca puede "
+"El objetivo de %(higher_rep)sRM de \"%(lift_name)s\" no puede ser más pesado"
+" que su objetivo de %(lower_rep)sRM — levantar más repeticiones nunca puede "
 "requerir más peso que menos repeticiones."
 
 #: challenges/custom_goals.py:306
@@ -327,11 +346,13 @@ msgstr "Completado"
 msgid "Cancelled"
 msgstr "Cancelado"
 
-#: challenges/models.py:27 templates/challenges/_history_window_section.html:51
+#: challenges/models.py:27
+#: templates/challenges/_history_window_section.html:51
 msgid "From join date"
 msgstr "Desde la fecha de inscripción"
 
-#: challenges/models.py:28 templates/challenges/_history_window_section.html:49
+#: challenges/models.py:28
+#: templates/challenges/_history_window_section.html:49
 msgid "From challenge start"
 msgstr "Desde el inicio del reto"
 
@@ -431,8 +452,8 @@ msgid ""
 "Prefilled from your recent Liftosaur history, uplifted {percent}%. Review "
 "every row before confirming — this chart is locked once you save it."
 msgstr ""
-"Prellenado a partir de tu historial reciente en Liftosaur, con un incremento "
-"del {percent}%. Revisa cada fila antes de confirmar — esta tabla queda "
+"Prellenado a partir de tu historial reciente en Liftosaur, con un incremento"
+" del {percent}%. Revisa cada fila antes de confirmar — esta tabla queda "
 "bloqueada en cuanto la guardes."
 
 #: challenges/views.py:1365
@@ -490,7 +511,8 @@ msgstr "abandonar"
 #: challenges/views.py:1669
 msgid ""
 "Leaving freezes your scoring — no further points will be earned for you in "
-"this challenge. Your past entries stay visible. This action cannot be undone."
+"this challenge. Your past entries stay visible. This action cannot be "
+"undone."
 msgstr ""
 "Abandonar congela tu puntuación — no ganarás más puntos en este reto. Tus "
 "entradas anteriores seguirán visibles. Esta acción no se puede deshacer."
@@ -572,11 +594,12 @@ msgstr " anticipadamente"
 #: challenges/views.py:1968
 msgid ""
 "Closing runs a final sync for every participant, locks the leaderboard, and "
-"notifies everyone that the challenge has ended. This action cannot be undone."
+"notifies everyone that the challenge has ended. This action cannot be "
+"undone."
 msgstr ""
 "Cerrar ejecuta una sincronización final para cada participante, bloquea la "
-"clasificación y notifica a todos que el reto ha terminado. Esta acción no se "
-"puede deshacer."
+"clasificación y notifica a todos que el reto ha terminado. Esta acción no se"
+" puede deshacer."
 
 #: challenges/views.py:2002
 msgid "This challenge can no longer be renamed."
@@ -648,8 +671,8 @@ msgid ""
 "undone on your own."
 msgstr ""
 "%(name)s obtendrá el control total de este reto — cerrar, cancelar, invitar "
-"y eliminar participantes. Tú seguirás siendo un participante normal. Solo el "
-"nuevo propietario puede transferirte la propiedad de vuelta, por lo que no "
+"y eliminar participantes. Tú seguirás siendo un participante normal. Solo el"
+" nuevo propietario puede transferirte la propiedad de vuelta, por lo que no "
 "puedes deshacer esto por tu cuenta."
 
 #: challenges/views.py:2386
@@ -701,8 +724,8 @@ msgstr ""
 #: core/models.py:22
 msgid ""
 "Join link for the current year's Very Open. Blank hides the onboarding "
-"invite step entirely -- clear this once the invite window closes rather than "
-"leaving a dead link live."
+"invite step entirely -- clear this once the invite window closes rather than"
+" leaving a dead link live."
 msgstr ""
 "Enlace de invitación al Very Open de este año. Si se deja en blanco, se "
 "oculta por completo el paso de invitación durante la incorporación -- "
@@ -711,8 +734,8 @@ msgstr ""
 
 #: core/models.py:32
 msgid ""
-"Displayed name for the current year's Very Open, e.g. \"The Very Open '26\". "
-"Only shown when the invite URL above is also set."
+"Displayed name for the current year's Very Open, e.g. \"The Very Open '26\"."
+" Only shown when the invite URL above is also set."
 msgstr ""
 "Nombre mostrado del Very Open de este año, p. ej. \"The Very Open '26\". "
 "Solo se muestra cuando también se ha configurado el enlace de invitación "
@@ -754,22 +777,26 @@ msgstr "Mantener tus datos actualizados"
 msgid "Units & added-weight lifts"
 msgstr "Unidades y ejercicios con peso añadido"
 
-#: liftosaur/models.py:24
+#: liftosaur/models.py:25
 #: templates/registration/onboarding_tracking_method.html:25
 msgid "Liftosaur"
 msgstr "Liftosaur"
 
-#: liftosaur/models.py:25
+#: liftosaur/models.py:26
 msgid "Manual"
 msgstr "Manual"
 
-#: liftosaur/models.py:26
+#: liftosaur/models.py:27
 msgid "Hevy"
 msgstr "Hevy"
 
-#: liftosaur/models.py:27
+#: liftosaur/models.py:28
 msgid "Strong"
 msgstr "Strong"
+
+#: liftosaur/models.py:29 templates/accounts/_wger_section.html:4
+msgid "Wger"
+msgstr "Wger"
 
 #: notifications/models.py:10
 msgid "Challenge Closed"
@@ -879,9 +906,11 @@ msgstr "Solicitud incorrecta"
 
 #: templates/400.html:8
 msgid ""
-"Something about that request didn't look right. Please go back and try again."
+"Something about that request didn't look right. Please go back and try "
+"again."
 msgstr ""
-"Algo en esa solicitud no parecía correcto. Vuelve atrás e inténtalo de nuevo."
+"Algo en esa solicitud no parecía correcto. Vuelve atrás e inténtalo de "
+"nuevo."
 
 #: templates/403.html:4
 msgid "Access Denied"
@@ -988,7 +1017,8 @@ msgid "Email address"
 msgstr "Correo electrónico"
 
 #: templates/accounts/_email_section.html:26
-msgid "Used only for password resets. Leave it blank to keep no email on file."
+msgid ""
+"Used only for password resets. Leave it blank to keep no email on file."
 msgstr ""
 "Se usa únicamente para restablecer la contraseña. Déjalo en blanco para no "
 "guardar ningún correo."
@@ -1030,15 +1060,19 @@ msgid "Saved API key"
 msgstr "Clave de API guardada"
 
 #: templates/accounts/_liftosaur_section.html:16
+#: templates/accounts/_wger_section.html:18
 msgid "Connected"
 msgstr "Conectado"
 
 #: templates/accounts/_liftosaur_section.html:22
+#: templates/accounts/_wger_section.html:24
 msgid "Testing…"
 msgstr "Probando…"
 
 #: templates/accounts/_liftosaur_section.html:23
 #: templates/accounts/_liftosaur_section.html:25
+#: templates/accounts/_wger_section.html:25
+#: templates/accounts/_wger_section.html:27
 msgid "Test Connection"
 msgstr "Probar Conexión"
 
@@ -1047,6 +1081,7 @@ msgid "Syncing with Liftosaur…"
 msgstr "Sincronizando con Liftosaur…"
 
 #: templates/accounts/_liftosaur_section.html:39
+#: templates/accounts/_wger_section.html:41
 msgid "Sync now"
 msgstr "Sincronizar ahora"
 
@@ -1063,6 +1098,7 @@ msgid "Remove Key"
 msgstr "Eliminar Clave"
 
 #: templates/accounts/_liftosaur_section.html:96
+#: templates/accounts/_wger_section.html:97
 msgid "Connection error. Please try again."
 msgstr "Error de conexión. Inténtalo de nuevo."
 
@@ -1083,6 +1119,7 @@ msgid "Save Key"
 msgstr "Guardar Clave"
 
 #: templates/accounts/_liftosaur_sync_status.html:4
+#: templates/accounts/_wger_sync_status.html:4
 #: templates/challenges/detail.html:58
 #, python-format
 msgid "Last synced %(when)s"
@@ -1113,8 +1150,8 @@ msgid ""
 "Quote this if you contact us about a problem — it lets us find your "
 "account's log entries without asking for anything else."
 msgstr ""
-"Menciona esto si nos contactas sobre un problema — nos permite encontrar las "
-"entradas de registro de tu cuenta sin pedirte nada más."
+"Menciona esto si nos contactas sobre un problema — nos permite encontrar las"
+" entradas de registro de tu cuenta sin pedirte nada más."
 
 #: templates/accounts/_support_id_section.html:20
 #: templates/challenges/_invite_link_section.html:34
@@ -1148,8 +1185,8 @@ msgid ""
 "Timestamps across the app are shown in this timezone. Automatic uses your "
 "browser's detected timezone:"
 msgstr ""
-"Las marcas de tiempo en toda la aplicación se muestran en esta zona horaria. "
-"Automático usa la zona horaria detectada por tu navegador:"
+"Las marcas de tiempo en toda la aplicación se muestran en esta zona horaria."
+" Automático usa la zona horaria detectada por tu navegador:"
 
 #: templates/accounts/_timezone_section.html:36
 msgid "Save Timezone"
@@ -1177,6 +1214,57 @@ msgstr ""
 #: templates/accounts/_unit_preference_section.html:31
 msgid "Save Unit"
 msgstr "Guardar Unidad"
+
+#: templates/accounts/_wger_section.html:6
+msgid "Connect your self-hosted Wger instance to import your exercise data."
+msgstr ""
+"Conecta tu instancia autoalojada de Wger para importar tus datos de "
+"ejercicio."
+
+#: templates/accounts/_wger_section.html:13
+#: templates/accounts/_wger_section.html:111
+msgid "Instance URL"
+msgstr "URL de la instancia"
+
+#: templates/accounts/_wger_section.html:15
+msgid "Saved API token"
+msgstr "Token de API guardado"
+
+#: templates/accounts/_wger_section.html:36
+msgid "Syncing with Wger…"
+msgstr "Sincronizando con Wger…"
+
+#: templates/accounts/_wger_section.html:51
+msgid "Disconnect Wger? This cannot be undone."
+msgstr "¿Desconectar Wger? Esta acción no se puede deshacer."
+
+#: templates/accounts/_wger_section.html:52
+msgid "Disconnecting…"
+msgstr "Desconectando…"
+
+#: templates/accounts/_wger_section.html:58
+msgid "Disconnect"
+msgstr "Desconectar"
+
+#: templates/accounts/_wger_section.html:117
+msgid "e.g. https://my-wger-instance.example.com"
+msgstr "p. ej. https://my-wger-instance.example.com"
+
+#: templates/accounts/_wger_section.html:121
+msgid "API Token"
+msgstr "Token de API"
+
+#: templates/accounts/_wger_section.html:127
+msgid "Enter your Wger API token"
+msgstr "Introduce tu token de API de Wger"
+
+#: templates/accounts/_wger_section.html:139
+msgid "Saving Wger connection…"
+msgstr "Guardando conexión con Wger…"
+
+#: templates/accounts/_wger_section.html:148
+msgid "Connect"
+msgstr "Conectar"
 
 #: templates/accounts/_workout_import_section.html:10
 msgid "Import workout CSV"
@@ -1209,7 +1297,8 @@ msgid "Last imported %(when)s"
 msgstr "Última importación %(when)s"
 
 #: templates/accounts/delete_account.html:4
-#: templates/accounts/delete_account.html:8 templates/accounts/settings.html:58
+#: templates/accounts/delete_account.html:8
+#: templates/accounts/settings.html:60
 msgid "Delete Account"
 msgstr "Eliminar cuenta"
 
@@ -1217,8 +1306,8 @@ msgstr "Eliminar cuenta"
 msgid ""
 "This permanently signs you out and anonymizes your account: your username, "
 "display name, and email are replaced with a randomly generated placeholder, "
-"your profile photo is deleted, and any connected Liftosaur API key or single "
-"sign-on link is removed."
+"your profile photo is deleted, and any connected Liftosaur API key or single"
+" sign-on link is removed."
 msgstr ""
 "Esto cierra tu sesión de forma permanente y anonimiza tu cuenta: tu nombre "
 "de usuario, nombre para mostrar y correo electrónico se reemplazan por un "
@@ -1229,8 +1318,8 @@ msgstr ""
 #: templates/accounts/delete_account.html:15
 msgid ""
 "Challenges you have participated in keep their past scores and entries, but "
-"you will show up as \"Former Participant\" instead of your name. This action "
-"cannot be undone."
+"you will show up as \"Former Participant\" instead of your name. This action"
+" cannot be undone."
 msgstr ""
 "Los retos en los que has participado conservan sus puntuaciones y entradas "
 "pasadas, pero aparecerás como \"Antiguo Participante\" en lugar de tu "
@@ -1269,12 +1358,13 @@ msgstr "Claro"
 msgid "Dark"
 msgstr "Oscuro"
 
-#: templates/accounts/settings.html:51
+#: templates/accounts/settings.html:53
 msgid "Danger Zone"
 msgstr "Zona de peligro"
 
-#: templates/accounts/settings.html:53
-msgid "Permanently anonymize your account and sign out. This cannot be undone."
+#: templates/accounts/settings.html:55
+msgid ""
+"Permanently anonymize your account and sign out. This cannot be undone."
 msgstr ""
 "Anonimiza tu cuenta permanentemente y cierra tu sesión. Esto no se puede "
 "deshacer."
@@ -1297,7 +1387,8 @@ msgstr "Continuar"
 #: templates/challenges/invite_accept.html:7 templates/challenges/share.html:7
 #: templates/landing.html:7 templates/landing.html:18
 msgid "Friendly lifting challenges where everyone chases their own goals."
-msgstr "Retos amistosos de fuerza donde cada quien persigue sus propias metas."
+msgstr ""
+"Retos amistosos de fuerza donde cada quien persigue sus propias metas."
 
 #: templates/challenges/_fitnessvolt_attribution.html:13
 msgid "Standards data powered by"
@@ -1414,8 +1505,8 @@ msgstr "Caduca en"
 #, python-format
 msgid ""
 "Add your Liftosaur API key to suggest targets from your recent lifts, or "
-"import a workout CSV from <a href=\"%(url)s\" class=\"text-accent hover:"
-"underline\">Settings</a> instead."
+"import a workout CSV from <a href=\"%(url)s\" class=\"text-accent "
+"hover:underline\">Settings</a> instead."
 msgstr ""
 "Añade tu clave de API de Liftosaur para sugerir objetivos a partir de tus "
 "levantamientos recientes, o importa un CSV de entrenamientos desde <a "
@@ -1546,8 +1637,8 @@ msgid ""
 "To reach your first point: add <span class=\"font-mono\">%(gap)s</span> "
 "%(unit)s"
 msgstr ""
-"Para alcanzar tu primer punto: añade <span class=\"font-mono\">%(gap)s</"
-"span> %(unit)s"
+"Para alcanzar tu primer punto: añade <span class=\"font-"
+"mono\">%(gap)s</span> %(unit)s"
 
 #: templates/challenges/_summary_card.html:59
 #, python-format
@@ -1624,8 +1715,8 @@ msgid ""
 "Scoring can apply retroactively from the start date — a participant's "
 "existing Liftosaur history on or after that date counts once they join."
 msgstr ""
-"La puntuación puede aplicarse retroactivamente desde la fecha de inicio — el "
-"historial existente de Liftosaur de un participante en o después de esa "
+"La puntuación puede aplicarse retroactivamente desde la fecha de inicio — el"
+" historial existente de Liftosaur de un participante en o después de esa "
 "fecha cuenta una vez que se une."
 
 #: templates/challenges/create.html:55
@@ -1652,9 +1743,9 @@ msgid ""
 "This lift list applies to every participant for the whole challenge — each "
 "person's goal chart will cover exactly these lifts."
 msgstr ""
-"Esta lista de ejercicios se aplica a todos los participantes durante todo el "
-"desafío — el gráfico de objetivos de cada persona cubrirá exactamente estos "
-"ejercicios."
+"Esta lista de ejercicios se aplica a todos los participantes durante todo el"
+" desafío — el gráfico de objetivos de cada persona cubrirá exactamente estos"
+" ejercicios."
 
 #: templates/challenges/create.html:91
 msgid "Search lifts…"
@@ -1711,7 +1802,8 @@ msgstr ""
 
 #: templates/challenges/custom_goal_setup.html:40
 msgid ""
-"This chart is locked once you confirm it — there's no editing after you join."
+"This chart is locked once you confirm it — there's no editing after you "
+"join."
 msgstr ""
 "Esta tabla queda bloqueada en cuanto la confirmes — no se puede editar "
 "después de unirte."
@@ -1727,17 +1819,14 @@ msgstr "Puntuando tu historial de entrenamientos…"
 #: templates/challenges/custom_goal_setup.html:68
 msgid ""
 "\n"
-"          Don't know JSON? Copy the prompt below into any AI chat — it'll "
-"ask\n"
+"          Don't know JSON? Copy the prompt below into any AI chat — it'll ask\n"
 "          for your weights and hand you back JSON to paste here. Already\n"
 "          comfortable with JSON? Paste it in the shape shown below.\n"
 "          "
 msgstr ""
 "\n"
-"          ¿No sabes qué es JSON? Copia el mensaje de abajo en cualquier chat "
-"de IA:\n"
-"          te pedirá tus pesos y te devolverá el JSON para pegar aquí. ¿Ya "
-"sabes\n"
+"          ¿No sabes qué es JSON? Copia el mensaje de abajo en cualquier chat de IA:\n"
+"          te pedirá tus pesos y te devolverá el JSON para pegar aquí. ¿Ya sabes\n"
 "          usar JSON? Pégalo con la forma que se muestra abajo.\n"
 "          "
 
@@ -1753,13 +1842,11 @@ msgstr "Error al copiar — selecciona y copia manualmente"
 #: templates/challenges/custom_goal_setup.html:90
 msgid ""
 "\n"
-"            This lift name isn't configured for this challenge and will be "
-"skipped:\n"
+"            This lift name isn't configured for this challenge and will be skipped:\n"
 "            "
 msgid_plural ""
 "\n"
-"            These lift names aren't configured for this challenge and will "
-"be skipped:\n"
+"            These lift names aren't configured for this challenge and will be skipped:\n"
 "            "
 msgstr[0] ""
 "\n"
@@ -1767,8 +1854,7 @@ msgstr[0] ""
 "            "
 msgstr[1] ""
 "\n"
-"            Estos ejercicios no están configurados para este reto y se "
-"omitirán:\n"
+"            Estos ejercicios no están configurados para este reto y se omitirán:\n"
 "            "
 
 #: templates/challenges/custom_goal_setup.html:104
@@ -1803,24 +1889,16 @@ msgid ""
 "              "
 msgstr ""
 "\n"
-"              Al hacer clic en Calcular se rellenan las celdas vacías de "
-"las\n"
-"              filas que ya tienen al menos un objetivo ingresado, "
-"redondeadas\n"
-"              a la precisión seleccionada. Las sugerencias combinan las "
-"fórmulas\n"
+"              Al hacer clic en Calcular se rellenan las celdas vacías de las\n"
+"              filas que ya tienen al menos un objetivo ingresado, redondeadas\n"
+"              a la precisión seleccionada. Las sugerencias combinan las fórmulas\n"
 "              de Epley, Brzycki, Lander, Lombardi y Marzagao, y suponen que\n"
-"              cada peso ingresado refleja un esfuerzo verdaderamente casi "
-"máximo.\n"
+"              cada peso ingresado refleja un esfuerzo verdaderamente casi máximo.\n"
 "              \n"
-"              Al hacer clic en Calcular se rellenan las celdas vacías de "
-"las\n"
-"              filas que ya tienen al menos un objetivo ingresado, "
-"redondeadas\n"
-"              a la precisión seleccionada. Las sugerencias usan la fórmula "
-"de\n"
-"              Epley para estimar entre tus pesos ingresados y más allá de "
-"ellos.\n"
+"              Al hacer clic en Calcular se rellenan las celdas vacías de las\n"
+"              filas que ya tienen al menos un objetivo ingresado, redondeadas\n"
+"              a la precisión seleccionada. Las sugerencias usan la fórmula de\n"
+"              Epley para estimar entre tus pesos ingresados y más allá de ellos.\n"
 "              "
 
 #: templates/challenges/custom_goal_setup.html:161
@@ -1909,14 +1987,14 @@ msgid ""
 "<span class=\"font-mono\">%(gap)s</span> %(unit)s away from your next point "
 "on %(lift)s."
 msgstr ""
-"<span class=\"font-mono\">%(gap)s</span> %(unit)s de distancia de tu próximo "
-"punto en %(lift)s."
+"<span class=\"font-mono\">%(gap)s</span> %(unit)s de distancia de tu próximo"
+" punto en %(lift)s."
 
 #: templates/challenges/detail.html:108
 #, python-format
 msgid ""
-"<span class=\"font-mono\">%(gap)s</span> %(unit)s away from your first point "
-"on %(lift)s, or"
+"<span class=\"font-mono\">%(gap)s</span> %(unit)s away from your first point"
+" on %(lift)s, or"
 msgstr ""
 "<span class=\"font-mono\">%(gap)s</span> %(unit)s de distancia de tu primer "
 "punto en %(lift)s, o"
@@ -1933,13 +2011,14 @@ msgid "more rep at this weight would earn your first point on %(lift)s."
 msgid_plural ""
 "more reps at this weight would earn your first point on %(lift)s."
 msgstr[0] "repetición más a este peso te daría tu primer punto en %(lift)s."
-msgstr[1] "repeticiones más a este peso te darían tu primer punto en %(lift)s."
+msgstr[1] ""
+"repeticiones más a este peso te darían tu primer punto en %(lift)s."
 
 #: templates/challenges/detail.html:115
 #, python-format
 msgid ""
-"<span class=\"font-mono\">%(gap)s</span> %(unit)s away from your first point "
-"on %(lift)s."
+"<span class=\"font-mono\">%(gap)s</span> %(unit)s away from your first point"
+" on %(lift)s."
 msgstr ""
 "<span class=\"font-mono\">%(gap)s</span> %(unit)s de distancia de tu primer "
 "punto en %(lift)s."
@@ -2111,8 +2190,8 @@ msgid ""
 "used anywhere else."
 msgstr ""
 "Esto se usa para calcular las cifras a continuación y se guarda con esta "
-"tabla como registro de cómo se calcularon sus objetivos — no se rastrea a lo "
-"largo del tiempo ni se usa en ningún otro lugar."
+"tabla como registro de cómo se calcularon sus objetivos — no se rastrea a lo"
+" largo del tiempo ni se usa en ningún otro lugar."
 
 #: templates/challenges/goal_setup_inputs.html:29
 msgid "Bodyweight"
@@ -2166,8 +2245,8 @@ msgid ""
 "Suggested targets are rounded to this increment so they're actual loadable "
 "numbers, not raw calculated decimals."
 msgstr ""
-"Los objetivos sugeridos se redondean a este incremento para que sean números "
-"cargables reales, no decimales calculados sin ajustar."
+"Los objetivos sugeridos se redondean a este incremento para que sean números"
+" cargables reales, no decimales calculados sin ajustar."
 
 #: templates/challenges/goal_setup_inputs.html:94
 msgid "Sex"
@@ -2400,15 +2479,11 @@ msgstr "Privacidad"
 #: templates/challenges/invite_link_preview.html:72 templates/landing.html:179
 msgid ""
 "\n"
-"        Made with ❤️ by 🏳️‍🌈 in <a href=\"https://www.nationalgeographic.com/"
-"travel/article/canada-photos\" class=\"hover:opacity-75\" target=\"_blank\" "
-"rel=\"noopener noreferrer\">🇨🇦</a>\n"
+"        Made with ❤️ by 🏳️‍🌈 in <a href=\"https://www.nationalgeographic.com/travel/article/canada-photos\" class=\"hover:opacity-75\" target=\"_blank\" rel=\"noopener noreferrer\">🇨🇦</a>\n"
 "        "
 msgstr ""
 "\n"
-"        Hecho con ❤️ por 🏳️‍🌈 en <a href=\"https://www.nationalgeographic.com/"
-"travel/article/canada-photos\" class=\"hover:opacity-75\" target=\"_blank\" "
-"rel=\"noopener noreferrer\">🇨🇦</a>\n"
+"        Hecho con ❤️ por 🏳️‍🌈 en <a href=\"https://www.nationalgeographic.com/travel/article/canada-photos\" class=\"hover:opacity-75\" target=\"_blank\" rel=\"noopener noreferrer\">🇨🇦</a>\n"
 "        "
 
 #: templates/challenges/key_required.html:4
@@ -2432,13 +2507,13 @@ msgstr ""
 #: templates/challenges/key_required.html:15
 #, python-format
 msgid ""
-"Paste a Liftosaur API key below, or head to <a href=\"%(url)s\" class=\"text-"
-"accent hover:underline\">Settings</a> to import a workout CSV (e.g. from "
-"Hevy) -- either gives us history to suggest from."
+"Paste a Liftosaur API key below, or head to <a href=\"%(url)s\" "
+"class=\"text-accent hover:underline\">Settings</a> to import a workout CSV "
+"(e.g. from Hevy) -- either gives us history to suggest from."
 msgstr ""
 "Pega una clave de API de Liftosaur abajo, o ve a <a href=\"%(url)s\" "
-"class=\"text-accent hover:underline\">Configuración</a> para importar un CSV "
-"de entrenamientos (por ejemplo de Hevy) -- cualquiera de las dos nos da "
+"class=\"text-accent hover:underline\">Configuración</a> para importar un CSV"
+" de entrenamientos (por ejemplo de Hevy) -- cualquiera de las dos nos da "
 "historial para sugerir."
 
 #: templates/challenges/participant_chart.html:10
@@ -2604,8 +2679,8 @@ msgstr ""
 
 #: templates/dashboard.html:235
 msgid ""
-"Join a challenge and this will fill in with how far each lift has come since "
-"your first scored set."
+"Join a challenge and this will fill in with how far each lift has come since"
+" your first scored set."
 msgstr ""
 "Únete a un reto y esto se completará con cuánto ha progresado cada "
 "levantamiento desde tu primera serie puntuada."
@@ -2637,8 +2712,7 @@ msgstr "Motivación sin el precio de una clase grupal"
 #: templates/landing.html:40
 msgid ""
 "\n"
-"            Get the social accountability of a training group without "
-"paying\n"
+"            Get the social accountability of a training group without paying\n"
 "            for one.\n"
 "            "
 msgstr ""
@@ -2654,14 +2728,12 @@ msgstr "Ve tu progreso al instante"
 #: templates/landing.html:49
 msgid ""
 "\n"
-"            Every lift updates your points and standing in real time: "
-"visual,\n"
+"            Every lift updates your points and standing in real time: visual,\n"
 "            gamified, and satisfying to watch climb.\n"
 "            "
 msgstr ""
 "\n"
-"            Cada levantamiento actualiza tus puntos y posición en tiempo "
-"real:\n"
+"            Cada levantamiento actualiza tus puntos y posición en tiempo real:\n"
 "            visual, gamificado y satisfactorio de ver crecer.\n"
 "            "
 
@@ -2672,18 +2744,13 @@ msgstr "Vence la fuckarounditis"
 #: templates/landing.html:58
 msgid ""
 "\n"
-"            <a href=\"https://leangains.com/fuckarounditis/\" class=\"text-"
-"accent hover:underline\" target=\"_blank\" rel=\"noopener "
-"noreferrer\">Fuckarounditis</a>\n"
-"            can be overcome by having realistic goals and working "
-"consistently\n"
+"            <a href=\"https://leangains.com/fuckarounditis/\" class=\"text-accent hover:underline\" target=\"_blank\" rel=\"noopener noreferrer\">Fuckarounditis</a>\n"
+"            can be overcome by having realistic goals and working consistently\n"
 "            toward them. very lift makes that easy.\n"
 "            "
 msgstr ""
 "\n"
-"            <a href=\"https://leangains.com/fuckarounditis/\" class=\"text-"
-"accent hover:underline\" target=\"_blank\" rel=\"noopener "
-"noreferrer\">Fuckarounditis</a>\n"
+"            <a href=\"https://leangains.com/fuckarounditis/\" class=\"text-accent hover:underline\" target=\"_blank\" rel=\"noopener noreferrer\">Fuckarounditis</a>\n"
 "            se puede superar con objetivos realistas y trabajando de forma\n"
 "            constante hacia ellos. very lift lo hace fácil.\n"
 "            "
@@ -2695,10 +2762,8 @@ msgstr "Cómo funciona"
 #: templates/landing.html:74
 msgid ""
 "\n"
-"            Create a challenge, choose when it starts and ends, and pick "
-"the\n"
-"            lifts everyone competes on. Each person then sets their own "
-"goals\n"
+"            Create a challenge, choose when it starts and ends, and pick the\n"
+"            lifts everyone competes on. Each person then sets their own goals\n"
 "            to chase. Invite friends or go solo.\n"
 "            "
 msgstr ""
@@ -2716,18 +2781,12 @@ msgstr "Puntuación automática"
 #: templates/landing.html:84
 msgid ""
 "\n"
-"            Syncs lift data from workout trackers like <a href=\"https://www."
-"liftosaur.com\" class=\"text-accent hover:underline\" target=\"_blank\" "
-"rel=\"noopener noreferrer\">Liftosaur</a> and awards points when you hit "
-"the\n"
+"            Syncs lift data from workout trackers like <a href=\"https://www.liftosaur.com\" class=\"text-accent hover:underline\" target=\"_blank\" rel=\"noopener noreferrer\">Liftosaur</a> and awards points when you hit the\n"
 "            rep-max targets on your own goal chart.\n"
 "            "
 msgstr ""
 "\n"
-"            Sincroniza tus datos de levantamientos desde aplicaciones de "
-"seguimiento como <a href=\"https://www.liftosaur.com\" class=\"text-accent "
-"hover:underline\" target=\"_blank\" rel=\"noopener noreferrer\">Liftosaur</"
-"a> y otorga\n"
+"            Sincroniza tus datos de levantamientos desde aplicaciones de seguimiento como <a href=\"https://www.liftosaur.com\" class=\"text-accent hover:underline\" target=\"_blank\" rel=\"noopener noreferrer\">Liftosaur</a> y otorga\n"
 "            puntos cuando alcanzas los objetivos de repeticiones máximas de\n"
 "            tu propia tabla.\n"
 "            "
@@ -2739,10 +2798,8 @@ msgstr "Justa por diseño"
 #: templates/landing.html:93
 msgid ""
 "\n"
-"            Each participant sets their own targets when they join, so "
-"points\n"
-"            always measure progress against your own chart, not someone "
-"else's.\n"
+"            Each participant sets their own targets when they join, so points\n"
+"            always measure progress against your own chart, not someone else's.\n"
 "            "
 msgstr ""
 "\n"
@@ -2758,16 +2815,13 @@ msgstr "Clasificación en vivo"
 #: templates/landing.html:102
 msgid ""
 "\n"
-"            A points chart, personal performance cards, and gap-to-next-"
-"point hints\n"
+"            A points chart, personal performance cards, and gap-to-next-point hints\n"
 "            keep everyone tracking their standing per lift.\n"
 "            "
 msgstr ""
 "\n"
-"            Un gráfico de puntos, tarjetas de rendimiento personal y pistas "
-"de\n"
-"            distancia al siguiente punto mantienen a todos al tanto de su "
-"posición\n"
+"            Un gráfico de puntos, tarjetas de rendimiento personal y pistas de\n"
+"            distancia al siguiente punto mantienen a todos al tanto de su posición\n"
 "            por ejercicio.\n"
 "            "
 
@@ -2802,8 +2856,8 @@ msgstr "Únete a nuestro Discord"
 
 #: templates/landing.html:141
 msgid ""
-"Find and share challenges, chat with other lifters, share feedback, and help "
-"shape the app."
+"Find and share challenges, chat with other lifters, share feedback, and help"
+" shape the app."
 msgstr ""
 "Encuentra y comparte desafíos, chatea con otros levantadores, comparte "
 "comentarios y ayuda a dar forma a la app."
@@ -2910,7 +2964,8 @@ msgstr "Reemplazada"
 msgid "View"
 msgstr "Ver"
 
-#: templates/policies/policy_list.html:4 templates/policies/policy_list.html:13
+#: templates/policies/policy_list.html:4
+#: templates/policies/policy_list.html:13
 msgid "Policies"
 msgstr "Políticas"
 
@@ -2942,7 +2997,8 @@ msgstr "Iniciar Sesión"
 msgid "Invalid username or password."
 msgstr "Nombre de usuario o contraseña no válidos."
 
-#: templates/registration/login.html:27 templates/registration/register.html:37
+#: templates/registration/login.html:27
+#: templates/registration/register.html:37
 msgid "Username"
 msgstr "Nombre de usuario"
 
@@ -3040,8 +3096,8 @@ msgid ""
 "Weights across the app are shown in this unit. You can change it anytime "
 "from Settings."
 msgstr ""
-"Los pesos en toda la aplicación se muestran en esta unidad. Puedes cambiarla "
-"en cualquier momento desde Configuración."
+"Los pesos en toda la aplicación se muestran en esta unidad. Puedes cambiarla"
+" en cualquier momento desde Configuración."
 
 #: templates/registration/onboarding_very_open.html:4
 msgid "Join the Very Open"
@@ -3086,8 +3142,8 @@ msgid ""
 "Enter the email address on your account. If it matches an account with a "
 "password, you'll get a link to set a new one."
 msgstr ""
-"Introduce el correo electrónico de tu cuenta. Si coincide con una cuenta que "
-"tenga contraseña, recibirás un enlace para establecer una nueva."
+"Introduce el correo electrónico de tu cuenta. Si coincide con una cuenta que"
+" tenga contraseña, recibirás un enlace para establecer una nueva."
 
 #: templates/registration/password_reset.html:40
 msgid "Send reset link"
@@ -3118,8 +3174,8 @@ msgstr "Este enlace ha caducado"
 
 #: templates/registration/password_reset_confirm.html:54
 msgid ""
-"Password reset links work once and don't last long. Request a new one to try "
-"again."
+"Password reset links work once and don't last long. Request a new one to try"
+" again."
 msgstr ""
 "Los enlaces de restablecimiento funcionan una sola vez y caducan pronto. "
 "Solicita uno nuevo para volver a intentarlo."
@@ -3136,18 +3192,18 @@ msgstr "Revisa tu correo"
 
 #: templates/registration/password_reset_done.html:20
 msgid ""
-"If that email address matches an account with a password, a reset link is on "
-"its way. The link works once, and expires after a short time."
+"If that email address matches an account with a password, a reset link is on"
+" its way. The link works once, and expires after a short time."
 msgstr ""
 "Si ese correo electrónico coincide con una cuenta que tenga contraseña, el "
-"enlace de restablecimiento está en camino. El enlace funciona una sola vez y "
-"caduca al poco tiempo."
+"enlace de restablecimiento está en camino. El enlace funciona una sola vez y"
+" caduca al poco tiempo."
 
 #: templates/registration/password_reset_done.html:24
 msgid "Nothing arrived? Check your spam folder, then request another link."
 msgstr ""
-"¿No ha llegado nada? Revisa tu carpeta de correo no deseado y luego solicita "
-"otro enlace."
+"¿No ha llegado nada? Revisa tu carpeta de correo no deseado y luego solicita"
+" otro enlace."
 
 #: templates/registration/password_reset_email_body.txt:1
 #, python-format
