@@ -1336,9 +1336,12 @@ msgid "Drop a CSV file here, or click to choose one"
 msgstr "Suelta un archivo CSV aquí, o haz clic para elegir uno"
 
 #: templates/accounts/_workout_import_section.html:45
-msgid "Currently supports: Hevy and Strong exports. More tracker apps coming."
+msgid ""
+"Currently supports: Hevy, Strong, and Liftosaur exports. More tracker apps "
+"coming."
 msgstr ""
-"Actualmente admite: exportaciones de Hevy y Strong. Próximamente más apps."
+"Actualmente admite: exportaciones de Hevy, Strong y Liftosaur. Próximamente "
+"más apps."
 
 #: templates/accounts/_workout_import_section.html:50
 msgid "Import CSV"
