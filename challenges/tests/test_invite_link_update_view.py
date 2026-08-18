@@ -104,6 +104,18 @@ class TestUpdateInviteLinkView:
         link.refresh_from_db()
         assert link.max_uses is None
 
+    def test_display_mode_shows_never_expires_for_a_null_expiry_link(
+        self, creator_client, challenge
+    ):
+        ChallengeInviteLinkFactory(
+            challenge=challenge, revoked_at=None, expires_at=None
+        )
+        url = reverse("challenges:update-invite-link", args=[challenge.pk])
+        response = creator_client.get(url, HTTP_HX_REQUEST="true")
+
+        assert response.status_code == 200
+        assert "Never expires" in response.content.decode()
+
     def test_get_without_edit_param_renders_display_mode(
         self, creator_client, challenge
     ):
@@ -125,6 +137,35 @@ class TestUpdateInviteLinkView:
 
         assert response.status_code == 200
         assert 'id="id_expires_at"' in response.content.decode()
+
+    def test_edit_mode_prefills_never_expires_checked_for_a_null_expiry_link(
+        self, creator_client, challenge
+    ):
+        ChallengeInviteLinkFactory(
+            challenge=challenge, revoked_at=None, expires_at=None
+        )
+        url = reverse("challenges:update-invite-link", args=[challenge.pk])
+        response = creator_client.get(url, {"edit": "1"}, HTTP_HX_REQUEST="true")
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert 'id="id_never_expires"' in content
+        assert "checked" in content.split('id="id_never_expires"')[1].split(">")[0]
+
+    def test_edit_mode_prefills_never_expires_unchecked_for_a_timed_link(
+        self, creator_client, challenge
+    ):
+        ChallengeInviteLinkFactory(
+            challenge=challenge,
+            revoked_at=None,
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+        url = reverse("challenges:update-invite-link", args=[challenge.pk])
+        response = creator_client.get(url, {"edit": "1"}, HTTP_HX_REQUEST="true")
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "checked" not in content.split('id="id_never_expires"')[1].split(">")[0]
 
     def test_get_non_htmx_redirects_to_settings(self, creator_client, challenge):
         ChallengeInviteLinkFactory(challenge=challenge, revoked_at=None)
@@ -190,6 +231,43 @@ class TestUpdateInviteLinkView:
         assert response.status_code == 302
         link.refresh_from_db()
         assert link.expires_at > timezone.now()
+
+    def test_never_expires_checkbox_forces_expires_at_none(
+        self, creator_client, challenge
+    ):
+        link = ChallengeInviteLinkFactory(
+            challenge=challenge,
+            revoked_at=None,
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+        url = reverse("challenges:update-invite-link", args=[challenge.pk])
+        response = creator_client.post(
+            url,
+            {"never_expires": "on", "expires_at": "", "max_uses": ""},
+        )
+
+        assert response.status_code == 302
+        link.refresh_from_db()
+        assert link.expires_at is None
+
+    def test_never_expires_checkbox_wins_over_a_submitted_date(
+        self, creator_client, challenge
+    ):
+        link = ChallengeInviteLinkFactory(challenge=challenge, revoked_at=None)
+        future = timezone.now() + timedelta(days=2)
+        url = reverse("challenges:update-invite-link", args=[challenge.pk])
+        response = creator_client.post(
+            url,
+            {
+                "never_expires": "on",
+                "expires_at": future.strftime("%Y-%m-%dT%H:%M"),
+                "max_uses": "",
+            },
+        )
+
+        assert response.status_code == 302
+        link.refresh_from_db()
+        assert link.expires_at is None
 
     def test_expiry_past_the_challenge_end_date_is_rejected(self, db):
         challenge = ChallengeFactory(
