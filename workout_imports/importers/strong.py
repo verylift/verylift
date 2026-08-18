@@ -67,9 +67,17 @@ def _parse_decimal(raw: str) -> Decimal | None:
     if not cleaned:
         return None
     try:
-        return Decimal(cleaned)
+        value = Decimal(cleaned)
     except InvalidOperation:
         return None
+    # Decimal("nan")/Decimal("Infinity") parse without raising InvalidOperation
+    # here, but a non-finite weight blows up quantize() downstream (Infinity)
+    # or silently produces a NaN weight_kg (nan) -- reject both as unparseable
+    # like any other malformed cell, rather than letting either reach the
+    # arithmetic below.
+    if not value.is_finite():
+        return None
+    return value
 
 
 def _parse_reps(raw: str) -> int | None:
@@ -82,9 +90,12 @@ def _parse_reps(raw: str) -> int | None:
         try:
             # Strong has been observed emitting reps as "8.0" for some
             # export variants; fall back to float parsing rather than
-            # dropping the row.
+            # dropping the row. float() itself never raises on something
+            # like "1e400" (it returns inf), so int() on that result raises
+            # OverflowError, not ValueError -- both must be caught here or
+            # a single malformed Reps cell crashes the whole import.
             return int(float(cleaned))
-        except ValueError:
+        except (ValueError, OverflowError):
             return None
 
 
@@ -119,10 +130,16 @@ class StrongImporter:
 
             weight_lbs = _parse_decimal(row.get("Weight"))
             reps = _parse_reps(row.get("Reps"))
-            if weight_lbs is None or reps is None:
-                # Cardio/rest-day rows (Distance/Seconds instead of
-                # Weight/Reps, or entirely blank) land here -- not an error,
-                # just not a set this importer scores.
+            if weight_lbs is None or reps is None or reps <= 0:
+                # Cardio/rest-day rows land here -- either Weight/Reps are
+                # genuinely blank in favor of Distance/Seconds, or (observed
+                # in a real export) explicitly "0" rather than blank, e.g. a
+                # Swimming entry logged as Weight=0, Reps=0, Distance=1.0.
+                # Zero reps is never a completed set regardless of which
+                # form the row takes, so it's checked directly rather than
+                # relying on the cell being unparseable. weight_lbs == 0 is
+                # left alone -- a legitimate bodyweight-only set (e.g. Push
+                # Up) reports zero added weight with real reps.
                 continue
 
             performed_at = _parse_date(row.get("Date"))
