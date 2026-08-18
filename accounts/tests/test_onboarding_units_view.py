@@ -70,6 +70,16 @@ class TestOnboardingUnitsView:
         assert response.status_code == 302
         assert response["Location"] == reverse("challenges:dashboard")
 
+    def test_get_does_not_render_app_sidebar_or_mobile_nav(self, client):
+        user = UserFactory()
+        client.force_login(user)
+
+        response = client.get(reverse("accounts:onboarding-units"))
+
+        content = response.content.decode()
+        assert 'id="app-sidebar"' not in content
+        assert 'id="mobile-nav-panel"' not in content
+
     def test_post_redirects_to_invite_link_when_session_has_usable_token(self, client):
         challenge = ChallengeFactory(status=Challenge.Status.ACTIVE)
         link = ChallengeInviteLinkFactory(
