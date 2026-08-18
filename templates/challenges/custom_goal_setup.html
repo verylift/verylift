@@ -375,6 +375,21 @@
       return Math.round(value / increment) * increment;
     }
 
+    // Nearest-multiple rounding can cross back over an anchor boundary that
+    // the pre-round clamp already satisfied (e.g. a pre-round 23.66kg with a
+    // 23kg anchor floor rounds to 22.5kg at a 2.5kg increment -- below the
+    // anchor again). These round to the nearest increment on the correct
+    // side of `bound` instead, so the rounded value never re-violates it.
+    function ceilToIncrement(value, increment) {
+      if (!increment) return value;
+      return Math.ceil(value / increment) * increment;
+    }
+
+    function floorToIncrement(value, increment) {
+      if (!increment) return value;
+      return Math.floor(value / increment) * increment;
+    }
+
     function formatWeight(value) {
       return round2(value).toString();
     }
@@ -501,17 +516,15 @@
       var side = lowerAll.length ? lowerAll : upperAll;
       if (!side.length) return null;
       var blend = blendAnchors(side, cell.reps);
-      var clampedValue = blend.value;
-      if (lowerAll.length) {
-        // Extrapolating to MORE reps than every anchor -- weight must not
-        // exceed the nearest (highest-rep) anchor's own weight.
-        clampedValue = Math.min(clampedValue, side[side.length - 1].weight);
-      } else {
-        // Extrapolating to FEWER reps than every anchor (e.g. projecting
-        // 1RM) -- weight must not fall below the nearest (lowest-rep)
-        // anchor's own weight.
-        clampedValue = Math.max(clampedValue, side[0].weight);
-      }
+      var boundIsUpper = lowerAll.length > 0;
+      // Extrapolating to MORE reps than every anchor: weight must not exceed
+      // the nearest (highest-rep) anchor's own weight (boundIsUpper). Fewer
+      // reps than every anchor (e.g. projecting 1RM): weight must not fall
+      // below the nearest (lowest-rep) anchor's own weight.
+      var bound = boundIsUpper ? side[side.length - 1].weight : side[0].weight;
+      var clampedValue = boundIsUpper
+        ? Math.min(blend.value, bound)
+        : Math.max(blend.value, bound);
       return {
         value: clampedValue,
         stats: {
@@ -519,7 +532,9 @@
           anchors: blend.projections,
           formulaSpread: blend.formulaSpread,
           anchorSpread: blend.anchorSpread,
-          preClamp: blend.value
+          preClamp: blend.value,
+          bound: bound,
+          boundIsUpper: boundIsUpper
         }
       };
     }
@@ -539,10 +554,19 @@
         if (cell.el.value.trim() !== "") return;
         var result = fillValue(cell, anchors);
         if (result === null) return;
-        var rounded = roundTo(result.value, increment);
-        markComputed(cell.el, rounded);
         var stats = result.stats;
         var isExtrapolation = stats.method === "extrapolation";
+        var rounded = roundTo(result.value, increment);
+        if (isExtrapolation) {
+          // roundTo's nearest-multiple rounding can push a value that already
+          // satisfied stats.bound back across it (see ceilToIncrement's
+          // comment) -- re-clamp the rounded value to the nearest increment
+          // on the correct side of the bound instead of the plain nearest one.
+          rounded = stats.boundIsUpper
+            ? Math.min(rounded, floorToIncrement(stats.bound, increment))
+            : Math.max(rounded, ceilToIncrement(stats.bound, increment));
+        }
+        markComputed(cell.el, rounded);
         logEntries.push({
           lift_name: liftName,
           target_rep: cell.reps,
