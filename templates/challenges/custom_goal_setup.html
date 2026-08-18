@@ -355,10 +355,19 @@
       return round2(value).toString();
     }
 
+    // Pinned cells get a colored border, not just "not muted" -- text-body
+    // vs. text-muted (and surface-card vs. surface-sunken) are both subtle,
+    // same-family greys, and once Compute fills most of a row the few
+    // remaining pinned cells stop reading as "look here, you entered this"
+    // and just look like the unremarkable default among a sea of muted
+    // ones. A positive marker on pinned cells survives that regardless of
+    // how many computed cells surround them.
+    var PINNED_BORDER_CLASS = "border-accent";
+
     function markComputed(input, value) {
       input.value = formatWeight(value);
       input.dataset.source = "computed";
-      input.classList.remove("text-content-body");
+      input.classList.remove("text-content-body", PINNED_BORDER_CLASS);
       COMPUTED_CLASSES.forEach(function (cls) { input.classList.add(cls); });
     }
 
@@ -366,6 +375,7 @@
       input.dataset.source = "typed";
       COMPUTED_CLASSES.forEach(function (cls) { input.classList.remove(cls); });
       input.classList.add("text-content-body");
+      input.classList.toggle(PINNED_BORDER_CLASS, input.value.trim() !== "");
     }
 
     function findAnchors(cells) {
@@ -587,8 +597,12 @@
     // A direct edit on a cell (typed or computed) means the user is now
     // pinning it themselves -- clear its "computed" marker back to "typed"
     // so a later Compute click treats it as a fresh anchor, not something to
-    // recalculate.
+    // recalculate. Also runs once up front for every cell so a value
+    // already present at page load (re-editing a saved goal, or a form
+    // re-render after a validation error) gets the pinned border too, not
+    // just cells edited live in this session.
     document.querySelectorAll("[data-rep]").forEach(function (el) {
+      markTyped(el);
       el.addEventListener("input", function () { markTyped(el); });
     });
 
