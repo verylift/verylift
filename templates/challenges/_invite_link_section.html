@@ -52,8 +52,16 @@
           </label>
           {{ invite_link_form.expires_at }}
           <p class="text-xs text-content-muted mt-1" data-expiry-relative>
-            {% blocktrans with when=current_invite_link.expires_at|timeuntil %}Expires in {{ when }}{% endblocktrans %}
+            {% if current_invite_link.expires_at %}
+              {% blocktrans with when=current_invite_link.expires_at|timeuntil %}Expires in {{ when }}{% endblocktrans %}
+            {% else %}
+              {% trans "Never expires" %}
+            {% endif %}
           </p>
+          <label for="{{ invite_link_form.never_expires.id_for_label }}" class="flex items-center gap-2 text-xs text-content-muted mt-2">
+            {{ invite_link_form.never_expires }}
+            {% trans "Never expires" %}
+          </label>
         </div>
         <div>
           <label for="{{ invite_link_form.max_uses.id_for_label }}" class="block text-xs text-content-muted mb-1">{% trans "Max uses" %}</label>
@@ -91,7 +99,13 @@
     </form>
     {% else %}
     <div class="flex items-center gap-2 text-sm text-content-body">
-      <span>{% blocktrans with when=current_invite_link.expires_at|timeuntil %}Expires in {{ when }}{% endblocktrans %}</span>
+      <span>
+        {% if current_invite_link.expires_at %}
+          {% blocktrans with when=current_invite_link.expires_at|timeuntil %}Expires in {{ when }}{% endblocktrans %}
+        {% else %}
+          {% trans "Never expires" %}
+        {% endif %}
+      </span>
       <span class="text-content-subtle">&middot;</span>
       <span>
         {% if current_invite_link.max_uses %}
@@ -167,6 +181,23 @@
           done();
         }
       });
+    })();
+  </script>
+  <script>
+    (function () {
+      // Pure UX: grey out the date input while "Never expires" is checked.
+      // The backend already ignores expires_at in that case
+      // (InviteLinkOptionsForm.clean), so this is not load-bearing.
+      var section = document.currentScript.closest('section');
+      var checkbox = section.querySelector('#{{ invite_link_form.never_expires.id_for_label }}');
+      var dateInput = section.querySelector('#{{ invite_link_form.expires_at.id_for_label }}');
+      if (!checkbox || !dateInput) return;
+
+      function syncDisabled() {
+        dateInput.disabled = checkbox.checked;
+      }
+      syncDisabled();
+      checkbox.addEventListener('change', syncDisabled);
     })();
   </script>
   <script>
