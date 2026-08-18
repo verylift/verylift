@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-16 23:28+0000\n"
+"POT-Creation-Date: 2026-08-17 22:31+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -52,23 +52,23 @@ msgstr "Kilogramos (kg)"
 msgid "Pounds (lb)"
 msgstr "Libras (lb)"
 
-#: accounts/models.py:62
+#: accounts/models.py:65
 msgid "Unknown"
 msgstr "Desconocido"
 
-#: accounts/models.py:63
+#: accounts/models.py:66
 msgid "Challenge invite link"
 msgstr "Enlace de invitación a un reto"
 
-#: accounts/models.py:64
+#: accounts/models.py:67
 msgid "Direct signup"
 msgstr "Registro directo"
 
-#: accounts/models.py:65
+#: accounts/models.py:68
 msgid "Single sign-on"
 msgstr "Inicio de sesión único"
 
-#: accounts/models.py:66
+#: accounts/models.py:69
 msgid "Created by an operator"
 msgstr "Creado por un operador"
 
@@ -84,36 +84,36 @@ msgstr "Debes aceptar los Términos de Servicio y la Política de Privacidad."
 msgid "Could not validate this Liftosaur API key."
 msgstr "No se pudo validar esta clave de API de Liftosaur."
 
-#: accounts/views.py:504
+#: accounts/views.py:505
 msgid "Your password has been updated. Sign in with your new password."
 msgstr ""
 "Tu contraseña se ha actualizado. Inicia sesión con tu contraseña nueva."
 
-#: accounts/views.py:552
+#: accounts/views.py:553
 msgid "Profile photo updated."
 msgstr "Foto de perfil actualizada."
 
-#: accounts/views.py:561
+#: accounts/views.py:562
 msgid "Display name updated."
 msgstr "Nombre para mostrar actualizado."
 
-#: accounts/views.py:571
+#: accounts/views.py:572
 msgid "Email address saved."
 msgstr "Correo electrónico guardado."
 
-#: accounts/views.py:582
+#: accounts/views.py:583
 msgid "Liftosaur API key saved."
 msgstr "Clave de API de Liftosaur guardada."
 
-#: accounts/views.py:587
+#: accounts/views.py:588
 msgid "Liftosaur API key removed."
 msgstr "Clave de API de Liftosaur eliminada."
 
-#: accounts/views.py:613
+#: accounts/views.py:614
 msgid "Couldn't import right now. Please try again in a moment."
 msgstr "No se pudo importar ahora mismo. Inténtalo de nuevo en un momento."
 
-#: accounts/views.py:620
+#: accounts/views.py:621
 #, python-format
 msgid ""
 "Imported %(count)s set(s) from %(source)s. %(scored)s challenge(s) rescored."
@@ -121,40 +121,40 @@ msgstr ""
 "Se importaron %(count)s serie(s) de %(source)s. Se recalcularon %(scored)s "
 "reto(s)."
 
-#: accounts/views.py:639
+#: accounts/views.py:640
 msgid "Unit preference saved."
 msgstr "Preferencia de unidad guardada."
 
-#: accounts/views.py:645
+#: accounts/views.py:646
 msgid "Timezone saved."
 msgstr "Zona horaria guardada."
 
-#: accounts/views.py:651
+#: accounts/views.py:652
 msgid "Language saved."
 msgstr "Idioma guardado."
 
-#: accounts/views.py:747
+#: accounts/views.py:748
 msgid "Connect a Liftosaur API key first."
 msgstr "Conecta primero una clave de API de Liftosaur."
 
-#: accounts/views.py:771
+#: accounts/views.py:772
 msgid "Couldn't sync right now. Please try again in a moment."
 msgstr "No se pudo sincronizar ahora mismo. Inténtalo de nuevo en un momento."
 
-#: accounts/views.py:777
+#: accounts/views.py:778
 #, python-format
 msgid "Sync triggered for %(count)s challenge(s)."
 msgstr "Sincronización iniciada para %(count)s reto(s)."
 
-#: accounts/views.py:813
+#: accounts/views.py:814
 msgid "No API key provided."
 msgstr "No se proporcionó ninguna clave de API."
 
-#: accounts/views.py:821
+#: accounts/views.py:822
 msgid "Invalid API key or connection error."
 msgstr "Clave de API no válida o error de conexión."
 
-#: accounts/views.py:825
+#: accounts/views.py:826
 msgid "Connection successful."
 msgstr "Conexión exitosa."
 
@@ -1149,7 +1149,7 @@ msgid "Last imported %(when)s"
 msgstr "Última importación %(when)s"
 
 #: templates/accounts/settings.html:6 templates/accounts/settings.html:10
-#: templates/components/sidebar.html:62
+#: templates/components/sidebar.html:59 templates/components/sidebar.html:151
 msgid "Settings"
 msgstr "Configuración"
 
@@ -1862,7 +1862,8 @@ msgid "Owner: %(owner)s"
 msgstr "Propietario: %(owner)s"
 
 #: templates/challenges/find.html:4 templates/challenges/find.html:8
-#: templates/components/sidebar.html:50 templates/dashboard.html:32
+#: templates/components/sidebar.html:51 templates/components/sidebar.html:139
+#: templates/components/sidebar.html:236 templates/dashboard.html:32
 #: templates/dashboard.html:60 templates/dashboard.html:63
 #: templates/landing.html:72
 msgid "Challenges"
@@ -2336,37 +2337,46 @@ msgstr "Descartar"
 msgid "Working…"
 msgstr "Trabajando…"
 
-#: templates/components/sidebar.html:5 templates/components/sidebar.html:23
+#: templates/components/sidebar.html:8 templates/components/sidebar.html:112
+#: templates/components/sidebar.html:221
 msgid "very lift, go to dashboard"
 msgstr "very lift, ir al panel"
 
-#: templates/components/sidebar.html:10
+#: templates/components/sidebar.html:13
 msgid "Open navigation menu"
 msgstr "Abrir menú de navegación"
 
-#: templates/components/sidebar.html:28
-msgid "Close navigation menu"
-msgstr "Cerrar menú de navegación"
-
-#: templates/components/sidebar.html:39 templates/dashboard.html:4
+#: templates/components/sidebar.html:40 templates/components/sidebar.html:127
+#: templates/components/sidebar.html:231 templates/dashboard.html:4
 msgid "Dashboard"
 msgstr "Panel"
 
-#: templates/components/sidebar.html:67 templates/docs/page.html:4
+#: templates/components/sidebar.html:64 templates/components/sidebar.html:156
+#: templates/docs/page.html:4
 msgid "User Guide"
 msgstr "Guía del Usuario"
 
-#: templates/components/sidebar.html:71
+#: templates/components/sidebar.html:68 templates/components/sidebar.html:160
 msgid "Terms & Privacy"
 msgstr "Términos y Privacidad"
 
-#: templates/components/sidebar.html:76
+#: templates/components/sidebar.html:73 templates/components/sidebar.html:165
 msgid "Admin"
 msgstr "Administración"
 
-#: templates/components/sidebar.html:98 templates/components/sidebar.html:106
+#: templates/components/sidebar.html:85 templates/components/sidebar.html:94
+#: templates/components/sidebar.html:187 templates/components/sidebar.html:195
+#: templates/components/sidebar.html:253 templates/components/sidebar.html:261
 msgid "Logout"
 msgstr "Cerrar sesión"
+
+#: templates/components/sidebar.html:117
+msgid "Collapse sidebar"
+msgstr "Contraer barra lateral"
+
+#: templates/components/sidebar.html:224
+msgid "Expand sidebar"
+msgstr "Expandir barra lateral"
 
 #: templates/dashboard.html:9
 msgid "Overview"
@@ -2867,8 +2877,8 @@ msgid ""
 "Weights across the app are shown in this unit. You can change it anytime "
 "from Settings."
 msgstr ""
-"Los pesos en toda la aplicación se muestran en esta unidad. Puedes "
-"cambiarla en cualquier momento desde Configuración."
+"Los pesos en toda la aplicación se muestran en esta unidad. Puedes cambiarla "
+"en cualquier momento desde Configuración."
 
 #: templates/registration/onboarding_units.html:35
 msgid "Finish setup"
