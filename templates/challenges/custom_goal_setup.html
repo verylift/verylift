@@ -56,6 +56,9 @@
           data-loading-message="{% trans 'Scoring your workout history…' %}">
       {% csrf_token %}
       <input type="hidden" name="wizard_step" value="{{ step }}">
+      {% if show_calculator %}
+      <input type="hidden" name="computed_fields" data-computed-fields-input value="">
+      {% endif %}
 
       {% if is_json_method %}
       <section class="bg-surface-card border border-line-subtle rounded p-6 mb-6"
@@ -169,7 +172,7 @@
                 <td class="py-1 px-0.5">
                   <input type="text" inputmode="decimal" name="{{ cell.field }}"
                          value="{{ cell.value }}"
-                         {% if show_calculator %}data-rep="{{ cell.rep }}" data-source="typed"{% endif %}
+                         {% if show_calculator %}data-rep="{{ cell.rep }}" data-source="{% if cell.is_computed %}computed{% else %}typed{% endif %}"{% endif %}
                          class="w-full min-w-[3.75rem] bg-surface-card text-content-body border border-line rounded px-1 py-1 text-sm text-right font-mono focus:outline-none focus:border-accent">
                 </td>
                 {% endfor %}
@@ -364,11 +367,15 @@
     // how many computed cells surround them.
     var PINNED_BORDER_CLASS = "border-accent";
 
-    function markComputed(input, value) {
-      input.value = formatWeight(value);
+    function applyComputedStyle(input) {
       input.dataset.source = "computed";
       input.classList.remove("text-content-body", PINNED_BORDER_CLASS);
       COMPUTED_CLASSES.forEach(function (cls) { input.classList.add(cls); });
+    }
+
+    function markComputed(input, value) {
+      input.value = formatWeight(value);
+      applyComputedStyle(input);
     }
 
     function markTyped(input) {
@@ -597,12 +604,18 @@
     // A direct edit on a cell (typed or computed) means the user is now
     // pinning it themselves -- clear its "computed" marker back to "typed"
     // so a later Compute click treats it as a fresh anchor, not something to
-    // recalculate. Also runs once up front for every cell so a value
-    // already present at page load (re-editing a saved goal, or a form
-    // re-render after a validation error) gets the pinned border too, not
-    // just cells edited live in this session.
+    // recalculate. On page load, a cell already tagged data-source="computed"
+    // (the server echoing back computed_fields after a failed submit --
+    // see sendComputeLog/the hidden computed_fields input below) keeps its
+    // computed styling instead of defaulting to "pinned"; every other
+    // non-blank cell (freshly typed, or prefilled from a saved goal) gets
+    // the pinned border immediately rather than only after its first edit.
     document.querySelectorAll("[data-rep]").forEach(function (el) {
-      markTyped(el);
+      if (el.dataset.source === "computed") {
+        applyComputedStyle(el);
+      } else {
+        markTyped(el);
+      }
       el.addEventListener("input", function () { markTyped(el); });
     });
 
@@ -619,6 +632,26 @@
         });
       });
     });
+
+    // Which cells are currently "computed" only ever lived in this page's
+    // DOM -- a failed submit (e.g. a non-monotonic table) re-renders the
+    // whole grid from scratch server-side, with no memory of which cells
+    // Compute filled versus which the user typed. Sync that set into a
+    // hidden field right before submit so the server can echo it back into
+    // computed_fields on re-render (see build_custom_goal_context), instead
+    // of every non-blank cell coming back looking "pinned".
+    var computedFieldsInput = document.querySelector("[data-computed-fields-input]");
+    var form = computeButton.closest("form");
+    if (computedFieldsInput && form) {
+      form.addEventListener("submit", function () {
+        var computedNames = Array.prototype.filter
+          .call(document.querySelectorAll("[data-rep]"), function (el) {
+            return el.dataset.source === "computed";
+          })
+          .map(function (el) { return el.name; });
+        computedFieldsInput.value = computedNames.join(",");
+      });
+    }
   })();
 </script>
 {% endblock %}

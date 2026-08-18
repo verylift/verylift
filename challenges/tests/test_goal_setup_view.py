@@ -7,6 +7,7 @@ CustomGoalTarget shape.
 """
 
 import json
+import re
 from datetime import timedelta
 from decimal import Decimal
 from unittest.mock import patch
@@ -397,6 +398,37 @@ class TestCustomMethodFullFlow:
 
         challenge.refresh_from_db()
         assert challenge.status == Challenge.Status.ACTIVE
+
+    def test_failed_submit_echoes_computed_fields_back(
+        self, authed_client, participant, challenge
+    ):
+        """A rejected submit (non-monotonic table) preserves which cells were
+        Compute-filled, so the re-rendered grid doesn't lose that styling
+        cue -- see build_custom_goal_context's computed_fields param."""
+        url = _url(challenge)
+        authed_client.post(url, {"method": "custom"})
+        weights = dict.fromkeys(range(1, 11), "100")
+        weights[2] = "150"  # heavier at 2RM than 1RM -- rejected as non-monotonic
+        computed_field = grid_field_name(0, 5)
+        typed_field = grid_field_name(0, 1)
+        resp = authed_client.post(
+            url,
+            {
+                "name": "My Custom Goal",
+                "computed_fields": computed_field,
+                **{grid_field_name(0, r): weights[r] for r in range(1, 11)},
+            },
+        )
+        assert resp.status_code == 200
+        content = resp.content.decode()
+        computed_match = re.search(
+            rf'name="{computed_field}"[^>]*data-source="(\w+)"', content
+        )
+        typed_match = re.search(
+            rf'name="{typed_field}"[^>]*data-source="(\w+)"', content
+        )
+        assert computed_match and computed_match.group(1) == "computed"
+        assert typed_match and typed_match.group(1) == "typed"
 
     def test_cancel_clears_session_and_redirects_to_detail(
         self, authed_client, participant, challenge

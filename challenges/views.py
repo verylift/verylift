@@ -1231,6 +1231,9 @@ def _goal_setup_chart_step(request, challenge, participant, data, *, step_contex
             targets_json=form.data.get("targets_json", ""),
             targets=form.targets,
             errors=form.banner_errors(),
+            computed_fields=set(
+                filter(None, form.data.get("computed_fields", "").split(","))
+            ),
         )
         context.update(step_context)
         return render(request, "challenges/custom_goal_setup.html", context)
