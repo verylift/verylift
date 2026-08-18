@@ -13,9 +13,22 @@ HEADER = (
     "duration_seconds,rpe"
 )
 
+LIFTOSAUR_HEADER = (
+    "Workout DateTime,Program,Day Name,Exercise,Is Warmup Set?,Required Reps,"
+    "Completed Reps,Is AMRAP?,Required RPE,Completed RPE,Log RPE?,"
+    "Required Weight Value,Required Weight Unit,Completed Weight Value,"
+    "Completed Weight Unit,Ask Weight?,Completed Reps Time,Target Muscles,"
+    "Synergist Muscles,Notes"
+)
+
 
 def csv_file(rows: str) -> io.BytesIO:
     content = HEADER + "\n" + rows
+    return io.BytesIO(content.encode("utf-8"))
+
+
+def liftosaur_csv_file(rows: str) -> io.BytesIO:
+    content = LIFTOSAUR_HEADER + "\n" + rows
     return io.BytesIO(content.encode("utf-8"))
 
 
@@ -51,6 +64,18 @@ class TestImportWorkoutCsv:
         result = import_workout_csv(user, csv_file(rows))
         assert result.pooled_count == 2
         assert LiftHistory.objects.filter(user=user).count() == 2
+
+    def test_pools_liftosaur_sets_and_reports_detected_source(self):
+        user = UserFactory()
+        rows = (
+            "2026-03-01T10:00:00.000Z,My Program,Day 1,Squat,0,5,5,0,,,0,"
+            "225,lb,225,lb,0,2026-03-01T10:05:00.000Z,,,\n"
+        )
+        result = import_workout_csv(user, liftosaur_csv_file(rows))
+        assert result.source == LiftSource.LIFTOSAUR
+        assert result.pooled_count == 1
+        history = LiftHistory.objects.get(user=user)
+        assert history.source == LiftSource.LIFTOSAUR
 
     def test_unrecognized_format_raises_instead_of_pooling_anything(self):
         user = UserFactory()
