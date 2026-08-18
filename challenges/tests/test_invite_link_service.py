@@ -181,19 +181,6 @@ class TestRegenerateInviteLink:
             challenge.end_date, time.max, tzinfo=UTC
         )
 
-    def test_falls_back_to_the_ttl_setting_when_end_date_has_already_passed(
-        self, settings
-    ):
-        settings.CHALLENGES_INVITE_LINK_TTL_DAYS = 3
-        challenge = ChallengeFactory(
-            end_date=(timezone.now() - timedelta(days=1)).date()
-        )
-        user = UserFactory()
-        before = timezone.now()
-        link = regenerate_invite_link(challenge, user)
-        assert link.expires_at - before <= timedelta(days=3, seconds=5)
-        assert link.expires_at - before >= timedelta(days=3, seconds=-5)
-
     def test_custom_expires_at_override_is_used_verbatim(self):
         challenge = ChallengeFactory(
             end_date=(timezone.now() + timedelta(days=10)).date()

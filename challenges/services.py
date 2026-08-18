@@ -359,17 +359,14 @@ def challenge_display_end_of_day(challenge, day):
 
 
 def _default_invite_link_expiry(challenge):
-    """End-of-day expiry for ``challenge.end_date``, with a safety-net fallback.
+    """End-of-day expiry for ``challenge.end_date``.
 
-    CHALLENGES_INVITE_LINK_TTL_DAYS used to be the *only* expiry rule; now it
-    only backstops the rare case where end_date is bad data (e.g. already in
-    the past), so a fresh link is never minted pre-expired. Kept as a setting
-    deliberately for that reason rather than dropped.
+    Callers (regenerate_invite_link, update_invite_link) are only ever
+    reached for a challenge that hasn't ended yet -- both views reject the
+    request outright once challenge_end_instant has passed -- so end_of_day
+    is always still in the future here.
     """
-    end_of_day = challenge_display_end_of_day(challenge, challenge.end_date)
-    if end_of_day <= timezone.now():
-        return timezone.now() + timedelta(days=settings.CHALLENGES_INVITE_LINK_TTL_DAYS)
-    return end_of_day
+    return challenge_display_end_of_day(challenge, challenge.end_date)
 
 
 def regenerate_invite_link(

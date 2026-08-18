@@ -1,11 +1,13 @@
 """Tests for the creator-only Challenge Settings page (TASK-183)."""
 
+from datetime import timedelta
 from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
 from django.test import Client
 from django.urls import reverse
+from django.utils import timezone
 
 from accounts.tests.factories import UserFactory
 from challenges.models import Challenge, ChallengeParticipant
@@ -169,6 +171,30 @@ class TestChallengeSettingsViewContent:
         )
         assert "Close Early" in content
         assert "Cancel Challenge" in content
+
+    def test_ended_but_still_active_challenge_hides_invite_link_actions(
+        self, db, mock_sync
+    ):
+        """end_date has passed but status hasn't flipped to COMPLETED yet (the
+        scheduler runs on a ~30-minute cadence) -- is_locked alone misses this
+        window, so the invite-link generate/regenerate control must not
+        render even though the rest of the Settings page still does."""
+        challenge = ChallengeFactory(
+            status=Challenge.Status.ACTIVE,
+            end_date=(timezone.now() - timedelta(days=1)).date(),
+        )
+        c = Client()
+        c.force_login(challenge.creator)
+        url = reverse("challenges:settings", args=[challenge.pk])
+
+        content = c.get(url).content.decode()
+
+        assert "Close Early" in content
+        assert "Invite Link" in content
+        assert (
+            reverse("challenges:regenerate-invite-link", args=[challenge.pk])
+            not in content
+        )
 
     def test_locked_challenge_hides_info_cards(self, creator_client, mock_sync):
         """Terminal challenges suppress the three editable cards, keep Participants.

@@ -1,5 +1,7 @@
 """Tests for the owner-facing invite-link regenerate action (TASK-249, TASK-300)."""
 
+from datetime import timedelta
+
 import pytest
 from django.test import Client
 from django.urls import reverse
@@ -81,6 +83,21 @@ class TestRegenerateInviteLinkView:
         url = reverse("challenges:regenerate-invite-link", args=[challenge.pk])
         response = c.post(url)
         assert response.status_code == 400
+
+    def test_ended_but_still_active_challenge_rejects_regenerate(self, db):
+        """end_date has passed but close_challenges hasn't flipped status yet
+        (a real window: the scheduler runs on a ~30-minute cadence) -- the
+        guard must reject on its own live instant check, not on is_terminal."""
+        challenge = ChallengeFactory(
+            status=Challenge.Status.ACTIVE,
+            end_date=(timezone.now() - timedelta(days=1)).date(),
+        )
+        c = Client()
+        c.force_login(challenge.creator)
+        url = reverse("challenges:regenerate-invite-link", args=[challenge.pk])
+        response = c.post(url)
+        assert response.status_code == 400
+        assert current_invite_link(challenge) is None
 
     def test_get_not_allowed(self, creator_client, challenge):
         url = reverse("challenges:regenerate-invite-link", args=[challenge.pk])

@@ -46,6 +46,7 @@ from challenges.services import (
     build_custom_goal_context,
     build_participant_chart,
     build_personal_data,
+    challenge_end_instant,
     close_challenge,
     create_challenge,
     current_invite_link,
@@ -1630,6 +1631,28 @@ def _terminal_status_response(request, challenge, message, *, action):
     return HttpResponseBadRequest(message)
 
 
+def _ended_invite_link_response(request, challenge, message, *, action):
+    """400 + warning log once ``challenge.end_date`` has actually passed, else None.
+
+    Additional to (not a replacement for) ``_terminal_status_response``: status
+    only flips to COMPLETED/CANCELLED once close_challenges actually runs, and
+    there's a real window where end_date has passed but status is still
+    ACTIVE. Invite-link creation/regeneration/update must be blocked for that
+    window too, so this checks the live instant directly rather than trusting
+    ``is_terminal``.
+    """
+    if timezone.now() < challenge_end_instant(challenge):
+        return None
+    logger.warning(
+        "User %s tried to %s challenge %s after its end_date (%s) had passed",
+        request.user.id,
+        action,
+        challenge.pk,
+        challenge.end_date,
+    )
+    return HttpResponseBadRequest(message)
+
+
 def _render_confirm_action(
     request,
     challenge,
@@ -1730,6 +1753,9 @@ def _participants_section_context(challenge):
         "challenge": challenge,
         "participant_rows": participant_rows,
         "is_locked": challenge.is_terminal,
+        "invite_link_locked": (
+            challenge.is_terminal or timezone.now() >= challenge_end_instant(challenge)
+        ),
         "current_invite_link": link,
         "invite_link_form": _invite_link_form_for(link),
         "invite_link_editing": False,
@@ -2021,6 +2047,15 @@ def regenerate_invite_link_view(request, pk):
     if response is not None:
         return response
 
+    response = _ended_invite_link_response(
+        request,
+        challenge,
+        gettext("This challenge can no longer accept invites."),
+        action="regenerate the invite link for",
+    )
+    if response is not None:
+        return response
+
     incumbent = current_invite_link(challenge)
     new_link = regenerate_invite_link(
         challenge,
@@ -2042,6 +2077,7 @@ def regenerate_invite_link_view(request, pk):
                 "current_invite_link": new_link,
                 "invite_link_form": _invite_link_form_for(new_link),
                 "invite_link_editing": False,
+                "invite_link_locked": False,
                 "oob_messages": True,
             },
         )
@@ -2067,6 +2103,15 @@ def update_invite_link_view(request, pk):
     challenge = _get_challenge_for_creator(request, pk)
 
     response = _terminal_status_response(
+        request,
+        challenge,
+        gettext("This challenge can no longer accept invites."),
+        action="update the invite link for",
+    )
+    if response is not None:
+        return response
+
+    response = _ended_invite_link_response(
         request,
         challenge,
         gettext("This challenge can no longer accept invites."),
@@ -2113,6 +2158,7 @@ def update_invite_link_view(request, pk):
                 "current_invite_link": link,
                 "invite_link_form": form,
                 "invite_link_editing": editing,
+                "invite_link_locked": False,
                 "oob_messages": True,
             },
         )
