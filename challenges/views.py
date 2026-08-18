@@ -485,6 +485,14 @@ def invite_link_view(request, token):
     row records ``joined_via_link`` (AC#3's per-join provenance). No membership
     pre-check is needed either: possessing a valid, unexpired token is itself
     the authorization.
+
+    A terminal challenge is checked uniformly, before the anonymous/
+    authenticated split -- a never-expiring link (issue #33) can otherwise
+    stay live and shareable long after its challenge ends, so anyone still
+    hitting it gets a dedicated "this one's over, start your own"
+    page (invite_link_ended.html) instead of either an anonymous join-preview
+    that dead-ends at signup, or the raw 400 an authenticated visitor used to
+    get at the actual join attempt.
     """
     link, reason = resolve_invite_token(token)
 
@@ -503,6 +511,30 @@ def invite_link_view(request, token):
             {"challenge": challenge, "reason": reason},
         )
 
+    if challenge.is_terminal:
+        # Checked uniformly for anonymous and authenticated visitors, and
+        # before the invite_token session write below -- a never-expiring
+        # link (issue #33) could otherwise walk an anonymous visitor through
+        # the entire registration flow only to dead-end on the raw
+        # HttpResponseBadRequest this used to return once they finally tried
+        # to join. Deliberately does NOT stash invite_token in the session:
+        # there is nothing left to join here, and leaving an old, unrelated
+        # pending invite (from a still-active challenge visited earlier)
+        # untouched is safer than overwriting it with one that can never be
+        # redeemed.
+        logger.info("Visitor hit an invite link for ended challenge %s", challenge.pk)
+        return render(
+            request,
+            "challenges/invite_link_ended.html",
+            {
+                "challenge": challenge,
+                "participant_count": challenge.participants.filter(
+                    invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+                    is_bailed=False,
+                ).count(),
+            },
+        )
+
     if not request.user.is_authenticated:
         request.session["invite_token"] = token
         participant_count = challenge.participants.filter(
@@ -519,14 +551,6 @@ def invite_link_view(request, token):
                 "discord_invite_url": SiteSettings.load().discord_invite_url,
             },
         )
-
-    if challenge.is_terminal:
-        logger.warning(
-            "User %s tried to use an invite link for terminal challenge %s",
-            request.user.id,
-            challenge.pk,
-        )
-        return HttpResponseBadRequest(gettext("Challenge is not active"))
 
     existing = ChallengeParticipant.objects.filter(
         challenge=challenge, user=request.user

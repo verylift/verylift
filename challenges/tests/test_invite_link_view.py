@@ -224,6 +224,9 @@ class TestAuthenticatedFreshVisitor:
         "status", [Challenge.Status.COMPLETED, Challenge.Status.CANCELLED]
     )
     def test_terminal_challenge_is_not_joinable(self, link, status):
+        # Used to be a raw 400; now the dedicated "start your own" page
+        # (TestTerminalChallenge covers that page's content in full) --
+        # this just confirms joining itself still never happens.
         challenge = link.challenge
         challenge.status = status
         challenge.save(update_fields=["status"])
@@ -231,7 +234,10 @@ class TestAuthenticatedFreshVisitor:
         c = Client()
         c.force_login(user)
         response = c.get(reverse("challenges:invite-link", args=[link.token]))
-        assert response.status_code == 400
+        assert response.status_code == 200
+        assert not ChallengeParticipant.objects.filter(
+            challenge=challenge, user=user
+        ).exists()
 
 
 @pytest.mark.django_db
@@ -263,6 +269,78 @@ class TestIdempotentRevisit:
         c.get(reverse("challenges:invite-link", args=[link.token]))
         link.refresh_from_db()
         assert link.use_count == 0
+
+
+class TestTerminalChallenge:
+    """A never-expiring link (issue #33) can stay live long after its
+    challenge ends -- both visitor types must land on the "start your own"
+    page rather than either a dead-end join-preview (anonymous) or the raw
+    400 this used to return (authenticated)."""
+
+    @pytest.fixture
+    def ended_challenge(self, db):
+        return ChallengeFactory(status=Challenge.Status.COMPLETED)
+
+    @pytest.fixture
+    def never_expiring_link(self, ended_challenge):
+        return ChallengeInviteLinkFactory(
+            challenge=ended_challenge, revoked_at=None, expires_at=None
+        )
+
+    def test_anonymous_visitor_sees_ended_page_not_the_join_preview(
+        self, ended_challenge, never_expiring_link
+    ):
+        c = Client()
+        response = c.get(
+            reverse("challenges:invite-link", args=[never_expiring_link.token])
+        )
+        assert response.status_code == 200
+        assert ended_challenge.name.encode() in response.content
+        assert b"Start your own challenge" in response.content
+
+    def test_anonymous_visitor_does_not_get_invite_token_stashed(
+        self, ended_challenge, never_expiring_link
+    ):
+        c = Client()
+        c.get(reverse("challenges:invite-link", args=[never_expiring_link.token]))
+        assert "invite_token" not in c.session
+
+    def test_authenticated_visitor_sees_ended_page_not_a_400(
+        self, ended_challenge, never_expiring_link
+    ):
+        c = Client()
+        c.force_login(UserFactory())
+        response = c.get(
+            reverse("challenges:invite-link", args=[never_expiring_link.token])
+        )
+        assert response.status_code == 200
+        assert b"Start your own challenge" in response.content
+
+    def test_shows_participant_count(self, ended_challenge, never_expiring_link):
+        ChallengeParticipantFactory(
+            challenge=ended_challenge,
+            invite_status=InviteStatus.ACCEPTED,
+        )
+        response = Client().get(
+            reverse("challenges:invite-link", args=[never_expiring_link.token])
+        )
+        assert b"1 person competed" in response.content
+
+    def test_bounded_but_unexpired_link_also_shows_ended_page_once_cancelled(self, db):
+        # A link's own expires_at can still be in the future while the
+        # challenge it points to has already ended some other way (e.g.
+        # cancelled by its creator) -- the challenge's own terminal status
+        # must win regardless of the link's remaining expiry.
+        comp = ChallengeFactory(status=Challenge.Status.CANCELLED)
+        bounded_link = ChallengeInviteLinkFactory(
+            challenge=comp,
+            revoked_at=None,
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+        response = Client().get(
+            reverse("challenges:invite-link", args=[bounded_link.token])
+        )
+        assert b"Start your own challenge" in response.content
 
 
 @pytest.mark.django_db
