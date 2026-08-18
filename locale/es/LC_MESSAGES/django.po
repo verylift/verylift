@@ -486,7 +486,7 @@ msgstr ""
 #: templates/challenges/_summary_card.html:76
 #: templates/challenges/create.html:42 templates/challenges/create.html:76
 #: templates/challenges/create.html:136
-#: templates/challenges/custom_goal_setup.html:197
+#: templates/challenges/custom_goal_setup.html:202
 #: templates/challenges/goal_setup_inputs.html:147
 #: templates/challenges/key_required.html:38
 msgid "Cancel"
@@ -1368,7 +1368,7 @@ msgid "No points yet"
 msgstr "Sin puntos todavía"
 
 #: templates/challenges/_participant_chart.html:57
-#: templates/challenges/custom_goal_setup.html:135
+#: templates/challenges/custom_goal_setup.html:140
 #: templates/challenges/detail.html:166 templates/challenges/detail.html:326
 msgid "Lift"
 msgstr "Ejercicio"
@@ -1545,7 +1545,7 @@ msgid "End Date"
 msgstr "Fecha de Finalización"
 
 #: templates/challenges/create.html:72 templates/challenges/create.html:132
-#: templates/challenges/custom_goal_setup.html:188
+#: templates/challenges/custom_goal_setup.html:193
 #: templates/challenges/goal_setup_inputs.html:141
 #: templates/policies/policy_list.html:10
 msgid "Back"
@@ -1677,27 +1677,38 @@ msgstr "Precisión de redondeo"
 
 #: templates/challenges/custom_goal_setup.html:125
 msgid ""
-"Clicking compute fills in blank cells for rows that have at least one goal "
-"already entered, rounded to the chosen precision."
+"\n"
+"              Clicking compute fills in blank cells for rows that have at\n"
+"              least one goal already entered, rounded to the chosen\n"
+"              precision. Suggestions use the Epley formula to estimate\n"
+"              between and beyond your entered weights.\n"
+"              "
 msgstr ""
-"Al hacer clic en Calcular se rellenan las celdas vacías de las filas que ya "
-"tienen al menos un objetivo ingresado, redondeadas a la precisión "
-"seleccionada."
+"\n"
+"              Al hacer clic en Calcular se rellenan las celdas vacías de "
+"las\n"
+"              filas que ya tienen al menos un objetivo ingresado, "
+"redondeadas\n"
+"              a la precisión seleccionada. Las sugerencias usan la "
+"fórmula de\n"
+"              Epley para estimar entre tus pesos ingresados y más allá de "
+"ellos.\n"
+"              "
 
-#: templates/challenges/custom_goal_setup.html:151
-#: templates/challenges/custom_goal_setup.html:152
+#: templates/challenges/custom_goal_setup.html:156
+#: templates/challenges/custom_goal_setup.html:157
 msgid "Clear this row"
 msgstr "Borrar esta fila"
 
-#: templates/challenges/custom_goal_setup.html:180
+#: templates/challenges/custom_goal_setup.html:185
 msgid "This challenge has no lifts configured."
 msgstr "Este reto no tiene ejercicios configurados."
 
-#: templates/challenges/custom_goal_setup.html:193
+#: templates/challenges/custom_goal_setup.html:198
 msgid "Confirm Goal"
 msgstr "Confirmar Objetivo"
 
-#: templates/challenges/custom_goal_setup.html:196
+#: templates/challenges/custom_goal_setup.html:201
 #: templates/challenges/goal_setup_inputs.html:146
 msgid "Cancel and discard everything entered so far?"
 msgstr "¿Cancelar y descartar todo lo introducido hasta ahora?"
