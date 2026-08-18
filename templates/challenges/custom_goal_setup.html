@@ -21,11 +21,10 @@
       {% trans "Review your chart" %}
     </h1>
     <p class="text-sm text-content-muted mb-2 max-w-2xl">
-      {% if allow_json %}
+      {% if is_json_method %}
       {% blocktrans with name=challenge.name unit=display_unit %}
       Your 1RM–10RM target weight for each lift in
-      <strong>{{ name }}</strong>, in {{ unit }}. You can paste a
-      JSON payload or fill the grid in by hand — either works.
+      <strong>{{ name }}</strong>, in {{ unit }}. Paste a JSON payload below.
       {% endblocktrans %}
       {% else %}
       {% blocktrans with name=challenge.name unit=display_unit %}
@@ -58,25 +57,9 @@
       {% csrf_token %}
       <input type="hidden" name="wizard_step" value="{{ step }}">
 
-      {% if allow_json %}
-      <div class="mb-4">
-        <span class="block text-sm font-medium text-content-body mb-1">{% trans "How do you want to enter targets?" %}</span>
-        <div class="flex gap-2">
-          <label class="flex items-center gap-2 text-sm text-content-body cursor-pointer border border-line-subtle rounded px-3 py-2">
-            <input type="radio" name="input_mode" value="grid" data-input-mode
-                   {% if not json_active %}checked{% endif %}>
-            {% trans "Fill in grid" %}
-          </label>
-          <label class="flex items-center gap-2 text-sm text-content-body cursor-pointer border border-line-subtle rounded px-3 py-2">
-            <input type="radio" name="input_mode" value="json" data-input-mode
-                   {% if json_active %}checked{% endif %}>
-            {% trans "Paste JSON" %}
-          </label>
-        </div>
-      </div>
-
-      <section class="bg-surface-card border border-line-subtle rounded p-6 mb-6 {% if not json_active %}hidden{% endif %}"
-               data-input-panel="json">
+      {% if is_json_method %}
+      <section class="bg-surface-card border border-line-subtle rounded p-6 mb-6"
+                data-input-panel="json">
         <h2 class="text-lg font-semibold text-content-strong mb-2">{% trans "Paste JSON" %}</h2>
         <p class="text-sm text-content-muted mb-3">
           {% blocktrans with unit=display_unit %}
@@ -103,9 +86,8 @@
                   class="w-full min-h-[55vh] bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm font-mono focus:outline-none focus:border-accent"
                   placeholder='{&#10;  "name": "Spring targets",&#10;  "unit": "{{ display_unit }}",&#10;  "targets": {&#10;    "Bench Press": {"1": 100, "2": 95, "...": "...", "10": 70}&#10;  }&#10;}'>{{ targets_json }}</textarea>
       </section>
-      {% endif %}
-
-      <section class="bg-surface-card border border-line-subtle rounded p-6 mb-6 {% if json_active %}hidden{% endif %}"
+      {% else %}
+      <section class="bg-surface-card border border-line-subtle rounded p-6 mb-6"
                data-input-panel="grid">
         <h2 class="text-lg font-semibold text-content-strong mb-4">{% blocktrans with unit=display_unit %}Target Grid ({{ unit }}){% endblocktrans %}</h2>
         <div class="mb-4 max-w-sm">
@@ -116,6 +98,35 @@
                  placeholder="{% trans 'e.g. Spring targets' %}"
                  class="w-full bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent">
         </div>
+        {% if show_calculator and lifts %}
+        <div class="mb-4 flex items-end gap-3 flex-wrap border border-line-subtle rounded px-3 py-2 bg-surface-sunken/40">
+          <div>
+            <label for="id_compute_rounding" class="block text-xs font-medium text-content-body mb-1">
+              {% trans "Rounding precision" %}
+            </label>
+            <select id="id_compute_rounding" data-compute-rounding
+                    class="bg-surface-card text-content-body border border-line rounded px-2 py-1.5 text-sm focus:outline-none focus:border-accent">
+              <option value="0">{% trans "No rounding (exact)" %}</option>
+              {% if display_unit == "lb" %}
+              <option value="2.5">2.5 lb</option>
+              <option value="5" selected>5 lb</option>
+              <option value="10">10 lb</option>
+              {% else %}
+              <option value="1">1 kg</option>
+              <option value="2.5" selected>2.5 kg</option>
+              <option value="5">5 kg</option>
+              {% endif %}
+            </select>
+          </div>
+          <button type="button" data-compute-button
+                  class="bg-surface-card text-content-body text-sm font-medium px-4 py-1.5 rounded border border-line hover:border-accent focus:outline-none focus:border-accent">
+            {% trans "Compute" %}
+          </button>
+          <p class="text-xs text-content-muted basis-full">
+            {% trans "Fills every blank cell in each row from that row's own filled-in weights — interpolating between two, extrapolating from one. Computed cells are shown muted; clear a cell to recompute it." %}
+          </p>
+        </div>
+        {% endif %}
         {% if lifts %}
         <div class="overflow-x-auto">
           <table class="text-sm text-left table-auto w-full">
@@ -129,7 +140,8 @@
             </thead>
             <tbody>
               {% for lift in lifts %}
-              <tr class="text-content-body {% if not lift.needs_decision %}border-b border-line-subtle{% endif %}">
+              <tr class="text-content-body {% if not lift.needs_decision %}border-b border-line-subtle{% endif %}"
+                  {% if show_calculator %}data-lift-row{% endif %}>
                 <td class="py-2 pr-4 font-medium text-content-strong align-top {% if lift.needs_decision %}border-l-4 border-warning pl-2{% endif %}">
                   {{ lift.name }}
                 </td>
@@ -137,6 +149,7 @@
                 <td class="py-1 px-0.5">
                   <input type="text" inputmode="decimal" name="{{ cell.field }}"
                          value="{{ cell.value }}"
+                         {% if show_calculator %}data-rep="{{ cell.rep }}" data-source="typed"{% endif %}
                          class="w-full min-w-[3.75rem] bg-surface-card text-content-body border border-line rounded px-1 py-1 text-sm text-right font-mono focus:outline-none focus:border-accent">
                 </td>
                 {% endfor %}
@@ -158,6 +171,7 @@
         </p>
         {% endif %}
       </section>
+      {% endif %}
 
       <div class="flex items-center gap-4">
         {% if step_number and step_number > 1 %}
@@ -177,27 +191,6 @@
 
 {% block after_main %}
 <script>
-  // Show one input panel at a time based on the selected entry mode. Both the
-  // JSON textarea and the grid stay in the DOM and submit together; the server
-  // dispatches on whether targets_json is non-empty, so this is purely a
-  // presentation toggle.
-  (function () {
-    const radios = document.querySelectorAll("[data-input-mode]");
-    if (!radios.length) return;
-    const panels = document.querySelectorAll("[data-input-panel]");
-    function sync() {
-      const selected = document.querySelector("[data-input-mode]:checked");
-      const mode = selected ? selected.value : "grid";
-      panels.forEach(function (panel) {
-        panel.classList.toggle("hidden", panel.dataset.inputPanel !== mode);
-      });
-    }
-    radios.forEach(function (radio) {
-      radio.addEventListener("change", sync);
-    });
-    sync();
-  })();
-
   // Copy the pre-built LLM prompt (which names this challenge's lifts and the
   // expected JSON schema) to the clipboard.
   (function () {
@@ -218,6 +211,120 @@
       setTimeout(function () {
         label.textContent = original;
       }, 2000);
+    });
+  })();
+
+  // Global "Compute" for the manual-entry grid (TASK-306): fills every
+  // currently blank cell in every lift row from that row's own currently
+  // non-blank ("pinned") cells -- linear interpolation between two anchors,
+  // Epley extrapolation beyond the outermost anchor (a single anchor fills
+  // both directions as the degenerate case). Explicit button press only --
+  // no recompute on blur/keystroke -- and a pure function of what's in the
+  // cells right now, so clicking Compute again only touches cells that are
+  // blank at that moment. Mirrors scoring/domain/calculator.py's
+  // estimated_one_rm/threshold_for_reps (Epley); duplicated in JS rather than
+  // round-tripping to the server since this is deliberately a client-side
+  // convenience with no schema change.
+  (function () {
+    var computeButton = document.querySelector("[data-compute-button]");
+    if (!computeButton) return;
+    var roundingSelect = document.querySelector("[data-compute-rounding]");
+    var COMPUTED_CLASSES = ["text-content-muted", "bg-surface-sunken"];
+
+    function estimatedOneRm(weight, reps) {
+      return reps === 1 ? weight : weight * (1 + reps / 30);
+    }
+
+    function thresholdForReps(oneRm, reps) {
+      return reps === 1 ? oneRm : oneRm / (1 + reps / 30);
+    }
+
+    function roundTo(value, increment) {
+      if (!increment) return value;
+      return Math.round(value / increment) * increment;
+    }
+
+    function formatWeight(value) {
+      return (Math.round(value * 100) / 100).toString();
+    }
+
+    function markComputed(input, value) {
+      input.value = formatWeight(value);
+      input.dataset.source = "computed";
+      input.classList.remove("text-content-body");
+      COMPUTED_CLASSES.forEach(function (cls) { input.classList.add(cls); });
+    }
+
+    function markTyped(input) {
+      input.dataset.source = "typed";
+      COMPUTED_CLASSES.forEach(function (cls) { input.classList.remove(cls); });
+      input.classList.add("text-content-body");
+    }
+
+    function findAnchors(cells) {
+      var anchors = [];
+      cells.forEach(function (cell) {
+        var weight = parseFloat(cell.el.value);
+        if (cell.el.value.trim() !== "" && !isNaN(weight)) {
+          anchors.push({ reps: cell.reps, weight: weight });
+        }
+      });
+      anchors.sort(function (a, b) { return a.reps - b.reps; });
+      return anchors;
+    }
+
+    function fillValue(cell, anchors) {
+      var lower = null;
+      var upper = null;
+      anchors.forEach(function (anchor) {
+        if (anchor.reps < cell.reps && (!lower || anchor.reps > lower.reps)) {
+          lower = anchor;
+        }
+        if (anchor.reps > cell.reps && (!upper || anchor.reps < upper.reps)) {
+          upper = anchor;
+        }
+      });
+      if (lower && upper) {
+        var t = (cell.reps - lower.reps) / (upper.reps - lower.reps);
+        return lower.weight + t * (upper.weight - lower.weight);
+      }
+      if (lower) {
+        return thresholdForReps(estimatedOneRm(lower.weight, lower.reps), cell.reps);
+      }
+      if (upper) {
+        return thresholdForReps(estimatedOneRm(upper.weight, upper.reps), cell.reps);
+      }
+      return null;
+    }
+
+    function computeRow(cells, increment) {
+      var anchors = findAnchors(cells);
+      if (!anchors.length) return;
+      cells.forEach(function (cell) {
+        if (cell.el.value.trim() !== "") return;
+        var value = fillValue(cell, anchors);
+        if (value === null) return;
+        markComputed(cell.el, roundTo(value, increment));
+      });
+    }
+
+    computeButton.addEventListener("click", function () {
+      var increment = roundingSelect ? parseFloat(roundingSelect.value) : 0;
+      document.querySelectorAll("[data-lift-row]").forEach(function (row) {
+        var cells = Array.prototype.map.call(
+          row.querySelectorAll("[data-rep]"),
+          function (el) { return { reps: parseInt(el.dataset.rep, 10), el: el }; }
+        );
+        computeRow(cells, increment);
+      });
+    });
+
+    // A direct edit on a cell (typed or computed) means the user is now
+    // pinning it themselves -- clear its "computed" marker back to "typed"
+    // so a later Compute click treats it as a fresh anchor, not something to
+    // recalculate.
+    document.querySelectorAll("[data-rep]").forEach(function (el) {
+      el.addEventListener("input", function () { markTyped(el); });
     });
   })();
 </script>

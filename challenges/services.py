@@ -1579,11 +1579,15 @@ def build_custom_goal_context(
     so it will never score) both mark rows the participant must decide on
     explicitly rather than receiving a silent computed default.
 
-    The JSON-paste path (``allow_json``) is offered only for the CUSTOM
-    method: pasting JSON over a standards/history-prefilled grid would let
-    the saved targets diverge from what ``source_detail`` claims produced
-    them, silently mislabelling the goal's provenance. ``CustomGoalForm``
-    enforces this server-side too (§ its ``clean``), so this is belt only.
+    JSON-paste (``is_json_method``) is its own top-level goal-setup method
+    (TASK-306), not a toggle inside the manual-entry screen: pasting JSON
+    over a standards/history-prefilled grid would let the saved targets
+    diverge from what ``source_detail`` claims produced them, silently
+    mislabelling the goal's provenance. ``CustomGoalForm`` enforces this
+    server-side too (§ its ``clean``), so this is belt only. The Compute
+    calculator (``show_calculator``) is offered only on the manual-entry
+    (CUSTOM) grid — the standards/history grids are already fully prefilled,
+    and JSON has no grid at all.
     """
     unit = user.unit_preference
     targets = targets or {}
@@ -1630,16 +1634,16 @@ def build_custom_goal_context(
                 "needs_decision_reason": needs_decision_reason,
             }
         )
-    allow_json = method == CustomGoal.SourceMethod.CUSTOM
     return {
         "challenge": challenge,
+        "method": method,
+        "is_json_method": method == CustomGoal.SourceMethod.JSON,
+        "show_calculator": method == CustomGoal.SourceMethod.CUSTOM,
         "display_unit": unit,
         "rep_range": list(range(10, 0, -1)),
         "lifts": lifts,
         "goal_name": goal_name,
         "targets_json": targets_json,
-        "json_active": allow_json and bool(targets_json.strip()),
-        "allow_json": allow_json,
         "llm_prompt": _custom_goal_llm_prompt(challenge, lifts, unit),
         "errors": errors or [],
         "unavailable_lifts": sorted(unavailable_lifts),

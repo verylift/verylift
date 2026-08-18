@@ -19,6 +19,7 @@ from challenges.custom_goals import (
     parse_custom_goal_grid,
     parse_custom_goal_json,
     save_custom_goal,
+    validate_rep_max_monotonicity,
 )
 from challenges.forms import CustomGoalForm
 from challenges.models import (
@@ -184,6 +185,48 @@ class TestCompleteness:
         assert custom_goal_is_complete(targets, challenge) == []
 
 
+class TestRepMaxMonotonicity:
+    def test_non_increasing_table_has_no_errors(self, challenge):
+        targets = {LIFT: {rep: Decimal(100 - rep) for rep in range(1, 11)}}
+        assert validate_rep_max_monotonicity(targets, challenge) == []
+
+    def test_equal_adjacent_reps_allowed(self, challenge):
+        # A genuinely rep-independent max: 5RM == 6RM is valid, not a violation.
+        weights = {rep: Decimal(100 - rep) for rep in range(1, 11)}
+        weights[6] = weights[5]
+        targets = {LIFT: weights}
+        assert validate_rep_max_monotonicity(targets, challenge) == []
+
+    def test_heavier_higher_rep_rejected(self, challenge):
+        weights = {rep: Decimal(100 - rep) for rep in range(1, 11)}
+        weights[5] = Decimal("200")  # 5RM heavier than 1RM-4RM
+        targets = {LIFT: weights}
+        errors = validate_rep_max_monotonicity(targets, challenge)
+        assert len(errors) == 1
+        assert "5RM" in errors[0] and "4RM" in errors[0]
+        assert LIFT in errors[0]
+
+    def test_violation_across_a_gap_is_still_caught(self, challenge):
+        # Only 1RM and 5RM present (no 2RM-4RM); 5RM heavier than 1RM is a
+        # violation even though they aren't numerically adjacent reps.
+        targets = {LIFT: {1: Decimal("100"), 5: Decimal("150")}}
+        errors = validate_rep_max_monotonicity(targets, challenge)
+        assert len(errors) == 1
+        assert "5RM" in errors[0] and "1RM" in errors[0]
+
+    def test_only_first_violation_per_lift_reported(self, challenge):
+        weights = {rep: Decimal("50") for rep in range(1, 11)}
+        weights[3] = Decimal("200")
+        weights[7] = Decimal("300")
+        errors = validate_rep_max_monotonicity({LIFT: weights}, challenge)
+        assert len(errors) == 1
+
+    def test_missing_lift_has_no_errors(self, challenge):
+        # Monotonicity has nothing to check against an empty table --
+        # completeness (custom_goal_is_complete) is a separate concern.
+        assert validate_rep_max_monotonicity({}, challenge) == []
+
+
 class TestParseGrid:
     def test_grid_entry_parsed(self, challenge):
         targets, errors = parse_custom_goal_grid(grid_post(), challenge, "kg")
@@ -246,6 +289,7 @@ class TestCustomGoalFormBannerErrors:
             {"targets_json": full_json(name=None)},
             challenge=challenge,
             unit="kg",
+            method=CustomGoal.SourceMethod.JSON,
         )
         assert not form.is_valid()
         banner_errors = form.banner_errors()
@@ -265,16 +309,47 @@ class TestCustomGoalFormBannerErrors:
         assert form.name == "My Goal"
         assert not any("Goal name:" in e for e in form.banner_errors())
 
+    def test_non_monotonic_grid_rejected(self, challenge):
+        """A grid submission whose 5RM is heavier than its 4RM is rejected —
+        rep-max monotonicity is enforced uniformly regardless of source."""
+        weights = {rep: 100 - rep for rep in range(1, 11)}
+        weights[5] = 500
+        form = CustomGoalForm(
+            {"name": "Spring", **grid_post(weights=weights)},
+            challenge=challenge,
+            unit="kg",
+        )
+        assert not form.is_valid()
+        assert any("5RM" in e and "4RM" in e for e in form.banner_errors())
+
+    def test_non_monotonic_json_rejected(self, challenge):
+        weights = {str(rep): 100 - rep for rep in range(1, 11)}
+        weights["5"] = 500
+        form = CustomGoalForm(
+            {"targets_json": full_json(weights=weights)},
+            challenge=challenge,
+            unit="kg",
+            method=CustomGoal.SourceMethod.JSON,
+        )
+        assert not form.is_valid()
+        assert any("5RM" in e and "4RM" in e for e in form.banner_errors())
+
 
 class TestSetupView:
     def _url(self, challenge):
         return reverse("challenges:goal-setup", args=[challenge.pk])
 
     def _goto_chart_step(self, authed_client, challenge):
-        """Select the "custom" method, the wizard's precondition for the
-        chart step this class's tests exercise directly (TASK-248: goal-setup
-        is now a 3-step method -> inputs -> chart wizard)."""
+        """Select the "custom" (manual-entry) method, the wizard's
+        precondition for the chart step this class's grid tests exercise
+        directly (TASK-248: goal-setup is now a 3-step method -> inputs ->
+        chart wizard)."""
         authed_client.post(self._url(challenge), {"method": "custom"})
+
+    def _goto_json_step(self, authed_client, challenge):
+        """Select the "json" method — its own top-level goal-setup method
+        (TASK-306), not a toggle inside the manual-entry screen."""
+        authed_client.post(self._url(challenge), {"method": "json"})
 
     def test_get_renders_grid(self, authed_client, participant, challenge):
         self._goto_chart_step(authed_client, challenge)
@@ -282,26 +357,27 @@ class TestSetupView:
         assert response.status_code == 200
         assert grid_field_name(0, 1).encode() in response.content
 
-    def test_get_defaults_to_grid_tab_active(
+    def test_manual_entry_screen_has_no_json_panel(
         self, authed_client, participant, challenge
     ):
         self._goto_chart_step(authed_client, challenge)
         response = authed_client.get(self._url(challenge))
         content = response.content.decode()
-        # The grid panel is visible and the JSON panel hidden by default.
-        grid_panel = content.split('data-input-panel="grid"')[0].rsplit("<section", 1)[
-            -1
-        ]
-        json_panel = content.split('data-input-panel="json"')[0].rsplit("<section", 1)[
-            -1
-        ]
-        assert "hidden" not in grid_panel
-        assert "hidden" in json_panel
+        assert 'data-input-panel="grid"' in content
+        assert 'data-input-panel="json"' not in content
+
+    def test_json_screen_has_no_grid_panel(self, authed_client, participant, challenge):
+        self._goto_json_step(authed_client, challenge)
+        response = authed_client.get(self._url(challenge))
+        content = response.content.decode()
+        assert 'data-input-panel="json"' in content
+        assert 'data-input-panel="grid"' not in content
+        assert grid_field_name(0, 1).encode() not in response.content
 
     def test_page_includes_llm_prompt_with_lifts_and_schema(
         self, authed_client, participant, challenge
     ):
-        self._goto_chart_step(authed_client, challenge)
+        self._goto_json_step(authed_client, challenge)
         response = authed_client.get(self._url(challenge))
         content = response.content.decode()
         assert "data-copy-prompt" in content
@@ -310,37 +386,31 @@ class TestSetupView:
         assert LIFT in content
         assert "&quot;unit&quot;: &quot;kg&quot;" in content
 
-    def test_json_error_rerender_activates_json_tab(
+    def test_json_error_rerenders_json_screen_with_value(
         self, authed_client, participant, challenge
     ):
-        self._goto_chart_step(authed_client, challenge)
+        self._goto_json_step(authed_client, challenge)
         response = authed_client.post(
             self._url(challenge),
             {"targets_json": "{not valid json"},
         )
         assert response.status_code == 200
         content = response.content.decode()
-        # The JSON panel is now visible and the grid hidden.
-        json_panel = content.split('data-input-panel="json"')[0].rsplit("<section", 1)[
-            -1
-        ]
-        grid_panel = content.split('data-input-panel="grid"')[0].rsplit("<section", 1)[
-            -1
-        ]
-        assert "hidden" not in json_panel
-        assert "hidden" in grid_panel
+        assert "valid JSON" in content
+        assert 'data-input-panel="json"' in content
+        assert "{not valid json" in content
 
     def test_post_saves_goal_and_activates_draft(
         self, authed_client, participant, challenge
     ):
-        self._goto_chart_step(authed_client, challenge)
+        self._goto_json_step(authed_client, challenge)
         data = {"targets_json": full_json(name="Spring")}
         response = authed_client.post(self._url(challenge), data)
         assert response.status_code == 302
         participant.refresh_from_db()
         assert participant.custom_goal_id is not None
         assert participant.custom_goal.name == "Spring"
-        assert participant.custom_goal.source_method == CustomGoal.SourceMethod.CUSTOM
+        assert participant.custom_goal.source_method == CustomGoal.SourceMethod.JSON
         challenge.refresh_from_db()
         assert challenge.status == Challenge.Status.ACTIVE
 
@@ -388,7 +458,7 @@ class TestSetupView:
     ):
         """A JSON submission with no "name" key shows a banner error and saves
         nothing — the JSON view has no separate name form field."""
-        self._goto_chart_step(authed_client, challenge)
+        self._goto_json_step(authed_client, challenge)
         response = authed_client.post(
             self._url(challenge),
             {"targets_json": full_json(name=None)},

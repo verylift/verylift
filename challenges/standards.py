@@ -2,10 +2,10 @@
 
 Every challenge is CUSTOM (TASK-248 plan §3): the owner names its lifts
 explicitly at creation time (ChallengeLift), and every goal-setting method
-(strength standards, fully custom, suggested from history) materialises into
-the same flat CustomGoal/CustomGoalTarget shape. This module has collapsed to
-the one function every other app still calls to resolve a challenge's
-configured lift set.
+(strength standards, manual entry, JSON paste, suggested from history)
+materialises into the same flat CustomGoal/CustomGoalTarget shape. This module
+has collapsed to the one function every other app still calls to resolve a
+challenge's configured lift set.
 """
 
 

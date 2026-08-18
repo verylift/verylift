@@ -775,9 +775,10 @@ def _goal_setup_needs_bodyweight(challenge, data):
 def goal_setup_view(request, pk):
     """One-time, per-participant goal-setting wizard (TASK-248).
 
-    Three methods — strength standards, suggested from Liftosaur history, or
-    fully custom — all materialise into the same flat CustomGoal/
-    CustomGoalTarget shape (challenges.goal_builders; TASK-248 plan §3), so
+    Four methods — strength standards, suggested from Liftosaur history,
+    manual entry, or JSON paste (TASK-306) — all materialise into the same
+    flat CustomGoal/CustomGoalTarget shape (challenges.goal_builders;
+    TASK-248 plan §3), so
     scoring never has to know which method produced a chart. Session-tracked,
     and every step shares this one URL -- @never_cache (UAT feedback: after
     using the in-wizard "Back" link then editing a field, "Continue" could
