@@ -1,0 +1,100 @@
+receivers:
+  hostmetrics:
+    root_path: /hostfs
+    collection_interval: 60s
+    scrapers:
+      cpu:
+      memory:
+      disk:
+      filesystem:
+      network:
+      load:
+      paging:
+
+  # Reads every container's json-file log on this host: kamal-proxy,
+  # verylift-web/scheduler/release, verylift-db, wg-nilou-glitchtip, and
+  # this collector itself (dropped below — no value shipping the log
+  # shipper's own logs to itself). Docker's json-file lines look like:
+  #   {"log":"...\n","stream":"stdout","attrs":{"tag":"verylift-web-2026.8.9"},"time":"..."}
+  # attrs.tag is only present for containers booted with a `logging`/
+  # `logging.options.tag` config (config/deploy.yml, or wg-nilou-glitchtip's
+  # own docker-compose.yml on the VPS, outside this repo) — every source
+  # here has one, so container.name is always populated.
+  #
+  # Deliberately thin: unwrap Docker's envelope, tag with container
+  # identity, drop self-ingestion. Per-source severity/field parsing
+  # (Django, gunicorn access logs, Postgres, kamal-proxy's JSON) lives in
+  # SigNoz Pipelines instead, so it's editable without a VPS redeploy and
+  # doesn't add processing load here.
+  filelog:
+    include:
+      - /hostfs/var/lib/docker/containers/*/*-json.log
+    include_file_path: true
+    start_at: beginning
+    operators:
+      - type: json_parser
+        parse_from: body
+        parse_to: body
+        timestamp:
+          parse_from: body.time
+          layout: "%Y-%m-%dT%H:%M:%S.%LZ"
+      - type: regex_parser
+        parse_from: attributes["log.file.path"]
+        regex: '/containers/(?P<container_id>[0-9a-f]{64})/'
+      - type: move
+        from: attributes.container_id
+        to: resource["container.id"]
+      - type: move
+        from: body.attrs.tag
+        to: resource["container.name"]
+        if: 'body.attrs?.tag != nil'
+      - type: filter
+        expr: 'resource["container.name"] == "verylift-otel-collector"'
+      - type: move
+        from: body.stream
+        to: attributes["log.iostream"]
+      - type: move
+        from: body.log
+        to: body
+
+processors:
+  batch:
+  resourcedetection:
+    detectors: [system]
+    system:
+      hostname_sources: [os]
+  # SigNoz's Logs/APM UI treats service.name as the primary grouping facet
+  # (service list, dropdowns) — container.name/id alone only surface as
+  # manual attribute filters. Derive service.name from container.name,
+  # stripping Kamal's version suffix (verylift-web-2026.8.9 -> verylift-web)
+  # so redeploys don't fragment the service list. kamal-proxy has no
+  # container.name (see filelog receiver comment above), so it falls back
+  # to container.id — still stable per container lifetime, just not
+  # human-readable until Kamal applies a tag to it too.
+  transform/service_name:
+    log_statements:
+      - context: log
+        statements:
+          - set(resource.attributes["service.name"], resource.attributes["container.name"]) where resource.attributes["container.name"] != nil
+          - set(resource.attributes["service.name"], resource.attributes["container.id"]) where resource.attributes["container.name"] == nil
+          - replace_pattern(resource.attributes["service.name"], "-\\d{4}\\.\\d+\\.\\d+$", "") where resource.attributes["service.name"] != nil
+
+exporters:
+  otlp:
+    # SigNoz's ingester on the homelab side (veryinfrastructure-net,
+    # nilou), reached over the wg-glitchtip WireGuard tunnel. Plain TCP
+    # inside that tunnel, so no TLS here.
+    endpoint: 172.19.0.20:4317
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    metrics:
+      receivers: [hostmetrics]
+      processors: [resourcedetection, batch]
+      exporters: [otlp]
+    logs:
+      receivers: [filelog]
+      processors: [transform/service_name, resourcedetection, batch]
+      exporters: [otlp]
