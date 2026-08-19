@@ -1,15 +1,18 @@
 """HTTP client module for the Wger REST API.
 
-This module owns all HTTP concerns (auth headers, pagination, error handling,
-response parsing) and nothing else -- no Django ORM, no business logic.
+This module is a thin wrapper around the official ``wger_api_client`` package
+(generated from Wger's published OpenAPI schema) -- request construction,
+query-param encoding, and response parsing are that package's responsibility,
+not this module's. This module only owns what's specific to how the app calls
+Wger: constructing a per-user authenticated client, translating between this
+codebase's plain-value signatures and the generated client's typed
+request/response objects, and mapping non-2xx responses onto ``WgerAPIError``.
 
 Unlike Liftosaur, Wger is self-hostable: there is no single fixed base URL, so
 the base URL is per-user, supplied alongside the API token.
 
-Verified against Wger's published docs
-(https://wger.readthedocs.io/en/latest/api/api.html) and the wger-project/wger
-source on GitHub (wger/manager/api/{views,filtersets,serializers}.py,
-wger/exercises/api/{views,serializers}.py):
+Notes (see https://wger.readthedocs.io/en/latest/api/api.html and the
+wger-project/wger source for background):
 
 - Auth: ``Authorization: Token <token>`` header (the "permanent token" scheme;
   Wger's docs mark this deprecated in favor of short-lived JWTs obtained via
@@ -18,39 +21,36 @@ wger/exercises/api/{views,serializers}.py):
 - Pagination: DRF LimitOffsetPagination -- ``limit``/``offset`` query params,
   response envelope ``{"count", "next", "previous", "results"}``.
 - Workout logs: ``GET /api/v2/workoutlog/`` (``WorkoutLogViewSet``), scoped to
-  the requesting user server-side. Supports ``date__gte``/``date__lte``
-  filters (``WorkoutLogFilterSet``). Each entry references its exercise by a
-  numeric ``exercise`` ID and its units by numeric ``weight_unit``/
-  ``repetitions_unit`` IDs -- Wger's exercise database is normalized, so there
-  is no raw exercise-name string on the log entry itself.
-- Exercise names: ``GET /api/v2/exerciseinfo/<id>/`` returns per-language
-  ``translations``; the human-readable name lives at
-  ``translations[i]["name"]``.
-
-NOT independently verified against a live instance (auth-gated / not
-reachable from this environment; inferred from wger's source and its default
-data fixtures, which every instance ships with and self-hosters are not
-expected to edit): the numeric IDs of the weight-unit and repetition-unit
-reference tables (``weightunit`` id 1 = kg, id 2 = lb; ``repetitionunit`` id 1
-= "Repetitions"). If a self-hosted instance has actually re-numbered these
-fixture rows, weight/rep unit resolution below would be wrong for that
-instance.
+  the requesting user server-side. Supports a ``date__gte`` filter. Each entry
+  references its exercise by a numeric ``exercise`` ID and its units by
+  numeric ``weight_unit``/``repetitions_unit`` IDs -- Wger's exercise database
+  is normalized, so there is no raw exercise-name string on the log entry
+  itself.
+- Exercise names: ``GET /api/v2/exerciseinfo/<id>/`` returns all
+  ``translations`` for that exercise (no server-side language filter); the
+  human-readable name lives at ``translations[i].name``.
+- Weight/repetition units: ``GET /api/v2/setting-weightunit/`` and
+  ``GET /api/v2/setting-repetitionunit/`` are small reference tables (a
+  handful of rows, effectively unpaginated in practice) that resolve the
+  numeric unit IDs referenced above to names (and, for repetition units,
+  a ``unit_type`` of ``REPETITIONS``/``TIME``/``DISTANCE``). These are looked
+  up live per-sync rather than assumed, since a self-hosted instance's
+  fixture data could in principle be re-numbered.
 """
 
+import datetime
 import logging
-import urllib.error
-import urllib.request
 
-from core.http import build_url, read_error_body, send_request
+import httpx
+from wger_api_client import AuthenticatedClient
+from wger_api_client.api.exerciseinfo import exerciseinfo_retrieve
+from wger_api_client.api.setting_repetitionunit import setting_repetitionunit_list
+from wger_api_client.api.setting_weightunit import setting_weightunit_list
+from wger_api_client.api.workoutlog import workoutlog_list
+from wger_api_client.models.repetition_unit import RepetitionUnit
+from wger_api_client.models.workout_log import WorkoutLog
 
 logger = logging.getLogger(__name__)
-
-# Wger's default fixture data (shipped with every instance, not user-editable
-# in the normal course of using the app). See the module docstring's
-# "NOT independently verified" note.
-WEIGHT_UNIT_KG_ID = 1
-WEIGHT_UNIT_LB_ID = 2
-REPETITION_UNIT_REPS_ID = 1
 
 # Wger's default translation language ID for English.
 ENGLISH_LANGUAGE_ID = 2
@@ -76,39 +76,12 @@ class WgerClient:
     def __init__(self, base_url: str, api_token: str, *, timeout: float = 10) -> None:
         self._base_url = base_url.rstrip("/")
         self._api_token = api_token
-        self._timeout = timeout
-
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
-
-    def _request(
-        self, method: str, path: str, params: dict | None = None
-    ) -> dict | list:
-        """Make an authenticated HTTP request and return the parsed JSON body.
-
-        Raises:
-            WgerAPIError: for any non-2xx HTTP response.
-            urllib.error.URLError: for network-level failures (propagated as-is).
-        """
-        url = build_url(f"{self._base_url}{path}", params)
-        req = urllib.request.Request(
-            url,
-            method=method,
-            headers={"Authorization": f"Token {self._api_token}"},
+        self._client = AuthenticatedClient(
+            base_url=self._base_url,
+            token=api_token,
+            prefix="Token",
+            timeout=httpx.Timeout(timeout),
         )
-        logger.info("Wger API %s %s", method, url)
-        _status, data = send_request(req, timeout=self._timeout)
-        return data
-
-    def _request_raising(
-        self, method: str, path: str, params: dict | None = None
-    ) -> dict | list:
-        try:
-            return self._request(method, path, params)
-        except urllib.error.HTTPError as exc:
-            logger.warning("Wger API returned %s for %s %s", exc.code, method, path)
-            raise WgerAPIError(exc.code, read_error_body(exc)) from exc
 
     # ------------------------------------------------------------------
     # Public API
@@ -119,7 +92,7 @@ class WgerClient:
         date_gte: str | None = None,
         limit: int = 100,
         offset: int = 0,
-    ) -> tuple[list[dict], bool, int]:
+    ) -> tuple[list[WorkoutLog], bool, int]:
         """Fetch a page of the user's workout log entries.
 
         Args:
@@ -129,28 +102,36 @@ class WgerClient:
             offset: Row offset for this page.
 
         Returns:
-            (entries, has_more, next_offset) where each entry is the raw
-            WorkoutLog dict (``exercise``, ``date``, ``weight``,
-            ``repetitions``, ``weight_unit``, ``repetitions_unit``, ...).
+            (entries, has_more, next_offset) where each entry is a
+            ``WorkoutLog`` object (``.exercise``, ``.date``, ``.weight``,
+            ``.repetitions``, ``.weight_unit``, ``.repetitions_unit``, ...).
 
         Raises:
             WgerAPIError: on non-2xx responses.
-            urllib.error.URLError: on network failures.
+            httpx.HTTPError: on network failures.
         """
-        params: dict = {"limit": limit, "offset": offset, "ordering": "date"}
+        kwargs: dict = {"limit": limit, "offset": offset, "ordering": "date"}
         if date_gte is not None:
-            params["date__gte"] = date_gte
+            kwargs["date_gte"] = datetime.datetime.combine(
+                datetime.date.fromisoformat(date_gte),
+                datetime.time.min,
+                tzinfo=datetime.UTC,
+            )
 
-        data = self._request_raising("GET", "/api/v2/workoutlog/", params)
+        logger.info("Wger API GET /api/v2/workoutlog/")
+        response = workoutlog_list.sync_detailed(client=self._client, **kwargs)
 
-        entries: list[dict] = []
-        has_more = False
-        if isinstance(data, dict):
-            results = data.get("results")
-            if isinstance(results, list):
-                entries = results
-            has_more = bool(data.get("next"))
+        if response.status_code != 200:
+            logger.warning(
+                "Wger API returned %s for GET /api/v2/workoutlog/",
+                response.status_code,
+            )
+            raise WgerAPIError(
+                response.status_code, response.content.decode(errors="replace")
+            )
 
+        entries = response.parsed.results
+        has_more = bool(response.parsed.next_)
         return entries, has_more, offset + limit
 
     def get_exercise_name(self, exercise_id: int) -> str | None:
@@ -161,33 +142,65 @@ class WgerClient:
         exercise. Returns None if the exercise has no name in any language
         Wger returned, or the lookup itself fails.
         """
-        try:
-            data = self._request_raising(
-                "GET",
-                f"/api/v2/exerciseinfo/{exercise_id}/",
-                {"language": ENGLISH_LANGUAGE_ID},
-            )
-        except WgerAPIError as exc:
+        logger.info("Wger API GET /api/v2/exerciseinfo/%s/", exercise_id)
+        response = exerciseinfo_retrieve.sync_detailed(
+            id=exercise_id, client=self._client
+        )
+
+        if response.status_code != 200:
             logger.warning(
-                "Wger exercise name lookup failed for exercise %s: %s",
+                "Wger exercise name lookup failed for exercise %s: status %s",
                 exercise_id,
-                exc,
+                response.status_code,
             )
             return None
 
-        if not isinstance(data, dict):
-            return None
-        translations = data.get("translations")
-        if not isinstance(translations, list) or not translations:
+        translations = response.parsed.translations
+        if not translations:
             return None
 
         for translation in translations:
-            if (
-                isinstance(translation, dict)
-                and translation.get("language") == ENGLISH_LANGUAGE_ID
-                and translation.get("name")
-            ):
-                return translation["name"]
+            if translation.language == ENGLISH_LANGUAGE_ID and translation.name:
+                return translation.name
 
-        first = translations[0]
-        return first.get("name") if isinstance(first, dict) else None
+        return translations[0].name
+
+    def get_weight_units(self) -> dict[int, str]:
+        """Return ``{id: name}`` for every weight unit Wger's instance defines.
+
+        A small reference table (a handful of rows) -- one call, no
+        pagination loop.
+        """
+        logger.info("Wger API GET /api/v2/setting-weightunit/")
+        response = setting_weightunit_list.sync_detailed(client=self._client)
+
+        if response.status_code != 200:
+            logger.warning(
+                "Wger API returned %s for GET /api/v2/setting-weightunit/",
+                response.status_code,
+            )
+            raise WgerAPIError(
+                response.status_code, response.content.decode(errors="replace")
+            )
+
+        return {unit.id: unit.name for unit in response.parsed.results}
+
+    def get_repetition_units(self) -> dict[int, RepetitionUnit]:
+        """Return ``{id: RepetitionUnit}`` for every repetition unit defined.
+
+        Returned objects carry ``.name`` and ``.unit_type`` (one of
+        ``"REPETITIONS"``, ``"TIME"``, ``"DISTANCE"``).
+        """
+        logger.info("Wger API GET /api/v2/setting-repetitionunit/")
+        response = setting_repetitionunit_list.sync_detailed(client=self._client)
+
+        if response.status_code != 200:
+            logger.warning(
+                "Wger API returned %s for GET /api/v2/setting-repetitionunit/",
+                response.status_code,
+            )
+            raise WgerAPIError(
+                response.status_code, response.content.decode(errors="replace")
+            )
+
+        return {unit.id: unit for unit in response.parsed.results}

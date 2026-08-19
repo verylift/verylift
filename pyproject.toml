@@ -23,6 +23,7 @@ dependencies = [
     "sentry-sdk>=2.35",
     "apscheduler>=3.11.3",
     "structlog>=26.1.0",
+    "wger-api-client>=2.6.1",
 ]
 
 [dependency-groups]

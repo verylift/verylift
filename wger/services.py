@@ -1,8 +1,7 @@
 """Service functions for the Wger integration.
 
 Mirrors liftosaur.services (sync/watermark/sync-log/cooldown pattern), adapted
-for two real differences in Wger's API (see wger.client's module docstring for
-what's verified vs inferred):
+for two real differences in Wger's API:
 
 - Wger is self-hostable: there's no fixed base URL, so every client call needs
   the user's own instance URL alongside their token.
@@ -12,30 +11,31 @@ what's verified vs inferred):
   persisted across syncs -- see the PR description for why that scope was cut)
   before running them through WgerLiftAlias, exactly like Liftosaur's raw
   exercise-name strings are run through LiftAlias.
+
+Weight and repetition units are resolved live from Wger's
+setting-weightunit/setting-repetitionunit endpoints each sync, rather than
+assumed by ID -- a self-hosted instance's fixture data could in principle be
+re-numbered.
 """
 
 import json
 import logging
 import threading
 import time
-import urllib.error
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
+import httpx
 from django.conf import settings
 from django.db import OperationalError, transaction
 from django.db.models import Max
 from django.utils import timezone
+from wger_api_client.models.repetition_unit import RepetitionUnit
+from wger_api_client.types import Unset
 
 from accounts.units import LB_TO_KG
 from liftosaur.models import LiftHistory, LiftSource
-from wger.client import (
-    REPETITION_UNIT_REPS_ID,
-    WEIGHT_UNIT_KG_ID,
-    WEIGHT_UNIT_LB_ID,
-    WgerAPIError,
-    WgerClient,
-)
+from wger.client import WgerAPIError, WgerClient
 from wger.models import WgerLiftAlias, WgerSyncLog
 
 logger = logging.getLogger(__name__)
@@ -50,10 +50,10 @@ POOL_WRITE_BATCH_SIZE = 500
 # Backoff schedule for a pool write that loses a race for the write lock.
 POOL_WRITE_RETRY_DELAYS = (0.1, 0.3, 0.9)
 
-_WEIGHT_UNIT_MULTIPLIERS = {
-    WEIGHT_UNIT_KG_ID: Decimal(1),
-    WEIGHT_UNIT_LB_ID: LB_TO_KG,
-}
+
+def _is_unset(value) -> bool:
+    """True for None or Wger's ``Unset`` sentinel (a field absent server-side)."""
+    return value is None or isinstance(value, Unset)
 
 
 def canonical_wger_lift_name(name: str) -> str:
@@ -94,7 +94,7 @@ def validate_wger_credentials(base_url: str, api_token: str) -> bool:
     except WgerAPIError as exc:
         logger.warning("Wger credential validation rejected by API: %s", exc)
         return False
-    except (urllib.error.URLError, OSError) as exc:
+    except (httpx.HTTPError, OSError) as exc:
         logger.warning(
             "Wger credential validation failed due to network error: %s", exc
         )
@@ -104,13 +104,15 @@ def validate_wger_credentials(base_url: str, api_token: str) -> bool:
         return False
 
 
-def _weight_kg(raw_weight, weight_unit_id) -> Decimal | None:
+def _weight_kg(
+    raw_weight, weight_unit_id, weight_units: dict[int, str]
+) -> Decimal | None:
     """Convert a raw WorkoutLog weight + unit ID into kg.
 
-    Unrecognized weight_unit IDs fall back to treating the value as already kg
-    (see wger.client's module docstring: the unit-table IDs are inferred from
-    Wger's default fixtures, not independently verified against a live
-    instance).
+    The unit ID is resolved against ``weight_units`` (this sync's live
+    id->name map from Wger's setting-weightunit endpoint) by name,
+    case-insensitively. An unrecognized name, or an ID missing from the map,
+    falls back to treating the value as already kg.
     """
     if raw_weight in (None, ""):
         return None
@@ -118,7 +120,8 @@ def _weight_kg(raw_weight, weight_unit_id) -> Decimal | None:
         amount = Decimal(str(raw_weight))
     except Exception:
         return None
-    multiplier = _WEIGHT_UNIT_MULTIPLIERS.get(weight_unit_id, Decimal(1))
+    unit_name = weight_units.get(weight_unit_id, "")
+    multiplier = {"kg": Decimal(1), "lb": LB_TO_KG}.get(unit_name.lower(), Decimal(1))
     return amount * multiplier
 
 
@@ -132,9 +135,17 @@ def _resolve_exercise_name(client, exercise_id, name_cache: dict) -> str | None:
 
 
 def _history_rows_for_page(
-    user, entries, *, client, synced_at, alias_map, name_cache
+    user,
+    entries,
+    *,
+    client,
+    synced_at,
+    alias_map,
+    name_cache,
+    weight_units: dict[int, str],
+    repetition_units: dict[int, RepetitionUnit],
 ) -> list[LiftHistory]:
-    """Build the unsaved LiftHistory rows for one page of raw WorkoutLog entries.
+    """Build the unsaved LiftHistory rows for one page of WorkoutLog entries.
 
     Keyed on (user, lift, performed_at, reps, weight_kg), mirroring
     liftosaur.services._history_rows_for_page -- Wger exposes no stable
@@ -143,19 +154,33 @@ def _history_rows_for_page(
 
     Entries whose repetitions_unit isn't plain "Repetitions" (e.g. "Until
     Failure") are skipped: the pooled reps column is a bare integer and can't
-    represent those units meaningfully.
+    represent those units meaningfully. Which unit id counts as "Repetitions"
+    is resolved live via ``repetition_units`` (unit_type == "REPETITIONS"),
+    not assumed by id.
     """
     rows: dict[tuple, LiftHistory] = {}
     for entry in entries:
-        repetitions_unit = entry.get("repetitions_unit")
-        if repetitions_unit not in (None, REPETITION_UNIT_REPS_ID):
+        repetitions_unit_id = entry.repetitions_unit
+        if not _is_unset(repetitions_unit_id):
+            unit = repetition_units.get(repetitions_unit_id)
+            if unit is None or unit.unit_type != "REPETITIONS":
+                continue
+
+        reps_raw = entry.repetitions
+        weight_kg = _weight_kg(entry.weight, entry.weight_unit, weight_units)
+        entry_date = entry.date
+        exercise_id = entry.exercise
+        if (
+            _is_unset(reps_raw)
+            or weight_kg is None
+            or _is_unset(entry_date)
+            or _is_unset(exercise_id)
+        ):
             continue
 
-        reps = entry.get("repetitions")
-        weight_kg = _weight_kg(entry.get("weight"), entry.get("weight_unit"))
-        date_str = entry.get("date")
-        exercise_id = entry.get("exercise")
-        if reps is None or weight_kg is None or not date_str or exercise_id is None:
+        try:
+            reps = int(reps_raw)
+        except (TypeError, ValueError):
             continue
 
         raw_name = _resolve_exercise_name(client, exercise_id, name_cache)
@@ -163,7 +188,7 @@ def _history_rows_for_page(
             continue
 
         lift = alias_map.get(raw_name.lower(), raw_name)
-        performed_at = datetime.strptime(date_str, "%Y-%m-%d").date()
+        performed_at = entry_date.date()
         weight_kg = weight_kg.quantize(Decimal("0.01"))
         rows[(lift, performed_at, reps, weight_kg)] = LiftHistory(
             user=user,
@@ -252,6 +277,8 @@ def pull_workout_logs_into_pool(client, user, *, start_date, synced_at) -> int:
     limit = 100
     alias_map = _alias_map()
     name_cache: dict = {}
+    weight_units = client.get_weight_units()
+    repetition_units = client.get_repetition_units()
     while True:
         entries, has_more, next_offset = client.get_workout_logs(
             date_gte=start_date, limit=limit, offset=offset
@@ -263,6 +290,8 @@ def pull_workout_logs_into_pool(client, user, *, start_date, synced_at) -> int:
             synced_at=synced_at,
             alias_map=alias_map,
             name_cache=name_cache,
+            weight_units=weight_units,
+            repetition_units=repetition_units,
         )
         pooled += len(rows)
         _write_history_batch_with_retry(rows, user=user)
