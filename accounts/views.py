@@ -52,7 +52,11 @@ from accounts.timezones import (
     with_detect_param,
 )
 from challenges.models import Challenge, ChallengeParticipant
-from challenges.services import resolve_invite_token
+from challenges.services import (
+    challenges_needing_new_owner,
+    resolve_invite_token,
+    transfer_ownership,
+)
 from core.http import is_htmx
 from core.models import SiteSettings
 from liftosaur.services import (
@@ -741,12 +745,32 @@ def delete_account_view(request):
     purpose, unlike every other settings section: the outcome ends the
     session, so a full PRG to the login page is the only response that makes
     sense.
+
+    Any non-terminal challenge the user still owns is handed off first (via
+    challenges.services.transfer_ownership, which also notifies the new
+    owner) -- otherwise deletion would silently strand it behind a creator
+    who can never log back in. The confirmation page's optional picker drawer
+    lets the user override who each challenge goes to; an unopened/untouched
+    picker still submits each challenge's preselected default (the
+    longest-tenured eligible participant), so "don't interact with it" and
+    "explicitly accept the defaults" are the same submission -- no separate
+    tracking of whether the drawer was opened. A submitted choice is only
+    trusted if it's still one of that challenge's actual eligible candidates
+    (recomputed server-side, not read back from a hidden field) -- otherwise
+    it silently falls back to the same default, rather than erroring out of
+    account deletion over a stale/tampered picker value.
     """
     errors = {}
+    user = request.user
+    ownership_rows = challenges_needing_new_owner(user)
     if request.method == "POST":
         form = DeleteAccountConfirmationForm(request.POST)
         if form.is_valid():
-            user = request.user
+            for row in ownership_rows:
+                candidates_by_id = {str(c.id): c for c in row["candidates"]}
+                submitted = request.POST.get(row["field_name"])
+                new_owner = candidates_by_id.get(submitted, row["candidates"][0])
+                transfer_ownership(row["challenge"], new_owner)
             anonymize_account(user)
             logger.info("Account %s deleted (self-serve) by its own owner", user.id)
             logout(request)
@@ -754,7 +778,11 @@ def delete_account_view(request):
             return redirect("accounts:login")
         errors["confirmation"] = form.errors["confirmation"][0]
 
-    return render(request, "accounts/delete_account.html", {"errors": errors})
+    return render(
+        request,
+        "accounts/delete_account.html",
+        {"errors": errors, "ownership_rows": ownership_rows},
+    )
 
 
 @never_cache

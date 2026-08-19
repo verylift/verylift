@@ -18,7 +18,7 @@ from django.utils.translation import gettext
 
 from accounts.timezones import is_valid_timezone
 from accounts.units import to_display_weight
-from challenges.custom_goals import grid_field_name
+from challenges.custom_goals import detach_active_goal, grid_field_name
 from challenges.models import (
     Challenge,
     ChallengeInviteLink,
@@ -504,7 +504,10 @@ def remove_participant(participant) -> None:
     notification). Removal is permanent for V1 — nothing clears the flag, and no
     invite link readmits a removed user. The removed user's PointEarnEvent
     history is left untouched, so their scored entries stay on the leaderboard
-    exactly like a voluntarily-bailed lifter.
+    exactly like a voluntarily-bailed lifter. custom_goal is detached (not
+    deleted) same as bail_view -- moot for this V1 since a removed user can
+    never rejoin to trigger the resurrection bail_view's own detach guards
+    against, but kept consistent in case that ever changes.
 
     State validation (ACCEPTED, not already bailed, challenge not locked) is
     the caller's responsibility — the view owns those guards, matching bail_view.
@@ -513,7 +516,15 @@ def remove_participant(participant) -> None:
         participant.is_bailed = True
         participant.bailed_at = datetime.now(tz=UTC)
         participant.removed_by_creator = True
-        participant.save(update_fields=["is_bailed", "bailed_at", "removed_by_creator"])
+        detach_active_goal(participant)
+        participant.save(
+            update_fields=[
+                "is_bailed",
+                "bailed_at",
+                "removed_by_creator",
+                "custom_goal",
+            ]
+        )
         Notification.objects.create(
             user=participant.user,
             event_type=Notification.EventType.REMOVED_FROM_CHALLENGE,
@@ -552,6 +563,54 @@ def transfer_ownership(challenge, new_owner) -> None:
         old_creator_id,
         new_owner.id,
     )
+
+
+def challenges_needing_new_owner(user):
+    """Non-terminal challenges ``user`` created, paired with eligible successors.
+
+    Used by the self-serve account-deletion flow (accounts.views.delete_account_view)
+    to offer an optional ownership-reassignment picker before anonymizing the
+    account, since deletion would otherwise silently strand any challenge
+    ``user`` still owns behind a creator who can never log back in.
+
+    Each row's ``candidates`` are ordered by ``joined_at`` ascending -- the
+    same eligibility as ``transfer_ownership_view`` (ACCEPTED, non-bailed,
+    active, not the creator) -- so ``candidates[0]`` is the longest-tenured
+    participant, the default the picker preselects and what a submission
+    falls back to if the user never opens the picker at all.
+
+    Challenges with no eligible successor are omitted entirely: there's no
+    choice to offer, and they're left exactly as today (owned by the
+    soon-to-be-anonymized creator, rescuable only by staff) rather than
+    inventing a fallback owner from nothing.
+    """
+    rows = []
+    challenges = Challenge.objects.filter(creator=user).exclude(
+        status__in=Challenge.TERMINAL_STATUSES
+    )
+    for challenge in challenges:
+        candidates = [
+            participant.user
+            for participant in ChallengeParticipant.objects.filter(
+                challenge=challenge,
+                invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+                is_bailed=False,
+                user__is_active=True,
+            )
+            .exclude(user=user)
+            .select_related("user")
+            .order_by("joined_at")
+        ]
+        if not candidates:
+            continue
+        rows.append(
+            {
+                "challenge": challenge,
+                "candidates": candidates,
+                "field_name": f"new_owner__{challenge.pk}",
+            }
+        )
+    return rows
 
 
 def create_challenge(creator, cleaned_data) -> Challenge:

@@ -1,5 +1,6 @@
 """Tests for transferring challenge ownership (TASK-170)."""
 
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -9,11 +10,16 @@ from django.urls import reverse
 
 from accounts.tests.factories import UserFactory
 from challenges.models import Challenge, ChallengeInviteLink, ChallengeParticipant
-from challenges.services import activate_draft_for_creator, transfer_ownership
+from challenges.services import (
+    activate_draft_for_creator,
+    challenges_needing_new_owner,
+    transfer_ownership,
+)
 from challenges.tests.factories import (
     ChallengeFactory,
     ChallengeParticipantFactory,
     CustomGoalFactory,
+    make_custom_challenge,
 )
 from notifications.models import Notification
 from notifications.views import build_display_text
@@ -360,3 +366,72 @@ class TestTransferLinkVisibility:
 
         assert b"Owner:" in response.content
         assert b"Created by" not in response.content
+
+
+class TestChallengesNeedingNewOwner:
+    """Feeds the account-deletion ownership-reassignment picker (#46 follow-up):
+    non-terminal challenges the user created, paired with eligible successors
+    ordered longest-tenured first (the picker's default)."""
+
+    def test_omits_challenges_with_no_eligible_successor(self, db):
+        creator = UserFactory()
+        make_custom_challenge(status=Challenge.Status.ACTIVE, creator=creator)
+        assert challenges_needing_new_owner(creator) == []
+
+    def test_orders_candidates_longest_tenured_first(self, db):
+        creator = UserFactory()
+        comp = make_custom_challenge(status=Challenge.Status.ACTIVE, creator=creator)
+        newer = ChallengeParticipantFactory(
+            challenge=comp,
+            invite_status=InviteStatus.ACCEPTED,
+            joined_at=datetime(2026, 1, 10, tzinfo=UTC),
+        ).user
+        older = ChallengeParticipantFactory(
+            challenge=comp,
+            invite_status=InviteStatus.ACCEPTED,
+            joined_at=datetime(2026, 1, 1, tzinfo=UTC),
+        ).user
+
+        rows = challenges_needing_new_owner(creator)
+
+        assert len(rows) == 1
+        assert rows[0]["challenge"] == comp
+        assert rows[0]["candidates"] == [older, newer]
+        assert rows[0]["field_name"] == f"new_owner__{comp.pk}"
+
+    def test_excludes_invited_declined_bailed_and_inactive_participants(self, db):
+        creator = UserFactory()
+        comp = make_custom_challenge(status=Challenge.Status.ACTIVE, creator=creator)
+        ChallengeParticipantFactory(challenge=comp, invite_status=InviteStatus.INVITED)
+        ChallengeParticipantFactory(challenge=comp, invite_status=InviteStatus.DECLINED)
+        ChallengeParticipantFactory(
+            challenge=comp,
+            invite_status=InviteStatus.ACCEPTED,
+            is_bailed=True,
+        )
+        ChallengeParticipantFactory(
+            challenge=comp,
+            invite_status=InviteStatus.ACCEPTED,
+            user=UserFactory(is_active=False),
+        )
+
+        assert challenges_needing_new_owner(creator) == []
+
+    def test_excludes_terminal_challenges(self, db):
+        creator = UserFactory()
+        for status in (Challenge.Status.COMPLETED, Challenge.Status.CANCELLED):
+            comp = make_custom_challenge(status=status, creator=creator)
+            ChallengeParticipantFactory(
+                challenge=comp, invite_status=InviteStatus.ACCEPTED
+            )
+
+        assert challenges_needing_new_owner(creator) == []
+
+    def test_excludes_other_users_challenges(self, db):
+        creator = UserFactory()
+        other = make_custom_challenge(status=Challenge.Status.ACTIVE)
+        ChallengeParticipantFactory(
+            challenge=other, invite_status=InviteStatus.ACCEPTED
+        )
+
+        assert challenges_needing_new_owner(creator) == []

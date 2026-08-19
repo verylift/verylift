@@ -171,7 +171,7 @@ class TestBuildPointsOverTime:
         data = build_points_over_time(challenge)
 
         labels = [ds["label"] for ds in data["datasets"]]
-        assert "Former Participant" in labels
+        assert "Gone User (deleted)" in labels
         assert "Gone User" not in labels
 
     def test_rejoined_participant_keeps_pre_bail_progress(self, challenge):

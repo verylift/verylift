@@ -1,0 +1,46 @@
+{% extends "base/base.html" %}
+{% load i18n %}
+
+{% block title %}{% blocktrans with name=challenge.name %}{{ name }} has ended{% endblocktrans %} — very lift{% endblock %}
+
+{% block og_title %}{% blocktrans with name=challenge.name %}{{ name }} has ended{% endblocktrans %}{% endblock %}
+{% block og_description %}{% trans "This challenge is over, but you can start your own and invite your friends." %}{% endblock %}
+
+{% block content %}
+<div class="min-h-full flex items-center justify-center py-12 px-4">
+  <div class="w-full max-w-sm">
+    <div class="mb-8 text-center">
+      <span class="text-accent font-bold text-2xl">very lift</span>
+    </div>
+
+    <section class="bg-surface-card border border-line-subtle rounded p-6 text-center">
+      <h1 class="text-lg font-semibold text-content-strong mb-2">
+        {% blocktrans with name=challenge.name %}{{ name }} has ended{% endblocktrans %}
+      </h1>
+      <p class="text-sm text-content-subtle">
+        {% if participant_count %}
+        {% blocktrans count counter=participant_count %}
+        {{ counter }} person competed in it. This invite link doesn't expire, but the challenge itself is over.
+        {% plural %}
+        {{ counter }} people competed in it. This invite link doesn't expire, but the challenge itself is over.
+        {% endblocktrans %}
+        {% else %}
+        {% trans "This invite link doesn't expire, but the challenge itself is over." %}
+        {% endif %}
+      </p>
+
+      <a href="{% url 'challenges:create' %}"
+        class="mt-6 inline-flex items-center justify-center w-full bg-accent text-accent-on text-sm font-medium px-6 py-3 rounded hover:bg-accent-hover">
+        {% trans "Start your own challenge" %}
+      </a>
+
+      {% if not request.user.is_authenticated %}
+      <p class="mt-4 text-center text-sm text-content-subtle">
+        {% trans "Already have an account?" %}
+        <a href="{% url 'accounts:login' %}" class="text-accent hover:underline">{% trans "Sign in" %}</a>
+      </p>
+      {% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}

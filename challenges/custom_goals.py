@@ -373,3 +373,30 @@ def save_custom_goal(
         participant.challenge_id,
     )
     return goal
+
+
+def detach_active_goal(participant) -> None:
+    """Detach (not delete) a participant's active goal when they leave.
+
+    Called from bail_view/remove_participant. The CustomGoal row itself is
+    untouched -- still reachable via participant.custom_goals for history --
+    but clearing participant.custom_goal makes has_goal_configured False
+    again, so rejoining (which un-bails this same participant row rather
+    than creating a fresh one) routes back through goal setup for a new
+    chart instead of resurrecting the old one.
+
+    Also renames the detached goal to free up its name: CustomGoal has a
+    unique constraint on (participant, name), and that same participant row
+    persists across a leave/rejoin cycle, so without this a rejoining user
+    who picks the same goal name again (e.g. the "My Goal" default) hits an
+    IntegrityError against their own archived goal. Appending the goal's own
+    id is guaranteed collision-free and permanent; nothing currently surfaces
+    a detached goal's name anywhere, so the ugly suffix is invisible.
+    No-op if the participant never finished goal setup.
+    """
+    if participant.custom_goal_id is None:
+        return
+    goal = participant.custom_goal
+    goal.name = f"{goal.name} [{goal.id}]"
+    goal.save(update_fields=["name"])
+    participant.custom_goal = None

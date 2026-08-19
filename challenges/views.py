@@ -22,7 +22,7 @@ from django_ratelimit.decorators import ratelimit
 
 from accounts.ratelimit import client_ip
 from accounts.units import to_display_weight
-from challenges.custom_goals import save_custom_goal
+from challenges.custom_goals import detach_active_goal, save_custom_goal
 from challenges.forms import (
     CreateChallengeDatesForm,
     CreateChallengeLiftsForm,
@@ -485,6 +485,14 @@ def invite_link_view(request, token):
     row records ``joined_via_link`` (AC#3's per-join provenance). No membership
     pre-check is needed either: possessing a valid, unexpired token is itself
     the authorization.
+
+    A terminal challenge is checked uniformly, before the anonymous/
+    authenticated split -- a never-expiring link (issue #33) can otherwise
+    stay live and shareable long after its challenge ends, so anyone still
+    hitting it gets a dedicated "this one's over, start your own"
+    page (invite_link_ended.html) instead of either an anonymous join-preview
+    that dead-ends at signup, or the raw 400 an authenticated visitor used to
+    get at the actual join attempt.
     """
     link, reason = resolve_invite_token(token)
 
@@ -503,6 +511,30 @@ def invite_link_view(request, token):
             {"challenge": challenge, "reason": reason},
         )
 
+    if challenge.is_terminal:
+        # Checked uniformly for anonymous and authenticated visitors, and
+        # before the invite_token session write below -- a never-expiring
+        # link (issue #33) could otherwise walk an anonymous visitor through
+        # the entire registration flow only to dead-end on the raw
+        # HttpResponseBadRequest this used to return once they finally tried
+        # to join. Deliberately does NOT stash invite_token in the session:
+        # there is nothing left to join here, and leaving an old, unrelated
+        # pending invite (from a still-active challenge visited earlier)
+        # untouched is safer than overwriting it with one that can never be
+        # redeemed.
+        logger.info("Visitor hit an invite link for ended challenge %s", challenge.pk)
+        return render(
+            request,
+            "challenges/invite_link_ended.html",
+            {
+                "challenge": challenge,
+                "participant_count": challenge.participants.filter(
+                    invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+                    is_bailed=False,
+                ).count(),
+            },
+        )
+
     if not request.user.is_authenticated:
         request.session["invite_token"] = token
         participant_count = challenge.participants.filter(
@@ -519,14 +551,6 @@ def invite_link_view(request, token):
                 "discord_invite_url": SiteSettings.load().discord_invite_url,
             },
         )
-
-    if challenge.is_terminal:
-        logger.warning(
-            "User %s tried to use an invite link for terminal challenge %s",
-            request.user.id,
-            challenge.pk,
-        )
-        return HttpResponseBadRequest(gettext("Challenge is not active"))
 
     existing = ChallengeParticipant.objects.filter(
         challenge=challenge, user=request.user
@@ -1408,16 +1432,19 @@ def challenge_detail_view(request, pk):
         entry_user = entry["user"]
         is_self = entry_user.pk == request.user.pk
         chart_url = None
+        name = entry_user.effective_display_name
         if entry_user.is_active:
-            name = entry_user.display_name or entry_user.username
             entry_participant = participant_by_user_id.get(entry_user.pk)
             if entry_participant is not None and not is_self:
                 chart_url = reverse(
                     "challenges:participant-chart",
                     args=[challenge.pk, entry_participant.pk],
                 )
-        else:
-            name = "Former Participant"
+        # else: no chart_url -- participant_chart_view itself requires
+        # user__is_active=True, so a link here would just 404. Deactivated
+        # (self-serve-deleted) users already show under their generated
+        # pseudonym with a "(deleted)" suffix (name computed above via
+        # effective_display_name); there's no separate identity left to mask.
         leaderboard.append(
             {
                 "rank": entry["rank"] if show_ranks else "-",
@@ -1655,7 +1682,8 @@ def bail_view(request, pk):
     if request.method == "POST":
         participant.is_bailed = True
         participant.bailed_at = datetime.now(tz=UTC)
-        participant.save(update_fields=["is_bailed", "bailed_at"])
+        detach_active_goal(participant)
+        participant.save(update_fields=["is_bailed", "bailed_at", "custom_goal"])
         logger.info("User %s bailed from challenge %s", request.user.id, pk)
         messages.success(request, gettext("You have left the challenge."))
         return redirect("challenges:dashboard")
@@ -1803,9 +1831,9 @@ def _participants_section_context(challenge):
     erased from this list once they leave (TASK-199). Legacy INVITED/DECLINED
     rows can still appear (nothing creates them any more, but old rows survive),
     which is why this builds its own list rather than reusing the detail view's
-    accepted-only ``others`` queryset. Deactivated users are masked as "Former
-    Participant", matching the leaderboard's privacy treatment (they must not
-    leak a real name).
+    accepted-only ``others`` queryset. Deactivated (self-serve-deleted) users
+    show under their generated pseudonym with a "(deleted)" suffix
+    (User.effective_display_name), matching the leaderboard.
 
     ``can_remove``/``can_become_owner`` gate the accepted-participant actions.
 
@@ -1819,9 +1847,7 @@ def _participants_section_context(challenge):
     participant_rows = [
         {
             "pk": row.pk,
-            "name": (row.user.display_name or row.user.username)
-            if row.user.is_active
-            else gettext("Former Participant"),
+            "name": row.user.effective_display_name,
             "invite_status": row.invite_status,
             "user_id": row.user_id,
             "can_remove": (
@@ -1904,11 +1930,7 @@ def remove_participant_view(request, pk, participant_pk):
         )
         return HttpResponseBadRequest(gettext("This participant cannot be removed."))
 
-    name = (
-        (participant.user.display_name or participant.user.username)
-        if participant.user.is_active
-        else gettext("Former Participant")
-    )
+    name = participant.user.effective_display_name
 
     if request.method == "POST":
         remove_participant(participant)

@@ -8,12 +8,13 @@ from django.test import Client
 from django.urls import reverse
 
 from accounts.tests.factories import UserFactory
-from challenges.models import Challenge, ChallengeParticipant
+from challenges.models import Challenge, ChallengeParticipant, CustomGoal
 from challenges.services import remove_participant
 from challenges.tests.factories import (
     ChallengeFactory,
     ChallengeInviteLinkFactory,
     ChallengeParticipantFactory,
+    CustomGoalFactory,
 )
 from notifications.models import Notification
 from scoring.services import rank_participants
@@ -69,6 +70,20 @@ class TestRemoveParticipantService:
             ).count()
             == 1
         )
+
+    def test_detaches_the_active_goal_without_deleting_it(self, challenge, participant):
+        goal = CustomGoalFactory(participant=participant, name="My Goal")
+        participant.custom_goal = goal
+        participant.save(update_fields=["custom_goal"])
+
+        remove_participant(participant)
+
+        participant.refresh_from_db()
+        goal.refresh_from_db()
+        assert participant.custom_goal_id is None
+        assert participant.has_goal_configured is False
+        assert CustomGoal.objects.filter(pk=goal.pk).exists()
+        assert goal.name != "My Goal"
 
 
 class TestRemoveParticipantView:

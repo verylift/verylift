@@ -5,10 +5,11 @@ from django.test import Client
 from django.urls import reverse
 
 from accounts.tests.factories import UserFactory
-from challenges.models import Challenge, ChallengeParticipant
+from challenges.models import Challenge, ChallengeParticipant, CustomGoal
 from challenges.tests.factories import (
     ChallengeFactory,
     ChallengeParticipantFactory,
+    CustomGoalFactory,
 )
 
 
@@ -49,6 +50,49 @@ class TestBail:
         participant.refresh_from_db()
         assert participant.is_bailed is True
         assert participant.bailed_at is not None
+
+    def test_bailing_detaches_the_active_goal_without_deleting_it(
+        self, member_client, participant, challenge
+    ):
+        """Rejoining via invite link un-bails this same participant row
+        rather than creating a fresh one -- if custom_goal weren't cleared
+        here, has_goal_configured would stay True and silently resurrect
+        the old goal instead of prompting a new one."""
+        goal = CustomGoalFactory(participant=participant, name="My Goal")
+        participant.custom_goal = goal
+        participant.save(update_fields=["custom_goal"])
+
+        url = reverse("challenges:bail", args=[challenge.pk])
+        member_client.post(url)
+
+        participant.refresh_from_db()
+        goal.refresh_from_db()
+        assert participant.custom_goal_id is None
+        assert participant.has_goal_configured is False
+        assert CustomGoal.objects.filter(pk=goal.pk).exists()
+        assert goal.name != "My Goal"
+
+    def test_rejoining_can_reuse_the_same_goal_name_after_bailing(
+        self, member_client, participant, challenge
+    ):
+        """Regression: CustomGoal has a unique constraint on (participant,
+        name), and the same participant row persists across a leave/rejoin
+        cycle -- without renaming the detached goal, picking the same name
+        again (e.g. the "My Goal" default) hit an IntegrityError against the
+        participant's own archived goal."""
+        goal = CustomGoalFactory(participant=participant, name="My Goal")
+        participant.custom_goal = goal
+        participant.save(update_fields=["custom_goal"])
+
+        url = reverse("challenges:bail", args=[challenge.pk])
+        member_client.post(url)
+
+        participant.refresh_from_db()
+        new_goal = CustomGoalFactory(participant=participant, name="My Goal")
+        participant.custom_goal = new_goal
+        participant.save(update_fields=["custom_goal"])
+
+        assert CustomGoal.objects.filter(participant=participant).count() == 2
 
     def test_get_renders_confirmation_page(self, member_client, participant, challenge):
         url = reverse("challenges:bail", args=[challenge.pk])

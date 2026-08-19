@@ -1,5 +1,6 @@
 """Tests for self-serve account deletion / anonymization (#46, TASK-308)."""
 
+from datetime import UTC, datetime
 from io import BytesIO
 from pathlib import Path
 from unittest.mock import patch
@@ -19,6 +20,7 @@ from challenges.tests.factories import (
     ChallengeParticipantFactory,
     make_custom_challenge,
 )
+from notifications.models import Notification
 from scoring.tests.factories import PointEarnEventFactory
 
 User = get_user_model()
@@ -181,6 +183,10 @@ class TestDeleteAccountView:
         assert response.status_code == 200
         assert "accounts/delete_account.html" in [t.name for t in response.templates]
 
+    def test_no_picker_drawer_when_owning_nothing(self, authed_client, user):
+        response = authed_client.get(reverse("accounts:delete-account"))
+        assert b"needs a new owner" not in response.content
+
     def test_wrong_confirmation_does_not_anonymize(self, authed_client, user):
         original_username = user.username
         response = authed_client.post(
@@ -241,6 +247,122 @@ class TestDeleteAccountView:
 
         c = Client()
         assert not c.login(username=user.username, password="a-strong-local-pass-1")
+
+
+class TestDeleteAccountOwnershipHandoff:
+    """A challenge the deleting user still owns is handed off first (#46
+    follow-up) -- otherwise it'd be stranded behind a creator who can never
+    log back in. transfer_ownership itself is unit-tested separately
+    (test_transfer_ownership.py); these cover the view's default/override/
+    fallback wiring specifically."""
+
+    def test_picker_shown_and_transfers_to_default_when_untouched(self, user, db):
+        comp = make_custom_challenge(status=Challenge.Status.ACTIVE, creator=user)
+        older = ChallengeParticipantFactory(
+            challenge=comp,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+            joined_at=datetime(2026, 1, 1, tzinfo=UTC),
+        ).user
+        ChallengeParticipantFactory(
+            challenge=comp,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+            joined_at=datetime(2026, 1, 10, tzinfo=UTC),
+        )
+        c = Client()
+        c.force_login(user)
+
+        get_response = c.get(reverse("accounts:delete-account"))
+        assert b"needs a new owner" in get_response.content
+
+        # Submitted with no new_owner__<pk> field at all -- simulates never
+        # opening the picker drawer.
+        c.post(
+            reverse("accounts:delete-account"), {"confirmation": "delete my account"}
+        )
+
+        comp.refresh_from_db()
+        assert comp.creator_id == older.id
+
+    def test_picker_honours_an_explicit_override(self, user, db):
+        comp = make_custom_challenge(status=Challenge.Status.ACTIVE, creator=user)
+        older = ChallengeParticipantFactory(
+            challenge=comp,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+            joined_at=datetime(2026, 1, 1, tzinfo=UTC),
+        ).user
+        newer = ChallengeParticipantFactory(
+            challenge=comp,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+            joined_at=datetime(2026, 1, 10, tzinfo=UTC),
+        ).user
+        c = Client()
+        c.force_login(user)
+
+        c.post(
+            reverse("accounts:delete-account"),
+            {
+                "confirmation": "delete my account",
+                f"new_owner__{comp.pk}": str(newer.id),
+            },
+        )
+
+        comp.refresh_from_db()
+        assert comp.creator_id == newer.id
+        assert comp.creator_id != older.id
+
+    def test_tampered_choice_falls_back_to_default_instead_of_erroring(self, user, db):
+        comp = make_custom_challenge(status=Challenge.Status.ACTIVE, creator=user)
+        older = ChallengeParticipantFactory(
+            challenge=comp,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+            joined_at=datetime(2026, 1, 1, tzinfo=UTC),
+        ).user
+        outsider = UserFactory()
+        c = Client()
+        c.force_login(user)
+
+        response = c.post(
+            reverse("accounts:delete-account"),
+            {
+                "confirmation": "delete my account",
+                # Not one of this challenge's actual eligible candidates.
+                f"new_owner__{comp.pk}": str(outsider.id),
+            },
+        )
+
+        assert response.status_code == 302
+        comp.refresh_from_db()
+        assert comp.creator_id == older.id
+
+    def test_new_owner_is_notified(self, user, db):
+        comp = make_custom_challenge(status=Challenge.Status.ACTIVE, creator=user)
+        successor = ChallengeParticipantFactory(
+            challenge=comp, invite_status=ChallengeParticipant.InviteStatus.ACCEPTED
+        ).user
+        c = Client()
+        c.force_login(user)
+
+        c.post(
+            reverse("accounts:delete-account"), {"confirmation": "delete my account"}
+        )
+
+        assert Notification.objects.filter(
+            user=successor,
+            challenge=comp,
+            event_type=Notification.EventType.OWNERSHIP_TRANSFERRED,
+        ).exists()
+
+    def test_terminal_challenge_is_left_alone(self, user, db):
+        comp = make_custom_challenge(status=Challenge.Status.COMPLETED, creator=user)
+        c = Client()
+        c.force_login(user)
+
+        c.post(
+            reverse("accounts:delete-account"), {"confirmation": "delete my account"}
+        )
+
+        comp.refresh_from_db()
+        assert comp.creator_id == user.id
 
 
 class TestSettingsDangerZone:

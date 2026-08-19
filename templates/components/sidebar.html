@@ -228,9 +228,12 @@
 
     <div class="pt-3 mt-3 pb-[env(safe-area-inset-bottom)] border-t border-line-subtle">
       <div class="flex items-center gap-2">
-        <div class="py-2" title="{{ request.user.display_name|default:request.user.username }}">
+        <button type="button" id="sidebar-collapsed-user-btn"
+          title="{% trans 'Expand sidebar and open account menu' %}"
+          aria-label="{% trans 'Expand sidebar and open account menu' %}"
+          class="py-2 rounded hover:bg-surface-hover">
           {% include "components/_avatar.html" with avatar_user=request.user size_classes="w-8 h-8 text-xs" %}
-        </div>
+        </button>
 
         {% if request.user.oidc_sub %}
         <form method="post" action="{% url 'oidc_logout' %}">
@@ -260,6 +263,7 @@
       var collapsedRail = document.getElementById('sidebar-collapsed');
       var collapseBtn = document.getElementById('sidebar-collapse-btn');
       var expandBtn = document.getElementById('sidebar-expand-btn');
+      var collapsedUserBtn = document.getElementById('sidebar-collapsed-user-btn');
       if (!nav || !expanded || !collapsedRail) return;
 
       function isCollapsed() {
@@ -306,6 +310,22 @@
 
       if (collapseBtn) collapseBtn.addEventListener('click', function () { setCollapsed(true); });
       if (expandBtn) expandBtn.addEventListener('click', function () { setCollapsed(false); });
+
+      // Collapsed rail has no room for the name/settings/logout row -- clicking
+      // the avatar expands the sidebar and immediately opens the same user
+      // menu popover the expanded layout already has, instead of requiring a
+      // second click once expanded.
+      if (collapsedUserBtn) {
+        collapsedUserBtn.addEventListener('click', function (e) {
+          // Stop the document-level "click outside closes the popover"
+          // listener (below) from immediately re-hiding what this same
+          // click just opened.
+          e.stopPropagation();
+          setCollapsed(false);
+          var popover = document.getElementById('user-menu-popover');
+          if (popover) popover.classList.remove('hidden');
+        });
+      }
     })();
   </script>
 </nav>

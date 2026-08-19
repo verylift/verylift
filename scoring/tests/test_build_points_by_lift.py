@@ -168,8 +168,8 @@ class TestBuildPointsByLift:
         assert "Gone" not in labels
         assert labels == {"Alice"}
 
-    def test_deactivated_user_labelled_former_participant(self, challenge):
-        former = UserFactory(display_name="Former", is_active=False)
+    def test_deactivated_user_labelled_with_deleted_suffix(self, challenge):
+        former = UserFactory(display_name="PseudonymName", is_active=False)
         _accept(challenge, former)
         PointEarnEventFactory(
             user=former,
@@ -181,13 +181,13 @@ class TestBuildPointsByLift:
 
         data = build_points_by_lift(challenge)
 
-        assert data["datasets"][0]["label"] == "Former Participant"
+        assert data["datasets"][0]["label"] == "PseudonymName (deleted)"
 
-    def test_anonymized_account_labelled_former_participant(self, challenge):
+    def test_anonymized_account_labelled_with_deleted_suffix(self, challenge):
         """Regression for TASK-308 (#46): accounts.services.anonymize_account
         must make this convention true at the data level (is_active=False plus
         a scrubbed display_name), not rely on a second display-time mechanism
-        -- see test_deactivated_user_labelled_former_participant above for the
+        -- see test_deactivated_user_labelled_with_deleted_suffix above for the
         same assertion driven by a manually-set is_active=False.
         """
         former = UserFactory(display_name="Former")
@@ -204,4 +204,4 @@ class TestBuildPointsByLift:
 
         data = build_points_by_lift(challenge)
 
-        assert data["datasets"][0]["label"] == "Former Participant"
+        assert data["datasets"][0]["label"] == f"{former.display_name} (deleted)"

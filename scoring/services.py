@@ -418,7 +418,12 @@ def build_points_over_time(challenge, *, top_n: int | None = None) -> dict:
     at their observation-window start so their first scored event renders as a
     rising slope from zero. Participants with no events produce a flat zero series.
 
-    Deactivated users are labelled "Former Participant".
+    Deactivated (self-serve-deleted) users show under their generated
+    pseudonym with a "(deleted)" suffix (User.effective_display_name) --
+    anonymize_account already replaced their real username/display_name
+    with the pseudonym, and the suffix marks that clearly instead of
+    leaving a departed member looking like an unexplained stranger next
+    to real names on the same chart.
 
     ``top_n``, when given, keeps only the ``top_n`` datasets with the highest
     final cumulative value (the shared label axis is unaffected) -- used by the
@@ -481,11 +486,7 @@ def build_points_over_time(challenge, *, top_n: int | None = None) -> dict:
     datasets = []
     for participant in participants:
         user = participant.user
-        label = (
-            (user.display_name or user.username)
-            if user.is_active
-            else "Former Participant"
-        )
+        label = user.effective_display_name
         user_events = points_by_user.get(user.pk, [])
         data = []
         cumulative = 0
@@ -515,8 +516,9 @@ def build_points_by_lift(challenge) -> dict:
     0 for a lift they have not scored. Because the same current-best rows back the
     leaderboard total, a lifter's per-lift bars sum to their leaderboard total.
 
-    Deactivated users are labelled "Former Participant", matching
-    build_points_over_time and the detail-page leaderboard.
+    Deactivated (self-serve-deleted) users show under their generated
+    pseudonym with a "(deleted)" suffix (User.effective_display_name),
+    matching build_points_over_time and the detail-page leaderboard.
 
     Shape: {"labels": [lift, ...], "datasets": [{"label": str, "data": [int]}, ...]}
     """
@@ -551,11 +553,7 @@ def build_points_by_lift(challenge) -> dict:
     datasets = []
     for participant in participants:
         user = participant.user
-        label = (
-            (user.display_name or user.username)
-            if user.is_active
-            else "Former Participant"
-        )
+        label = user.effective_display_name
         user_points = points_by_user_lift.get(user.pk, {})
         data = [user_points.get(lift, 0) for lift in lifts]
         datasets.append({"label": label, "data": data})
@@ -581,9 +579,11 @@ def build_recent_scoring_activity(challenge, viewing_user, limit: int = 5) -> li
     progressively more points as the lifter works up, so only the best-scoring
     set from each session is kept rather than showing every intermediate set.
 
-    Deactivated lifters are labelled "Former Participant". An empty list means the
-    challenge has no scoring activity yet, which the template renders as an
-    explicit empty state.
+    Deactivated (self-serve-deleted) lifters show under their generated
+    pseudonym with a "(deleted)" suffix (User.effective_display_name), same
+    as everywhere else this shows up. An empty list means the challenge has
+    no scoring activity yet, which the template renders as an explicit empty
+    state.
 
     Dict shape: {'name': str, 'lift': str, 'weight': Decimal, 'unit': str,
     'reps': int, 'points_earned': int, 'date': date}.
@@ -616,11 +616,7 @@ def build_recent_scoring_activity(challenge, viewing_user, limit: int = 5) -> li
     for session_key in session_order[:limit]:
         event = best_by_session[session_key]
         user = event.user
-        name = (
-            (user.display_name or user.username)
-            if user.is_active
-            else "Former Participant"
-        )
+        name = user.effective_display_name
         weight, _ = to_display_weight(event.weight, unit)
         activity.append(
             {

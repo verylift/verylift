@@ -124,12 +124,33 @@
 
       // Drive the TASK-141 loading overlay from htmx requests when it exists.
       // Guarded so htmx conversions work standalone before TASK-141 lands.
+      var pendingProcessingMessage = null;
       document.body.addEventListener('htmx:beforeRequest', function (e) {
         if (!window.ppLoading) return;
         var el = e.target.closest('[data-loading-message]');
-        if (el) window.ppLoading.show(el.getAttribute('data-loading-message'));
+        if (!el) return;
+        pendingProcessingMessage = el.getAttribute('data-processing-message');
+        window.ppLoading.show(el.getAttribute('data-loading-message'));
+      });
+      // Real upload byte-progress (htmx re-fires the underlying XHR upload
+      // events) -- lengthComputable is false for a request with no body or
+      // one the browser can't size up front, so this silently no-ops rather
+      // than showing a meaningless bar for those.
+      document.body.addEventListener('htmx:xhr:progress', function (e) {
+        if (!window.ppLoading || !e.detail.lengthComputable) return;
+        window.ppLoading.setProgress(e.detail.loaded / e.detail.total);
+      });
+      // The upload itself has finished, but the response (and whatever
+      // server-side work produces it) hasn't arrived yet -- switch to the
+      // "still working" message instead of leaving an upload-phrased one
+      // sitting there once there's nothing left to upload.
+      document.body.addEventListener('htmx:xhr:loadend', function () {
+        if (!window.ppLoading) return;
+        window.ppLoading.setProgress(null);
+        if (pendingProcessingMessage) window.ppLoading.setMessage(pendingProcessingMessage);
       });
       document.body.addEventListener('htmx:afterRequest', function () {
+        pendingProcessingMessage = null;
         if (window.ppLoading) window.ppLoading.hide();
       });
     })();
