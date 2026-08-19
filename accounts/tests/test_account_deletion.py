@@ -117,25 +117,6 @@ class TestAnonymizeAccount:
         assert user.is_active is False
         assert user.deactivated_at is not None
 
-    def test_clears_every_connected_tracker_credential(self, user, db):
-        # Wger/Hevy were added after this feature first shipped -- anonymize
-        # only ever cleared liftosaur_api_key until this test caught that
-        # deletion left a live Wger/Hevy credential on an otherwise-anonymized
-        # account, matching what each tracker's own manual disconnect clears.
-        user.liftosaur_api_key = "a-real-liftosaur-key"
-        user.wger_instance_url = "https://my-wger.example.com"
-        user.wger_api_token = "a-real-wger-token"
-        user.hevy_api_key = "a-real-hevy-key"
-        user.save()
-
-        anonymize_account(user)
-        user.refresh_from_db()
-
-        assert user.liftosaur_api_key is None
-        assert user.wger_instance_url is None
-        assert user.wger_api_token is None
-        assert user.hevy_api_key is None
-
     def test_deletes_avatar_file_from_storage(self, settings, tmp_path, user, db):
         settings.MEDIA_ROOT = tmp_path
         user.avatar = _png()

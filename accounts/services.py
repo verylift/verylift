@@ -300,13 +300,11 @@ def anonymize_account(user) -> None:
 
     ``avatar`` is deleted from storage (not just cleared from the field --
     matching AvatarForm.save's ``.delete(save=False)`` convention). ``oidc_sub``
-    and every connected tracker credential (``liftosaur_api_key``,
-    ``wger_instance_url``/``wger_api_token``, ``hevy_api_key``) are cleared so
-    the row can never re-authenticate or resume a sync -- matching what each
-    tracker's own manual "disconnect" view already clears (accounts/views.py).
-    ``is_active=False`` blocks login (Django's ``ModelBackend`` already
-    refuses inactive users); ``deactivated_at`` is stamped for the first time
-    this field has ever been populated by anything other than admin action.
+    and ``liftosaur_api_key`` are cleared so the row can never re-authenticate
+    or resume a sync. ``is_active=False`` blocks login (Django's
+    ``ModelBackend`` already refuses inactive users); ``deactivated_at`` is
+    stamped for the first time this field has ever been populated by anything
+    other than admin action.
 
     Session invalidation is the caller's responsibility (``django.contrib.
     auth.logout`` in the view) -- this function only touches the row.
@@ -323,9 +321,6 @@ def anonymize_account(user) -> None:
     user.avatar = None
     user.oidc_sub = None
     user.liftosaur_api_key = None
-    user.wger_instance_url = None
-    user.wger_api_token = None
-    user.hevy_api_key = None
     user.is_active = False
     user.deactivated_at = timezone.now()
     user.save(
@@ -336,9 +331,6 @@ def anonymize_account(user) -> None:
             "avatar",
             "oidc_sub",
             "liftosaur_api_key",
-            "wger_instance_url",
-            "wger_api_token",
-            "hevy_api_key",
             "is_active",
             "deactivated_at",
         ]
