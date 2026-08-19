@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
-from django.db.models import Case, CharField, F, When
+from django.db.models import Case, CharField, F, Q, When
 from django.db.models.functions import Lower
 from django.utils import timezone
 from django.utils.translation import gettext
@@ -287,11 +287,15 @@ def get_co_participants(user):
 
 
 def current_invite_link(challenge):
-    """The challenge's single live (non-revoked, non-expired) invite link, if any."""
+    """The challenge's single live (non-revoked, non-expired) invite link, if any.
+
+    A null ``expires_at`` means "never expires" (see ChallengeInviteLink),
+    so it's admitted alongside the not-yet-expired case.
+    """
     return ChallengeInviteLink.objects.filter(
+        Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now()),
         challenge=challenge,
         revoked_at__isnull=True,
-        expires_at__gt=timezone.now(),
     ).first()
 
 
@@ -370,7 +374,7 @@ def _default_invite_link_expiry(challenge):
 
 
 def regenerate_invite_link(
-    challenge, by_user, *, expires_at=None, max_uses=None
+    challenge, by_user, *, expires_at=None, max_uses=None, never_expires=False
 ) -> ChallengeInviteLink:
     """Mint a fresh live invite link for ``challenge``, revoking any incumbent.
 
@@ -384,10 +388,12 @@ def regenerate_invite_link(
     ``expires_at``, when given, is used verbatim -- validation (e.g. must be
     in the future) is the caller's/form's responsibility. When omitted, the
     default is the challenge's own end_date (end of that day); see
-    ``_default_invite_link_expiry``. ``max_uses`` is None for unlimited uses;
-    the two overrides are independent of each other and combinable. A fresh
-    row's use_count always starts at 0, never carried over from the revoked
-    incumbent.
+    ``_default_invite_link_expiry``. ``never_expires=True`` overrides both:
+    the resulting link's ``expires_at`` is always None regardless of
+    whatever ``expires_at`` was passed. ``max_uses`` is None for unlimited
+    uses; the overrides are independent of each other and combinable. A
+    fresh row's use_count always starts at 0, never carried over from the
+    revoked incumbent.
 
     The token is 6 random bytes (48 bits of entropy, `secrets.token_urlsafe`
     encodes to a fixed 8 characters) -- matching Discord invite codes' length
@@ -405,7 +411,11 @@ def regenerate_invite_link(
             challenge=challenge,
             token=secrets.token_urlsafe(6),
             created_by=by_user,
-            expires_at=expires_at or _default_invite_link_expiry(challenge),
+            expires_at=(
+                None
+                if never_expires
+                else expires_at or _default_invite_link_expiry(challenge)
+            ),
             max_uses=max_uses,
         )
     logger.info(
@@ -414,30 +424,37 @@ def regenerate_invite_link(
         link.pk,
         challenge.pk,
         by_user.id,
-        link.expires_at.isoformat(),
+        link.expires_at.isoformat() if link.expires_at else "never",
         max_uses,
     )
     return link
 
 
-def update_invite_link(link, *, expires_at=None, max_uses=None) -> ChallengeInviteLink:
+def update_invite_link(
+    link, *, expires_at=None, max_uses=None, never_expires=False
+) -> ChallengeInviteLink:
     """Adjust ``link``'s expiry/max-uses in place, without touching its token.
 
     Unlike ``regenerate_invite_link``, this keeps the same row (and therefore
     the same shareable URL and use_count) live -- it's for an owner tweaking
     an already-shared link's limits, not invalidating it. ``expires_at``
     missing/blank falls back to the challenge's default (its own end_date),
-    same as a fresh link would get; ``max_uses`` missing/blank means
-    unlimited. Both are independent, matching ``regenerate_invite_link``.
+    same as a fresh link would get; ``never_expires=True`` overrides that to
+    None regardless of ``expires_at``. ``max_uses`` missing/blank means
+    unlimited. All are independent, matching ``regenerate_invite_link``.
     """
-    link.expires_at = expires_at or _default_invite_link_expiry(link.challenge)
+    link.expires_at = (
+        None
+        if never_expires
+        else expires_at or _default_invite_link_expiry(link.challenge)
+    )
     link.max_uses = max_uses
     link.save(update_fields=["expires_at", "max_uses"])
     logger.info(
         "Updated invite link %s for challenge %s (expires_at=%s, max_uses=%s)",
         link.pk,
         link.challenge_id,
-        link.expires_at.isoformat(),
+        link.expires_at.isoformat() if link.expires_at else "never",
         max_uses,
     )
     return link

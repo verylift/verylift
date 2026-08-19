@@ -363,18 +363,25 @@ class RenameChallengeForm(forms.Form):
 class InviteLinkOptionsForm(forms.Form):
     """Owner-facing overrides at invite-link generation time (Settings/Share).
 
-    Both fields are optional and independent: blank ``expires_at`` falls back
-    to challenges.services._default_invite_link_expiry (the challenge's own
-    end_date); blank ``max_uses`` means unlimited uses (the section's clear
-    button blanks the field for exactly this). ``0`` is rejected rather than
-    silently treated as unlimited -- a cap of zero admits no one, which is
-    never what a submitter meant, so 1 is the lowest accepted explicit value.
+    Three independent expiry states: blank ``expires_at`` with the "Never
+    expires" checkbox unchecked falls back to
+    challenges.services._default_invite_link_expiry (the challenge's own
+    end_date); a filled ``expires_at`` uses that value verbatim (subject to
+    the validation below); and the "Never expires" checkbox, when checked,
+    forces ``expires_at`` to None regardless of whatever was typed in the
+    date field -- the checkbox always wins, with no validation error even if
+    a date was also entered. ``max_uses`` is a fully independent field:
+    blank means unlimited uses (the section's clear button blanks the field
+    for exactly this). ``0`` is rejected rather than silently treated as
+    unlimited -- a cap of zero admits no one, which is never what a
+    submitter meant, so 1 is the lowest accepted explicit value.
 
     Pass ``challenge`` so a custom ``expires_at`` can be bounded to the
     challenge's own end_date -- a link that outlives the competition it's
     for doesn't make sense, and the plain-default expiry already caps there
     (services._default_invite_link_expiry), so a custom value shouldn't be
-    able to exceed it either.
+    able to exceed it either. The bound does not apply when "Never expires"
+    is checked -- that's the whole point of the checkbox.
     """
 
     expires_at = forms.DateTimeField(
@@ -388,6 +395,11 @@ class InviteLinkOptionsForm(forms.Form):
             format="%Y-%m-%dT%H:%M",
             attrs={"type": "datetime-local", "class": _DATE_INPUT_CSS},
         ),
+    )
+    never_expires = forms.BooleanField(
+        required=False,
+        label=_("Never expires"),
+        widget=forms.CheckboxInput(attrs={"class": "h-4 w-4 rounded border-line"}),
     )
     max_uses = forms.IntegerField(
         required=False,
@@ -404,6 +416,13 @@ class InviteLinkOptionsForm(forms.Form):
     def __init__(self, *args, challenge=None, **kwargs):
         self.challenge = challenge
         super().__init__(*args, **kwargs)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get("never_expires"):
+            cleaned_data["expires_at"] = None
+            self.errors.pop("expires_at", None)
+        return cleaned_data
 
     def clean_expires_at(self):
         expires_at = self.cleaned_data.get("expires_at")
