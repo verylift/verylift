@@ -1,0 +1,60 @@
+name: Licenses
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "uv.lock"
+      - "pyproject.toml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "uv.lock"
+      - "pyproject.toml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pip-licenses:
+    name: Dependency license check (pip-licenses)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      # We ship under PolyForm Shield (source-available, not copyleft), so a
+      # GPL/AGPL dependency would impose obligations we can't satisfy. LGPL is
+      # fine since we only ever consume packages as unmodified libraries.
+      #
+      # Deliberately exact-match (no --partial-match): a partial match on
+      # "GPL" would false-positive on "LGPL-3.0-only" (psycopg's license),
+      # since "gpl" is a literal substring of "lgpl". Suppress a genuine
+      # false positive with --ignore-packages=<name>, with a comment
+      # explaining why.
+      - name: Check for copyleft-incompatible licenses
+        env:
+          FAIL_ON_LICENSES: >-
+            GPL;GPL-1.0-only;GPL-1.0-or-later;GPL-2.0-only;GPL-2.0-or-later;
+            GPL-3.0-only;GPL-3.0-or-later;GNU General Public License;
+            GNU General Public License (GPL);
+            GNU General Public License v2 (GPLv2);
+            GNU General Public License v2 or later (GPLv2+);
+            GNU General Public License v3 (GPLv3);
+            GNU General Public License v3 or later (GPLv3+);
+            AGPL;AGPL-3.0-only;AGPL-3.0-or-later;
+            GNU Affero General Public License v3;
+            GNU Affero General Public License v3 or later (AGPLv3+)
+        run: uv run --with pip-licenses pip-licenses --fail-on="$FAIL_ON_LICENSES"
