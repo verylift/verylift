@@ -136,6 +136,48 @@ class TestSyncWgerLifts:
         assert row.source == LiftSource.WGER
         assert last_synced_at(user) is not None
 
+    def test_decimal_formatted_reps_from_real_api_are_parsed(self):
+        """Wger's real API returns repetitions as a decimal-formatted string
+        (e.g. "7.00"), not a bare integer string. int("7.00") raises
+        ValueError, which the code used to swallow and silently drop the row
+        -- this is the exact shape that caused every synced set to vanish
+        against a real instance despite the sync reporting success.
+        """
+        user = self._user()
+        entries = [_log_entry(repetitions="7.00")]
+        p1, p2 = _patch_units(STANDARD_WEIGHT_UNITS, STANDARD_REPETITION_UNITS)
+        with (
+            p1,
+            p2,
+            patch(
+                "wger.services.WgerClient.get_workout_logs",
+                return_value=(entries, False, 100),
+            ),
+            patch("wger.services.WgerClient.get_exercise_name", return_value="Squat"),
+        ):
+            pooled = sync_wger_lifts(user, force=True)
+
+        assert pooled == 1
+        assert LiftHistory.objects.get(user=user).reps == 7
+
+    def test_fractional_reps_skipped(self):
+        user = self._user()
+        entries = [_log_entry(repetitions="7.50")]
+        p1, p2 = _patch_units(STANDARD_WEIGHT_UNITS, STANDARD_REPETITION_UNITS)
+        with (
+            p1,
+            p2,
+            patch(
+                "wger.services.WgerClient.get_workout_logs",
+                return_value=(entries, False, 100),
+            ),
+            patch("wger.services.WgerClient.get_exercise_name", return_value="Squat"),
+        ):
+            pooled = sync_wger_lifts(user, force=True)
+
+        assert pooled == 0
+        assert not LiftHistory.objects.filter(user=user).exists()
+
     def test_alias_applied_to_resolved_exercise_name(self):
         user = self._user()
         WgerLiftAliasFactory(from_name="Squat", to_name="Back Squat")

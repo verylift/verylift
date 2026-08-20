@@ -179,9 +179,12 @@ def _history_rows_for_page(
             continue
 
         try:
-            reps = int(reps_raw)
-        except (TypeError, ValueError):
+            reps_decimal = Decimal(str(reps_raw))
+        except Exception:
             continue
+        if reps_decimal != reps_decimal.to_integral_value():
+            continue
+        reps = int(reps_decimal)
 
         raw_name = _resolve_exercise_name(client, exercise_id, name_cache)
         if not raw_name:
