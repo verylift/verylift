@@ -102,7 +102,9 @@
     <section class="border-2 border-accent bg-accent-subtle rounded p-6 mb-6">
       <span class="inline-block text-xs font-medium px-2 py-0.5 mb-2 rounded bg-accent text-accent-on">{% trans "Final stretch" %}</span>
       <p class="text-sm text-content-body">
-        {% if card.endgame_suggestion == "next_point" %}
+        {% if card.endgame_suggestion == "next_point" and is_rep_target_mode %}
+        {% blocktrans count counter=card.reps_gap with lift=card.lift %}{{ counter }} more rep for your next point on {{ lift }}.{% plural %}{{ counter }} more reps for your next point on {{ lift }}.{% endblocktrans %}
+        {% elif card.endgame_suggestion == "next_point" %}
         {% blocktrans with gap=card.next_point_weight_gap unit=personal_data.display_unit lift=card.lift %}<span class="font-mono">{{ gap }}</span> {{ unit }} away from your next point on {{ lift }}.{% endblocktrans %}
         {% elif card.endgame_suggestion_via == "both" %}
         {% blocktrans with gap=card.weight_gap unit=personal_data.display_unit lift=card.lift %}<span class="font-mono">{{ gap }}</span> {{ unit }} away from your first point on {{ lift }}, or{% endblocktrans %}
@@ -300,6 +302,7 @@
     <section class="bg-surface-card border border-line-subtle rounded p-6 mb-6">
       <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
         <h2 class="text-lg font-semibold text-content-strong">{% trans "Your Performance" %}</h2>
+        {% if not is_rep_target_mode %}
         <div class="inline-flex rounded border border-line-subtle overflow-hidden text-sm">
           <button type="button" id="tab-summary-btn"
                   class="px-4 py-2 font-medium bg-accent text-accent-on"
@@ -308,16 +311,22 @@
                   class="px-4 py-2 font-medium bg-surface-card text-content-body"
                   onclick="showPersonalTab('standards')">{% trans "Goals" %}</button>
         </div>
+        {% endif %}
       </div>
 
       <div id="tab-summary">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
           {% for card in personal_data.summary_cards %}
+          {% if is_rep_target_mode %}
+          {% include "challenges/_rep_target_summary_card.html" with card=card display_unit=personal_data.display_unit challenge=challenge %}
+          {% else %}
           {% include "challenges/_summary_card.html" with card=card display_unit=personal_data.display_unit challenge=challenge %}
+          {% endif %}
           {% endfor %}
         </div>
       </div>
 
+      {% if not is_rep_target_mode %}
       <div id="tab-standards" class="hidden">
         <div class="overflow-auto max-h-[70vh] snap-y snap-mandatory scroll-pt-[37px]">
           <table class="text-sm text-left w-full border-separate border-spacing-0">
@@ -347,6 +356,7 @@
         </div>
         <p class="text-xs text-content-muted mt-2">{% blocktrans with unit=personal_data.display_unit %}Thresholds shown in {{ unit }}{% endblocktrans %} {% trans "for your custom goal." %}</p>
       </div>
+      {% endif %}
     </section>
     <style>
       /* Self-report flip card (TASK-25). Front/back are both always in the

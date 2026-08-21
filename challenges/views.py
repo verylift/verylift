@@ -26,6 +26,7 @@ from challenges.custom_goals import detach_active_goal, save_custom_goal
 from challenges.forms import (
     CreateChallengeDatesForm,
     CreateChallengeLiftsForm,
+    CreateChallengeModeForm,
     CreateChallengeNameForm,
     CustomGoalForm,
     GoalInputsForm,
@@ -40,13 +41,26 @@ from challenges.goal_builders import (
     standards_source_detail,
     suggest_from_history,
     suggest_from_standards,
+    suggest_rep_targets_from_history,
 )
-from challenges.models import Challenge, ChallengeParticipant, CustomGoal
+from challenges.models import (
+    Challenge,
+    ChallengeParticipant,
+    CustomGoal,
+    RepTargetGoal,
+)
+from challenges.rep_target_goals import (
+    detach_active_rep_target_goal,
+    parse_rep_target_grid,
+    rep_target_goal_is_complete,
+    save_rep_target_goal,
+)
 from challenges.services import (
     activate_draft_for_creator,
     build_custom_goal_context,
     build_participant_chart,
     build_personal_data,
+    build_rep_target_goal_context,
     challenge_end_instant,
     close_challenge,
     create_challenge,
@@ -276,13 +290,13 @@ _CREATE_STEP_SESSION_KEY = "create_challenge_step_index"
 def _wizard_steps(data):
     """Effective step list for the create wizard.
 
-    Fixed — every challenge is CUSTOM (TASK-248): the owner sets only name,
-    dates, and lifts. There is no invitee step (TASK-272: challenges are
-    invite-only and everyone joins by shareable link), and goal setup happens
-    per-participant at join. Kept as a function (rather than a bare constant)
-    so the session-based "go back" / re-render flow keeps its existing shape.
+    Name -> Dates -> Mode -> Lifts (issue #85 inserted "mode" right after
+    dates). There is no invitee step (TASK-272: challenges are invite-only and
+    everyone joins by shareable link), and goal setup happens per-participant
+    at join. Kept as a function (rather than a bare constant) so the
+    session-based "go back" / re-render flow keeps its existing shape.
     """
-    return ["name", "dates", "lifts"]
+    return ["name", "dates", "mode", "lifts"]
 
 
 def _create_wizard_step_form(step, data, *, post=None):
@@ -305,13 +319,20 @@ def _create_wizard_step_form(step, data, *, post=None):
                 "end_date": data.get("end_date", ""),
             }
         )
+    if step == "mode":
+        if post is not None:
+            return CreateChallengeModeForm(post)
+        return CreateChallengeModeForm(
+            initial={"mode": data.get("mode", Challenge.Mode.CLASSIC)}
+        )
     # step == "lifts", the final step. No prefill-from-session branch here (the
     # other steps have one): submitting this step creates the challenge and
     # clears the wizard session, so no GET can ever arrive with a stashed lift
     # selection to restore.
+    mode = data.get("mode", Challenge.Mode.CLASSIC)
     if post is not None:
-        return CreateChallengeLiftsForm(post)
-    return CreateChallengeLiftsForm()
+        return CreateChallengeLiftsForm(post, mode=mode)
+    return CreateChallengeLiftsForm(mode=mode)
 
 
 @login_required
@@ -354,12 +375,15 @@ def create_challenge_view(request):
             elif step == "dates":
                 data["start_date"] = form.cleaned_data["start_date"].isoformat()
                 data["end_date"] = form.cleaned_data["end_date"].isoformat()
+            elif step == "mode":
+                data["mode"] = form.cleaned_data["mode"]
             elif step == "lifts":
                 data["lift_names"] = [lift.name for lift in form.cleaned_data["lifts"]]
                 creation_data = {
                     "name": data["name"],
                     "start_date": date.fromisoformat(data["start_date"]),
                     "end_date": date.fromisoformat(data["end_date"]),
+                    "mode": data.get("mode", Challenge.Mode.CLASSIC),
                     "history_window": Challenge.HistoryWindow.FROM_START,
                     "plate_unit": Challenge.PlateUnit.LB,
                     "smallest_plate_kg": Decimal("1.25"),
@@ -800,6 +824,88 @@ def _goal_setup_needs_bodyweight(challenge, data):
     return False
 
 
+def _rep_target_goal_setup_view(request, challenge, participant):
+    """Single-page Rep Target goal-setup form (issue #85).
+
+    One row per configured lift (target weight + target reps), manual entry
+    only, plus a table-wide "Suggest targets" button that re-renders the same
+    form prefilled from the participant's synced history -- a convenience
+    equivalent to Classic's "Compute", not a save. Reached only from
+    goal_setup_view, which has already applied the terminal-challenge and
+    has_goal_configured guards, so none of those are repeated here.
+    """
+    if request.method == "GET":
+        try:
+            sync_and_score(request.user, challenge)
+        except OperationalError:
+            logger.exception(
+                "Rep target goal-setup sync/score failed for user %s challenge %s",
+                request.user.id,
+                challenge.pk,
+            )
+            messages.warning(
+                request,
+                gettext(
+                    "Couldn't refresh your Liftosaur history just now — "
+                    "showing the history we already have."
+                ),
+            )
+
+    unit = request.user.unit_preference
+
+    if request.method == "POST":
+        targets, errors = parse_rep_target_grid(request.POST, challenge, unit)
+        goal_name = (request.POST.get("name") or "").strip() or "My Goal"
+
+        if request.POST.get("action") == "suggest":
+            suggested, no_history_lifts = suggest_rep_targets_from_history(
+                request.user,
+                challenge,
+                lookback_days=settings.CHALLENGES_GOAL_SUGGESTION_LOOKBACK_DAYS,
+            )
+            merged_targets = {**targets, **suggested}
+            context = build_rep_target_goal_context(
+                request.user,
+                challenge,
+                goal_name=goal_name,
+                targets=merged_targets,
+                no_history_lifts=set(no_history_lifts),
+                source_note=gettext(
+                    "Prefilled from your recent history. Review every row "
+                    "before confirming — this goal is locked once you save it."
+                ),
+            )
+            return render(request, "challenges/rep_target_goal_setup.html", context)
+
+        other_errors = errors + rep_target_goal_is_complete(targets, challenge)
+        if other_errors:
+            context = build_rep_target_goal_context(
+                request.user,
+                challenge,
+                goal_name=goal_name,
+                targets=targets,
+                errors=other_errors,
+            )
+            return render(request, "challenges/rep_target_goal_setup.html", context)
+
+        save_rep_target_goal(
+            participant,
+            goal_name,
+            targets,
+            source_method=RepTargetGoal.SourceMethod.CUSTOM,
+        )
+        # Score the pool already pulled at this view's GET entry -- local-DB
+        # only -- so the leaderboard reflects the new targets immediately.
+        sync_and_score(request.user, challenge, sync=False)
+        activate_draft_for_creator(challenge, request.user)
+        return redirect(f"/challenges/{challenge.pk}/")
+
+    context = build_rep_target_goal_context(
+        request.user, challenge, goal_name="My Goal"
+    )
+    return render(request, "challenges/rep_target_goal_setup.html", context)
+
+
 @never_cache
 @login_required
 def goal_setup_view(request, pk):
@@ -860,7 +966,8 @@ def goal_setup_view(request, pk):
         # back at the wizard's start with no obvious cause) -- this is the
         # only code path that discards wizard progress outright, so a log
         # line here confirms or rules it out as the explanation if it
-        # recurs, without needing to reproduce it live.
+        # recurs, without needing to reproduce it live. A no-op pop for a
+        # REP_TARGET participant, who never wrote these session keys.
         logger.info(
             "User %s cancelled goal-setup wizard for challenge %s at step index %s",
             request.user.id,
@@ -872,6 +979,14 @@ def goal_setup_view(request, pk):
         request.session[_GOAL_DATA_SESSION_KEY] = all_data
         request.session[_GOAL_STEP_SESSION_KEY] = all_indexes
         return redirect(reverse("challenges:detail", args=[pk]))
+
+    if challenge.mode == Challenge.Mode.REP_TARGET:
+        # Rep Target has no strength-standards/JSON method and no multi-step
+        # inputs wizard (issue #85) -- manual entry plus a "Suggest targets"
+        # convenience fits on one page, so it skips the session-tracked
+        # multi-step machinery entirely rather than reusing it for a wizard
+        # of one real step.
+        return _rep_target_goal_setup_view(request, challenge, participant)
 
     data = all_data.get(pk_key, {})
     index = all_indexes.get(pk_key, 0)
@@ -1469,6 +1584,7 @@ def challenge_detail_view(request, pk):
         "by_lift_data": by_lift_data,
         "recent_activity": recent_activity,
         "personal_data": personal_data,
+        "is_rep_target_mode": challenge.mode == Challenge.Mode.REP_TARGET,
         "last_synced_at": last_synced_at(request.user),
         "mobile_header_title": challenge.name,
     }
@@ -1683,7 +1799,10 @@ def bail_view(request, pk):
         participant.is_bailed = True
         participant.bailed_at = datetime.now(tz=UTC)
         detach_active_goal(participant)
-        participant.save(update_fields=["is_bailed", "bailed_at", "custom_goal"])
+        detach_active_rep_target_goal(participant)
+        participant.save(
+            update_fields=["is_bailed", "bailed_at", "custom_goal", "rep_target_goal"]
+        )
         logger.info("User %s bailed from challenge %s", request.user.id, pk)
         messages.success(request, gettext("You have left the challenge."))
         return redirect("challenges:dashboard")

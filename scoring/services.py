@@ -15,6 +15,7 @@ from challenges.standards import covered_lift_names
 from liftosaur.models import Lift, LiftHistory, LiftSource
 from notifications.models import Notification
 from scoring.domain.calculator import (
+    best_score_for_rep_target,
     best_score_for_set,
     is_assisted_equipment,
     is_bodyweight_added_lift,
@@ -53,6 +54,24 @@ class _GoalTargets:
         scoring no-op.
         """
         return self._targets.get(lift) or None
+
+
+class _RepTargetGoalTargets:
+    """A participant's flat per-lift ``{lift: (target_weight_kg, target_reps)}``
+    table for a REP_TARGET challenge -- the sibling of _GoalTargets above,
+    same "one prefetch per resolver" shape.
+    """
+
+    def __init__(self, *, rep_target_goal=None):
+        self._targets: dict[str, tuple[Decimal, int]] = {}
+        if rep_target_goal is not None:
+            for lift, target_weight, target_reps in rep_target_goal.targets.values_list(
+                "lift", "target_weight", "target_reps"
+            ):
+                self._targets[lift] = (target_weight, target_reps)
+
+    def targets_for(self, lift: str) -> tuple[Decimal, int] | None:
+        return self._targets.get(lift)
 
 
 @dataclass
@@ -130,14 +149,18 @@ def process_scored_set(
             return None
 
     # Eligibility guards. A frozen (bailed) ledger blocks any source. A
-    # participant with no CustomGoal yet configured — including, deliberately,
-    # any participant row that predates this task and so has no goal at all
-    # (there is no legacy backfill, TASK-248 revision 5) — is a clean scoring
-    # no-op, indistinguishable from someone who joined and abandoned goal
-    # setup: listed, scoring nothing, no exception.
+    # participant with no goal yet configured for their challenge's mode —
+    # including, deliberately, any participant row that predates this task and
+    # so has no goal at all (there is no legacy backfill, TASK-248 revision 5)
+    # — is a clean scoring no-op, indistinguishable from someone who joined
+    # and abandoned goal setup: listed, scoring nothing, no exception.
     if participant.is_bailed:
         return None
-    if participant.custom_goal_id is None:
+    is_rep_target = challenge.mode == Challenge.Mode.REP_TARGET
+    goal_id = (
+        participant.rep_target_goal_id if is_rep_target else participant.custom_goal_id
+    )
+    if goal_id is None:
         return None
 
     if is_bodyweight_added is None:
@@ -146,15 +169,27 @@ def process_scored_set(
         return None
 
     if resolver is None:
-        resolver = _GoalTargets(custom_goal=participant.custom_goal)
+        resolver = (
+            _RepTargetGoalTargets(rep_target_goal=participant.rep_target_goal)
+            if is_rep_target
+            else _GoalTargets(custom_goal=participant.custom_goal)
+        )
     target = resolver.targets_for(lift)
     if target is None:
         return None
 
     # The weight comparison is exact — no fuzz band. Every target is a static,
     # entered-once weight; there is no bodyweight drift to absorb.
-    result = best_score_for_set(reps, weight, target)
-    if result is None:
+    if is_rep_target:
+        target_weight, target_reps = target
+        points_earned = best_score_for_rep_target(
+            reps, weight, target_reps, target_weight
+        )
+    else:
+        result = best_score_for_set(reps, weight, target)
+        points_earned = result[0] if result is not None else None
+
+    if points_earned is None:
         return _persist_audit_row(
             user=user,
             challenge=challenge,
@@ -167,7 +202,6 @@ def process_scored_set(
             source=source,
         )
 
-    points_earned, _rep_count_satisfied = result
     return _persist_best(
         user=user,
         challenge=challenge,
@@ -325,7 +359,11 @@ def score_pooled_history(*, user, challenge) -> ScoringSummary:
     # backfill): the participant is already in hand; build one target-table
     # lookup and read the bodyweight-added lift set in a single query so the
     # assisted-equipment skip rule never hits the Lift table per set.
-    resolver = _GoalTargets(custom_goal=participant.custom_goal)
+    resolver = (
+        _RepTargetGoalTargets(rep_target_goal=participant.rep_target_goal)
+        if challenge.mode == Challenge.Mode.REP_TARGET
+        else _GoalTargets(custom_goal=participant.custom_goal)
+    )
     bodyweight_added_lifts = set(
         Lift.objects.filter(
             name__in=standard_lifts, is_bodyweight_added=True

@@ -77,6 +77,44 @@
       </div>
     </form>
 
+    {% elif step == "mode" %}
+    <h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "Choose a scoring mode" %}</h1>
+    <p class="text-sm text-content-muted mb-6">
+      {% trans "This applies to the whole challenge and can't be changed once you continue." %}
+    </p>
+    <form method="post" class="bg-surface-card border border-line-subtle rounded p-6">
+      {% csrf_token %}
+      <div class="space-y-3 mb-6">
+        {% for radio in form.mode %}
+        <label class="flex items-start gap-3 border border-line-subtle rounded p-4 cursor-pointer hover:border-accent">
+          {{ radio.tag }}
+          <span>
+            <span class="block text-sm font-semibold text-content-strong">
+              {% if radio.data.value == "classic" %}{% trans "Classic" %}{% else %}{% trans "Rep Target" %}{% endif %}
+            </span>
+            <span class="block text-xs text-content-muted mt-1">
+              {% if radio.data.value == "classic" %}
+              {% trans "Score against a personal rep-max weight chart — a target weight for each rep count, 1 through 10." %}
+              {% else %}
+              {% trans "Score against a single reps-at-a-weight goal per exercise — well suited to calisthenics like push-ups, dips, and pull-ups." %}
+              {% endif %}
+            </span>
+          </span>
+        </label>
+        {% endfor %}
+      </div>
+      {% if form.mode.errors %}
+      <p class="mt-1 mb-4 text-xs text-danger">{{ form.mode.errors|join:", " }}</p>
+      {% endif %}
+      <div class="flex items-center gap-4">
+        <a href="{% url 'challenges:create' %}?back=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "Back" %}</a>
+        <button type="submit" class="bg-accent text-accent-on text-sm font-medium px-6 py-2 rounded hover:bg-accent-hover">
+          {% trans "Continue" %}
+        </button>
+        <a href="{% url 'challenges:create' %}?cancel=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "Cancel" %}</a>
+      </div>
+    </form>
+
     {% elif step == "lifts" %}
     <h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "Choose your lifts" %}</h1>
     <p class="text-sm text-content-muted mb-6">
@@ -111,11 +149,25 @@
         </div>
       </div>
 
+      <div class="mb-2" data-lift-group>
+        <h2 class="text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1 mt-3">{% trans "Calisthenics" %}</h2>
+        <div class="space-y-1 border border-line-subtle rounded px-3 py-2">
+          {% for checkbox in form.lifts %}
+          {% if checkbox.choice_label in form.calisthenics_lift_names and checkbox.choice_label not in form.classic_lift_names %}
+          <label class="flex items-center gap-2 text-sm text-content-body cursor-pointer" data-lift-row data-lift-name="{{ checkbox.choice_label|lower }}">
+            {{ checkbox.tag }}
+            {{ checkbox.choice_label }}
+          </label>
+          {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+
       <div class="mb-4" data-lift-group>
         <h2 class="text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1 mt-3">{% trans "All lifts" %}</h2>
         <div class="space-y-1 max-h-64 overflow-y-auto border border-line-subtle rounded px-3 py-2">
           {% for checkbox in form.lifts %}
-          {% if checkbox.choice_label not in form.classic_lift_names %}
+          {% if checkbox.choice_label not in form.classic_lift_names and checkbox.choice_label not in form.calisthenics_lift_names %}
           <label class="flex items-center gap-2 text-sm text-content-body cursor-pointer" data-lift-row data-lift-name="{{ checkbox.choice_label|lower }}">
             {{ checkbox.tag }}
             {{ checkbox.choice_label }}

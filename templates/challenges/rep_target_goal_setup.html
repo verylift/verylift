@@ -1,0 +1,97 @@
+{% extends "base/wizard.html" %}
+{% load i18n %}
+
+{% block title %}{% blocktrans with name=challenge.name %}Set Your Goal — {{ name }}{% endblocktrans %}{% endblock %}
+
+{% block wizard_width %}max-w-4xl{% endblock %}
+
+{% block wizard_body %}
+    <h1 class="text-2xl font-bold text-content-strong mb-2">
+      {% trans "Set your rep target goal" %}
+    </h1>
+    <p class="text-sm text-content-muted mb-2 max-w-2xl">
+      {% blocktrans with name=challenge.name unit=display_unit %}
+      One target weight and rep count per lift in <strong>{{ name }}</strong>,
+      in {{ unit }}. A qualifying set is any at or above the target weight —
+      reps earn points toward the target, up to 10.
+      {% endblocktrans %}
+    </p>
+    {% if source_note %}
+    <p class="text-sm text-content-muted mb-2 max-w-2xl">{{ source_note }}</p>
+    {% endif %}
+    <p class="text-sm font-medium text-warning mb-8 max-w-2xl">
+      {% trans "This goal is locked once you confirm it — there's no editing after you join." %}
+    </p>
+
+    {% if errors %}
+    <div class="mb-6 px-4 py-3 rounded bg-danger-light text-danger-dark text-sm">
+      <p class="font-medium mb-1">{% trans "Please fix the following:" %}</p>
+      <ul class="list-disc list-inside space-y-1">
+        {% for error in errors %}
+        <li>{{ error }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <form method="post" action="{% url 'challenges:goal-setup' challenge.pk %}">
+      {% csrf_token %}
+
+      <div class="mb-6">
+        <label for="id_goal_name" class="block text-sm font-medium text-content-body mb-1">
+          {% trans "Goal name" %}
+        </label>
+        <input id="id_goal_name" type="text" name="name" value="{{ goal_name }}"
+               placeholder="{% trans 'e.g. Calisthenics goals' %}"
+               class="w-full bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent">
+      </div>
+
+      <div class="overflow-x-auto mb-6">
+        <table class="text-sm text-left w-full border-separate border-spacing-0">
+          <thead>
+            <tr class="text-content-muted">
+              <th class="py-2 pr-4 font-medium">{% trans "Lift" %}</th>
+              <th class="py-2 px-3 font-medium">{% blocktrans with unit=display_unit %}Target weight ({{ unit }}){% endblocktrans %}</th>
+              <th class="py-2 px-3 font-medium">{% trans "Target reps" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for lift in lifts %}
+            <tr class="text-content-body border-b border-line-subtle">
+              <td class="py-2 pr-4 font-medium text-content-strong whitespace-nowrap">
+                {{ lift.name }}{% if lift.is_bodyweight_added %} <span class="text-content-muted font-normal">({% trans "BW" %})</span>{% endif %}
+              </td>
+              <td class="py-2 px-3">
+                <input type="text" inputmode="decimal" name="{{ lift.weight_field }}" value="{{ lift.weight_value }}"
+                       class="w-28 bg-surface-card text-content-body border border-line rounded px-2 py-1.5 text-sm focus:outline-none focus:border-accent">
+              </td>
+              <td class="py-2 px-3">
+                <input type="number" min="1" max="999" name="{{ lift.reps_field }}" value="{{ lift.reps_value }}"
+                       class="w-24 bg-surface-card text-content-body border border-line rounded px-2 py-1.5 text-sm focus:outline-none focus:border-accent">
+              </td>
+            </tr>
+            {% if lift.needs_decision %}
+            <tr>
+              <td colspan="3" class="pb-2 text-xs text-content-muted italic">
+                {% trans "No recent history for this lift yet — enter a target manually." %}
+              </td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <button type="submit" name="action" value="suggest"
+                class="text-sm font-medium px-4 py-2 rounded border border-line-subtle text-content-body hover:bg-surface-sunken">
+          {% trans "Suggest targets" %}
+        </button>
+        <button type="submit" name="action" value="save"
+                class="bg-accent text-accent-on text-sm font-medium px-6 py-2 rounded hover:bg-accent-hover">
+          {% trans "Confirm Goal" %}
+        </button>
+        <a href="{% url 'challenges:goal-setup' challenge.pk %}?cancel=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "Cancel" %}</a>
+      </div>
+    </form>
+{% endblock %}

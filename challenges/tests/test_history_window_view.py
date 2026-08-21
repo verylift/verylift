@@ -136,8 +136,7 @@ class TestWizardCreatedChallengeDefaultsWindow:
         url = reverse("challenges:create")
         c.post(url, {"name": "Wizard Default Test"})
         c.post(url, {"start_date": "2027-03-01", "end_date": "2027-06-01"})
-        c.post(url, {"standard": "custom"})
+        c.post(url, {"mode": Challenge.Mode.CLASSIC})
         c.post(url, {"lifts": [str(bench.pk)]})
-        c.post(url, {"invitees": []})
         challenge = Challenge.objects.get(creator=creator)
         assert challenge.history_window == Challenge.HistoryWindow.FROM_START

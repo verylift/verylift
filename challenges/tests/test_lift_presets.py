@@ -12,7 +12,11 @@ from pathlib import Path
 
 from django.conf import settings
 
-from challenges.lift_presets import CLASSIC_LIFT_NAMES, IPF_LIFT_NAMES
+from challenges.lift_presets import (
+    CALISTHENICS_LIFT_NAMES,
+    CLASSIC_LIFT_NAMES,
+    IPF_LIFT_NAMES,
+)
 
 BASE_DIR = Path(settings.BASE_DIR)
 
@@ -29,3 +33,7 @@ def test_classic_names_are_seeded_liftosaur_lifts():
 
 def test_ipf_names_are_seeded_liftosaur_lifts():
     assert _liftosaur_lift_names() >= IPF_LIFT_NAMES
+
+
+def test_calisthenics_names_are_seeded_liftosaur_lifts():
+    assert _liftosaur_lift_names() >= CALISTHENICS_LIFT_NAMES

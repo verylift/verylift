@@ -44,3 +44,23 @@ IPF_LIFT_NAMES: frozenset[str] = frozenset(
         "Deadlift",
     }
 )
+
+# Bodyweight/calisthenics exercises the lift picker pre-checks under its own
+# "Calisthenics" group (issue #85). Available regardless of challenge mode --
+# an owner can still build a CLASSIC push-up rep-max chart -- but this is the
+# preset a REP_TARGET challenge (no rep-max ladder makes sense for these)
+# will typically reach for.
+CALISTHENICS_LIFT_NAMES: frozenset[str] = frozenset(
+    {
+        "Push Up",
+        "Pull-up",
+        "Chin-up",
+        "Dip",
+        "Sit Up",
+        "Handstand Push Up",
+        "Hanging Leg Raise",
+        "Toes To Bar",
+        "Pistol Squat",
+        "Inverted Row",
+    }
+)

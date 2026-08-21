@@ -12,6 +12,8 @@ from challenges.models import (
     ChallengeParticipant,
     CustomGoal,
     CustomGoalTarget,
+    RepTargetGoal,
+    RepTargetGoalTarget,
 )
 
 
@@ -79,6 +81,24 @@ class CustomGoalTargetFactory(factory.django.DjangoModelFactory):
     target_weight = Decimal("100.00")
 
 
+class RepTargetGoalFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = RepTargetGoal
+
+    participant = factory.SubFactory(ChallengeParticipantFactory)
+    name = factory.Sequence(lambda n: f"Rep Target Goal {n}")
+
+
+class RepTargetGoalTargetFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = RepTargetGoalTarget
+
+    goal = factory.SubFactory(RepTargetGoalFactory)
+    lift = "Push Up"
+    target_weight = Decimal("0.00")
+    target_reps = 20
+
+
 def make_custom_challenge(*, lifts=("Bench Press",), **kwargs):
     """Build a challenge with its configured ChallengeLift rows.
 
@@ -90,3 +110,9 @@ def make_custom_challenge(*, lifts=("Bench Press",), **kwargs):
     for name in lifts:
         ChallengeLiftFactory(challenge=challenge, name=name)
     return challenge
+
+
+def make_rep_target_challenge(*, lifts=("Push Up",), **kwargs):
+    """Build a REP_TARGET-mode challenge with its configured ChallengeLift rows."""
+    kwargs.setdefault("mode", Challenge.Mode.REP_TARGET)
+    return make_custom_challenge(lifts=lifts, **kwargs)

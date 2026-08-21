@@ -1,0 +1,46 @@
+{% load i18n %}
+{% comment %}
+One "Your Performance" summary card for a REP_TARGET challenge (issue #85) --
+the sibling of _summary_card.html, but showing progress toward a single
+(target_weight, target_reps) goal instead of Classic's rep-max ladder + a
+self-report carousel. There is no manual self-report path for this mode
+(out of scope for issue #85).
+
+Context: card (a personal_data.summary_cards entry), display_unit, challenge.
+{% endcomment %}
+<div class="{% if card.close_to_goal %}border-2 border-warning-light{% else %}border border-line-subtle{% endif %} rounded p-4">
+  <h3 class="text-sm font-semibold text-content-strong mb-2">{{ card.lift }}</h3>
+  <p class="text-xs text-content-muted mb-3">
+    {% blocktrans with weight=card.target_weight reps=card.target_reps %}Target: <span class="font-mono">{{ weight }}</span>{% endblocktrans %}{% if card.target_weight != "BW" %} {{ display_unit }}{% endif %} × <span class="font-mono">{{ card.target_reps }}</span> {% trans "reps" %}
+  </p>
+
+  {% if card.state == "scored" %}
+  <p class="text-2xl font-bold text-accent font-mono">{% blocktrans with points=card.points_earned %}{{ points }} pts{% endblocktrans %}</p>
+  <div class="h-1.5 w-full bg-surface-sunken rounded-full overflow-hidden my-2">
+    <div class="h-full bg-accent" style="width: {% widthratio card.progress_reps card.target_reps 100 %}%"></div>
+  </div>
+  <p class="text-sm text-content-body">
+    {% blocktrans with progress=card.progress_reps target=card.target_reps %}<span class="font-mono">{{ progress }}</span>/<span class="font-mono">{{ target }}</span> reps{% endblocktrans %}
+    ({{ card.weight }}{% if card.weight != "BW" %} {{ display_unit }}{% endif %}, {{ card.date }})
+  </p>
+  {% if card.reps_gap is not None %}
+  <p class="text-xs text-content-muted mt-1">
+    {% blocktrans count counter=card.reps_gap with lift=card.lift %}{{ counter }} more rep for your next point on {{ lift }}.{% plural %}{{ counter }} more reps for your next point on {{ lift }}.{% endblocktrans %}
+  </p>
+  {% endif %}
+  {% elif card.state == "no_points" %}
+  {% if card.close_to_goal %}
+  <span class="inline-block text-xs font-medium px-2 py-0.5 mb-2 rounded bg-warning-light text-warning-dark">{% trans "Close to goal" %}</span>
+  {% endif %}
+  <p class="text-sm text-content-body">
+    {% blocktrans with weight=card.best_weight date=card.best_date %}Best logged: <span class="font-mono">{{ weight }}</span>{% endblocktrans %}{% if card.best_weight != "BW" %} {{ display_unit }}{% endif %} {% blocktrans with date=card.best_date %}({{ date }}){% endblocktrans %}
+  </p>
+  {% if card.weight_gap is not None %}
+  <p class="text-xs text-content-muted mt-1">
+    {% blocktrans with gap=card.weight_gap unit=display_unit lift=card.lift %}Add <span class="font-mono">{{ gap }}</span> {{ unit }} to start scoring on {{ lift }}.{% endblocktrans %}
+  </p>
+  {% endif %}
+  {% else %}
+  <p class="text-sm text-content-muted italic">{% trans "No data yet" %}</p>
+  {% endif %}
+</div>
