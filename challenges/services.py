@@ -27,11 +27,16 @@ from challenges.models import (
     CustomGoal,
     CustomGoalTarget,
 )
+from challenges.rep_target_goals import (
+    detach_active_rep_target_goal,
+    rep_target_field_names,
+)
 from challenges.standards import covered_lift_names
 from liftosaur.models import LiftHistory, LiftSource
 from liftosaur.services import sync_user_lifts
 from notifications.models import Notification
 from scoring.domain.calculator import (
+    best_score_for_rep_target,
     best_score_for_set,
     format_added_weight,
     is_assisted_equipment,
@@ -517,12 +522,14 @@ def remove_participant(participant) -> None:
         participant.bailed_at = datetime.now(tz=UTC)
         participant.removed_by_creator = True
         detach_active_goal(participant)
+        detach_active_rep_target_goal(participant)
         participant.save(
             update_fields=[
                 "is_bailed",
                 "bailed_at",
                 "removed_by_creator",
                 "custom_goal",
+                "rep_target_goal",
             ]
         )
         Notification.objects.create(
@@ -632,6 +639,7 @@ def create_challenge(creator, cleaned_data) -> Challenge:
             start_date=cleaned_data["start_date"],
             end_date=cleaned_data["end_date"],
             status=Challenge.Status.DRAFT,
+            mode=cleaned_data.get("mode", Challenge.Mode.CLASSIC),
             history_window=cleaned_data["history_window"],
             plate_unit=cleaned_data["plate_unit"],
             smallest_plate=cleaned_data["smallest_plate_kg"],
@@ -1349,6 +1357,164 @@ def _flag_endgame_suggestion(summary_cards, challenge):
         card["endgame_suggestion_via"] = via
 
 
+def _next_reps_for_rep_target(current_points, target_reps, target_weight) -> int | None:
+    """Fewest reps (assuming the weight gate is already met) that would score
+    more than ``current_points`` against a Rep Target goal.
+
+    Reuses ``best_score_for_rep_target`` itself (called with
+    ``performed_weight == target_weight``, satisfying the gate exactly) rather
+    than inverting its round-half-up formula by hand -- this is what keeps the
+    "N more reps" nudge mathematically identical to what scoring would actually
+    award, the same "single source of truth" reasoning _threshold_at_for_lift
+    documents for Classic. Returns None when ``current_points`` is already 10
+    (there is no next point).
+    """
+    for reps in range(1, target_reps + 1):
+        points = best_score_for_rep_target(
+            reps, target_weight, target_reps, target_weight
+        )
+        if points is not None and points > current_points:
+            return reps
+    return None
+
+
+def build_rep_target_personal_data(user, challenge, participant):
+    """The REP_TARGET sibling of :func:`build_personal_data`.
+
+    Each summary card tracks progress toward one lift's single (target_weight,
+    target_reps) goal instead of a rep-max ladder: a progress bar/fraction
+    ("12/20 reps -> 6 pts") once the weight gate is met, or a weight-gate
+    message before it is. Reuses the exact same "Close to goal"/"Final
+    stretch" tuning constants and flagging functions as Classic
+    (_flag_close_to_goal/_flag_endgame_suggestion) rather than a separate set
+    (issue #85 open question #1) -- both functions key off generic
+    state/gap_fraction/reps_gap card fields, and Rep Target's weight-gate gap
+    and reps-to-next-point gap slot into that same vocabulary cleanly enough
+    that a second set of near-duplicate CHALLENGES_* settings would only add
+    surface area for the same UX concept.
+
+    Returns None under the same conditions as build_personal_data: no
+    effective window start, or the participant hasn't configured a goal yet.
+    """
+    window_start = challenge.window_start_for(participant)
+    if window_start is None or participant.rep_target_goal_id is None:
+        return None
+
+    display_unit = user.unit_preference
+    goal = participant.rep_target_goal
+    targets_by_lift = {
+        target.lift: (target.target_weight, target.target_reps)
+        for target in goal.targets.all()
+    }
+    lift_names = sorted(targets_by_lift)
+    goal_label = goal.name
+
+    # Window-independent, matching Classic (D5/TASK-164): a bail/rejoin resets
+    # joined_at, which would otherwise blank a card for points that still
+    # stand on the leaderboard.
+    current_best_by_lift = {
+        event.lift: event
+        for event in PointEarnEvent.objects.filter(
+            user=user, challenge=challenge, is_current_best=True
+        )
+    }
+    events = list(
+        PointEarnEvent.objects.filter(
+            user=user, challenge=challenge, performed_at__gte=window_start
+        )
+    )
+
+    summary_cards = []
+    for lift in lift_names:
+        target_weight, target_reps = targets_by_lift[lift]
+        is_bw_added = is_bodyweight_added_lift(lift)
+        card = {
+            "lift": lift,
+            "is_bodyweight_added": is_bw_added,
+            "target_weight": _weight_display(
+                target_weight, lift, display_unit, challenge, snap=False
+            ),
+            "target_reps": target_reps,
+            "state": "no_data",
+        }
+
+        current_best = current_best_by_lift.get(lift)
+        if current_best is not None:
+            points = current_best.points_earned
+            progress_reps = min(current_best.reps, target_reps)
+            card.update(
+                {
+                    "state": "scored",
+                    "points_earned": points,
+                    "progress_reps": progress_reps,
+                    "weight": _weight_display(
+                        current_best.weight, lift, display_unit, challenge, snap=False
+                    ),
+                    "date": current_best.performed_at,
+                }
+            )
+            if points < 10:
+                next_reps = _next_reps_for_rep_target(
+                    points, target_reps, target_weight
+                )
+                if next_reps is not None:
+                    card["reps_gap"] = max(next_reps - progress_reps, 1)
+                    # A reps-based closeness fraction, not a weight one -- the
+                    # weight gate is already met for a scored card, so the
+                    # only thing left to close is reps. Comparable against the
+                    # same CHALLENGES_ENDGAME_GAP_FRACTION threshold Classic's
+                    # weight-based fraction uses; both are unit-independent
+                    # "how close, proportionally" numbers.
+                    card["next_point_gap_fraction"] = Decimal(next_reps) / Decimal(
+                        target_reps
+                    )
+        else:
+            lift_window_events = [e for e in events if e.lift == lift]
+            candidate_rows = [(e.weight, e.performed_at) for e in lift_window_events]
+            if not candidate_rows:
+                fallback_rows = LiftHistory.objects.filter(
+                    user=user, lift=lift, performed_at__gte=window_start.date()
+                )
+                candidate_rows = [
+                    (row.weight_kg, row.performed_at)
+                    for row in fallback_rows
+                    if not (is_bw_added and is_assisted_equipment(row.equipment))
+                ]
+            if candidate_rows:
+                best_weight_kg, best_date = max(candidate_rows, key=lambda r: r[0])
+                gap_kg = target_weight - best_weight_kg
+                if gap_kg < Decimal("0"):
+                    gap_kg = Decimal("0")
+                card.update(
+                    {
+                        "state": "no_points",
+                        "best_weight": _weight_display(
+                            best_weight_kg, lift, display_unit, challenge, snap=False
+                        ),
+                        "best_date": best_date,
+                        "weight_gap": _kg_to_display(
+                            gap_kg, display_unit, challenge, snap=False
+                        ),
+                        "gap_fraction": (
+                            gap_kg / target_weight
+                            if target_weight > Decimal("0")
+                            else None
+                        ),
+                    }
+                )
+
+        summary_cards.append(card)
+
+    _flag_close_to_goal(summary_cards)
+    _flag_endgame_suggestion(summary_cards, challenge)
+
+    return {
+        "summary_cards": summary_cards,
+        "display_unit": display_unit,
+        "goal_label": goal_label,
+    }
+
+
 def build_personal_data(user, challenge, participant):
     """Build the personal performance context for the challenge detail page.
 
@@ -1364,7 +1530,13 @@ def build_personal_data(user, challenge, participant):
     effective window start, since the standards set and participation-window
     filter each depend on one of them. The window start is the participant's
     join timestamp (from_join mode) or the challenge start date (from_start).
+
+    Dispatches to :func:`build_rep_target_personal_data` for a REP_TARGET
+    challenge, which has no rep-max ladder to build ``standards_rows`` from.
     """
+    if challenge.mode == Challenge.Mode.REP_TARGET:
+        return build_rep_target_personal_data(user, challenge, participant)
+
     window_start = challenge.window_start_for(participant)
     if window_start is None or participant.custom_goal_id is None:
         return None
@@ -1751,6 +1923,56 @@ def build_custom_goal_context(
         "source_note": source_note,
         "unknown_lifts": unknown_lifts or [],
         "acknowledge_unknown_lifts": acknowledge_unknown_lifts,
+    }
+
+
+def build_rep_target_goal_context(
+    user,
+    challenge,
+    *,
+    goal_name="",
+    targets=None,
+    errors=None,
+    source_note="",
+    no_history_lifts=None,
+) -> dict:
+    """Build the render context for the Rep Target goal-setup form.
+
+    ``targets`` is a ``{lift: (target_weight_kg, target_reps)}`` table used to
+    prefill the grid -- a "Suggest targets" history suggestion, or a
+    partially-parsed submission on a failed save. ``no_history_lifts`` (from
+    :func:`challenges.goal_builders.suggest_rep_targets_from_history`) marks
+    lifts the suggester couldn't prefill, so the template can say so rather
+    than silently leaving the row blank.
+    """
+    unit = user.unit_preference
+    targets = targets or {}
+    no_history_lifts = no_history_lifts or set()
+    lifts = []
+    for lift_index, lift in enumerate(sorted(covered_lift_names(challenge))):
+        weight_field, reps_field = rep_target_field_names(lift_index)
+        weight_kg, reps = targets.get(lift, (None, None))
+        weight_value = ""
+        if weight_kg is not None:
+            weight_value, _ = to_display_weight(weight_kg, unit)
+        lifts.append(
+            {
+                "name": lift,
+                "is_bodyweight_added": is_bodyweight_added_lift(lift),
+                "weight_field": weight_field,
+                "weight_value": weight_value,
+                "reps_field": reps_field,
+                "reps_value": reps if reps is not None else "",
+                "needs_decision": lift in no_history_lifts,
+            }
+        )
+    return {
+        "challenge": challenge,
+        "display_unit": unit,
+        "lifts": lifts,
+        "goal_name": goal_name,
+        "errors": errors or [],
+        "source_note": source_note,
     }
 
 

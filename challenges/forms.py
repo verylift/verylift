@@ -18,7 +18,7 @@ from challenges.custom_goals import (
     validate_rep_max_monotonicity,
 )
 from challenges.goal_builders import default_goal_name
-from challenges.lift_presets import CLASSIC_LIFT_NAMES
+from challenges.lift_presets import CALISTHENICS_LIFT_NAMES, CLASSIC_LIFT_NAMES
 from challenges.models import Challenge, CustomGoal
 from challenges.services import challenge_display_end_of_day
 from fitnessvolt import services as fitnessvolt_services
@@ -92,8 +92,23 @@ class CreateChallengeDatesForm(forms.Form):
         return cleaned_data
 
 
+class CreateChallengeModeForm(forms.Form):
+    """Step 3 of the create wizard: Classic vs Rep Target (issue #85).
+
+    Whole-challenge, not mixable per-lift, and locked once chosen -- the
+    template explains each mode with a short blurb; this form just validates
+    the choice against the two real Challenge.Mode values.
+    """
+
+    mode = forms.ChoiceField(
+        choices=Challenge.Mode.choices,
+        widget=forms.RadioSelect(),
+        initial=Challenge.Mode.CLASSIC,
+    )
+
+
 class CreateChallengeLiftsForm(forms.Form):
-    """Step 3 of the create wizard: which lifts count.
+    """Step 4 of the create wizard: which lifts count.
 
     One flat list of every lift in the canonical liftosaur.Lift catalogue
     (picking from it, rather than free text, guarantees every chosen name
@@ -109,20 +124,28 @@ class CreateChallengeLiftsForm(forms.Form):
         error_messages={"required": _("Select at least one lift.")},
     )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, mode=Challenge.Mode.CLASSIC, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["lifts"].queryset = Lift.objects.order_by("name")
-        # Pre-check the Classics preset on the unbound (fresh) form so the
-        # default selection works without JS. A bound form must keep whatever
-        # the POST carried, so only seed initial when unbound.
+        # Pre-check a default preset on the unbound (fresh) form so the
+        # default selection works without JS -- Rep Target defaults to the
+        # Calisthenics group (issue #85: it's the mode calisthenics
+        # challenges will typically reach for), Classic keeps its existing
+        # default. A bound form must keep whatever the POST carried, so only
+        # seed initial when unbound.
         if not self.is_bound:
-            self.fields["lifts"].initial = list(
-                Lift.objects.filter(name__in=CLASSIC_LIFT_NAMES).values_list(
-                    "pk", flat=True
-                )
+            default_names = (
+                CALISTHENICS_LIFT_NAMES
+                if mode == Challenge.Mode.REP_TARGET
+                else CLASSIC_LIFT_NAMES
             )
-        # Exposed for the template so the "Popular" group can test membership.
+            self.fields["lifts"].initial = list(
+                Lift.objects.filter(name__in=default_names).values_list("pk", flat=True)
+            )
+        # Exposed for the template so the "Popular"/"Calisthenics" groups can
+        # test membership.
         self.classic_lift_names = CLASSIC_LIFT_NAMES
+        self.calisthenics_lift_names = CALISTHENICS_LIFT_NAMES
 
 
 class GoalMethodForm(forms.Form):

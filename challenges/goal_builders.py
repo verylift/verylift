@@ -336,6 +336,60 @@ def suggest_from_history(
     return table, needs_decision, assisted_only_lifts
 
 
+def suggest_rep_targets_from_history(
+    user, challenge, *, lookback_days
+) -> tuple[dict[str, tuple[Decimal, int]], list[str]]:
+    """Build a suggested ``{lift: (target_weight_kg, target_reps)}`` table from
+    Liftosaur/pooled LiftHistory, for the Rep Target goal-setup "Suggest
+    targets" convenience (issue #85).
+
+    Unlike suggest_from_history's rep-max ladder, Rep Target has nothing to
+    expand a single e1RM into -- one weight, one rep count. The suggestion is
+    simply the participant's own best already-recorded set in the lookback
+    window: the row with the heaviest weight (added weight for bodyweight-added
+    lifts, ties broken toward more reps), used verbatim as the target so
+    "Suggest targets" seeds a goal exactly at the lifter's current PR --
+    editable before confirming, same convenience role as Classic's "Compute".
+
+    Assisted-equipment rows on bodyweight-added lifts are skipped (their
+    recorded weight is net total load, not added weight, and isn't comparable
+    -- same rule as suggest_from_history). Returns
+    ``({lift: (weight_kg, reps)}, lifts_with_no_history)``.
+    """
+    configured = sorted(covered_lift_names(challenge))
+    cutoff = (datetime.now(tz=UTC) - timedelta(days=lookback_days)).date()
+
+    table: dict[str, tuple[Decimal, int]] = {}
+    no_history: list[str] = []
+
+    for lift in configured:
+        is_added = is_bodyweight_added_lift(lift)
+        rows = LiftHistory.objects.filter(
+            user=user, lift=lift, performed_at__gte=cutoff
+        )
+        best: tuple[Decimal, int] | None = None
+        for row in rows:
+            if is_added and is_assisted_equipment(row.equipment):
+                continue
+            candidate = (row.weight_kg, row.reps)
+            if best is None or candidate > best:
+                best = candidate
+        if best is None:
+            no_history.append(lift)
+        else:
+            table[lift] = best
+
+    if no_history:
+        logger.warning(
+            "Rep target history suggestion: lift(s) %s for user %s have no "
+            "usable history in the last %s day(s)",
+            no_history,
+            user.id,
+            lookback_days,
+        )
+    return table, no_history
+
+
 def default_goal_name(method, *, tier=None, population=None, uplift=None) -> str:
     """A sensible, never-demanded default CustomGoal.name for each method."""
     if method == CustomGoal.SourceMethod.STANDARDS and population and tier:
