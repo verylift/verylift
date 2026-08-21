@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-20 00:51+0000\n"
+"POT-Creation-Date: 2026-08-20 02:28+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -81,56 +81,68 @@ msgstr "Creado por un operador"
 msgid "%(name)s (deleted)"
 msgstr "%(name)s (eliminado)"
 
+#: accounts/models.py:182
+msgid "Tracker Request"
+msgstr "Solicitud de Tracker"
+
+#: accounts/models.py:183
+msgid "Tracker Requests"
+msgstr "Solicitudes de Tracker"
+
 #: accounts/ratelimit.py:103
 msgid "Too many attempts. Try again in a minute."
 msgstr "Demasiados intentos. Inténtalo de nuevo en un minuto."
 
-#: accounts/views.py:234
+#: accounts/views.py:235
 msgid "You must accept the Terms of Service and Privacy Policy."
 msgstr "Debes aceptar los Términos de Servicio y la Política de Privacidad."
 
-#: accounts/views.py:321 challenges/views.py:133
+#: accounts/views.py:325 challenges/views.py:133
 msgid "Could not validate this Liftosaur API key."
 msgstr "No se pudo validar esta clave de API de Liftosaur."
 
-#: accounts/views.py:553
+#: accounts/views.py:344
+msgid "Could not validate this Wger instance URL or API token."
+msgstr "No se pudo validar la URL de la instancia o el token de API de Wger."
+
+#: accounts/views.py:377 accounts/views.py:779
+msgid "Couldn't import right now. Please try again in a moment."
+msgstr "No se pudo importar ahora mismo. Inténtalo de nuevo en un momento."
+
+#: accounts/views.py:655
 msgid "Your password has been updated. Sign in with your new password."
 msgstr ""
 "Tu contraseña se ha actualizado. Inicia sesión con tu contraseña nueva."
 
-#: accounts/views.py:603
+#: accounts/views.py:705
 msgid "Profile photo updated."
 msgstr "Foto de perfil actualizada."
 
-#: accounts/views.py:612
+#: accounts/views.py:714
 msgid "Display name updated."
 msgstr "Nombre para mostrar actualizado."
 
-#: accounts/views.py:622
+#: accounts/views.py:724
 msgid "Email address saved."
 msgstr "Correo electrónico guardado."
 
-#: accounts/views.py:633
+#: accounts/views.py:735
 msgid "Liftosaur API key saved."
 msgstr "Clave de API de Liftosaur guardada."
 
-#: accounts/views.py:638
+#: accounts/views.py:740
 msgid "Liftosaur API key removed."
 msgstr "Clave de API de Liftosaur eliminada."
 
-#: accounts/views.py:645
+#: accounts/views.py:747
 msgid "Wger connected."
 msgstr "Wger conectado."
 
-#: accounts/views.py:651
+#: accounts/views.py:753
 msgid "Wger disconnected."
 msgstr "Wger desconectado."
 
-#: accounts/views.py:677
-msgid "Couldn't import right now. Please try again in a moment."
-msgstr "No se pudo importar ahora mismo. Inténtalo de nuevo en un momento."
-
-#: accounts/views.py:684
+#: accounts/views.py:786
 #, python-format
 msgid ""
 "Imported %(count)s set(s) from %(source)s. %(scored)s challenge(s) rescored."
@@ -138,56 +150,56 @@ msgstr ""
 "Se importaron %(count)s serie(s) de %(source)s. Se recalcularon %(scored)s "
 "reto(s)."
 
-#: accounts/views.py:703
+#: accounts/views.py:805
 msgid "Unit preference saved."
 msgstr "Preferencia de unidad guardada."
 
-#: accounts/views.py:709
+#: accounts/views.py:811
 msgid "Timezone saved."
 msgstr "Zona horaria guardada."
 
-#: accounts/views.py:715
+#: accounts/views.py:817
 msgid "Language saved."
 msgstr "Idioma guardado."
 
-#: accounts/views.py:805
+#: accounts/views.py:907
 msgid "Your account has been deleted."
 msgstr "Tu cuenta ha sido eliminada."
 
-#: accounts/views.py:866
+#: accounts/views.py:968
 msgid "Connect a Liftosaur API key first."
 msgstr "Conecta primero una clave de API de Liftosaur."
 
-#: accounts/views.py:890 accounts/views.py:937
+#: accounts/views.py:992 accounts/views.py:1039
 msgid "Couldn't sync right now. Please try again in a moment."
 msgstr "No se pudo sincronizar ahora mismo. Inténtalo de nuevo en un momento."
 
-#: accounts/views.py:896 accounts/views.py:943
+#: accounts/views.py:998 accounts/views.py:1045
 #, python-format
 msgid "Sync triggered for %(count)s challenge(s)."
 msgstr "Sincronización iniciada para %(count)s reto(s)."
 
-#: accounts/views.py:917
+#: accounts/views.py:1019
 msgid "Connect your Wger account first."
 msgstr "Conecta primero tu cuenta de Wger."
 
-#: accounts/views.py:979
+#: accounts/views.py:1081
 msgid "No API key provided."
 msgstr "No se proporcionó ninguna clave de API."
 
-#: accounts/views.py:987
+#: accounts/views.py:1089
 msgid "Invalid API key or connection error."
 msgstr "Clave de API no válida o error de conexión."
 
-#: accounts/views.py:991 accounts/views.py:1029
+#: accounts/views.py:1093 accounts/views.py:1131
 msgid "Connection successful."
 msgstr "Conexión exitosa."
 
-#: accounts/views.py:1017
+#: accounts/views.py:1119
 msgid "No Wger credentials provided."
 msgstr "No se proporcionaron credenciales de Wger."
 
-#: accounts/views.py:1025
+#: accounts/views.py:1127
 msgid "Invalid credentials or connection error."
 msgstr "Credenciales no válidas o error de conexión."
 
@@ -387,7 +399,6 @@ msgid "Suggested from history"
 msgstr "Sugerido a partir del historial"
 
 #: challenges/models.py:289 templates/challenges/goal_setup_method.html:49
-#: templates/registration/onboarding_tracking_method.html:32
 msgid "Manual entry"
 msgstr "Entrada manual"
 
@@ -782,7 +793,7 @@ msgid "Units & added-weight lifts"
 msgstr "Unidades y ejercicios con peso añadido"
 
 #: liftosaur/models.py:26
-#: templates/registration/onboarding_tracking_method.html:25
+#: templates/registration/onboarding_tracking_method.html:28
 msgid "Liftosaur"
 msgstr "Liftosaur"
 
@@ -791,10 +802,12 @@ msgid "Manual"
 msgstr "Manual"
 
 #: liftosaur/models.py:28
+#: templates/registration/onboarding_tracking_method.html:30
 msgid "Hevy"
 msgstr "Hevy"
 
 #: liftosaur/models.py:29 templates/accounts/_wger_section.html:4
+#: templates/registration/onboarding_tracking_method.html:29
 msgid "Wger"
 msgstr "Wger"
 
@@ -1214,10 +1227,13 @@ msgstr "Guardar Unidad"
 
 #: templates/accounts/_wger_section.html:6
 msgid "Connect your self-hosted Wger instance to import your exercise data."
-msgstr "Conecta tu instancia autoalojada de Wger para importar tus datos de ejercicio."
+msgstr ""
+"Conecta tu instancia autoalojada de Wger para importar tus datos de "
+"ejercicio."
 
 #: templates/accounts/_wger_section.html:13
 #: templates/accounts/_wger_section.html:111
+#: templates/registration/onboarding_connect_tracker.html:30
 msgid "Instance URL"
 msgstr "URL de la instancia"
 
@@ -1242,10 +1258,12 @@ msgid "Disconnect"
 msgstr "Desconectar"
 
 #: templates/accounts/_wger_section.html:117
+#: templates/registration/onboarding_connect_tracker.html:35
 msgid "e.g. https://my-wger-instance.example.com"
 msgstr "p. ej. https://mi-instancia-wger.ejemplo.com"
 
 #: templates/accounts/_wger_section.html:121
+#: templates/registration/onboarding_connect_tracker.html:41
 msgid "API Token"
 msgstr "Token de API"
 
@@ -1280,6 +1298,8 @@ msgstr ""
 "grandes…"
 
 #: templates/accounts/_workout_import_section.html:38
+#: templates/registration/onboarding_connect_tracker.html:77
+#: templates/registration/onboarding_connect_tracker.html:94
 msgid "Drop a CSV file here, or click to choose one"
 msgstr "Suelta un archivo CSV aquí, o haz clic para elegir uno"
 
@@ -1402,8 +1422,9 @@ msgstr "Un momento…"
 #: templates/challenges/create.html:40 templates/challenges/create.html:74
 #: templates/challenges/goal_setup_inputs.html:143
 #: templates/challenges/goal_setup_method.html:67
-#: templates/registration/onboarding_liftosaur.html:37
-#: templates/registration/onboarding_tracking_method.html:48
+#: templates/registration/onboarding_connect_tracker.html:109
+#: templates/registration/onboarding_other_tracker.html:36
+#: templates/registration/onboarding_tracking_method.html:43
 #: templates/registration/onboarding_units.html:35
 msgid "Continue"
 msgstr "Continuar"
@@ -1538,7 +1559,7 @@ msgstr ""
 
 #: templates/challenges/_key_required.html:20
 #: templates/challenges/key_required.html:23
-#: templates/registration/onboarding_liftosaur.html:22
+#: templates/registration/onboarding_connect_tracker.html:57
 msgid "Liftosaur API key"
 msgstr "Clave de API de Liftosaur"
 
@@ -2574,7 +2595,6 @@ msgstr ""
 "        "
 
 #: templates/challenges/key_required.html:4
-#: templates/registration/onboarding_liftosaur.html:4
 msgid "Connect Liftosaur"
 msgstr "Conectar Liftosaur"
 
@@ -3139,21 +3159,96 @@ msgstr "¿No tienes una cuenta?"
 msgid "Create one"
 msgstr "Crea una"
 
-#: templates/registration/onboarding_liftosaur.html:9
+#: templates/registration/onboarding_connect_tracker.html:4
+msgid "Connect Your Tracker"
+msgstr "Conecta Tu Tracker"
+
+#: templates/registration/onboarding_connect_tracker.html:9
+#: templates/registration/onboarding_other_tracker.html:9
 msgid "Step 2 of 3"
 msgstr "Paso 2 de 3"
 
-#: templates/registration/onboarding_liftosaur.html:16
+#: templates/registration/onboarding_connect_tracker.html:17
+msgid "Connect your Wger account"
+msgstr "Conecta tu cuenta de Wger"
+
+#: templates/registration/onboarding_connect_tracker.html:19
+msgid "Import your Hevy history"
+msgstr "Importa tu historial de Hevy"
+
+#: templates/registration/onboarding_connect_tracker.html:21
 msgid "Connect your Liftosaur account"
 msgstr "Conecta tu cuenta de Liftosaur"
 
-#: templates/registration/onboarding_liftosaur.html:17
+#: templates/registration/onboarding_connect_tracker.html:23
 msgid "Optional — you can add or change this later from Settings."
 msgstr "Opcional — puedes añadirla o cambiarla más tarde desde Configuración."
 
-#: templates/registration/onboarding_liftosaur.html:30
-msgid "Leave blank to skip and connect it later."
-msgstr "Déjalo en blanco para omitirlo y conectarlo más tarde."
+#: templates/registration/onboarding_connect_tracker.html:52
+msgid "You can find your API token in your Wger account under the API page."
+msgstr ""
+"Puedes encontrar tu token de API en tu cuenta de Wger, en la página de API."
+
+#: templates/registration/onboarding_connect_tracker.html:68
+msgid ""
+"For automated tracking, get your key from <a href=\"https://www.liftosaur."
+"com/doc/api\" target=\"_blank\" rel=\"noopener\" "
+"class=\"underline\">Liftosaur's API docs</a>."
+msgstr ""
+"Para el seguimiento automático, obtén tu clave en <a href=\"https://www."
+"liftosaur.com/doc/api\" target=\"_blank\" rel=\"noopener\" "
+"class=\"underline\">la documentación de la API de Liftosaur</a>."
+
+#: templates/registration/onboarding_connect_tracker.html:71
+msgid "Or upload a CSV export instead"
+msgstr "O sube una exportación CSV en su lugar"
+
+#: templates/registration/onboarding_connect_tracker.html:83
+msgid ""
+"You can export your history by navigating to Me → Export history to CSV file "
+"and pressing Ok."
+msgstr ""
+"Puedes exportar tu historial yendo a Yo → Exportar historial a archivo CSV y "
+"pulsando Aceptar."
+
+#: templates/registration/onboarding_connect_tracker.html:88
+msgid "Hevy CSV export"
+msgstr "Exportación CSV de Hevy"
+
+#: templates/registration/onboarding_connect_tracker.html:100
+msgid ""
+"Learn how to export your data in <a href=\"https://help.hevyapp.com/hc/en-us/"
+"articles/38001424401943-How-to-Import-Strong-App-CSV-Files-and-Export-Your-"
+"Data-in-Hevy\" target=\"_blank\" rel=\"noopener\" class=\"underline\">Hevy's "
+"help center</a>."
+msgstr ""
+"Descubre cómo exportar tus datos en <a href=\"https://help.hevyapp.com/hc/en-"
+"us/articles/38001424401943-How-to-Import-Strong-App-CSV-Files-and-Export-"
+"Your-Data-in-Hevy\" target=\"_blank\" rel=\"noopener\" "
+"class=\"underline\">el centro de ayuda de Hevy</a>."
+
+#: templates/registration/onboarding_other_tracker.html:4
+msgid "Which App Do You Use?"
+msgstr "¿Qué Aplicación Usas?"
+
+#: templates/registration/onboarding_other_tracker.html:16
+msgid "Which app do you use?"
+msgstr "¿Qué aplicación usas?"
+
+#: templates/registration/onboarding_other_tracker.html:17
+msgid ""
+"We don't support it yet, but this helps us prioritize what to build next."
+msgstr ""
+"Todavía no la soportamos, pero esto nos ayuda a priorizar qué construir a "
+"continuación."
+
+#: templates/registration/onboarding_other_tracker.html:22
+msgid "App name"
+msgstr "Nombre de la aplicación"
+
+#: templates/registration/onboarding_other_tracker.html:30
+msgid "Optional — leave blank to skip."
+msgstr "Opcional — déjalo en blanco para omitir."
 
 #: templates/registration/onboarding_tracking_method.html:4
 msgid "Track Your Lifts"
@@ -3164,30 +3259,36 @@ msgid "Step 1 of 3"
 msgstr "Paso 1 de 3"
 
 #: templates/registration/onboarding_tracking_method.html:16
-msgid "How do you want to track your lifts?"
-msgstr "¿Cómo quieres registrar tus levantamientos?"
+msgid "Do you use a tracking app?"
+msgstr "¿Usas una aplicación de seguimiento?"
 
 #: templates/registration/onboarding_tracking_method.html:17
 msgid "You can change this anytime from Settings."
 msgstr "Puedes cambiar esto en cualquier momento desde Configuración."
 
-#: templates/registration/onboarding_tracking_method.html:26
-msgid "Connect your API key now to sync automatically."
-msgstr "Conecta tu clave de API ahora para sincronizar automáticamente."
+#: templates/registration/onboarding_tracking_method.html:22
+msgid "Tracking app"
+msgstr "Aplicación de seguimiento"
 
-#: templates/registration/onboarding_tracking_method.html:33
-msgid "Self-report lifts as you go — no setup needed."
-msgstr "Registra tus levantamientos tú mismo -- no requiere configuración."
+#: templates/registration/onboarding_tracking_method.html:27
+msgid "Pick an option"
+msgstr "Elige una opción"
 
-#: templates/registration/onboarding_tracking_method.html:39
-msgid "Workout CSV"
-msgstr "CSV de entrenamiento"
+#: templates/registration/onboarding_tracking_method.html:31
+msgid "A different one"
+msgstr "Otra"
 
-#: templates/registration/onboarding_tracking_method.html:40
-msgid "Upload an export (e.g. Hevy) anytime from Settings."
+#: templates/registration/onboarding_tracking_method.html:36
+msgid ""
+"It's ok if you don't — you can log lifts manually one at a time, or use CSV "
+"uploads, anytime from Settings."
 msgstr ""
-"Sube una exportación (por ejemplo de Hevy) cuando quieras desde "
-"Configuración."
+"No pasa nada si no la usas — puedes registrar tus levantamientos manualmente "
+"uno a uno, o usar cargas CSV, cuando quieras desde Configuración."
+
+#: templates/registration/onboarding_tracking_method.html:50
+msgid "No, I don't use one"
+msgstr "No, no uso ninguna"
 
 #: templates/registration/onboarding_units.html:4
 msgid "Display Units"

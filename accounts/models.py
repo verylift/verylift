@@ -156,3 +156,31 @@ class User(AbstractBaseUser, PermissionsMixin):
         if self.is_active:
             return name
         return gettext("%(name)s (deleted)") % {"name": name}
+
+
+class TrackerRequest(models.Model):
+    """A free-text "I use a different tracker" signal from onboarding.
+
+    Not a connection or a credential of any kind -- purely product-feedback
+    data for triaging which tracker to build next (mirrors the existing
+    GitHub-issue-driven tracker backlog, e.g. #26). Created only when a lifter
+    picks "A different one" in onboarding_tracking_method_view and then names
+    it in onboarding_other_tracker_view; a blank/skipped name creates nothing.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="tracker_requests",
+    )
+    app_name = models.CharField(max_length=200)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = _("Tracker Request")
+        verbose_name_plural = _("Tracker Requests")
+
+    def __str__(self):
+        return f"{self.user} wants {self.app_name}"
