@@ -13,6 +13,10 @@ class Challenge(models.Model):
         LB = "lb", _("Pounds (lb)")
         KG = "kg", _("Kilograms (kg)")
 
+    class Mode(models.TextChoices):
+        CLASSIC = "classic", _("Classic")
+        REP_TARGET = "rep_target", _("Rep Target")
+
     class Status(models.TextChoices):
         DRAFT = "draft", _("Draft")
         ACTIVE = "active", _("Active")
@@ -38,6 +42,17 @@ class Challenge(models.Model):
     end_date = models.DateField()
     status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.DRAFT
+    )
+    # Whole-challenge, not mixable per-lift, and locked at creation (issue #85):
+    # the create wizard writes this once and nothing ever updates it afterward.
+    # CLASSIC scores against a per-lift 1RM-10RM CustomGoal ladder; REP_TARGET
+    # scores against a single (target_weight, target_reps) RepTargetGoal per
+    # lift instead, for calisthenics/rep-based exercises where a rep-max ladder
+    # doesn't make sense.
+    mode = models.CharField(
+        max_length=20,
+        choices=Mode.choices,
+        default=Mode.CLASSIC,
     )
     history_window = models.CharField(
         max_length=20,
@@ -227,6 +242,18 @@ class ChallengeParticipant(models.Model):
         null=True,
         blank=True,
     )
+    # The REP_TARGET-mode equivalent of custom_goal above. Exactly one of the
+    # two is ever set for a given participant, since Challenge.mode is fixed
+    # and whole-challenge -- has_goal_configured below checks both so callers
+    # never need to branch on mode themselves just to ask "has this person
+    # finished goal setup".
+    rep_target_goal = models.ForeignKey(
+        "RepTargetGoal",
+        on_delete=models.PROTECT,
+        related_name="active_for",
+        null=True,
+        blank=True,
+    )
     invite_status = models.CharField(
         max_length=20,
         choices=InviteStatus.choices,
@@ -266,8 +293,13 @@ class ChallengeParticipant(models.Model):
 
     @property
     def has_goal_configured(self):
-        """True when the participant has completed goal setup."""
-        return self.custom_goal_id is not None
+        """True when the participant has completed goal setup.
+
+        Checks both goal FKs rather than branching on challenge.mode: exactly
+        one is ever populated for a given participant, so this stays a single
+        cheap check regardless of which mode the challenge is in.
+        """
+        return self.custom_goal_id is not None or self.rep_target_goal_id is not None
 
 
 class CustomGoal(models.Model):
@@ -376,3 +408,94 @@ class CustomGoalTarget(models.Model):
 
     def __str__(self):
         return f"{self.lift} {self.rep_count}RM @ {self.target_weight}kg"
+
+
+class RepTargetGoal(models.Model):
+    """A participant's named bundle of per-lift (target_weight, target_reps)
+    goals for a REP_TARGET challenge.
+
+    The REP_TARGET sibling of CustomGoal: one goal covers every lift the
+    challenge is configured on, but each lift gets a single target pair
+    instead of a 1RM-10RM ladder -- there is no strength-standards or
+    JSON-paste method for this mode (issue #85), so source_method is limited
+    to HISTORY (a "Suggest targets" prefill from the participant's own synced
+    LiftHistory) and CUSTOM (manual entry). created_at is the lock timestamp,
+    same as CustomGoal -- goals are create-only (save_rep_target_goal) and
+    cannot be edited after joining.
+    """
+
+    class SourceMethod(models.TextChoices):
+        HISTORY = "history", _("Suggested from history")
+        CUSTOM = "custom", _("Manual entry")
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    participant = models.ForeignKey(
+        ChallengeParticipant,
+        on_delete=models.CASCADE,
+        related_name="rep_target_goals",
+    )
+    name = models.CharField(max_length=100)
+    source_method = models.CharField(
+        max_length=20,
+        choices=SourceMethod.choices,
+        default=SourceMethod.CUSTOM,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "challenges_reptargetgoal"
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["participant", "name"],
+                name="reptargetgoal_unique_name_per_participant",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.participant})"
+
+
+class RepTargetGoalTarget(models.Model):
+    """One lift's (target_weight, target_reps) goal within a RepTargetGoal.
+
+    target_weight follows the same convention as CustomGoalTarget: kg, and for
+    bodyweight-added lifts (Pull-up/Chin-up/Dip) it is ADDED weight relative to
+    bodyweight (0 = bodyweight-only, negative = assisted), compared directly
+    against the recorded LiftHistory weight -- no bodyweight arithmetic
+    anywhere in scoring (see scoring.domain.calculator.best_score_for_rep_target).
+
+    Unlike CustomGoalTarget there is exactly one row per (goal, lift) -- a
+    single target pair, not a per-rep-count ladder -- so the unique
+    constraint has no rep_count component. target_reps is capped at 999: high
+    enough that no realistic calisthenics goal is blocked (issue #85 open
+    question #2), while keeping the milestone math and any per-rep UI
+    (progress bars, "N more reps" nudges) bounded.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    goal = models.ForeignKey(
+        RepTargetGoal,
+        on_delete=models.CASCADE,
+        related_name="targets",
+    )
+    lift = models.CharField(max_length=100)
+    target_weight = models.DecimalField(max_digits=7, decimal_places=2)
+    target_reps = models.PositiveSmallIntegerField()
+
+    class Meta:
+        db_table = "challenges_reptargetgoaltarget"
+        ordering = ["lift"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["goal", "lift"],
+                name="reptargetgoaltarget_unique_lift_per_goal",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(target_reps__gte=1, target_reps__lte=999),
+                name="reptargetgoaltarget_target_reps_1_to_999",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.lift} {self.target_reps} reps @ {self.target_weight}kg"
