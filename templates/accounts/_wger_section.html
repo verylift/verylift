@@ -1,0 +1,171 @@
+{% load i18n %}
+<!-- Wger connection section -->
+<section class="bg-surface-card border border-line-subtle rounded p-6 mb-6" id="wger-section">
+  <h2 class="text-lg font-semibold text-content-strong mb-2">{% trans "Wger" %}</h2>
+  <p class="text-sm text-content-muted mb-4">
+    {% trans "Connect your self-hosted Wger instance to import your exercise data." %}
+  </p>
+
+  {% if has_wger_credentials %}
+  <!-- Connected: show card with instance URL, masked token, Test Connection, Remove -->
+  <div class="flex items-center justify-between bg-surface-sunken border border-line-subtle rounded px-4 py-3 mb-4">
+    <div>
+      <p class="text-xs text-content-muted mb-1">{% trans "Instance URL" %}</p>
+      <p class="font-mono text-sm text-content-strong">{{ wger_instance_url }}</p>
+      <p class="text-xs text-content-muted mb-1 mt-2">{% trans "Saved API token" %}</p>
+      <p class="font-mono text-sm text-content-strong" id="masked-wger-token-display">{{ masked_wger_token }}</p>
+    </div>
+    <span class="text-xs font-medium text-success px-2 py-1 bg-success-light rounded">{% trans "Connected" %}</span>
+  </div>
+  <div class="flex gap-3 items-center flex-wrap">
+    <button
+      type="button"
+      id="btn-test-saved-wger"
+      data-testing-label="{% trans 'Testing…' %}"
+      data-default-label="{% trans 'Test Connection' %}"
+      class="bg-surface-sunken text-content-strong text-sm font-medium px-4 py-2 rounded hover:bg-surface-hover">
+      {% trans "Test Connection" %}
+    </button>
+    <form
+      method="post"
+      action="{% url 'accounts:wger_sync_now' %}"
+      class="inline"
+      hx-post="{% url 'accounts:wger_sync_now' %}"
+      hx-target="#wger-sync-status"
+      hx-swap="outerHTML"
+      data-loading-message="{% trans 'Syncing with Wger…' %}">
+      {% csrf_token %}
+      <button
+        type="submit"
+        class="bg-surface-sunken text-content-strong text-sm font-medium px-4 py-2 rounded hover:bg-surface-hover">
+        {% trans "Sync now" %}
+      </button>
+    </form>
+    <form
+      method="post"
+      action="{% url 'accounts:settings' %}"
+      class="inline"
+      hx-post="{% url 'accounts:settings' %}"
+      hx-target="closest section"
+      hx-swap="outerHTML"
+      hx-confirm="{% trans 'Disconnect Wger? This cannot be undone.' %}"
+      data-loading-message="{% trans 'Disconnecting…' %}">
+      {% csrf_token %}
+      <input type="hidden" name="form_name" value="remove_wger_credentials">
+      <button
+        type="submit"
+        class="bg-danger text-white text-sm font-medium px-4 py-2 rounded hover:bg-danger-dark">
+        {% trans "Disconnect" %}
+      </button>
+    </form>
+  </div>
+  {% include "accounts/_wger_sync_status.html" %}
+  <div id="saved-wger-test-msg" class="mt-2 text-sm hidden"></div>
+  <script>
+  (function () {
+    function getCookie(name) {
+      var value = '; ' + document.cookie;
+      var parts = value.split('; ' + name + '=');
+      if (parts.length === 2) return parts.pop().split(';').shift();
+      return '';
+    }
+
+    var btnTestSaved = document.getElementById('btn-test-saved-wger');
+    var savedMsgEl = document.getElementById('saved-wger-test-msg');
+    if (!btnTestSaved || !savedMsgEl) return;
+
+    btnTestSaved.addEventListener('click', function () {
+      btnTestSaved.disabled = true;
+      btnTestSaved.textContent = btnTestSaved.dataset.testingLabel;
+      savedMsgEl.classList.add('hidden');
+
+      fetch('{% url "accounts:validate_wger_credentials" %}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-CSRFToken': getCookie('csrftoken'),
+        },
+        // instance URL/token omitted -- the view falls back to the saved credentials
+        body: '',
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          savedMsgEl.textContent = data.message;
+          savedMsgEl.className = 'mt-2 text-sm ' + (data.valid ? 'text-success' : 'text-danger');
+        })
+        .catch(function () {
+          savedMsgEl.textContent = '{% trans "Connection error. Please try again." %}';
+          savedMsgEl.className = 'mt-2 text-sm text-danger';
+        })
+        .finally(function () {
+          btnTestSaved.disabled = false;
+          btnTestSaved.textContent = btnTestSaved.dataset.defaultLabel;
+        });
+    });
+  })();
+  </script>
+  {% else %}
+  <!-- Not connected: entry form for instance URL + API token -->
+  <div class="mb-4">
+    <label for="wger_instance_url" class="block text-sm font-medium text-content-body mb-1">
+      {% trans "Instance URL" %}
+    </label>
+    <input
+      type="text"
+      id="wger_instance_url"
+      name="wger_instance_url"
+      placeholder="{% trans 'e.g. https://my-wger-instance.example.com' %}"
+      class="w-full bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent mb-3"
+    >
+    <label for="wger_api_token" class="block text-sm font-medium text-content-body mb-1">
+      {% trans "API Token" %}
+    </label>
+    <input
+      type="text"
+      id="wger_api_token"
+      name="wger_api_token"
+      placeholder="{% trans 'Enter your Wger API token' %}"
+      class="w-full bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent"
+    >
+    <div id="wger-validation-msg" class="mt-1 text-sm hidden"></div>
+  </div>
+  <form
+    method="post"
+    action="{% url 'accounts:settings' %}"
+    id="save-wger-form"
+    hx-post="{% url 'accounts:settings' %}"
+    hx-target="closest section"
+    hx-swap="outerHTML"
+    data-loading-message="{% trans 'Saving Wger connection…' %}">
+    {% csrf_token %}
+    <input type="hidden" name="form_name" value="wger_credentials">
+    <input type="hidden" name="wger_instance_url" id="wger_instance_url_hidden">
+    <input type="hidden" name="wger_api_token" id="wger_api_token_hidden">
+    <button
+      type="submit"
+      id="btn-save-wger"
+      class="bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
+      {% trans "Connect" %}
+    </button>
+  </form>
+  <script>
+  (function () {
+    // Mirror the visible inputs into the form's hidden fields on every
+    // keystroke, same pattern as the Liftosaur section -- the visible inputs
+    // sit outside the form, and this survives an htmx swap.
+    var urlInput = document.getElementById('wger_instance_url');
+    var tokenInput = document.getElementById('wger_api_token');
+    var hiddenUrl = document.getElementById('wger_instance_url_hidden');
+    var hiddenToken = document.getElementById('wger_api_token_hidden');
+    if (!urlInput || !tokenInput || !hiddenUrl || !hiddenToken) return;
+    urlInput.addEventListener('input', function () {
+      hiddenUrl.value = urlInput.value.trim();
+    });
+    tokenInput.addEventListener('input', function () {
+      hiddenToken.value = tokenInput.value.trim();
+    });
+  })();
+  </script>
+  {% endif %}
+  {% if oob_messages %}{% include "components/_messages_oob.html" %}{% endif %}
+</section>

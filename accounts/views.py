@@ -34,6 +34,7 @@ from accounts.forms import (
     RegistrationForm,
     TimezoneForm,
     UnitPreferenceForm,
+    WgerCredentialsForm,
 )
 from accounts.ratelimit import (
     client_ip,
@@ -68,6 +69,14 @@ from liftosaur.services import (
 from policies.models import Policy, PolicyConsent, PolicyVersion
 from policies.services import record_consent
 from scoring.services import score_pooled_history
+from wger.services import (
+    last_synced_at as wger_last_synced_at,
+)
+from wger.services import (
+    sync_wger_lifts,
+    trigger_wger_lift_history_backfill,
+    validate_wger_credentials,
+)
 from workout_imports.forms import WorkoutCsvImportForm
 from workout_imports.services import import_workout_csv
 from workout_imports.services import last_imported_at as workout_import_last_imported_at
@@ -565,6 +574,8 @@ _SETTINGS_SECTION_PARTIALS = {
     "email": "accounts/_email_section.html",
     "liftosaur_key": "accounts/_liftosaur_section.html",
     "remove_liftosaur_key": "accounts/_liftosaur_section.html",
+    "wger_credentials": "accounts/_wger_section.html",
+    "remove_wger_credentials": "accounts/_wger_section.html",
     "workout_csv_import": "accounts/_workout_import_section.html",
     "unit_preference": "accounts/_unit_preference_section.html",
     "timezone": "accounts/_timezone_section.html",
@@ -625,6 +636,19 @@ def settings_view(request):
             user.liftosaur_api_key = None
             user.save(update_fields=["liftosaur_api_key"])
             messages.success(request, gettext("Liftosaur API key removed."))
+
+        elif posted_form_name == "wger_credentials":
+            form = WgerCredentialsForm(request.POST)
+            form.is_valid()
+            if form.save(user):
+                trigger_wger_lift_history_backfill(user)
+                messages.success(request, gettext("Wger connected."))
+
+        elif posted_form_name == "remove_wger_credentials":
+            user.wger_instance_url = None
+            user.wger_api_token = None
+            user.save(update_fields=["wger_instance_url", "wger_api_token"])
+            messages.success(request, gettext("Wger disconnected."))
 
         elif posted_form_name == "workout_csv_import":
             form = WorkoutCsvImportForm(request.POST, request.FILES, user=user)
@@ -725,6 +749,10 @@ def settings_view(request):
         "last_synced_at": last_synced_at(user),
         "workout_import_error": workout_import_error,
         "last_workout_imported_at": workout_import_last_imported_at(user),
+        "has_wger_credentials": bool(user.wger_instance_url and user.wger_api_token),
+        "wger_instance_url": user.wger_instance_url,
+        "masked_wger_token": mask_api_key(user.wger_api_token),
+        "last_wger_synced_at": wger_last_synced_at(user),
     }
 
     if request.method == "POST" and is_htmx(request):
@@ -882,6 +910,53 @@ def _sync_now_response(request, user):
 
 @login_required
 @require_POST
+def wger_sync_now_view(request):
+    """Force an immediate Wger sync + rescore, mirroring sync_now_view."""
+    user = request.user
+    if not user.wger_instance_url or not user.wger_api_token:
+        messages.error(request, gettext("Connect your Wger account first."))
+        return _wger_sync_now_response(request, user)
+
+    participations = ChallengeParticipant.objects.filter(
+        user=user,
+        invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        challenge__status=Challenge.Status.ACTIVE,
+    ).select_related("challenge")
+
+    try:
+        sync_wger_lifts(user, force=True)
+
+        count = 0
+        for participation in participations:
+            score_pooled_history(user=user, challenge=participation.challenge)
+            count += 1
+    except OperationalError:
+        logger.exception("Forced Wger sync failed for user %s", user.id)
+        messages.error(
+            request,
+            gettext("Couldn't sync right now. Please try again in a moment."),
+        )
+        return _wger_sync_now_response(request, user)
+
+    messages.success(
+        request,
+        gettext("Sync triggered for %(count)s challenge(s).") % {"count": count},
+    )
+    return _wger_sync_now_response(request, user)
+
+
+def _wger_sync_now_response(request, user):
+    if is_htmx(request):
+        return render(
+            request,
+            "accounts/_wger_sync_status.html",
+            {"last_wger_synced_at": wger_last_synced_at(user), "oob_messages": True},
+        )
+    return redirect("accounts:settings")
+
+
+@login_required
+@require_POST
 @ratelimit(
     group="validate_key_user",
     key="user",
@@ -910,6 +985,44 @@ def validate_liftosaur_key_view(request):
             {
                 "valid": False,
                 "message": gettext("Invalid API key or connection error."),
+            }
+        )
+
+    return JsonResponse({"valid": True, "message": gettext("Connection successful.")})
+
+
+@login_required
+@require_POST
+@ratelimit(
+    group="validate_key_user",
+    key="user",
+    rate=validate_key_user_rate,
+    method="POST",
+)
+def validate_wger_credentials_view(request):
+    """AJAX endpoint: validate a Wger instance URL + API token without saving.
+
+    If either field is omitted, falls back to the user's saved credentials so
+    the connected-card 'Test Connection' button can validate without
+    re-transmitting the token to the browser.
+    """
+    instance_url = request.POST.get("wger_instance_url", "").strip()
+    api_token = request.POST.get("wger_api_token", "").strip()
+    if not instance_url:
+        instance_url = (request.user.wger_instance_url or "").strip()
+    if not api_token:
+        api_token = (request.user.wger_api_token or "").strip()
+    if not instance_url or not api_token:
+        return JsonResponse(
+            {"valid": False, "message": gettext("No Wger credentials provided.")}
+        )
+
+    if not validate_wger_credentials(instance_url, api_token):
+        logger.warning("Wger credential validation failed for user %s", request.user.id)
+        return JsonResponse(
+            {
+                "valid": False,
+                "message": gettext("Invalid credentials or connection error."),
             }
         )
 

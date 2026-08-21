@@ -99,6 +99,26 @@ class LiftosaurKeyForm(forms.Form):
         return True
 
 
+class WgerCredentialsForm(forms.Form):
+    """Settings Wger connect form. Unlike Liftosaur's single API key, Wger is
+    self-hostable -- a user must supply both their instance's URL and their
+    API token. Saving only happens when both are supplied."""
+
+    wger_instance_url = forms.URLField(required=False, max_length=500)
+    wger_api_token = forms.CharField(required=False)
+
+    def save(self, user) -> bool:
+        """Persist the credentials when both are present. Returns whether saved."""
+        instance_url = self.cleaned_data["wger_instance_url"]
+        api_token = self.cleaned_data["wger_api_token"]
+        if not instance_url or not api_token:
+            return False
+        user.wger_instance_url = instance_url
+        user.wger_api_token = api_token
+        user.save(update_fields=["wger_instance_url", "wger_api_token"])
+        return True
+
+
 MAX_AVATAR_BYTES = 10 * 1024 * 1024
 MAX_AVATAR_PIXELS = 25_000_000
 
