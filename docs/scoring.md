@@ -1,10 +1,14 @@
 # How scoring works
 
-Every set you log gets compared against your own goal chart — a per-lift,
-per-rep target table you build for yourself when you join a challenge.
-Clear a target and you earn a point. This page explains how your chart is
-shaped, what a point is worth, and how the app shows you the fastest way to
-your next one.
+Every set you log gets compared against your own goal chart — a set of
+targets you build for yourself when you join a challenge. Clear a target and
+you earn a point. This page explains how your chart is shaped, what a point
+is worth, and how the app shows you the fastest way to your next one.
+
+This page describes **Classic** scoring — a per-lift, per-rep target table.
+If your challenge runs in **Rep Target** mode instead, skip ahead to
+[Rep Target scoring](#rep-target-scoring); it uses a different, simpler
+formula.
 
 ## Your goal chart
 
@@ -143,6 +147,46 @@ deployment — `CHALLENGES_ENDGAME_WINDOW_DAYS` (default `14`),
 `CHALLENGES_ENDGAME_GAP_FRACTION` (default `0.05`), and
 `CHALLENGES_ENDGAME_REPS_GAP` (default `2`) — kept separate from the
 close-to-goal settings so the two features can be tuned independently.
+
+## Rep Target scoring
+
+In a Rep Target challenge, your goal chart is a single **(target weight,
+target reps)** pair per lift — no rep-max ladder, no weight-for-reps
+tradeoff.
+
+Scoring works differently from Classic in one key way: **weight is a gate,
+not a tradeoff axis**. A set only counts at all if its weight meets or beats
+your target weight — there's no substituting extra reps for missing weight
+the way Classic's rep-max ladder allows. Once the weight gate is cleared,
+points scale with how many of your target reps you did:
+
+```
+points = round(10 × min(your reps, target reps) / target reps)
+```
+
+capped at 10, floored at 0. A few examples against a 20-rep target:
+
+- 20 reps (or more) at or above the target weight → **10 points** (the max).
+- 12 reps → **6 points**.
+- A single rep can round down to **0 points** if the target is high enough
+  (e.g. 1 rep against a 999-rep target) — that's expected: the weight gate
+  alone already tells you you're "on the board," and any later, better set
+  still overwrites this one upward (see below).
+
+As with Classic, only your **current best result per lift** counts toward
+the leaderboard — a new set that beats your previous best replaces it, and a
+non-improving set still saves to your history without moving your points.
+Your total challenge score is the sum of your best points across every lift.
+
+Your performance card shows a progress bar toward the full target (e.g.
+"12/20 reps → 6 pts") once the weight gate is met. Before the weight gate is
+met, the card shows a weight-gate message instead (e.g. "Add 5 lb to start
+scoring on Dip") — reps don't help you here, since weight is a strict
+prerequisite. The same "Close to goal" and "Final stretch" highlights
+described above apply to Rep Target cards too, tuned by the same
+`CHALLENGES_CLOSE_TO_GOAL_*`/`CHALLENGES_ENDGAME_*` settings — a reps-based
+closeness measure standing in for Classic's weight-based one once the gate
+is cleared.
 
 ## Related pages
 

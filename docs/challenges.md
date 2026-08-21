@@ -1,11 +1,33 @@
 # Running a challenge
 
 A challenge is a time-boxed strength challenge you run with a group of
-friends. The creator picks the timeframe and the lifts; each participant
-then builds their own goal chart when they join, so everyone is scored
-against their own targets. Challenges are invite-only: people join through a
-link you share with them. This page walks through the whole lifecycle — from
-setting one up, to inviting people, to wrapping it up at the end.
+friends. The creator picks the timeframe, a scoring mode, and the lifts;
+each participant then builds their own goal chart when they join, so
+everyone is scored against their own targets. Challenges are invite-only:
+people join through a link you share with them. This page walks through the
+whole lifecycle — from setting one up, to inviting people, to wrapping it up
+at the end.
+
+## Two scoring modes
+
+Every challenge runs in one of two modes, chosen once at creation and locked
+for its whole lifetime:
+
+- **Classic** — each participant builds a personal rep-max weight chart: a
+  target weight for every rep count from 1 to 10, per lift. This is the
+  mode described in the rest of this page and in
+  [How scoring works](scoring.md).
+- **Rep Target** — well suited to calisthenics and other rep-based
+  exercises (push-ups, dips, pull-ups) where a full rep-max ladder doesn't
+  make sense. Each participant sets a single "reps at a weight" goal per
+  lift instead. See [Rep Target mode](#rep-target-mode) below for how goal
+  setup and scoring differ.
+
+The mode applies to the whole challenge — it's not something you mix
+per-lift — but the lift picker's **Calisthenics** preset group (push-ups,
+pull-ups, dips, sit-ups, and similar bodyweight exercises) is available
+regardless of mode, so you can still build a Classic rep-max chart for
+push-ups if you'd rather.
 
 ## The lifecycle at a glance
 
@@ -31,9 +53,11 @@ Creating a challenge is a short guided wizard:
 1. **Name** — pick something your group will recognize.
 2. **Dates** — a start date and an end date. Scoring can apply
    retroactively from the start date once someone joins.
-3. **Lifts** — choose from every Liftosaur-supported lift (a searchable
-   list, with a pinned Popular group of classic barbell lifts up top). This
-   list applies to every participant for the whole challenge — each person
+3. **Mode** — Classic or Rep Target (see [above](#two-scoring-modes)).
+   Locked once you continue past this step.
+4. **Lifts** — choose from every Liftosaur-supported lift (a searchable
+   list, with pinned Popular and Calisthenics groups up top). This list
+   applies to every participant for the whole challenge — each person
    builds their own targets for these lifts when they join.
 
 Finishing the wizard creates the challenge and drops you on a **share
@@ -69,8 +93,12 @@ per-person invitation to send, accept, or decline.
 ## Picking your goal and locking it in
 
 Before any of your lifts can be scored, you have to complete **goal
-setup** — a one-time step, done separately by every participant. You pick
-one of four ways to build your chart:
+setup** — a one-time step, done separately by every participant. What
+follows describes **Classic** goal setup; for a **Rep Target** challenge see
+[Rep Target mode](#rep-target-mode) below instead — its goal setup is a
+simpler single page rather than this multi-step wizard.
+
+For Classic, you pick one of four ways to build your chart:
 
 - **Strength standards** — pull published FitnessVolt numbers for a
   population, sex, bodyweight, and tier, and use them as your starting
@@ -105,6 +133,32 @@ Two things happen the moment you confirm your chart:
 2. If you're the **creator** and the challenge is still a draft,
    confirming your own goal setup is what **starts the challenge** —
    it flips from draft to active.
+
+## Rep Target mode
+
+In a Rep Target challenge, goal setup is a single page rather than a
+multi-step wizard: one row per configured lift, each with a **target
+weight** and a **target reps** count that you fill in manually. There's no
+strength-standards or JSON-paste method for this mode.
+
+A **"Suggest targets"** button prefills the whole table from your own synced
+lift history (whatever's already pooled — Liftosaur sync, wger sync, a Hevy
+CSV import, or manual self-report) — the same convenience role as Classic's
+manual-entry "Compute" button. It seeds each lift's target at your own
+best-recorded (weight, reps) pair in that history, fully editable before you
+confirm. Lifts with no usable history are left blank for you to fill in
+yourself.
+
+Just as with Classic, confirming your goals is **permanent** for the
+challenge, and confirming your own goals as the creator is what starts the
+challenge (draft → active).
+
+Weighted bodyweight lifts (pull-ups, chin-ups, dips, and similar) use the
+same added-weight convention as Classic: `0` means bodyweight-only, and a
+negative number means machine-assisted.
+
+See [How scoring works](scoring.md#rep-target-scoring) for how a Rep Target
+goal actually gets scored.
 
 ## Counting history: from when you join, or from the start
 
