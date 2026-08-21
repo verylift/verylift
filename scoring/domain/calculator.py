@@ -212,3 +212,39 @@ def best_score_for_set(
         if satisfies_threshold(effective_reps, performed_weight, n, threshold):
             return (points_for_rep_count(n), n)
     return None
+
+
+def best_score_for_rep_target(
+    performed_reps: int,
+    performed_weight: Decimal,
+    target_reps: int,
+    target_weight: Decimal,
+) -> int | None:
+    """Score a set against a Rep Target goal's single (weight, reps) pair.
+
+    Unlike best_score_for_set, weight is a GATE here, not a tradeoff axis:
+    there is only one weight to hit, so ``performed_weight >= target_weight``
+    is a strict pass/fail with no substitution of extra reps for missing
+    weight. Returns ``None`` when the gate fails -- the same "no threshold
+    met" signal best_score_for_set returns, so callers (scoring.services)
+    persist it the same way (a zero-point audit row, never current-best).
+
+    When the gate passes, points scale with reps performed toward the target,
+    capped at the target (extra reps beyond it earn nothing more):
+    ``round(10 * min(performed_reps, target_reps) / target_reps)``, using
+    round-half-up integer arithmetic (matching this codebase's Decimal
+    ROUND_HALF_UP convention elsewhere) rather than the float-precision-prone
+    builtin ``round()``.
+
+    A single qualifying rep against a very high target_reps can legitimately
+    round to 0 points (issue #85 open question #3) -- accepted by design: the
+    weight gate alone already tells the lifter they're "on the board", and
+    best-set-replaces-old aggregation means any later, better set overwrites
+    this one upward. Flooring every qualifying set at 1 point would make an
+    arbitrarily large target_reps trivially farmable for free points.
+    """
+    if performed_weight < target_weight:
+        return None
+    effective_reps = min(performed_reps, target_reps)
+    points = (10 * effective_reps + target_reps // 2) // target_reps
+    return max(0, min(10, points))

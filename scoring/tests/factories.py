@@ -8,7 +8,10 @@ from challenges.tests.factories import (
     ChallengeParticipantFactory,
     CustomGoalFactory,
     CustomGoalTargetFactory,
+    RepTargetGoalFactory,
+    RepTargetGoalTargetFactory,
     make_custom_challenge,
+    make_rep_target_challenge,
 )
 from scoring.models import PointEarnEvent
 
@@ -50,6 +53,35 @@ def make_custom_scoring_setup(
         )
     participant.custom_goal = goal
     participant.save(update_fields=["custom_goal"])
+    return user, challenge, participant
+
+
+def make_rep_target_scoring_setup(
+    *, lift, target_weight, target_reps, is_bailed=False, start_date=None, end_date=None
+):
+    """Build an accepted participant with a complete rep target goal for one
+    lift. Mirrors make_custom_scoring_setup for REP_TARGET mode. Returns
+    ``(user, challenge, participant)`` ready for scoring.
+    """
+    user = UserFactory()
+    challenge_kwargs = {}
+    if start_date is not None:
+        challenge_kwargs["start_date"] = start_date
+    if end_date is not None:
+        challenge_kwargs["end_date"] = end_date
+    challenge = make_rep_target_challenge(lifts=[lift], **challenge_kwargs)
+    participant = ChallengeParticipantFactory(
+        user=user,
+        challenge=challenge,
+        is_bailed=is_bailed,
+        invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+    )
+    goal = RepTargetGoalFactory(participant=participant, name="My Targets")
+    RepTargetGoalTargetFactory(
+        goal=goal, lift=lift, target_weight=target_weight, target_reps=target_reps
+    )
+    participant.rep_target_goal = goal
+    participant.save(update_fields=["rep_target_goal"])
     return user, challenge, participant
 
 
