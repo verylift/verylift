@@ -47,16 +47,18 @@ class TestOnboardingTrackingMethodView:
         assert response["Location"] == reverse("accounts:onboarding-other-tracker")
 
     @pytest.mark.parametrize("choice", ["", "manual", "csv", "not-a-real-app"])
-    def test_unrecognized_choices_skip_straight_to_units_step(self, client, choice):
+    def test_unrecognized_choices_go_to_the_no_tracker_step(self, client, choice):
         client.force_login(UserFactory())
         response = client.post(
             reverse("accounts:onboarding-tracking-method"),
             {"tracking_app": choice},
         )
         assert response.status_code == 302
-        assert response["Location"] == reverse("accounts:onboarding-units")
+        assert response["Location"] == reverse("accounts:onboarding-no-tracker")
 
-    def test_skip_button_goes_to_units_regardless_of_dropdown_value(self, client):
+    def test_skip_button_goes_to_no_tracker_step_regardless_of_dropdown_value(
+        self, client
+    ):
         """The grey skip button is a distinctly-named submit control -- per
         HTML form semantics, only the clicked button's name/value is sent, so
         its presence must win even if a live-sync app is also selected."""
@@ -66,4 +68,4 @@ class TestOnboardingTrackingMethodView:
             {"tracking_app": "liftosaur", "skip": "1"},
         )
         assert response.status_code == 302
-        assert response["Location"] == reverse("accounts:onboarding-units")
+        assert response["Location"] == reverse("accounts:onboarding-no-tracker")

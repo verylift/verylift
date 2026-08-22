@@ -1,0 +1,21 @@
+{% load i18n %}
+{% comment %}
+Liftosaur affiliate coupon CTA. Usage: {% include "components/_liftosaur_coupon_cta.html" %}
+Shown wherever there's an empty Liftosaur API key input -- never when a key is
+already saved (that's the caller's job to gate).
+{% endcomment %}
+<div class="border border-line-subtle rounded p-4 bg-surface-sunken" id="liftosaur-coupon-cta">
+  <p class="text-sm text-content-body mb-1">
+    {% blocktrans %}New to Liftosaur? Sign up and use code <span class="font-mono font-semibold">VERYLIFT</span>.{% endblocktrans %}
+  </p>
+  <a
+    href="https://www.liftosaur.com"
+    target="_blank"
+    rel="noopener noreferrer"
+    class="inline-block text-sm font-medium text-accent hover:underline">
+    {% trans "Sign up at liftosaur.com" %} &rarr;
+  </a>
+  <p class="mt-2 text-xs text-content-subtle">
+    {% trans "We earn a commission if you sign up with this code." %}
+  </p>
+</div>

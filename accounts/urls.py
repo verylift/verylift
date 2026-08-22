@@ -25,6 +25,11 @@ urlpatterns = [
         name="onboarding-other-tracker",
     ),
     path(
+        "accounts/onboarding/no-tracker/",
+        views.onboarding_no_tracker_view,
+        name="onboarding-no-tracker",
+    ),
+    path(
         "accounts/onboarding/units/",
         views.onboarding_units_view,
         name="onboarding-units",
