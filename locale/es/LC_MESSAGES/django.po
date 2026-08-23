@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-23 00:23+0000\n"
+"POT-Creation-Date: 2026-08-23 00:51+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -1171,6 +1171,8 @@ msgstr "Copiar"
 #: templates/accounts/_support_id_section.html:33
 #: templates/challenges/_invite_link_section.html:169
 #: templates/challenges/custom_goal_setup.html:77
+#: templates/components/_liftosaur_coupon_cta.html:21
+#: templates/registration/onboarding_no_tracker.html:27
 msgid "Copied!"
 msgstr "¡Copiado!"
 
@@ -1423,7 +1425,7 @@ msgstr "Un momento…"
 #: templates/challenges/goal_setup_inputs.html:143
 #: templates/challenges/goal_setup_method.html:67
 #: templates/registration/onboarding_connect_tracker.html:112
-#: templates/registration/onboarding_no_tracker.html:51
+#: templates/registration/onboarding_no_tracker.html:54
 #: templates/registration/onboarding_other_tracker.html:36
 #: templates/registration/onboarding_tracking_method.html:43
 #: templates/registration/onboarding_units.html:35
@@ -2688,31 +2690,28 @@ msgid "Use code"
 msgstr "Usa el código"
 
 #: templates/components/_liftosaur_coupon_cta.html:20
-#: templates/components/_liftosaur_coupon_cta.html:21
+#: templates/components/_liftosaur_coupon_cta.html:22
+#: templates/components/_liftosaur_coupon_cta.html:23
 #: templates/registration/onboarding_no_tracker.html:26
-#: templates/registration/onboarding_no_tracker.html:27
+#: templates/registration/onboarding_no_tracker.html:28
+#: templates/registration/onboarding_no_tracker.html:29
 msgid "Copy coupon code"
 msgstr "Copiar código de descuento"
 
-#: templates/components/_liftosaur_coupon_cta.html:25
-#: templates/registration/onboarding_no_tracker.html:31
+#: templates/components/_liftosaur_coupon_cta.html:28
+#: templates/registration/onboarding_no_tracker.html:34
 msgid "when you subscribe."
 msgstr "al suscribirte."
 
-#: templates/components/_liftosaur_coupon_cta.html:32
-#: templates/registration/onboarding_no_tracker.html:40
+#: templates/components/_liftosaur_coupon_cta.html:35
+#: templates/registration/onboarding_no_tracker.html:43
 msgid "Get Liftosaur"
 msgstr "Consigue Liftosaur"
 
-#: templates/components/_liftosaur_coupon_cta.html:35
-#: templates/registration/onboarding_no_tracker.html:43
+#: templates/components/_liftosaur_coupon_cta.html:38
+#: templates/registration/onboarding_no_tracker.html:46
 msgid "We earn a commission if you subscribe with this code."
 msgstr "Ganamos una comisión si te suscribes con este código."
-
-#: templates/components/_liftosaur_coupon_cta.html:47
-#: templates/registration/onboarding_no_tracker.html:66
-msgid "Copied VERYLIFT to clipboard."
-msgstr "VERYLIFT copiado al portapapeles."
 
 #: templates/components/_messages.html:10
 msgid "Dismiss"
