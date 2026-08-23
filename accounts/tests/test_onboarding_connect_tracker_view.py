@@ -55,6 +55,20 @@ class TestOnboardingConnectTrackerViewRouting:
 
 
 @pytest.mark.django_db
+class TestOnboardingConnectTrackerViewCouponCta:
+    def test_liftosaur_page_shows_coupon_cta(self, client):
+        client.force_login(UserFactory())
+        response = client.get(_url("liftosaur"))
+        assert b'id="liftosaur-coupon-cta"' in response.content
+
+    @pytest.mark.parametrize("app", ["wger", "hevy"])
+    def test_other_apps_do_not_show_coupon_cta(self, client, app):
+        client.force_login(UserFactory())
+        response = client.get(_url(app))
+        assert b'id="liftosaur-coupon-cta"' not in response.content
+
+
+@pytest.mark.django_db
 class TestOnboardingConnectTrackerViewLiftosaur:
     @patch("accounts.views.trigger_lift_history_backfill")
     @patch("accounts.views.validate_liftosaur_key", return_value=True)

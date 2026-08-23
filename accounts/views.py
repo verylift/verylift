@@ -299,19 +299,20 @@ def onboarding_tracking_method_view(request):
     standard HTML form semantics only the clicked submit button's name/value
     pair is sent, so its presence in POST unambiguously means that button was
     clicked regardless of whatever the dropdown happens to be set to. Any of
-    these "no app" paths (skip button, blank/unrecognized dropdown value)
-    skip straight to the units step, since manual self-report always lives in
-    Settings either way.
+    these "no app" paths (skip button, blank/unrecognized dropdown value) go
+    on to onboarding_no_tracker_view, which suggests Liftosaur (with our
+    affiliate coupon) before continuing to the units step, since manual
+    self-report always lives in Settings either way.
     """
     if request.method == "POST":
         if request.POST.get("skip"):
-            return redirect("accounts:onboarding-units")
+            return redirect("accounts:onboarding-no-tracker")
         app = request.POST.get("tracking_app")
         if app in ONBOARDING_TRACKER_APPS:
             return redirect("accounts:onboarding-connect-tracker", app=app)
         if app == "other":
             return redirect("accounts:onboarding-other-tracker")
-        return redirect("accounts:onboarding-units")
+        return redirect("accounts:onboarding-no-tracker")
 
     return render(request, "registration/onboarding_tracking_method.html")
 
@@ -435,6 +436,22 @@ def onboarding_other_tracker_view(request):
         return redirect("accounts:onboarding-units")
 
     return render(request, "registration/onboarding_other_tracker.html")
+
+
+@login_required
+def onboarding_no_tracker_view(request):
+    """Onboarding step 2 (reached when no tracking app is in use): suggest Liftosaur.
+
+    Reached via the "No, I don't use one" skip button and via any
+    blank/unrecognized tracking_app value from step 1. Purely a suggestion --
+    no credentials are collected here, matching onboarding_very_open_view's
+    shape (external link out, secondary POST-and-continue button). GET
+    renders the page; POST just continues to the units step.
+    """
+    if request.method == "POST":
+        return redirect("accounts:onboarding-units")
+
+    return render(request, "registration/onboarding_no_tracker.html")
 
 
 @login_required

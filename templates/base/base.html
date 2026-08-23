@@ -114,6 +114,7 @@
         });
       }
       wireMessages();
+
       // A response can be *entirely* oob content (e.g. draft-delete: the row's
       // hx-target gets emptied and the toast rides along as the only payload) --
       // htmx then skips the main swap lifecycle altogether, so neither
