@@ -1,5 +1,5 @@
 {% extends "base/onboarding.html" %}
-{% load i18n %}
+{% load i18n icons %}
 
 {% block title %}{% trans "Try Liftosaur" %} — very lift{% endblock %}
 
@@ -14,9 +14,22 @@
 </div>
 
 <h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "Not using a tracking app yet?" %}</h1>
-<p class="text-sm text-content-muted mb-6">
-  {% blocktrans %}We suggest using Liftosaur! Sign up using our code <span class="font-mono font-semibold">VERYLIFT</span>.{% endblocktrans %}
+<p class="text-sm text-content-muted mb-2">
+  {% trans "We suggest using Liftosaur! Its API requires a premium subscription." %}
 </p>
+<div class="flex items-center gap-1.5 mb-6 text-sm text-content-muted" id="no-tracker-coupon-code">
+  <span>{% trans "Use our code" %}</span>
+  <span class="font-mono font-semibold text-accent">VERYLIFT</span>
+  <button
+    type="button"
+    data-copy-text="VERYLIFT"
+    title="{% trans 'Copy coupon code' %}"
+    aria-label="{% trans 'Copy coupon code' %}"
+    class="inline-flex items-center justify-center text-content-subtle hover:text-accent">
+    {% icon "copy" css_class="h-3.5 w-3.5" %}
+  </button>
+  <span>{% trans "when you subscribe." %}</span>
+</div>
 
 <div class="bg-surface-card border border-line-subtle rounded p-6">
   <a
@@ -24,10 +37,10 @@
     target="_blank"
     rel="noopener noreferrer"
     class="block w-full text-center bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover mb-3">
-    {% trans "Sign up at liftosaur.com" %}
+    {% trans "Get Liftosaur" %}
   </a>
   <p class="mb-4 text-xs text-content-subtle">
-    {% trans "We earn a commission if you sign up with this code." %}
+    {% trans "We earn a commission if you subscribe with this code." %}
   </p>
 
   <form method="post">
@@ -39,4 +52,31 @@
     </button>
   </form>
 </div>
+
+<script>
+  (function () {
+    var container = document.getElementById('no-tracker-coupon-code');
+    var button = container && container.querySelector('[data-copy-text]');
+    if (!button) return;
+    button.addEventListener('click', function () {
+      var text = button.getAttribute('data-copy-text');
+      var done = function () {
+        button.classList.add('text-accent');
+        setTimeout(function () { button.classList.remove('text-accent'); }, 1200);
+        if (window.ppToast) window.ppToast("{% trans 'Copied VERYLIFT to clipboard.' %}", 'success');
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, done);
+      } else {
+        var tmp = document.createElement('textarea');
+        tmp.value = text;
+        document.body.appendChild(tmp);
+        tmp.select();
+        document.execCommand('copy');
+        document.body.removeChild(tmp);
+        done();
+      }
+    });
+  })();
+</script>
 {% endblock %}

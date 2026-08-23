@@ -1,21 +1,63 @@
-{% load i18n %}
+{% load i18n icons %}
 {% comment %}
 Liftosaur affiliate coupon CTA. Usage: {% include "components/_liftosaur_coupon_cta.html" %}
 Shown wherever there's an empty Liftosaur API key input -- never when a key is
-already saved (that's the caller's job to gate).
+already saved (that's the caller's job to gate). The code itself sits outside
+the translated sentences (not fused into one blocktrans string) so the inline
+{% icon %} copy button can sit next to it -- blocktrans can't contain other
+block tags.
 {% endcomment %}
 <div class="border border-line-subtle rounded p-4 bg-surface-sunken" id="liftosaur-coupon-cta">
-  <p class="text-sm text-content-body mb-1">
-    {% blocktrans %}New to Liftosaur? Sign up and use code <span class="font-mono font-semibold">VERYLIFT</span>.{% endblocktrans %}
+  <p class="text-sm text-content-body mb-2">
+    {% trans "New to Liftosaur? Its API requires a premium subscription." %}
   </p>
+  <div class="flex items-center gap-1.5 mb-2 text-sm text-content-body">
+    <span>{% trans "Use code" %}</span>
+    <span class="font-mono font-semibold text-accent">VERYLIFT</span>
+    <button
+      type="button"
+      data-copy-text="VERYLIFT"
+      title="{% trans 'Copy coupon code' %}"
+      aria-label="{% trans 'Copy coupon code' %}"
+      class="inline-flex items-center justify-center text-content-subtle hover:text-accent">
+      {% icon "copy" css_class="h-3.5 w-3.5" %}
+    </button>
+    <span>{% trans "when you subscribe." %}</span>
+  </div>
   <a
     href="https://www.liftosaur.com"
     target="_blank"
     rel="noopener noreferrer"
     class="inline-block text-sm font-medium text-accent hover:underline">
-    {% trans "Sign up at liftosaur.com" %} &rarr;
+    {% trans "Get Liftosaur" %} &rarr;
   </a>
   <p class="mt-2 text-xs text-content-subtle">
-    {% trans "We earn a commission if you sign up with this code." %}
+    {% trans "We earn a commission if you subscribe with this code." %}
   </p>
+  <script>
+    (function () {
+      var container = document.currentScript.closest('#liftosaur-coupon-cta');
+      var button = container.querySelector('[data-copy-text]');
+      if (!button) return;
+      button.addEventListener('click', function () {
+        var text = button.getAttribute('data-copy-text');
+        var done = function () {
+          button.classList.add('text-accent');
+          setTimeout(function () { button.classList.remove('text-accent'); }, 1200);
+          if (window.ppToast) window.ppToast("{% trans 'Copied VERYLIFT to clipboard.' %}", 'success');
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done, done);
+        } else {
+          var tmp = document.createElement('textarea');
+          tmp.value = text;
+          document.body.appendChild(tmp);
+          tmp.select();
+          document.execCommand('copy');
+          document.body.removeChild(tmp);
+          done();
+        }
+      });
+    })();
+  </script>
 </div>
