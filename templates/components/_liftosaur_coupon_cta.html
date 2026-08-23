@@ -17,10 +17,13 @@ block tags.
     <button
       type="button"
       data-copy-text="VERYLIFT"
+      data-copy-label="{% trans 'Copy coupon code' %}"
+      data-copied-label="{% trans 'Copied!' %}"
       title="{% trans 'Copy coupon code' %}"
       aria-label="{% trans 'Copy coupon code' %}"
       class="inline-flex items-center justify-center text-content-subtle hover:text-accent">
-      {% icon "copy" css_class="h-3.5 w-3.5" %}
+      <span data-copy-icon>{% icon "copy" css_class="h-3.5 w-3.5" %}</span>
+      <span data-copied-icon class="hidden">{% icon "check" css_class="h-3.5 w-3.5" %}</span>
     </button>
     <span>{% trans "when you subscribe." %}</span>
   </div>
@@ -39,12 +42,23 @@ block tags.
       var container = document.currentScript.closest('#liftosaur-coupon-cta');
       var button = container.querySelector('[data-copy-text]');
       if (!button) return;
+      var copyIcon = button.querySelector('[data-copy-icon]');
+      var copiedIcon = button.querySelector('[data-copied-icon]');
       button.addEventListener('click', function () {
         var text = button.getAttribute('data-copy-text');
         var done = function () {
+          button.title = button.getAttribute('data-copied-label');
+          button.setAttribute('aria-label', button.getAttribute('data-copied-label'));
           button.classList.add('text-accent');
-          setTimeout(function () { button.classList.remove('text-accent'); }, 1200);
-          if (window.ppToast) window.ppToast("{% trans 'Copied VERYLIFT to clipboard.' %}", 'success');
+          copyIcon.classList.add('hidden');
+          copiedIcon.classList.remove('hidden');
+          setTimeout(function () {
+            button.title = button.getAttribute('data-copy-label');
+            button.setAttribute('aria-label', button.getAttribute('data-copy-label'));
+            button.classList.remove('text-accent');
+            copyIcon.classList.remove('hidden');
+            copiedIcon.classList.add('hidden');
+          }, 1500);
         };
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(text).then(done, done);

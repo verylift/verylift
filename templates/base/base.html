@@ -115,27 +115,6 @@
       }
       wireMessages();
 
-      // Client-side-only toast (e.g. "Copied to clipboard") for actions that
-      // never hit the server, so never go through Django's messages
-      // framework. Reuses the same #app-messages markup/timing/dismiss
-      // wiring as a server-rendered message.
-      window.ppToast = function (text, tag) {
-        var container = document.getElementById('app-messages');
-        if (!container) return;
-        var toneClass = tag === 'error' ? 'bg-danger-light text-danger-dark'
-          : tag === 'warning' ? 'bg-warning-light text-warning-dark'
-          : tag === 'success' ? 'bg-success-light text-success-dark'
-          : 'bg-brand-100 text-brand-800';
-        var toast = document.createElement('div');
-        toast.className = 'app-message max-w-xl mx-auto flex items-start gap-3 px-4 py-3 rounded text-sm font-medium ' + toneClass;
-        var span = document.createElement('span');
-        span.className = 'flex-1';
-        span.textContent = text;
-        toast.appendChild(span);
-        container.appendChild(toast);
-        wireMessages();
-      };
-
       // A response can be *entirely* oob content (e.g. draft-delete: the row's
       // hx-target gets emptied and the toast rides along as the only payload) --
       // htmx then skips the main swap lifecycle altogether, so neither
