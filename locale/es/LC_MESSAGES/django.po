@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-22 01:08+0000\n"
+"POT-Creation-Date: 2026-08-23 00:23+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -1423,7 +1423,7 @@ msgstr "Un momento…"
 #: templates/challenges/goal_setup_inputs.html:143
 #: templates/challenges/goal_setup_method.html:67
 #: templates/registration/onboarding_connect_tracker.html:112
-#: templates/registration/onboarding_no_tracker.html:38
+#: templates/registration/onboarding_no_tracker.html:51
 #: templates/registration/onboarding_other_tracker.html:36
 #: templates/registration/onboarding_tracking_method.html:43
 #: templates/registration/onboarding_units.html:35
@@ -2679,23 +2679,40 @@ msgstr ""
 "Cuando te unas a un reto, aquí aparecerán las personas con las que has "
 "competido."
 
-#: templates/components/_liftosaur_coupon_cta.html:9
-msgid ""
-"New to Liftosaur? Sign up and use code <span class=\"font-mono font-"
-"semibold\">VERYLIFT</span>."
-msgstr ""
-"¿Nuevo en Liftosaur? Regístrate y usa el código <span class=\"font-mono "
-"font-semibold\">VERYLIFT</span>."
+#: templates/components/_liftosaur_coupon_cta.html:12
+msgid "New to Liftosaur? Its API requires a premium subscription."
+msgstr "¿Nuevo en Liftosaur? Su API requiere una suscripción premium."
 
-#: templates/components/_liftosaur_coupon_cta.html:16
+#: templates/components/_liftosaur_coupon_cta.html:15
+msgid "Use code"
+msgstr "Usa el código"
+
+#: templates/components/_liftosaur_coupon_cta.html:20
+#: templates/components/_liftosaur_coupon_cta.html:21
+#: templates/registration/onboarding_no_tracker.html:26
 #: templates/registration/onboarding_no_tracker.html:27
-msgid "Sign up at liftosaur.com"
-msgstr "Regístrate en liftosaur.com"
+msgid "Copy coupon code"
+msgstr "Copiar código de descuento"
 
-#: templates/components/_liftosaur_coupon_cta.html:19
-#: templates/registration/onboarding_no_tracker.html:30
-msgid "We earn a commission if you sign up with this code."
-msgstr "Ganamos una comisión si te registras con este código."
+#: templates/components/_liftosaur_coupon_cta.html:25
+#: templates/registration/onboarding_no_tracker.html:31
+msgid "when you subscribe."
+msgstr "al suscribirte."
+
+#: templates/components/_liftosaur_coupon_cta.html:32
+#: templates/registration/onboarding_no_tracker.html:40
+msgid "Get Liftosaur"
+msgstr "Consigue Liftosaur"
+
+#: templates/components/_liftosaur_coupon_cta.html:35
+#: templates/registration/onboarding_no_tracker.html:43
+msgid "We earn a commission if you subscribe with this code."
+msgstr "Ganamos una comisión si te suscribes con este código."
+
+#: templates/components/_liftosaur_coupon_cta.html:47
+#: templates/registration/onboarding_no_tracker.html:66
+msgid "Copied VERYLIFT to clipboard."
+msgstr "VERYLIFT copiado al portapapeles."
 
 #: templates/components/_messages.html:10
 msgid "Dismiss"
@@ -3256,12 +3273,12 @@ msgid "Not using a tracking app yet?"
 msgstr "¿Todavía no usas una aplicación de seguimiento?"
 
 #: templates/registration/onboarding_no_tracker.html:18
-msgid ""
-"We suggest using Liftosaur! Sign up using our code <span class=\"font-mono "
-"font-semibold\">VERYLIFT</span>."
-msgstr ""
-"¡Te sugerimos usar Liftosaur! Regístrate usando nuestro código <span "
-"class=\"font-mono font-semibold\">VERYLIFT</span>."
+msgid "We suggest using Liftosaur! Its API requires a premium subscription."
+msgstr "¡Te recomendamos Liftosaur! Su API requiere una suscripción premium."
+
+#: templates/registration/onboarding_no_tracker.html:21
+msgid "Use our code"
+msgstr "Usa nuestro código"
 
 #: templates/registration/onboarding_other_tracker.html:4
 msgid "Which App Do You Use?"
