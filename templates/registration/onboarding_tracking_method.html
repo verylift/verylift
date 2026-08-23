@@ -13,39 +13,42 @@
   </div>
 </div>
 
-<h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "How do you want to track your lifts?" %}</h1>
+<h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "Do you use a tracking app?" %}</h1>
 <p class="text-sm text-content-muted mb-6">{% trans "You can change this anytime from Settings." %}</p>
 
 <form method="post" class="bg-surface-card border border-line-subtle rounded p-6">
   {% csrf_token %}
-  <div class="space-y-2 mb-6">
-    <label class="flex items-start gap-2 border border-line rounded px-3 py-2 cursor-pointer has-[:checked]:border-accent">
-      <input type="radio" name="tracking_method_choice" value="liftosaur" class="mt-0.5">
-      <span>
-        <span class="block text-sm font-medium text-content-body">{% trans "Liftosaur" %}</span>
-        <span class="block text-xs text-content-subtle">{% trans "Connect your API key now to sync automatically." %}</span>
-      </span>
-    </label>
-    <label class="flex items-start gap-2 border border-line rounded px-3 py-2 cursor-pointer has-[:checked]:border-accent">
-      <input type="radio" name="tracking_method_choice" value="manual" class="mt-0.5">
-      <span>
-        <span class="block text-sm font-medium text-content-body">{% trans "Manual entry" %}</span>
-        <span class="block text-xs text-content-subtle">{% trans "Self-report lifts as you go — no setup needed." %}</span>
-      </span>
-    </label>
-    <label class="flex items-start gap-2 border border-line rounded px-3 py-2 cursor-pointer has-[:checked]:border-accent">
-      <input type="radio" name="tracking_method_choice" value="csv" class="mt-0.5">
-      <span>
-        <span class="block text-sm font-medium text-content-body">{% trans "Workout CSV" %}</span>
-        <span class="block text-xs text-content-subtle">{% trans "Upload an export (e.g. Hevy) anytime from Settings." %}</span>
-      </span>
-    </label>
+  <div class="mb-4">
+    <label for="id_tracking_app" class="block text-sm font-medium text-content-body mb-1">{% trans "Tracking app" %}</label>
+    <select
+      id="id_tracking_app"
+      name="tracking_app"
+      class="w-full border border-line-subtle rounded px-3 py-2 text-sm bg-surface-page text-content-body">
+      <option value="" selected disabled>{% trans "Pick an option" %}</option>
+      <option value="liftosaur">{% trans "Liftosaur" %}</option>
+      <option value="wger">{% trans "Wger" %}</option>
+      <option value="hevy">{% trans "Hevy" %}</option>
+      <option value="other">{% trans "A different one" %}</option>
+    </select>
   </div>
 
-  <button
-    type="submit"
-    class="w-full bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
-    {% trans "Continue" %}
-  </button>
+  <p class="text-xs text-content-subtle mb-6">
+    {% trans "It's ok if you don't — you can log lifts manually one at a time, or use CSV uploads, anytime from Settings." %}
+  </p>
+
+  <div class="flex gap-2">
+    <button
+      type="submit"
+      class="flex-1 bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
+      {% trans "Continue" %}
+    </button>
+    <button
+      type="submit"
+      name="skip"
+      value="1"
+      class="flex-1 bg-surface-sunken text-content-body text-sm font-medium px-4 py-2 rounded hover:bg-surface-hover">
+      {% trans "No, I don't use one" %}
+    </button>
+  </div>
 </form>
 {% endblock %}

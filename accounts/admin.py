@@ -6,6 +6,7 @@ from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.contrib.auth.forms import AdminUserCreationForm as BaseUserCreationForm
 from django.contrib.auth.forms import UserChangeForm as BaseUserChangeForm
 
+from accounts.models import TrackerRequest
 from accounts.services import mask_api_key
 from liftosaur.services import sync_user_lifts
 from wger.services import sync_wger_lifts
@@ -168,3 +169,11 @@ class UserAdmin(DjangoUserAdmin):
                 f"Backfilled Wger lift history for {succeeded} user(s).",
                 level=messages.SUCCESS,
             )
+
+
+@admin.register(TrackerRequest)
+class TrackerRequestAdmin(admin.ModelAdmin):
+    list_display = ("app_name", "user", "created_at")
+    list_filter = ("app_name",)
+    search_fields = ("app_name", "user__username", "user__display_name")
+    readonly_fields = ("user", "app_name", "created_at")
