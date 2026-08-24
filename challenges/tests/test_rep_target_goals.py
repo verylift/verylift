@@ -316,6 +316,43 @@ class TestRepTargetGoalSetupView:
         assert row["weight_suggested"]
         assert response.context["suggested_fields"] == weight_field
 
+    def test_second_suggest_keeps_first_suggestions_marked(self):
+        # Regression: a field the first Suggest filled comes back in the
+        # second Suggest's POST as an ordinary value, so the merge saw it as
+        # typed and its suggested styling vanished. The round-tripped
+        # suggested_fields hidden input has to keep it marked.
+        challenge = make_rep_target_challenge(lifts=[LIFT])
+        user = UserFactory(unit_preference="kg")
+        ChallengeParticipantFactory(
+            challenge=challenge,
+            user=user,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        )
+        client = Client()
+        client.force_login(user)
+        weight_field, reps_field = rep_target_field_names(0)
+        with patch(
+            "challenges.views.suggest_rep_targets_from_history",
+            return_value=({LIFT: (Decimal("5"), 30)}, []),
+        ):
+            response = client.post(
+                reverse("challenges:goal-setup", args=[challenge.pk]),
+                {
+                    "name": "My Goal",
+                    "action": "suggest",
+                    weight_field: "5",
+                    reps_field: "30",
+                    "suggested_fields": f"{weight_field},{reps_field}",
+                },
+            )
+        row = response.context["lifts"][0]
+        assert row["weight_suggested"]
+        assert row["reps_suggested"]
+        assert set(response.context["suggested_fields"].split(",")) == {
+            weight_field,
+            reps_field,
+        }
+
     def test_save_records_history_provenance_when_suggested(self):
         # Classic's wizard persists HISTORY for suggested goals; the grid's
         # suggested_fields hidden input carries the same fact here.

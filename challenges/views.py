@@ -867,10 +867,15 @@ def _rep_target_goal_setup_view(request, challenge, participant):
             )
             # Per-field merge: anything the participant already typed is
             # pinned, only blank fields take the suggestion -- same contract
-            # as Classic's Compute button.
+            # as Classic's Compute button. A field a *previous* Suggest
+            # filled arrives in this POST as an ordinary value, so keep its
+            # marker from the round-tripped hidden input (edited fields were
+            # already dropped from it client-side) or a second Suggest would
+            # relabel it as typed.
             field_values, suggested_fields = merge_suggested_fields(
                 request.POST, suggested, challenge, unit
             )
+            suggested_fields |= parse_suggested_fields(request.POST) & set(field_values)
             if no_history_lifts:
                 # A toast, not an inline grid row (UAT feedback: the extra
                 # full-width row broke the grid's spacing) -- one message
