@@ -101,9 +101,9 @@ class TestBuildRepTargetPersonalData:
         )
         data = build_rep_target_personal_data(user, challenge, participant)
         card = data["summary_cards"][0]
-        # 13/20 is the first rep count that scores more than the current 6
-        # points (round(10*13/20) = 7); one more rep than the 12 performed.
-        assert card["reps_gap"] == 1
+        # 14/20 is the first rep count that scores more than the current 6
+        # points (floor(10*14/20) = 7); two more reps than the 12 performed.
+        assert card["reps_gap"] == 2
 
     def test_maxed_card_has_no_reps_gap(self):
         user, challenge, participant = _setup(

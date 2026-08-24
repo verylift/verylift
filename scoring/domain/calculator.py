@@ -231,13 +231,17 @@ def best_score_for_rep_target(
 
     When the gate passes, points scale with reps performed toward the target,
     capped at the target (extra reps beyond it earn nothing more):
-    ``round(10 * min(performed_reps, target_reps) / target_reps)``, using
-    round-half-up integer arithmetic (matching this codebase's Decimal
-    ROUND_HALF_UP convention elsewhere) rather than the float-precision-prone
-    builtin ``round()``.
+    ``floor(10 * min(performed_reps, target_reps) / target_reps)``.
+
+    Flooring, not rounding. Round-half-up awarded the full 10 points at 95%
+    of the target, so the rep count the participant actually chose was never
+    the one that earned full marks: a 32-rep target maxed out at 31, a
+    100-rep target at 95 (UAT). Flooring makes every tier an honest fraction
+    of the target -- N points needs N/10 of the reps, and 10 points needs all
+    of them.
 
     A single qualifying rep against a very high target_reps can legitimately
-    round to 0 points (issue #85 open question #3) -- accepted by design: the
+    score 0 points (issue #85 open question #3) -- accepted by design: the
     weight gate alone already tells the lifter they're "on the board", and
     best-set-replaces-old aggregation means any later, better set overwrites
     this one upward. Flooring every qualifying set at 1 point would make an
@@ -246,5 +250,5 @@ def best_score_for_rep_target(
     if performed_weight < target_weight:
         return None
     effective_reps = min(performed_reps, target_reps)
-    points = (10 * effective_reps + target_reps // 2) // target_reps
+    points = (10 * effective_reps) // target_reps
     return max(0, min(10, points))

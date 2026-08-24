@@ -161,14 +161,18 @@ the way Classic's rep-max ladder allows. Once the weight gate is cleared,
 points scale with how many of your target reps you did:
 
 ```
-points = round(10 × min(your reps, target reps) / target reps)
+points = floor(10 × min(your reps, target reps) / target reps)
 ```
 
-capped at 10, floored at 0. A few examples against a 20-rep target:
+capped at 10, floored at 0. Every tier is an honest fraction of your target:
+N points takes N/10 of the reps, and the full 10 takes all of them. A few
+examples against a 20-rep target:
 
 - 20 reps (or more) at or above the target weight → **10 points** (the max).
 - 12 reps → **6 points**.
-- A single rep can round down to **0 points** if the target is high enough
+- 19 reps → **9 points**. The last rep is the one that earns the tenth point;
+  nothing short of your whole target maxes the lift out.
+- A single rep can come out at **0 points** if the target is high enough
   (e.g. 1 rep against a 999-rep target) — that's expected: the weight gate
   alone already tells you you're "on the board," and any later, better set
   still overwrites this one upward (see below).

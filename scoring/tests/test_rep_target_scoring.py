@@ -95,7 +95,9 @@ class TestProcessScoredSetRepTarget:
         )
         self._score(user, challenge, reps=20, weight="0")
         worse = self._score(user, challenge, reps=5, weight="0")
-        assert worse.points_earned == 3
+        # floor(10 * 5 / 20) = 2; a quarter of the target earns a fifth of
+        # the points, and still does not displace the full-target best.
+        assert worse.points_earned == 2
         assert worse.is_current_best is False
 
     def test_missing_rep_target_goal_is_a_no_op(self):
