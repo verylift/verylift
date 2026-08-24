@@ -1,5 +1,5 @@
 {% extends "base/wizard.html" %}
-{% load i18n %}
+{% load i18n icons %}
 
 {% block title %}{% blocktrans with name=challenge.name %}Set Your Goal — {{ name }}{% endblocktrans %}{% endblock %}
 
@@ -65,9 +65,17 @@
           </thead>
           <tbody>
             {% for lift in lifts %}
-            <tr class="text-content-body border-b border-line-subtle">
+            <tr class="text-content-body border-b border-line-subtle" data-lift-row>
               <td class="py-2 pr-2 sm:pr-4 font-medium text-content-strong">
-                {{ lift.name }}{% if lift.is_bodyweight_added %} <span class="text-content-muted font-normal">({% trans "BW" %})</span>{% endif %}
+                <div class="flex items-center justify-between gap-1.5 w-full">
+                  <span>{{ lift.name }}{% if lift.is_bodyweight_added %} <span class="text-content-muted font-normal">({% trans "BW" %})</span>{% endif %}</span>
+                  <button type="button" data-clear-row
+                          class="shrink-0 text-content-muted hover:text-danger focus:outline-none"
+                          title="{% trans "Clear this row" %}"
+                          aria-label="{% trans "Clear this row" %}">
+                    {% icon "trash-2" css_class="h-3.5 w-3.5" %}
+                  </button>
+                </div>
               </td>
               {# Unit sits beside the field rather than in the header: which #}
               {# unit you are typing matters most at the moment you type.    #}
@@ -94,6 +102,10 @@
                 class="text-sm font-medium px-4 py-2 rounded border border-line-subtle text-content-body hover:bg-surface-sunken">
           {% trans "Suggest targets" %}
         </button>
+        <button type="button" data-clear-all
+                class="text-sm font-medium px-4 py-2 rounded border border-line-subtle text-content-muted hover:text-danger hover:bg-surface-sunken">
+          {% trans "Clear all" %}
+        </button>
         <button type="submit" name="action" value="save"
                 class="bg-accent text-accent-on text-sm font-medium px-6 py-2 rounded hover:bg-accent-hover">
           {% trans "Confirm Goal" %}
@@ -103,25 +115,55 @@
     </form>
 
 <script>
-  // Editing a suggested cell pins it: the participant now owns the value,
-  // so drop the suggested styling and take it out of the hidden
-  // suggested_fields set -- same rule as Classic's markTyped.
   (function () {
     var hidden = document.querySelector("[data-suggested-fields-input]");
-    if (!hidden) return;
     var SUGGESTED = ["text-content-muted", "bg-surface-sunken"];
     var PINNED = ["bg-surface-card", "text-content-body"];
-    document.querySelectorAll("[data-suggested]").forEach(function (el) {
-      el.addEventListener("input", function () {
-        SUGGESTED.forEach(function (c) { el.classList.remove(c); });
-        PINNED.forEach(function (c) { el.classList.add(c); });
-        delete el.dataset.suggested;
+
+    // Editing (or clearing) a suggested cell pins it: the participant now
+    // owns the value, so drop the suggested styling and take it out of the
+    // hidden suggested_fields set -- same rule as Classic's markTyped.
+    function unmark(el) {
+      if (!el.dataset.suggested) return;
+      SUGGESTED.forEach(function (c) { el.classList.remove(c); });
+      PINNED.forEach(function (c) { el.classList.add(c); });
+      delete el.dataset.suggested;
+      if (hidden) {
         hidden.value = hidden.value
           .split(",")
           .filter(function (name) { return name && name !== el.name; })
           .join(",");
+      }
+    }
+
+    document.querySelectorAll("[data-suggested]").forEach(function (el) {
+      el.addEventListener("input", function () { unmark(el); });
+    });
+
+    // Blanks every grid input inside scope. Programmatic clears don't fire
+    // "input", so unmark explicitly -- emptied cells are ordinary blanks,
+    // not stale "suggested" ones (same recovery role as Classic's per-row
+    // clear).
+    function clearInputs(scope) {
+      scope.querySelectorAll("input[name^='target_']").forEach(function (el) {
+        el.value = "";
+        unmark(el);
+      });
+    }
+
+    document.querySelectorAll("[data-clear-row]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        var row = button.closest("[data-lift-row]");
+        if (row) clearInputs(row);
       });
     });
+
+    var clearAll = document.querySelector("[data-clear-all]");
+    if (clearAll) {
+      clearAll.addEventListener("click", function () {
+        clearInputs(document);
+      });
+    }
   })();
 </script>
 {% endblock %}
