@@ -118,63 +118,58 @@
     {% elif step == "lifts" %}
     <h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "Choose your lifts" %}</h1>
     <p class="text-sm text-content-muted mb-6">
-      {% trans "This lift list applies to every participant for the whole challenge — each person's goal chart will cover exactly these lifts." %}
+      {% trans "This lift list applies to every participant for the whole challenge — each person's goal chart will cover exactly these lifts. \"All Lifts\" holds everything; \"Popular\" and \"Calisthenics\" are just curated shortcuts into the same list." %}
     </p>
     <form method="post" class="bg-surface-card border border-line-subtle rounded p-6">
       {% csrf_token %}
-      <div class="mb-4 flex items-center gap-2">
+      <div class="mb-4">
         <input
           type="search"
           data-lift-search
           placeholder="{% trans 'Search lifts…' %}"
-          class="flex-1 bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent">
-        <button type="button" data-clear-lifts class="text-sm text-content-muted hover:text-content-strong whitespace-nowrap px-2">
-          {% trans "Clear all" %}
+          class="w-full bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent">
+      </div>
+
+      <div class="flex items-center justify-between gap-3 mb-6">
+        <p class="text-xs text-content-subtle whitespace-nowrap">
+          <span data-selected-count>0</span> {% trans "selected" %}
+        </p>
+        <div class="flex items-center gap-4 whitespace-nowrap">
+          <button type="button" data-select-all-tab class="text-xs font-medium text-accent hover:text-accent-hover">
+            {% trans "Select all" %}
+          </button>
+          <button type="button" data-clear-lifts class="text-xs font-medium text-content-muted hover:text-content-strong">
+            {% trans "Clear all" %}
+          </button>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-1 mb-3" data-lift-tabs-bar data-default-tab="{{ form.default_lift_tab }}">
+        <button type="button" data-lift-tab="all" class="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded">
+          {% trans "All Lifts" %}
+          <span class="text-xs px-1.5 py-0.5 rounded-full bg-surface-sunken">{{ form.lifts.field.queryset.count }}</span>
+        </button>
+        <button type="button" data-lift-tab="popular" class="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded">
+          {% trans "Popular" %}
+          <span class="text-xs px-1.5 py-0.5 rounded-full bg-surface-sunken">{{ form.classic_lift_names|length }}</span>
+        </button>
+        <button type="button" data-lift-tab="calisthenics" class="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded">
+          {% trans "Calisthenics" %}
+          <span class="text-xs px-1.5 py-0.5 rounded-full bg-surface-sunken">{{ form.calisthenics_lift_names|length }}</span>
         </button>
       </div>
 
-      <div class="mb-2" data-lift-group>
-        <h2 class="text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">{% trans "Popular" %}</h2>
-        {# CLASSIC_LIFT_NAMES is a fixed 14-item list (challenges/lift_presets.py), so unlike #}
-        {# "All lifts" below, this box doesn't need its own scroll cap. #}
-        <div class="space-y-1 border border-line-subtle rounded px-3 py-2">
-          {% for checkbox in form.lifts %}
-          {% if checkbox.choice_label in form.classic_lift_names %}
-          <label class="flex items-center gap-2 text-sm text-content-body cursor-pointer" data-lift-row data-lift-name="{{ checkbox.choice_label|lower }}">
-            {{ checkbox.tag }}
-            {{ checkbox.choice_label }}
-          </label>
-          {% endif %}
-          {% endfor %}
-        </div>
-      </div>
-
-      <div class="mb-2" data-lift-group>
-        <h2 class="text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1 mt-3">{% trans "Calisthenics" %}</h2>
-        <div class="space-y-1 border border-line-subtle rounded px-3 py-2">
-          {% for checkbox in form.lifts %}
-          {% if checkbox.choice_label in form.calisthenics_lift_names and checkbox.choice_label not in form.classic_lift_names %}
-          <label class="flex items-center gap-2 text-sm text-content-body cursor-pointer" data-lift-row data-lift-name="{{ checkbox.choice_label|lower }}">
-            {{ checkbox.tag }}
-            {{ checkbox.choice_label }}
-          </label>
-          {% endif %}
-          {% endfor %}
-        </div>
-      </div>
-
-      <div class="mb-4" data-lift-group>
-        <h2 class="text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1 mt-3">{% trans "All lifts" %}</h2>
-        <div class="space-y-1 max-h-64 overflow-y-auto border border-line-subtle rounded px-3 py-2">
-          {% for checkbox in form.lifts %}
-          {% if checkbox.choice_label not in form.classic_lift_names and checkbox.choice_label not in form.calisthenics_lift_names %}
-          <label class="flex items-center gap-2 text-sm text-content-body cursor-pointer" data-lift-row data-lift-name="{{ checkbox.choice_label|lower }}">
-            {{ checkbox.tag }}
-            {{ checkbox.choice_label }}
-          </label>
-          {% endif %}
-          {% endfor %}
-        </div>
+      <div class="space-y-1 max-h-64 overflow-y-auto border border-line-subtle rounded px-3 py-2 mb-6" data-lift-list>
+        {% for checkbox in form.lifts %}
+        <label
+          class="flex items-center gap-2 text-sm text-content-body cursor-pointer rounded px-1 py-1 hover:bg-surface-hover"
+          data-lift-row
+          data-lift-name="{{ checkbox.choice_label|lower }}"
+          data-lift-tabs="all{% if checkbox.choice_label in form.classic_lift_names %} popular{% endif %}{% if checkbox.choice_label in form.calisthenics_lift_names %} calisthenics{% endif %}">
+          {{ checkbox.tag }}
+          {{ checkbox.choice_label }}
+        </label>
+        {% endfor %}
       </div>
       {% if form.lifts.errors %}
       <p class="mt-1 mb-4 text-xs text-danger">{{ form.lifts.errors|join:", " }}</p>
@@ -194,40 +189,92 @@
 {% block after_main %}
 {% if step == "lifts" %}
 <script>
-  // Client-side substring search over the two lift groups (~139 rows total, so
-  // no server round-trip needed). Hides a group entirely when every row in it
-  // is filtered out, so an empty "Popular"/"All lifts" heading never floats
-  // above nothing.
+  // All lifts render once in a single list (~139 rows); "Popular" and
+  // "Calisthenics" are just filtered views into that same list via each
+  // row's data-lift-tabs, not separate markup -- so a lift's checked state
+  // is naturally shared across every tab it appears under.
   (function () {
-    const input = document.querySelector("[data-lift-search]");
-    if (!input) return;
-    const groups = document.querySelectorAll("[data-lift-group]");
-    input.addEventListener("input", function () {
-      const query = input.value.trim().toLowerCase();
-      groups.forEach(function (group) {
-        let anyVisible = false;
-        group.querySelectorAll("[data-lift-row]").forEach(function (row) {
-          const match = !query || row.getAttribute("data-lift-name").includes(query);
-          row.classList.toggle("hidden", !match);
-          if (match) anyVisible = true;
-        });
-        group.classList.toggle("hidden", !anyVisible);
+    const tabsBar = document.querySelector("[data-lift-tabs-bar]");
+    const searchInput = document.querySelector("[data-lift-search]");
+    const clearButton = document.querySelector("[data-clear-lifts]");
+    const selectAllButton = document.querySelector("[data-select-all-tab]");
+    const rows = document.querySelectorAll("[data-lift-row]");
+    const selectedCountEl = document.querySelector("[data-selected-count]");
+    if (!tabsBar || !searchInput || !rows.length) return;
+    const tabButtons = tabsBar.querySelectorAll("[data-lift-tab]");
+    let activeTab = tabsBar.dataset.defaultTab || "all";
+
+    const ACTIVE_CLASSES = ["bg-accent-subtle", "text-accent"];
+    const INACTIVE_CLASSES = ["text-content-muted"];
+
+    // Every row's data-lift-tabs always includes "all", so a single
+    // membership check covers every tab, including "All Lifts" itself.
+    function rowMatchesTab(row, tab) {
+      return row.getAttribute("data-lift-tabs").split(" ").includes(tab);
+    }
+
+    function applyFilters() {
+      const query = searchInput.value.trim().toLowerCase();
+      rows.forEach(function (row) {
+        const matchesTab = rowMatchesTab(row, activeTab);
+        const matchesQuery = !query || row.getAttribute("data-lift-name").includes(query);
+        row.classList.toggle("hidden", !(matchesTab && matchesQuery));
+      });
+    }
+
+    function setActiveTab(tab) {
+      activeTab = tab;
+      tabButtons.forEach(function (btn) {
+        const isActive = btn.getAttribute("data-lift-tab") === tab;
+        btn.classList.toggle(ACTIVE_CLASSES[0], isActive);
+        btn.classList.toggle(ACTIVE_CLASSES[1], isActive);
+        btn.classList.toggle(INACTIVE_CLASSES[0], !isActive);
+        btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+      });
+      applyFilters();
+    }
+
+    function updateSelectedCount() {
+      if (!selectedCountEl) return;
+      const count = document.querySelectorAll("[data-lift-row] input[type=checkbox]:checked").length;
+      selectedCountEl.textContent = count;
+    }
+
+    tabButtons.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        setActiveTab(btn.getAttribute("data-lift-tab"));
       });
     });
-  })();
-
-  // Clear all lift checkboxes in one click -- unchecks every row regardless
-  // of the current search filter, since the search only toggles visibility.
-  (function () {
-    const button = document.querySelector("[data-clear-lifts]");
-    if (!button) return;
-    button.addEventListener("click", function () {
-      document.querySelectorAll("[data-lift-row] input[type=checkbox]").forEach(
-        function (checkbox) {
-          checkbox.checked = false;
-        }
-      );
+    searchInput.addEventListener("input", applyFilters);
+    document.querySelectorAll("[data-lift-row] input[type=checkbox]").forEach(function (checkbox) {
+      checkbox.addEventListener("change", updateSelectedCount);
     });
+    if (clearButton) {
+      clearButton.addEventListener("click", function () {
+        document.querySelectorAll("[data-lift-row] input[type=checkbox]").forEach(
+          function (checkbox) {
+            checkbox.checked = false;
+          }
+        );
+        updateSelectedCount();
+      });
+    }
+    if (selectAllButton) {
+      // Scoped to whatever's currently visible -- tab membership AND any
+      // active search filter -- so it only ever selects what the user can
+      // actually see, never a hidden lift they didn't ask for.
+      selectAllButton.addEventListener("click", function () {
+        rows.forEach(function (row) {
+          if (row.classList.contains("hidden")) return;
+          const checkbox = row.querySelector("input[type=checkbox]");
+          if (checkbox) checkbox.checked = true;
+        });
+        updateSelectedCount();
+      });
+    }
+
+    setActiveTab(activeTab);
+    updateSelectedCount();
   })();
 </script>
 {% endif %}

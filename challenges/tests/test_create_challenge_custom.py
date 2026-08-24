@@ -9,30 +9,31 @@ those behaviors are exercised.
 import pytest
 
 from challenges.forms import CreateChallengeLiftsForm
-from challenges.lift_presets import CLASSIC_LIFT_NAMES
+from challenges.models import Challenge
 from liftosaur.models import Lift
 
 pytestmark = pytest.mark.django_db
 
 
-class TestClassicsPreset:
-    def test_unbound_form_pre_checks_exactly_the_classics(self):
+class TestLiftTabMembership:
+    def test_unbound_form_pre_checks_nothing(self):
+        """No silent default preset (issue #85 follow-up): the picker's
+        "Popular"/"Calisthenics" tabs are select-all shortcuts an owner
+        chooses, not a pre-applied default they might not notice."""
         form = CreateChallengeLiftsForm()
-        expected = set(
-            Lift.objects.filter(name__in=CLASSIC_LIFT_NAMES).values_list(
-                "pk", flat=True
-            )
-        )
-        assert len(expected) == 14
-        assert set(form.fields["lifts"].initial) == expected
+        assert not form.fields["lifts"].initial
 
-    def test_bound_form_does_not_force_classics_over_posted_data(self):
+    def test_bound_form_keeps_posted_selection(self):
         bench = Lift.objects.get(name="Bench Press")
         form = CreateChallengeLiftsForm(data={"lifts": [bench.pk]})
         assert form.is_valid()
-        # Bound form keeps the POSTed selection; the Classics initial is not
-        # applied on top of it.
         assert set(form.cleaned_data["lifts"].values_list("pk", flat=True)) == {
             bench.pk
         }
-        assert not form.fields["lifts"].initial
+
+    def test_default_tab_follows_mode(self):
+        assert CreateChallengeLiftsForm().default_lift_tab == "popular"
+        assert (
+            CreateChallengeLiftsForm(mode=Challenge.Mode.REP_TARGET).default_lift_tab
+            == "calisthenics"
+        )

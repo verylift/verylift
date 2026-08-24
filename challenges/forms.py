@@ -112,10 +112,12 @@ class CreateChallengeLiftsForm(forms.Form):
 
     One flat list of every lift in the canonical liftosaur.Lift catalogue
     (picking from it, rather than free text, guarantees every chosen name
-    matches a participant's actual Liftosaur history). The template pins
-    CLASSIC_LIFT_NAMES ("Popular") above the rest, which render alphabetically
-    (Lift.Meta.ordering). This list is the owner's call for the whole
-    challenge — every participant's goal chart covers exactly these lifts.
+    matches a participant's actual Liftosaur history), rendered alphabetically
+    (Lift.Meta.ordering). Nothing is pre-checked: the template's "Popular" and
+    "Calisthenics" tabs are just curated, tab-scoped "select all" shortcuts
+    into this same list, not a silent default the owner might not notice.
+    This list is the owner's call for the whole challenge — every
+    participant's goal chart covers exactly these lifts.
     """
 
     lifts = forms.ModelMultipleChoiceField(
@@ -127,25 +129,16 @@ class CreateChallengeLiftsForm(forms.Form):
     def __init__(self, *args, mode=Challenge.Mode.CLASSIC, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["lifts"].queryset = Lift.objects.order_by("name")
-        # Pre-check a default preset on the unbound (fresh) form so the
-        # default selection works without JS -- Rep Target defaults to the
-        # Calisthenics group (issue #85: it's the mode calisthenics
-        # challenges will typically reach for), Classic keeps its existing
-        # default. A bound form must keep whatever the POST carried, so only
-        # seed initial when unbound.
-        if not self.is_bound:
-            default_names = (
-                CALISTHENICS_LIFT_NAMES
-                if mode == Challenge.Mode.REP_TARGET
-                else CLASSIC_LIFT_NAMES
-            )
-            self.fields["lifts"].initial = list(
-                Lift.objects.filter(name__in=default_names).values_list("pk", flat=True)
-            )
-        # Exposed for the template so the "Popular"/"Calisthenics" groups can
+        # Exposed for the template so the "Popular"/"Calisthenics" tabs can
         # test membership.
         self.classic_lift_names = CLASSIC_LIFT_NAMES
         self.calisthenics_lift_names = CALISTHENICS_LIFT_NAMES
+        # Which tab the picker opens on -- Rep Target challenges typically
+        # reach for Calisthenics lifts (issue #85), Classic keeps Popular.
+        # Purely which tab is shown first; nothing is pre-checked.
+        self.default_lift_tab = (
+            "calisthenics" if mode == Challenge.Mode.REP_TARGET else "popular"
+        )
 
 
 class GoalMethodForm(forms.Form):

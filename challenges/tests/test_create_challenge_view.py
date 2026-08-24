@@ -319,10 +319,19 @@ class TestLiftPickerStep:
         rows = self._lift_rows(content)
         assert len(rows) == 139
 
-    def test_classics_pre_checked_on_fresh_form(self, authed_client):
+    def test_nothing_pre_checked_on_fresh_form(self, authed_client):
+        """No silent default preset (issue #85 follow-up) -- an owner picks a
+        tab and hits its "Select all", or checks lifts by hand."""
         content = self._goto_lifts_step(authed_client).content.decode()
         checked = re.findall(r'<input[^>]*name="lifts"[^>]*checked[^>]*>', content)
-        assert len(checked) == 14
+        assert len(checked) == 0
+
+    def test_nothing_pre_checked_for_rep_target_mode(self, authed_client):
+        content = self._goto_lifts_step(
+            authed_client, mode=Challenge.Mode.REP_TARGET
+        ).content.decode()
+        checked = re.findall(r'<input[^>]*name="lifts"[^>]*checked[^>]*>', content)
+        assert len(checked) == 0
 
     def test_search_input_rendered(self, authed_client):
         content = self._goto_lifts_step(authed_client).content.decode()
@@ -332,21 +341,28 @@ class TestLiftPickerStep:
         content = self._goto_lifts_step(authed_client).content.decode()
         assert "data-clear-lifts" in content
 
+    def test_select_all_button_rendered(self, authed_client):
+        content = self._goto_lifts_step(authed_client).content.decode()
+        assert "data-select-all-tab" in content
+
     def test_popular_group_heading_rendered(self, authed_client):
         content = self._goto_lifts_step(authed_client).content.decode()
         assert "Popular" in content
-        assert "All lifts" in content
+        assert "All Lifts" in content
 
     def test_calisthenics_group_heading_rendered(self, authed_client):
         content = self._goto_lifts_step(authed_client).content.decode()
         assert "Calisthenics" in content
 
-    def test_calisthenics_pre_checked_for_rep_target_mode(self, authed_client):
+    def test_default_tab_is_popular_for_classic_mode(self, authed_client):
+        content = self._goto_lifts_step(authed_client).content.decode()
+        assert 'data-default-tab="popular"' in content
+
+    def test_default_tab_is_calisthenics_for_rep_target_mode(self, authed_client):
         content = self._goto_lifts_step(
             authed_client, mode=Challenge.Mode.REP_TARGET
         ).content.decode()
-        checked = re.findall(r'<input[^>]*name="lifts"[^>]*checked[^>]*>', content)
-        assert len(checked) == 10
+        assert 'data-default-tab="calisthenics"' in content
 
 
 class TestNoAdvancedFields:
