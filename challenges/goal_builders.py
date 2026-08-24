@@ -11,11 +11,13 @@ place one is ever written to storage at all, via :func:`standards_source_detail`
 """
 
 import logging
+import math
 from datetime import UTC, datetime, timedelta
 from decimal import ROUND_CEILING, ROUND_HALF_UP, Decimal
 
 from accounts.units import from_display_weight, to_display_weight
 from challenges.models import CustomGoal
+from challenges.rep_target_goals import MAX_TARGET_REPS
 from challenges.standards import covered_lift_names
 from fitnessvolt import services as fitnessvolt_services
 from liftosaur.models import LiftHistory
@@ -337,6 +339,9 @@ def suggest_from_history(
 
 
 REP_TARGET_SUGGESTED_REPS = 5
+# Bodyweight-added lifts target bodyweight itself, so reps carry the whole
+# goal: ask for half again the best set in the window.
+REP_TARGET_BODYWEIGHT_UPLIFT = Decimal("1.5")
 _REP_TARGET_ROUNDING_LB = Decimal("5")
 
 
@@ -385,10 +390,15 @@ def suggest_rep_targets_from_history(
     up that still clears the rounding as the "good chance to score soon"
     case.
 
-    Bodyweight-added lifts (Pull-up/Chin-up/Dip/Pistol Squat) keep the older
-    verbatim behavior: the best already-recorded (weight, reps) row, ties
-    broken toward more reps. Their "weight" is added weight, not total load;
-    revisit alongside this same 0-points concern if it comes up for them too.
+    Bodyweight-added lifts (Pull-up/Chin-up/Dip/Pistol Squat) reach the same
+    "must not arrive pre-completed" outcome from the other direction. Their
+    stored weight is added weight, so targeting 0 means targeting bodyweight
+    itself: the gate is whatever the lifter already carries, and reps become
+    the only axis left to grow. The target is
+    ``REP_TARGET_BODYWEIGHT_UPLIFT`` x the most reps managed in the window,
+    rounded up and clamped to ``MAX_TARGET_REPS``. Taking the best set
+    verbatim, as this used to, handed back a goal the lifter had by
+    definition already completed.
 
     Assisted-equipment rows on bodyweight-added lifts are skipped (their
     recorded weight is net total load, not added weight, and isn't comparable
@@ -407,17 +417,23 @@ def suggest_rep_targets_from_history(
             user=user, lift=lift, performed_at__gte=cutoff
         )
         if is_added:
-            best: tuple[Decimal, int] | None = None
-            for row in rows:
-                if is_assisted_equipment(row.equipment):
-                    continue
-                candidate = (row.weight_kg, row.reps)
-                if best is None or candidate > best:
-                    best = candidate
-            if best is None:
+            # Target bodyweight itself (0 added weight), so the weight gate is
+            # whatever the lifter already carries and reps are the only axis
+            # left to grow. Then ask for half again the most they have managed
+            # in the window: taking their best set verbatim, as this used to,
+            # handed them a goal they had by definition already completed.
+            best_reps = max(
+                (row.reps for row in rows if not is_assisted_equipment(row.equipment)),
+                default=None,
+            )
+            if best_reps is None:
                 no_history.append(lift)
             else:
-                table[lift] = best
+                target_reps = math.ceil(best_reps * REP_TARGET_BODYWEIGHT_UPLIFT)
+                table[lift] = (
+                    Decimal("0"),
+                    min(max(target_reps, 1), MAX_TARGET_REPS),
+                )
             continue
 
         weights = [row.weight_kg for row in rows]
