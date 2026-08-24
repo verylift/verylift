@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-24 19:04+0000\n"
+"POT-Creation-Date: 2026-08-24 19:08+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -596,7 +596,7 @@ msgstr ""
 #: templates/challenges/custom_goal_setup.html:234
 #: templates/challenges/goal_setup_inputs.html:147
 #: templates/challenges/key_required.html:38
-#: templates/challenges/rep_target_goal_setup.html:87
+#: templates/challenges/rep_target_goal_setup.html:91
 msgid "Cancel"
 msgstr "Cancelar"
 
@@ -1739,6 +1739,7 @@ msgid "for your rep target goal."
 msgstr "para tu objetivo de repeticiones."
 
 #: templates/challenges/_rep_target_goal_table.html:21
+#: templates/challenges/rep_target_goal_setup.html:54
 msgid "Weight"
 msgstr "Peso"
 
@@ -2145,7 +2146,7 @@ msgid "This challenge has no lifts configured."
 msgstr "Este reto no tiene ejercicios configurados."
 
 #: templates/challenges/custom_goal_setup.html:230
-#: templates/challenges/rep_target_goal_setup.html:85
+#: templates/challenges/rep_target_goal_setup.html:89
 msgid "Confirm Goal"
 msgstr "Confirmar Objetivo"
 
@@ -2830,16 +2831,11 @@ msgstr ""
 msgid "e.g. Calisthenics goals"
 msgstr "p. ej. Objetivos de calistenia"
 
-#: templates/challenges/rep_target_goal_setup.html:54
-#, python-format
-msgid "Weight (%(unit)s)"
-msgstr "Peso (%(unit)s)"
-
 #: templates/challenges/rep_target_goal_setup.html:55
 msgid "Reps"
 msgstr "Reps"
 
-#: templates/challenges/rep_target_goal_setup.html:81
+#: templates/challenges/rep_target_goal_setup.html:85
 msgid "Suggest targets"
 msgstr "Sugerir objetivos"
 
