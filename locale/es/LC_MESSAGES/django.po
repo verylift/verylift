@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-24 17:46+0000\n"
+"POT-Creation-Date: 2026-08-24 17:55+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -1642,9 +1642,12 @@ msgid "Close"
 msgstr "Cerrar"
 
 #: templates/challenges/_participant_chart.html:44
+#: templates/challenges/_participant_chart.html:61
 #: templates/challenges/_rep_target_goal_tab.html:36
 #: templates/challenges/_rep_target_summary_card.html:14
 #: templates/challenges/_summary_card.html:47
+#: templates/challenges/custom_goal_setup.html:173
+#: templates/challenges/detail.html:339
 msgid "reps"
 msgstr "repeticiones"
 

@@ -225,7 +225,9 @@ class TestRendering:
         content = resp.content.decode()
         assert LIFT in content
         assert second_lift in content
-        assert "10RM" in content and "1RM" in content
+        # Columns lead with what they're worth; the rep count is the
+        # sub-label ("10pt" over "1 reps"), so both ends must be present.
+        assert "10pt" in content and "1pt" in content
 
     def test_highlighted_cell_matches_current_best(
         self, viewer_client, viewer, challenge, subject, subject_participant
