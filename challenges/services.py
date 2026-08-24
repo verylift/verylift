@@ -2106,9 +2106,6 @@ def build_custom_goal_context(
     }
 
 
-REP_TARGET_DEFAULT_BW_REPS = 10
-
-
 def build_rep_target_goal_context(
     user,
     challenge,
@@ -2126,39 +2123,30 @@ def build_rep_target_goal_context(
     couldn't prefill (:func:`challenges.goal_builders.suggest_rep_targets_from_history`)
     is surfaced via a toast in the view, not a per-row flag here -- an
     inline grid row broke the grid's spacing (UAT feedback).
+
+    Every row starts empty unless ``targets`` fills it. Bodyweight-added
+    lifts briefly defaulted to 0 weight and 10 reps, but a challenge mixing
+    them with barbell lifts then opened showing "0" against a bench press,
+    which reads as a suggestion nobody asked for. Prefilling is
+    "Suggest targets"' job alone.
     """
     unit = user.unit_preference
     targets = targets or {}
     lifts = []
     for lift_index, lift in enumerate(sorted(covered_lift_names(challenge))):
         weight_field, reps_field = rep_target_field_names(lift_index)
-        is_bw_added = is_bodyweight_added_lift(lift)
         weight_kg, reps = targets.get(lift, (None, None))
+        weight_value = ""
         if weight_kg is not None:
             weight_value, _ = to_display_weight(weight_kg, unit)
-        elif is_bw_added:
-            # Added weight defaults to 0 (bodyweight-only) rather than blank:
-            # that's the common case, and 0 is itself a valid target. Written
-            # without a trailing ".0" to match every other whole weight on the
-            # page (accounts.units.trim_whole_weight).
-            weight_value = "0"
-        else:
-            weight_value = ""
-        if reps is None and is_bw_added:
-            # No history to suggest reps from either -- 10 is a reasonable
-            # bodyweight-only starting target, same reasoning as the 0.0
-            # weight default just above.
-            reps_value = REP_TARGET_DEFAULT_BW_REPS
-        else:
-            reps_value = reps if reps is not None else ""
         lifts.append(
             {
                 "name": lift,
-                "is_bodyweight_added": is_bw_added,
+                "is_bodyweight_added": is_bodyweight_added_lift(lift),
                 "weight_field": weight_field,
                 "weight_value": weight_value,
                 "reps_field": reps_field,
-                "reps_value": reps_value,
+                "reps_value": reps if reps is not None else "",
             }
         )
     return {

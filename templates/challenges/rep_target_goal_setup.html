@@ -51,7 +51,10 @@
           <thead>
             <tr class="text-content-muted">
               <th class="py-2 pr-2 sm:pr-4 font-medium">{% trans "Lift" %}</th>
-              <th class="py-2 pl-2 pr-1 sm:px-3 font-medium text-right">{% trans "Weight" %}</th>
+              {# Headers stay left-aligned like the rest of the app's tables; #}
+              {# only numeric display columns right-align, and these label    #}
+              {# input fields rather than figures.                            #}
+              <th class="py-2 pl-2 pr-1 sm:px-3 font-medium">{% trans "Weight" %}</th>
               <th class="py-2 pl-1 pr-2 sm:px-3 font-medium">{% trans "Reps" %}</th>
             </tr>
           </thead>
