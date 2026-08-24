@@ -969,6 +969,10 @@ body {
   display: grid;
 }
 
+.contents {
+  display: contents;
+}
+
 .hidden {
   display: none;
 }
@@ -1168,6 +1172,10 @@ body {
 
 .min-w-5 {
   min-width: 1.25rem;
+}
+
+.min-w-\[1\.1rem\] {
+  min-width: 1.1rem;
 }
 
 .min-w-\[1\.6rem\] {

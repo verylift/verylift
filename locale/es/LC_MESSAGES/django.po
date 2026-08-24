@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-24 18:56+0000\n"
+"POT-Creation-Date: 2026-08-24 19:04+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -1643,7 +1643,7 @@ msgstr "Cerrar"
 
 #: templates/challenges/_participant_chart.html:44
 #: templates/challenges/_participant_chart.html:67
-#: templates/challenges/_rep_target_goal_table.html:42
+#: templates/challenges/_rep_target_goal_table.html:46
 #: templates/challenges/_rep_target_summary_card.html:14
 #: templates/challenges/_summary_card.html:47
 #: templates/challenges/custom_goal_setup.html:173
@@ -1739,10 +1739,8 @@ msgid "for your rep target goal."
 msgstr "para tu objetivo de repeticiones."
 
 #: templates/challenges/_rep_target_goal_table.html:21
-#: templates/challenges/rep_target_goal_setup.html:54
-#, python-format
-msgid "Weight (%(unit)s)"
-msgstr "Peso (%(unit)s)"
+msgid "Weight"
+msgstr "Peso"
 
 #: templates/challenges/_rep_target_summary_card.html:14
 #, python-format
@@ -2831,6 +2829,11 @@ msgstr ""
 #: templates/challenges/rep_target_goal_setup.html:45
 msgid "e.g. Calisthenics goals"
 msgstr "p. ej. Objetivos de calistenia"
+
+#: templates/challenges/rep_target_goal_setup.html:54
+#, python-format
+msgid "Weight (%(unit)s)"
+msgstr "Peso (%(unit)s)"
 
 #: templates/challenges/rep_target_goal_setup.html:55
 msgid "Reps"
