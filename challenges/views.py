@@ -329,10 +329,9 @@ def _create_wizard_step_form(step, data, *, post=None):
     # other steps have one): submitting this step creates the challenge and
     # clears the wizard session, so no GET can ever arrive with a stashed lift
     # selection to restore.
-    mode = data.get("mode", Challenge.Mode.CLASSIC)
     if post is not None:
-        return CreateChallengeLiftsForm(post, mode=mode)
-    return CreateChallengeLiftsForm(mode=mode)
+        return CreateChallengeLiftsForm(post)
+    return CreateChallengeLiftsForm()
 
 
 @login_required

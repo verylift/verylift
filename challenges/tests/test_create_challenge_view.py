@@ -354,15 +354,14 @@ class TestLiftPickerStep:
         content = self._goto_lifts_step(authed_client).content.decode()
         assert "Calisthenics" in content
 
-    def test_default_tab_is_popular_for_classic_mode(self, authed_client):
-        content = self._goto_lifts_step(authed_client).content.decode()
-        assert 'data-default-tab="popular"' in content
-
-    def test_default_tab_is_calisthenics_for_rep_target_mode(self, authed_client):
-        content = self._goto_lifts_step(
-            authed_client, mode=Challenge.Mode.REP_TARGET
-        ).content.decode()
-        assert 'data-default-tab="calisthenics"' in content
+    @pytest.mark.parametrize(
+        "mode", [Challenge.Mode.CLASSIC, Challenge.Mode.REP_TARGET]
+    )
+    def test_picker_opens_on_all_lifts_in_either_mode(self, authed_client, mode):
+        """Opening on a curated subset hid how much the catalogue holds, so
+        neither mode starts on one."""
+        content = self._goto_lifts_step(authed_client, mode=mode).content.decode()
+        assert 'data-default-tab="all"' in content
 
 
 class TestNoAdvancedFields:

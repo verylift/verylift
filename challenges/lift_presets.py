@@ -19,7 +19,6 @@ CLASSIC_LIFT_NAMES: frozenset[str] = frozenset(
         "Back Squat",
         "Front Squat",
         "Deadlift",
-        "Sumo Deadlift",
         "Power Clean",
         "Bench Press",
         "Incline Bench Press",

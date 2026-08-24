@@ -9,7 +9,6 @@ those behaviors are exercised.
 import pytest
 
 from challenges.forms import CreateChallengeLiftsForm
-from challenges.models import Challenge
 from liftosaur.models import Lift
 
 pytestmark = pytest.mark.django_db
@@ -31,9 +30,11 @@ class TestLiftTabMembership:
             bench.pk
         }
 
-    def test_default_tab_follows_mode(self):
-        assert CreateChallengeLiftsForm().default_lift_tab == "popular"
-        assert (
-            CreateChallengeLiftsForm(mode=Challenge.Mode.REP_TARGET).default_lift_tab
-            == "calisthenics"
-        )
+    def test_tab_presets_are_subsets_of_the_full_catalogue(self):
+        """The tabs filter one rendered list rather than adding lifts of their
+        own, so a name in either preset must exist in the queryset backing it
+        or its rows would silently go missing from that tab."""
+        form = CreateChallengeLiftsForm()
+        catalogue = set(form.fields["lifts"].queryset.values_list("name", flat=True))
+        assert form.classic_lift_names <= catalogue
+        assert form.calisthenics_lift_names <= catalogue

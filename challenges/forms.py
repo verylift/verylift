@@ -116,8 +116,11 @@ class CreateChallengeLiftsForm(forms.Form):
     (Lift.Meta.ordering). Nothing is pre-checked: the template's "Popular" and
     "Calisthenics" tabs are just curated, tab-scoped "select all" shortcuts
     into this same list, not a silent default the owner might not notice.
-    This list is the owner's call for the whole challenge — every
-    participant's goal chart covers exactly these lifts.
+    Both modes open on "All Lifts" for the same reason -- landing on a curated
+    subset hides how much is on offer, so the shortcuts are left to be found
+    rather than presented as the starting point. This list is the owner's call
+    for the whole challenge — every participant's goal chart covers exactly
+    these lifts.
     """
 
     lifts = forms.ModelMultipleChoiceField(
@@ -126,19 +129,13 @@ class CreateChallengeLiftsForm(forms.Form):
         error_messages={"required": _("Select at least one lift.")},
     )
 
-    def __init__(self, *args, mode=Challenge.Mode.CLASSIC, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["lifts"].queryset = Lift.objects.order_by("name")
         # Exposed for the template so the "Popular"/"Calisthenics" tabs can
         # test membership.
         self.classic_lift_names = CLASSIC_LIFT_NAMES
         self.calisthenics_lift_names = CALISTHENICS_LIFT_NAMES
-        # Which tab the picker opens on -- Rep Target challenges typically
-        # reach for Calisthenics lifts (issue #85), Classic keeps Popular.
-        # Purely which tab is shown first; nothing is pre-checked.
-        self.default_lift_tab = (
-            "calisthenics" if mode == Challenge.Mode.REP_TARGET else "popular"
-        )
 
 
 class GoalMethodForm(forms.Form):
