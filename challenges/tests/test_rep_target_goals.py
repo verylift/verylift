@@ -215,3 +215,24 @@ class TestRepTargetGoalSetupView:
         assert response.status_code == 200
         participant.refresh_from_db()
         assert not participant.has_goal_configured
+
+    def test_suggest_action_toasts_lifts_with_no_history(self):
+        """UAT feedback: a full-width "no recent history" row broke the
+        grid's spacing -- it's a toast instead (issue #85 follow-up)."""
+        challenge = make_rep_target_challenge(lifts=[LIFT])
+        user = UserFactory()
+        ChallengeParticipantFactory(
+            challenge=challenge,
+            user=user,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        )
+        client = Client()
+        client.force_login(user)
+        response = client.post(
+            reverse("challenges:goal-setup", args=[challenge.pk]),
+            {"name": "My Goal", "action": "suggest"},
+        )
+        content = response.content.decode()
+        assert f"No recent history for {LIFT}" in content
+        # The old per-row message is gone -- it broke the grid's spacing.
+        assert "No recent history for this lift yet" not in content

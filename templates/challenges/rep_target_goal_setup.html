@@ -12,15 +12,15 @@
     <p class="text-sm text-content-muted mb-2 max-w-2xl">
       {% blocktrans with name=challenge.name unit=display_unit %}
       One target weight and rep count per lift in <strong>{{ name }}</strong>,
-      in {{ unit }}. A qualifying set is any at or above the target weight —
-      reps earn points toward the target, up to 10.
+      in {{ unit }}. A qualifying set is any at or above the target weight,
+      and reps earn points toward the target, up to 10.
       {% endblocktrans %}
     </p>
     {% if source_note %}
     <p class="text-sm text-content-muted mb-2 max-w-2xl">{{ source_note }}</p>
     {% endif %}
     <p class="text-sm font-medium text-warning mb-8 max-w-2xl">
-      {% trans "This goal is locked once you confirm it — there's no editing after you join." %}
+      {% trans "This goal is locked once you confirm it. There's no editing after you join." %}
     </p>
 
     {% if errors %}
@@ -50,33 +50,26 @@
         <table class="text-sm text-left w-full border-separate border-spacing-0">
           <thead>
             <tr class="text-content-muted">
-              <th class="py-2 pr-4 font-medium">{% trans "Lift" %}</th>
-              <th class="py-2 px-3 font-medium">{% blocktrans with unit=display_unit %}Target weight ({{ unit }}){% endblocktrans %}</th>
-              <th class="py-2 px-3 font-medium">{% trans "Target reps" %}</th>
+              <th class="py-2 pr-2 sm:pr-4 font-medium">{% trans "Lift" %}</th>
+              <th class="py-2 pl-2 pr-1 sm:px-3 font-medium text-right">{% blocktrans with unit=display_unit %}Weight ({{ unit }}){% endblocktrans %}</th>
+              <th class="py-2 pl-1 pr-2 sm:px-3 font-medium">{% trans "Reps" %}</th>
             </tr>
           </thead>
           <tbody>
             {% for lift in lifts %}
             <tr class="text-content-body border-b border-line-subtle">
-              <td class="py-2 pr-4 font-medium text-content-strong whitespace-nowrap">
+              <td class="py-2 pr-2 sm:pr-4 font-medium text-content-strong">
                 {{ lift.name }}{% if lift.is_bodyweight_added %} <span class="text-content-muted font-normal">({% trans "BW" %})</span>{% endif %}
               </td>
-              <td class="py-2 px-3">
-                <input type="text" inputmode="decimal" name="{{ lift.weight_field }}" value="{{ lift.weight_value }}"
-                       class="w-28 bg-surface-card text-content-body border border-line rounded px-2 py-1.5 text-sm focus:outline-none focus:border-accent">
+              <td class="py-2 pl-2 pr-1 sm:px-3 text-right">
+                <input type="number" step="any" inputmode="decimal" name="{{ lift.weight_field }}" value="{{ lift.weight_value }}"
+                       class="w-16 sm:w-28 bg-surface-card text-content-body border border-line rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:border-accent">
               </td>
-              <td class="py-2 px-3">
+              <td class="py-2 pl-1 pr-2 sm:px-3">
                 <input type="number" min="1" max="999" name="{{ lift.reps_field }}" value="{{ lift.reps_value }}"
-                       class="w-24 bg-surface-card text-content-body border border-line rounded px-2 py-1.5 text-sm focus:outline-none focus:border-accent">
+                       class="w-16 sm:w-24 bg-surface-card text-content-body border border-line rounded px-2 py-1.5 text-sm focus:outline-none focus:border-accent">
               </td>
             </tr>
-            {% if lift.needs_decision %}
-            <tr>
-              <td colspan="3" class="pb-2 text-xs text-content-muted italic">
-                {% trans "No recent history for this lift yet — enter a target manually." %}
-              </td>
-            </tr>
-            {% endif %}
             {% endfor %}
           </tbody>
         </table>

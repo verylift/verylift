@@ -846,8 +846,8 @@ def _rep_target_goal_setup_view(request, challenge, participant):
             messages.warning(
                 request,
                 gettext(
-                    "Couldn't refresh your Liftosaur history just now — "
-                    "showing the history we already have."
+                    "Couldn't refresh your Liftosaur history just now. "
+                    "Showing the history we already have."
                 ),
             )
 
@@ -862,17 +862,30 @@ def _rep_target_goal_setup_view(request, challenge, participant):
                 request.user,
                 challenge,
                 lookback_days=settings.CHALLENGES_GOAL_SUGGESTION_LOOKBACK_DAYS,
+                uplift=settings.CHALLENGES_GOAL_SUGGESTION_UPLIFT,
             )
             merged_targets = {**targets, **suggested}
+            if no_history_lifts:
+                # A toast, not an inline grid row (UAT feedback: the extra
+                # full-width row broke the grid's spacing) -- one message
+                # naming every lift the suggester couldn't prefill.
+                messages.warning(
+                    request,
+                    ngettext(
+                        "No recent history for %(lifts)s. Enter a target manually.",
+                        "No recent history for %(lifts)s. Enter targets manually.",
+                        len(no_history_lifts),
+                    )
+                    % {"lifts": ", ".join(no_history_lifts)},
+                )
             context = build_rep_target_goal_context(
                 request.user,
                 challenge,
                 goal_name=goal_name,
                 targets=merged_targets,
-                no_history_lifts=set(no_history_lifts),
                 source_note=gettext(
                     "Prefilled from your recent history. Review every row "
-                    "before confirming — this goal is locked once you save it."
+                    "before confirming."
                 ),
             )
             return render(request, "challenges/rep_target_goal_setup.html", context)
@@ -1026,8 +1039,8 @@ def goal_setup_view(request, pk):
             messages.warning(
                 request,
                 gettext(
-                    "Couldn't refresh your Liftosaur history just now — "
-                    "showing the history we already have."
+                    "Couldn't refresh your Liftosaur history just now. "
+                    "Showing the history we already have."
                 ),
             )
 
