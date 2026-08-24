@@ -245,6 +245,18 @@ class TestLiftosaurKeyForms:
         response = authed_client.get(url)
         assert b"abc" in response.content
 
+    def test_coupon_cta_shown_when_no_key(self, authed_client, user, db):
+        url = reverse("accounts:settings")
+        response = authed_client.get(url)
+        assert b'id="liftosaur-coupon-cta"' in response.content
+
+    def test_coupon_cta_not_shown_when_key_saved(self, authed_client, user, db):
+        user.liftosaur_api_key = "existing-key"
+        user.save()
+        url = reverse("accounts:settings")
+        response = authed_client.get(url)
+        assert b'id="liftosaur-coupon-cta"' not in response.content
+
 
 class TestValidateLiftosaurKeyView:
     def test_post_with_valid_key_returns_json_valid(self, authed_client, user, db):

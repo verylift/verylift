@@ -1,7 +1,7 @@
 {% extends "base/onboarding.html" %}
 {% load i18n %}
 
-{% block title %}{% trans "Connect Liftosaur" %} — very lift{% endblock %}
+{% block title %}{% trans "Which App Do You Use?" %} — very lift{% endblock %}
 
 {% block wizard_body %}
 <div class="mb-6">
@@ -13,22 +13,21 @@
   </div>
 </div>
 
-<h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "Connect your Liftosaur account" %}</h1>
-<p class="text-sm text-content-muted mb-6">{% trans "Optional — you can add or change this later from Settings." %}</p>
+<h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "Which app do you use?" %}</h1>
+<p class="text-sm text-content-muted mb-6">{% trans "We don't support it yet, but this helps us prioritize what to build next." %}</p>
 
 <form method="post" class="bg-surface-card border border-line-subtle rounded p-6">
   {% csrf_token %}
   <div class="mb-6">
-    <label for="id_liftosaur_api_key" class="block text-sm font-medium text-content-body mb-1">{% trans "Liftosaur API key" %}</label>
+    <label for="id_app_name" class="block text-sm font-medium text-content-body mb-1">{% trans "App name" %}</label>
     <input
       type="text"
-      id="id_liftosaur_api_key"
-      name="liftosaur_api_key"
+      id="id_app_name"
+      name="app_name"
       autocomplete="off"
       class="w-full border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent"
     >
-    <p class="mt-1 text-xs text-content-subtle">{% trans "Leave blank to skip and connect it later." %}</p>
-    {% if errors.liftosaur_api_key %}<p class="mt-1 text-xs text-danger-dark">{{ errors.liftosaur_api_key }}</p>{% endif %}
+    <p class="mt-1 text-xs text-content-subtle">{% trans "Optional — leave blank to skip." %}</p>
   </div>
 
   <button

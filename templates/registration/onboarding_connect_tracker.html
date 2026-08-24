@@ -1,0 +1,162 @@
+{% extends "base/onboarding.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Connect Your Tracker" %} — very lift{% endblock %}
+
+{% block wizard_body %}
+<div class="mb-6">
+  <p class="text-sm text-content-muted mb-2">
+    {% blocktrans %}Step 2 of 3{% endblocktrans %}
+  </p>
+  <div class="h-1.5 w-full bg-surface-sunken rounded-full overflow-hidden">
+    <div class="h-full bg-accent" style="width: 66%"></div>
+  </div>
+</div>
+
+{% if app == "wger" %}
+  <h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "Connect your Wger account" %}</h1>
+{% elif app == "hevy" %}
+  <h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "Import your Hevy history" %}</h1>
+{% else %}
+  <h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "Connect your Liftosaur account" %}</h1>
+{% endif %}
+<p class="text-sm text-content-muted mb-6">{% trans "Optional — you can add or change this later from Settings." %}</p>
+
+<form method="post" enctype="multipart/form-data" class="bg-surface-card border border-line-subtle rounded p-6">
+  {% csrf_token %}
+
+  {% if app == "wger" %}
+    <div class="mb-4">
+      <label for="id_wger_instance_url" class="block text-sm font-medium text-content-body mb-1">{% trans "Instance URL" %}</label>
+      <input
+        type="text"
+        id="id_wger_instance_url"
+        name="wger_instance_url"
+        placeholder="{% trans 'e.g. https://my-wger-instance.example.com' %}"
+        autocomplete="off"
+        class="w-full border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent"
+      >
+    </div>
+    <div class="mb-2">
+      <label for="id_wger_api_token" class="block text-sm font-medium text-content-body mb-1">{% trans "API Token" %}</label>
+      <input
+        type="text"
+        id="id_wger_api_token"
+        name="wger_api_token"
+        autocomplete="off"
+        class="w-full border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent"
+      >
+      {% if errors.wger_credentials %}<p class="mt-1 text-xs text-danger-dark">{{ errors.wger_credentials }}</p>{% endif %}
+    </div>
+    <p class="mb-6 text-xs text-content-subtle">
+      {% trans "You can find your API token in your Wger account under the API page." %}
+    </p>
+  {% else %}
+    {% if app == "liftosaur" %}
+      <div class="mb-2">
+        <label for="id_liftosaur_api_key" class="block text-sm font-medium text-content-body mb-1">{% trans "Liftosaur API key" %}</label>
+        <input
+          type="text"
+          id="id_liftosaur_api_key"
+          name="liftosaur_api_key"
+          autocomplete="off"
+          class="w-full border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent"
+        >
+        {% if errors.liftosaur_api_key %}<p class="mt-1 text-xs text-danger-dark">{{ errors.liftosaur_api_key }}</p>{% endif %}
+      </div>
+      <p class="mb-4 text-xs text-content-subtle">
+        {% blocktrans %}For automated tracking, get your key from <a href="https://www.liftosaur.com/doc/api" target="_blank" rel="noopener" class="underline">Liftosaur's API docs</a>.{% endblocktrans %}
+      </p>
+      <div class="mb-4">
+        {% include "components/_liftosaur_coupon_cta.html" %}
+      </div>
+      <div class="mb-4 border-t border-line-subtle pt-4">
+        <p class="text-sm text-content-muted mb-2">{% trans "Or upload a CSV export instead" %}</p>
+        <label
+          for="id_csv_file"
+          id="onboarding-csv-dropzone"
+          class="flex flex-col items-center justify-center text-center border-2 border-dashed border-line rounded px-4 py-6 cursor-pointer hover:border-accent hover:bg-surface-sunken transition-colors">
+          <span id="onboarding-csv-dropzone-label" class="text-sm text-content-body">
+            {% trans "Drop a CSV file here, or click to choose one" %}
+          </span>
+          <input type="file" id="id_csv_file" name="csv_file" accept=".csv" class="sr-only">
+        </label>
+        {% if errors.csv_file %}<p class="mt-2 text-xs text-danger-dark">{{ errors.csv_file }}</p>{% endif %}
+        <p class="mt-2 text-xs text-content-subtle">
+          {% trans "You can export your history by navigating to Me → Export history to CSV file and pressing Ok." %}
+        </p>
+      </div>
+    {% else %}
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-content-body mb-1">{% trans "Hevy CSV export" %}</label>
+        <label
+          for="id_csv_file"
+          id="onboarding-csv-dropzone"
+          class="flex flex-col items-center justify-center text-center border-2 border-dashed border-line rounded px-4 py-6 cursor-pointer hover:border-accent hover:bg-surface-sunken transition-colors">
+          <span id="onboarding-csv-dropzone-label" class="text-sm text-content-body">
+            {% trans "Drop a CSV file here, or click to choose one" %}
+          </span>
+          <input type="file" id="id_csv_file" name="csv_file" accept=".csv" class="sr-only">
+        </label>
+        {% if errors.csv_file %}<p class="mt-2 text-xs text-danger-dark">{{ errors.csv_file }}</p>{% endif %}
+        <p class="mt-2 text-xs text-content-subtle">
+          {% blocktrans %}Learn how to export your data in <a href="https://help.hevyapp.com/hc/en-us/articles/38001424401943-How-to-Import-Strong-App-CSV-Files-and-Export-Your-Data-in-Hevy" target="_blank" rel="noopener" class="underline">Hevy's help center</a>.{% endblocktrans %}
+        </p>
+      </div>
+    {% endif %}
+  {% endif %}
+
+  <button
+    type="submit"
+    class="w-full bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
+    {% trans "Continue" %}
+  </button>
+</form>
+
+{% if app == "liftosaur" or app == "hevy" %}
+<script>
+(function () {
+  // Same dropzone affordance as Settings' _workout_import_section.html:
+  // click-to-choose already works via the <label for>, this only adds
+  // drag-and-drop and an updated filename label.
+  var dropzone = document.getElementById('onboarding-csv-dropzone');
+  var input = document.getElementById('id_csv_file');
+  var labelText = document.getElementById('onboarding-csv-dropzone-label');
+  if (!dropzone || !input || !labelText) return;
+
+  var defaultLabel = labelText.textContent;
+
+  function showFileName() {
+    if (input.files && input.files.length > 0) {
+      labelText.textContent = input.files[0].name;
+    } else {
+      labelText.textContent = defaultLabel;
+    }
+  }
+
+  input.addEventListener('change', showFileName);
+
+  ['dragover', 'dragenter'].forEach(function (evt) {
+    dropzone.addEventListener(evt, function (e) {
+      e.preventDefault();
+      dropzone.classList.add('border-accent', 'bg-surface-sunken');
+    });
+  });
+  ['dragleave', 'dragend'].forEach(function (evt) {
+    dropzone.addEventListener(evt, function () {
+      dropzone.classList.remove('border-accent', 'bg-surface-sunken');
+    });
+  });
+  dropzone.addEventListener('drop', function (e) {
+    e.preventDefault();
+    dropzone.classList.remove('border-accent', 'bg-surface-sunken');
+    var files = e.dataTransfer && e.dataTransfer.files;
+    if (files && files.length > 0) {
+      input.files = files;
+      showFileName();
+    }
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,77 @@
+{% load i18n icons %}
+{% comment %}
+Liftosaur affiliate coupon CTA. Usage: {% include "components/_liftosaur_coupon_cta.html" %}
+Shown wherever there's an empty Liftosaur API key input -- never when a key is
+already saved (that's the caller's job to gate). The code itself sits outside
+the translated sentences (not fused into one blocktrans string) so the inline
+{% icon %} copy button can sit next to it -- blocktrans can't contain other
+block tags.
+{% endcomment %}
+<div class="border border-line-subtle rounded p-4 bg-surface-sunken" id="liftosaur-coupon-cta">
+  <p class="text-sm text-content-body mb-2">
+    {% trans "New to Liftosaur? Its API requires a premium subscription." %}
+  </p>
+  <div class="flex items-center gap-1.5 mb-2 text-sm text-content-body">
+    <span>{% trans "Use code" %}</span>
+    <span class="font-mono font-semibold text-accent">VERYLIFT</span>
+    <button
+      type="button"
+      data-copy-text="VERYLIFT"
+      data-copy-label="{% trans 'Copy coupon code' %}"
+      data-copied-label="{% trans 'Copied!' %}"
+      title="{% trans 'Copy coupon code' %}"
+      aria-label="{% trans 'Copy coupon code' %}"
+      class="inline-flex items-center justify-center text-content-subtle hover:text-accent">
+      <span data-copy-icon>{% icon "copy" css_class="h-3.5 w-3.5" %}</span>
+      <span data-copied-icon class="hidden">{% icon "check" css_class="h-3.5 w-3.5" %}</span>
+    </button>
+    <span>{% trans "when you subscribe." %}</span>
+  </div>
+  <a
+    href="https://www.liftosaur.com"
+    target="_blank"
+    rel="noopener noreferrer"
+    class="inline-block text-sm font-medium text-accent hover:underline">
+    {% trans "Get Liftosaur" %} &rarr;
+  </a>
+  <p class="mt-2 text-xs text-content-subtle">
+    {% trans "We earn a commission if you subscribe with this code." %}
+  </p>
+  <script>
+    (function () {
+      var container = document.currentScript.closest('#liftosaur-coupon-cta');
+      var button = container.querySelector('[data-copy-text]');
+      if (!button) return;
+      var copyIcon = button.querySelector('[data-copy-icon]');
+      var copiedIcon = button.querySelector('[data-copied-icon]');
+      button.addEventListener('click', function () {
+        var text = button.getAttribute('data-copy-text');
+        var done = function () {
+          button.title = button.getAttribute('data-copied-label');
+          button.setAttribute('aria-label', button.getAttribute('data-copied-label'));
+          button.classList.add('text-accent');
+          copyIcon.classList.add('hidden');
+          copiedIcon.classList.remove('hidden');
+          setTimeout(function () {
+            button.title = button.getAttribute('data-copy-label');
+            button.setAttribute('aria-label', button.getAttribute('data-copy-label'));
+            button.classList.remove('text-accent');
+            copyIcon.classList.remove('hidden');
+            copiedIcon.classList.add('hidden');
+          }, 1500);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done, done);
+        } else {
+          var tmp = document.createElement('textarea');
+          tmp.value = text;
+          document.body.appendChild(tmp);
+          tmp.select();
+          document.execCommand('copy');
+          document.body.removeChild(tmp);
+          done();
+        }
+      });
+    })();
+  </script>
+</div>

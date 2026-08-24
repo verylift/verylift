@@ -15,9 +15,19 @@ urlpatterns = [
         name="onboarding-tracking-method",
     ),
     path(
-        "accounts/onboarding/liftosaur/",
-        views.onboarding_liftosaur_view,
-        name="onboarding-liftosaur",
+        "accounts/onboarding/connect/<str:app>/",
+        views.onboarding_connect_tracker_view,
+        name="onboarding-connect-tracker",
+    ),
+    path(
+        "accounts/onboarding/other-tracker/",
+        views.onboarding_other_tracker_view,
+        name="onboarding-other-tracker",
+    ),
+    path(
+        "accounts/onboarding/no-tracker/",
+        views.onboarding_no_tracker_view,
+        name="onboarding-no-tracker",
     ),
     path(
         "accounts/onboarding/units/",

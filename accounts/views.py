@@ -36,6 +36,7 @@ from accounts.forms import (
     UnitPreferenceForm,
     WgerCredentialsForm,
 )
+from accounts.models import TrackerRequest
 from accounts.ratelimit import (
     client_ip,
     login_ip_rate,
@@ -170,7 +171,7 @@ def register_view(request):
 
     Creates the account and records ToS/Privacy consent, then hands off to the
     onboarding flow (accounts:onboarding-tracking-method) for everything else
-    -- choosing a tracking method, connecting Liftosaur, and setting a unit
+    -- choosing a tracking app, connecting it, and setting a unit
     preference. Registration itself asks for nothing beyond credentials and
     terms acceptance so a barrier-free signup (e.g. via a challenge invite)
     isn't blocked on anything else.
@@ -282,57 +283,175 @@ def register_view(request):
     )
 
 
+ONBOARDING_TRACKER_APPS = ("liftosaur", "wger", "hevy")
+
+
 @login_required
 def onboarding_tracking_method_view(request):
-    """Onboarding step 1: "How do you want to track your lifts?"
+    """Onboarding step 1: "Do you use a tracking app?"
 
-    Routing-only -- the choice itself is never persisted anywhere, matching
-    the pre-onboarding UI where this radio only decided which panel to show.
-    Choosing Liftosaur goes on to collect a key; manual/CSV have nothing else
-    to collect here (self-report and CSV import both live in Settings) so
-    they skip straight to the units step.
+    Routing-only -- the dropdown choice itself is never persisted anywhere,
+    matching the pre-onboarding UI where this only decided which panel to
+    show. Choosing a supported app goes on to whichever of API-key entry
+    and/or CSV upload that app actually supports; "A different one" goes to a
+    free-text feedback step (TrackerRequest) instead. The grey "No, I don't
+    use one" button is a second, distinctly-named submit control -- per
+    standard HTML form semantics only the clicked submit button's name/value
+    pair is sent, so its presence in POST unambiguously means that button was
+    clicked regardless of whatever the dropdown happens to be set to. Any of
+    these "no app" paths (skip button, blank/unrecognized dropdown value) go
+    on to onboarding_no_tracker_view, which suggests Liftosaur (with our
+    affiliate coupon) before continuing to the units step, since manual
+    self-report always lives in Settings either way.
     """
     if request.method == "POST":
-        if request.POST.get("tracking_method_choice") == "liftosaur":
-            return redirect("accounts:onboarding-liftosaur")
-        return redirect("accounts:onboarding-units")
+        if request.POST.get("skip"):
+            return redirect("accounts:onboarding-no-tracker")
+        app = request.POST.get("tracking_app")
+        if app in ONBOARDING_TRACKER_APPS:
+            return redirect("accounts:onboarding-connect-tracker", app=app)
+        if app == "other":
+            return redirect("accounts:onboarding-other-tracker")
+        return redirect("accounts:onboarding-no-tracker")
 
     return render(request, "registration/onboarding_tracking_method.html")
 
 
-@login_required
-def onboarding_liftosaur_view(request):
-    """Onboarding step 2 (only reached via the Liftosaur choice): connect a key.
+def _handle_onboarding_liftosaur_key(request, errors) -> None:
+    api_key = request.POST.get("liftosaur_api_key", "").strip()
+    if not api_key:
+        return
+    if not validate_liftosaur_key(api_key):
+        errors["liftosaur_api_key"] = gettext(
+            "Could not validate this Liftosaur API key."
+        )
+        return
+    had_key_before = bool(request.user.liftosaur_api_key)
+    request.user.liftosaur_api_key = api_key
+    request.user.save(update_fields=["liftosaur_api_key"])
+    if not had_key_before:
+        # Seed the lifter's 12-month LiftHistory pool off the request cycle
+        # so goal-setup and challenge joins later only need delta syncs.
+        trigger_lift_history_backfill(request.user)
 
-    The key is optional here too -- a blank submission just moves on. When a
-    key is submitted it's validated against the live API before saving, same
-    as registration used to do. The 12-month LiftHistory backfill only fires
-    when the account didn't already have a key, so revisiting/resubmitting
-    this step (e.g. after bookmarking it) doesn't re-seed history that's
-    already been pulled.
+
+def _handle_onboarding_wger_credentials(request, errors) -> None:
+    instance_url = request.POST.get("wger_instance_url", "").strip()
+    api_token = request.POST.get("wger_api_token", "").strip()
+    if not (instance_url or api_token):
+        return
+    if not validate_wger_credentials(instance_url, api_token):
+        errors["wger_credentials"] = gettext(
+            "Could not validate this Wger instance URL or API token."
+        )
+        return
+    if instance_url and api_token:
+        had_credentials_before = bool(
+            request.user.wger_instance_url and request.user.wger_api_token
+        )
+        request.user.wger_instance_url = instance_url
+        request.user.wger_api_token = api_token
+        request.user.save(update_fields=["wger_instance_url", "wger_api_token"])
+        if not had_credentials_before:
+            trigger_wger_lift_history_backfill(request.user)
+
+
+def _handle_onboarding_csv_upload(request, errors) -> None:
+    csv_file = request.FILES.get("csv_file")
+    if not csv_file:
+        return
+    form = WorkoutCsvImportForm({}, {"csv_file": csv_file}, user=request.user)
+    if not form.is_valid():
+        errors["csv_file"] = form.errors["csv_file"][0]
+        return
+    try:
+        # No challenge-rescore loop here (unlike Settings' identical CSV
+        # handling) -- a brand-new account can't yet be an ACCEPTED
+        # ChallengeParticipant of anything: the invite-link join this
+        # wizard may be en route to only happens after the units step.
+        import_workout_csv(request.user, form.cleaned_data["csv_file"])
+    except OperationalError:
+        logger.exception(
+            "Onboarding workout CSV import failed for user %s", request.user.id
+        )
+        errors["csv_file"] = gettext(
+            "Couldn't import right now. Please try again in a moment."
+        )
+
+
+@login_required
+def onboarding_connect_tracker_view(request, app):
+    """Onboarding step 2 (only reached via a tracking-app choice): connect it.
+
+    Generalized over whichever app was picked in step 1, showing only what
+    that app actually supports: Liftosaur offers both an API key and a CSV
+    upload; Wger (self-hostable, API-only, no CSV importer exists for it) is
+    instance URL + API token; Hevy (no live-sync integration merged yet) is
+    CSV upload only. Every field is independently optional -- a blank
+    submission just moves on, and submitting some but not all fields
+    processes whichever were filled in without blocking on the others.
+    Credentials are validated against the live API before saving, same as
+    registration used to do for Liftosaur alone. The 12-month LiftHistory
+    backfill only fires when the account didn't already have credentials for
+    this app, so revisiting/resubmitting this step (e.g. after bookmarking
+    it) doesn't re-seed history that's already been pulled.
     """
+    if app not in ONBOARDING_TRACKER_APPS:
+        return redirect("accounts:onboarding-tracking-method")
+
     errors = {}
 
     if request.method == "POST":
-        api_key = request.POST.get("liftosaur_api_key", "").strip()
-
-        if api_key and not validate_liftosaur_key(api_key):
-            errors["liftosaur_api_key"] = gettext(
-                "Could not validate this Liftosaur API key."
-            )
+        if app == "liftosaur":
+            _handle_onboarding_liftosaur_key(request, errors)
+            _handle_onboarding_csv_upload(request, errors)
+        elif app == "wger":
+            _handle_onboarding_wger_credentials(request, errors)
         else:
-            if api_key:
-                had_key_before = bool(request.user.liftosaur_api_key)
-                request.user.liftosaur_api_key = api_key
-                request.user.save(update_fields=["liftosaur_api_key"])
-                if not had_key_before:
-                    # Seed the lifter's 12-month LiftHistory pool off the
-                    # request cycle so goal-setup and challenge joins later
-                    # only need delta syncs.
-                    trigger_lift_history_backfill(request.user)
+            _handle_onboarding_csv_upload(request, errors)
+
+        if not errors:
             return redirect("accounts:onboarding-units")
 
-    return render(request, "registration/onboarding_liftosaur.html", {"errors": errors})
+    return render(
+        request,
+        "registration/onboarding_connect_tracker.html",
+        {"app": app, "errors": errors},
+    )
+
+
+@login_required
+def onboarding_other_tracker_view(request):
+    """Onboarding step 2 (only reached via "A different one"): name it.
+
+    Purely product-feedback signal for triaging the tracker-support backlog
+    (e.g. GitHub issue #26) -- nothing here connects any account to anything.
+    A blank/skipped name creates nothing and still continues, same
+    optional-field-skips-forward pattern as the credential steps.
+    """
+    if request.method == "POST":
+        app_name = request.POST.get("app_name", "").strip()
+        if app_name:
+            TrackerRequest.objects.create(user=request.user, app_name=app_name)
+        return redirect("accounts:onboarding-units")
+
+    return render(request, "registration/onboarding_other_tracker.html")
+
+
+@login_required
+def onboarding_no_tracker_view(request):
+    """Onboarding step 2 (reached when no tracking app is in use): suggest Liftosaur.
+
+    Reached via the "No, I don't use one" skip button and via any
+    blank/unrecognized tracking_app value from step 1. Purely a suggestion --
+    no credentials are collected here, matching onboarding_very_open_view's
+    shape (external link out, secondary POST-and-continue button). GET
+    renders the page; POST just continues to the units step.
+    """
+    if request.method == "POST":
+        return redirect("accounts:onboarding-units")
+
+    return render(request, "registration/onboarding_no_tracker.html")
 
 
 @login_required

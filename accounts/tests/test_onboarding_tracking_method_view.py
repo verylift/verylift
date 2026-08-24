@@ -23,23 +23,49 @@ class TestOnboardingTrackingMethodView:
         client.force_login(UserFactory())
         response = client.get(reverse("accounts:onboarding-tracking-method"))
         assert response.status_code == 200
-        assert b'name="tracking_method_choice"' in response.content
+        assert b'name="tracking_app"' in response.content
 
-    def test_choosing_liftosaur_goes_to_liftosaur_step(self, client):
+    @pytest.mark.parametrize("app", ["liftosaur", "wger", "hevy"])
+    def test_choosing_a_tracking_app_goes_to_its_connect_step(self, client, app):
         client.force_login(UserFactory())
         response = client.post(
             reverse("accounts:onboarding-tracking-method"),
-            {"tracking_method_choice": "liftosaur"},
+            {"tracking_app": app},
         )
         assert response.status_code == 302
-        assert response["Location"] == reverse("accounts:onboarding-liftosaur")
+        assert response["Location"] == reverse(
+            "accounts:onboarding-connect-tracker", args=[app]
+        )
 
-    @pytest.mark.parametrize("choice", ["manual", "csv", ""])
-    def test_other_choices_skip_straight_to_units_step(self, client, choice):
+    def test_choosing_other_goes_to_the_feedback_step(self, client):
         client.force_login(UserFactory())
         response = client.post(
             reverse("accounts:onboarding-tracking-method"),
-            {"tracking_method_choice": choice},
+            {"tracking_app": "other"},
         )
         assert response.status_code == 302
-        assert response["Location"] == reverse("accounts:onboarding-units")
+        assert response["Location"] == reverse("accounts:onboarding-other-tracker")
+
+    @pytest.mark.parametrize("choice", ["", "manual", "csv", "not-a-real-app"])
+    def test_unrecognized_choices_go_to_the_no_tracker_step(self, client, choice):
+        client.force_login(UserFactory())
+        response = client.post(
+            reverse("accounts:onboarding-tracking-method"),
+            {"tracking_app": choice},
+        )
+        assert response.status_code == 302
+        assert response["Location"] == reverse("accounts:onboarding-no-tracker")
+
+    def test_skip_button_goes_to_no_tracker_step_regardless_of_dropdown_value(
+        self, client
+    ):
+        """The grey skip button is a distinctly-named submit control -- per
+        HTML form semantics, only the clicked button's name/value is sent, so
+        its presence must win even if a live-sync app is also selected."""
+        client.force_login(UserFactory())
+        response = client.post(
+            reverse("accounts:onboarding-tracking-method"),
+            {"tracking_app": "liftosaur", "skip": "1"},
+        )
+        assert response.status_code == 302
+        assert response["Location"] == reverse("accounts:onboarding-no-tracker")
