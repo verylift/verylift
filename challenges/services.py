@@ -2112,14 +2112,21 @@ def build_rep_target_goal_context(
     *,
     goal_name="",
     targets=None,
+    field_values=None,
+    suggested_fields=None,
     errors=None,
     source_note="",
 ) -> dict:
     """Build the render context for the Rep Target goal-setup form.
 
     ``targets`` is a ``{lift: (target_weight_kg, target_reps)}`` table used to
-    prefill the grid -- a "Suggest targets" history suggestion, or a
-    partially-parsed submission on a failed save. A lift the suggester
+    prefill the grid; ``field_values`` (``{field_name: display_value}``, from
+    :func:`challenges.rep_target_goals.merge_suggested_fields`) takes
+    precedence when given, so a re-render can echo the participant's raw
+    per-field input instead of only fully-parsed rows. ``suggested_fields``
+    marks the fields the "Suggest targets" convenience (not the participant)
+    filled, for the grid's suggested-cell styling and the hidden input that
+    persists that set across re-renders. A lift the suggester
     couldn't prefill (:func:`challenges.goal_builders.suggest_rep_targets_from_history`)
     is surfaced via a toast in the view, not a per-row flag here -- an
     inline grid row broke the grid's spacing (UAT feedback).
@@ -2132,21 +2139,29 @@ def build_rep_target_goal_context(
     """
     unit = user.unit_preference
     targets = targets or {}
+    suggested_fields = suggested_fields or set()
     lifts = []
     for lift_index, lift in enumerate(sorted(covered_lift_names(challenge))):
         weight_field, reps_field = rep_target_field_names(lift_index)
-        weight_kg, reps = targets.get(lift, (None, None))
-        weight_value = ""
-        if weight_kg is not None:
-            weight_value, _ = to_display_weight(weight_kg, unit)
+        if field_values is not None:
+            weight_value = field_values.get(weight_field, "")
+            reps_value = field_values.get(reps_field, "")
+        else:
+            weight_kg, reps = targets.get(lift, (None, None))
+            weight_value = ""
+            if weight_kg is not None:
+                weight_value, _ = to_display_weight(weight_kg, unit)
+            reps_value = reps if reps is not None else ""
         lifts.append(
             {
                 "name": lift,
                 "is_bodyweight_added": is_bodyweight_added_lift(lift),
                 "weight_field": weight_field,
                 "weight_value": weight_value,
+                "weight_suggested": weight_field in suggested_fields,
                 "reps_field": reps_field,
-                "reps_value": reps if reps is not None else "",
+                "reps_value": reps_value,
+                "reps_suggested": reps_field in suggested_fields,
             }
         )
     return {
@@ -2154,6 +2169,7 @@ def build_rep_target_goal_context(
         "display_unit": unit,
         "lifts": lifts,
         "goal_name": goal_name,
+        "suggested_fields": ",".join(sorted(suggested_fields)),
         "errors": errors or [],
         "source_note": source_note,
     }

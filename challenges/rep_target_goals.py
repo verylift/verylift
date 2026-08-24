@@ -10,15 +10,15 @@ through this same grid before it locks.
 """
 
 import logging
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 
 from django.db import transaction
 from django.utils.translation import gettext
 
-from accounts.units import from_display_weight
+from accounts.units import to_display_weight
+from challenges.custom_goals import _bodyweight_added_lift_names, _to_kg
 from challenges.models import RepTargetGoal, RepTargetGoalTarget
 from challenges.standards import covered_lift_names
-from liftosaur.models import Lift
 
 logger = logging.getLogger(__name__)
 
@@ -31,24 +31,6 @@ def rep_target_field_names(lift_index: int) -> tuple[str, str]:
     position (not a slugified name) so two distinct lift names never collide.
     """
     return f"target_weight__{lift_index}", f"target_reps__{lift_index}"
-
-
-def _bodyweight_added_lift_names(configured: set[str]) -> set[str]:
-    return set(
-        Lift.objects.filter(name__in=configured, is_bodyweight_added=True).values_list(
-            "name", flat=True
-        )
-    )
-
-
-def _weight_to_kg(raw, unit: str, *, allow_non_positive: bool) -> Decimal | None:
-    try:
-        value = Decimal(str(raw))
-    except (InvalidOperation, ValueError, TypeError):
-        return None
-    if not allow_non_positive and value <= 0:
-        return None
-    return from_display_weight(value, unit)
 
 
 def _reps_to_int(raw) -> int | None:
@@ -84,9 +66,7 @@ def parse_rep_target_grid(
             continue
 
         allow_non_positive = lift_name in bw_added
-        weight_kg = _weight_to_kg(
-            raw_weight, unit, allow_non_positive=allow_non_positive
-        )
+        weight_kg = _to_kg(raw_weight, unit, allow_non_positive=allow_non_positive)
         if weight_kg is None:
             message = (
                 gettext('"%(lift_name)s" target weight must be a number.')
@@ -109,6 +89,52 @@ def parse_rep_target_grid(
             targets[lift_name] = (weight_kg, reps)
 
     return targets, errors
+
+
+def merge_suggested_fields(
+    post_data, suggested, challenge, unit: str
+) -> tuple[dict[str, str], set[str]]:
+    """Per-field merge of history suggestions into the participant's typed grid.
+
+    A field the participant already filled is pinned -- kept verbatim, never
+    overwritten -- and only blank fields take the suggestion, mirroring
+    Classic's Compute button (custom_goal_setup.html), which fills blank
+    cells and treats non-blank ones as anchors.
+
+    Returns ``({field_name: display_value}, suggested_field_names)`` --
+    display-unit strings ready to re-render the grid, plus the set of fields
+    the suggestion (rather than the participant) filled, for the template's
+    suggested-cell styling and the ``suggested_fields`` hidden input.
+    """
+    values: dict[str, str] = {}
+    suggested_fields: set[str] = set()
+    for lift_index, lift_name in enumerate(sorted(covered_lift_names(challenge))):
+        weight_field, reps_field = rep_target_field_names(lift_index)
+        weight_kg, reps = (suggested or {}).get(lift_name, (None, None))
+        raw_weight = (post_data.get(weight_field) or "").strip()
+        raw_reps = (post_data.get(reps_field) or "").strip()
+        if raw_weight:
+            values[weight_field] = raw_weight
+        elif weight_kg is not None:
+            display_value, _ = to_display_weight(weight_kg, unit)
+            values[weight_field] = str(display_value)
+            suggested_fields.add(weight_field)
+        if raw_reps:
+            values[reps_field] = raw_reps
+        elif reps is not None:
+            values[reps_field] = str(reps)
+            suggested_fields.add(reps_field)
+    return values, suggested_fields
+
+
+def parse_suggested_fields(post_data) -> set[str]:
+    """The ``suggested_fields`` hidden input, parsed back into a set.
+
+    Restricted to real grid field names so a crafted POST can't smuggle
+    arbitrary strings back into the template.
+    """
+    raw = {f for f in (post_data.get("suggested_fields") or "").split(",") if f}
+    return {f for f in raw if f.startswith(("target_weight__", "target_reps__"))}
 
 
 def rep_target_goal_is_complete(

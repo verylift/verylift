@@ -9,10 +9,12 @@ from django.test import Client
 from django.urls import reverse
 
 from accounts.tests.factories import UserFactory
-from challenges.models import Challenge, ChallengeParticipant
+from challenges.models import Challenge, ChallengeParticipant, RepTargetGoal
 from challenges.rep_target_goals import (
     detach_active_rep_target_goal,
+    merge_suggested_fields,
     parse_rep_target_grid,
+    parse_suggested_fields,
     rep_target_field_names,
     rep_target_goal_is_complete,
     save_rep_target_goal,
@@ -77,6 +79,52 @@ class TestParseRepTargetGrid:
         )
         assert LIFT not in targets
         assert errors
+
+    @pytest.mark.parametrize("raw_weight", ["NaN", "Infinity", "-Infinity"])
+    def test_non_finite_weight_is_an_error_not_a_crash(self, raw_weight):
+        # Regression: Decimal("NaN") parses fine but raised InvalidOperation
+        # in the positivity check (regular lifts) or in from_display_weight's
+        # quantize (bodyweight-added lifts) -- a 500 either way. One row of
+        # each kind so both branches are exercised.
+        challenge = make_rep_target_challenge(lifts=["Deadlift", LIFT])
+        post = {}
+        for lift_index in (0, 1):
+            weight_field, reps_field = rep_target_field_names(lift_index)
+            post[weight_field] = raw_weight
+            post[reps_field] = "5"
+        targets, errors = parse_rep_target_grid(post, challenge, "kg")
+        assert targets == {}
+        assert len(errors) == 2
+
+
+class TestMergeSuggestedFields:
+    def test_typed_values_are_pinned_and_blanks_filled(self):
+        challenge = make_rep_target_challenge(lifts=["Dip", LIFT])
+        dip_weight, dip_reps = rep_target_field_names(0)
+        pu_weight, pu_reps = rep_target_field_names(1)
+        suggested = {"Dip": (Decimal("10"), 12), LIFT: (Decimal("0"), 30)}
+
+        values, suggested_fields = merge_suggested_fields(
+            {dip_weight: "7.5", pu_reps: "25"}, suggested, challenge, "kg"
+        )
+
+        assert values[dip_weight] == "7.5"
+        assert values[dip_reps] == "12"
+        assert values[pu_weight] == "0"
+        assert values[pu_reps] == "25"
+        assert suggested_fields == {dip_reps, pu_weight}
+
+    def test_lift_without_suggestion_or_input_stays_blank(self):
+        challenge = make_rep_target_challenge(lifts=[LIFT])
+        weight_field, reps_field = rep_target_field_names(0)
+        values, suggested_fields = merge_suggested_fields({}, {}, challenge, "kg")
+        assert weight_field not in values
+        assert reps_field not in values
+        assert suggested_fields == set()
+
+    def test_parse_suggested_fields_drops_non_grid_names(self):
+        post = {"suggested_fields": "target_reps__0,<script>alert(1)</script>,name"}
+        assert parse_suggested_fields(post) == {"target_reps__0"}
 
 
 class TestRepTargetGoalIsComplete:
@@ -237,6 +285,66 @@ class TestRepTargetGoalSetupView:
         assert response.context["errors"]
         participant.refresh_from_db()
         assert not participant.has_goal_configured
+
+    def test_suggest_pins_typed_values_and_fills_only_blanks(self):
+        # A field the participant already filled must survive Suggest
+        # untouched; only the blank fields take the suggestion, and only
+        # those are flagged as suggested for the grid styling.
+        challenge = make_rep_target_challenge(lifts=[LIFT])
+        user = UserFactory(unit_preference="kg")
+        ChallengeParticipantFactory(
+            challenge=challenge,
+            user=user,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        )
+        client = Client()
+        client.force_login(user)
+        weight_field, reps_field = rep_target_field_names(0)
+        with patch(
+            "challenges.views.suggest_rep_targets_from_history",
+            return_value=({LIFT: (Decimal("5"), 30)}, []),
+        ):
+            response = client.post(
+                reverse("challenges:goal-setup", args=[challenge.pk]),
+                {"name": "My Goal", "action": "suggest", reps_field: "25"},
+            )
+        assert response.status_code == 200
+        row = response.context["lifts"][0]
+        assert row["reps_value"] == "25"
+        assert not row["reps_suggested"]
+        assert row["weight_value"] == "5"
+        assert row["weight_suggested"]
+        assert response.context["suggested_fields"] == weight_field
+
+    def test_save_records_history_provenance_when_suggested(self):
+        # Classic's wizard persists HISTORY for suggested goals; the grid's
+        # suggested_fields hidden input carries the same fact here.
+        challenge = make_rep_target_challenge(lifts=[LIFT])
+        user = UserFactory()
+        participant = ChallengeParticipantFactory(
+            challenge=challenge,
+            user=user,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        )
+        client = Client()
+        client.force_login(user)
+        weight_field, reps_field = rep_target_field_names(0)
+        response = client.post(
+            reverse("challenges:goal-setup", args=[challenge.pk]),
+            {
+                "name": "My Goal",
+                "action": "save",
+                weight_field: "0",
+                reps_field: "20",
+                "suggested_fields": f"{weight_field},{reps_field}",
+            },
+        )
+        assert response.status_code == 302
+        participant.refresh_from_db()
+        assert (
+            participant.rep_target_goal.source_method
+            == RepTargetGoal.SourceMethod.HISTORY
+        )
 
     def test_suggest_action_prefills_without_saving(self):
         challenge = make_rep_target_challenge(lifts=[LIFT])

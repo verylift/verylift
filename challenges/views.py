@@ -51,7 +51,9 @@ from challenges.models import (
 )
 from challenges.rep_target_goals import (
     detach_active_rep_target_goal,
+    merge_suggested_fields,
     parse_rep_target_grid,
+    parse_suggested_fields,
     rep_target_goal_is_complete,
     save_rep_target_goal,
 )
@@ -863,7 +865,12 @@ def _rep_target_goal_setup_view(request, challenge, participant):
                 lookback_days=settings.CHALLENGES_GOAL_SUGGESTION_LOOKBACK_DAYS,
                 uplift=settings.CHALLENGES_GOAL_SUGGESTION_UPLIFT,
             )
-            merged_targets = {**targets, **suggested}
+            # Per-field merge: anything the participant already typed is
+            # pinned, only blank fields take the suggestion -- same contract
+            # as Classic's Compute button.
+            field_values, suggested_fields = merge_suggested_fields(
+                request.POST, suggested, challenge, unit
+            )
             if no_history_lifts:
                 # A toast, not an inline grid row (UAT feedback: the extra
                 # full-width row broke the grid's spacing) -- one message
@@ -881,10 +888,12 @@ def _rep_target_goal_setup_view(request, challenge, participant):
                 request.user,
                 challenge,
                 goal_name=goal_name,
-                targets=merged_targets,
+                field_values=field_values,
+                suggested_fields=suggested_fields,
                 source_note=gettext(
-                    "Prefilled from your recent history. Review every row "
-                    "before confirming."
+                    "Blank fields were filled from your recent history; "
+                    "values you typed were kept. Review every row before "
+                    "confirming."
                 ),
             )
             return render(request, "challenges/rep_target_goal_setup.html", context)
@@ -896,20 +905,33 @@ def _rep_target_goal_setup_view(request, challenge, participant):
             errors.append(gettext("Goal name must be 100 characters or fewer."))
         other_errors = errors + rep_target_goal_is_complete(targets, challenge)
         if other_errors:
+            # Echo the raw per-field input back (not just the rows that
+            # parsed), and keep the suggested-cell styling for suggested
+            # fields that still hold a value.
+            field_values, _ = merge_suggested_fields(request.POST, {}, challenge, unit)
+            suggested_fields = parse_suggested_fields(request.POST) & set(field_values)
             context = build_rep_target_goal_context(
                 request.user,
                 challenge,
                 goal_name=goal_name,
-                targets=targets,
+                field_values=field_values,
+                suggested_fields=suggested_fields,
                 errors=other_errors,
             )
             return render(request, "challenges/rep_target_goal_setup.html", context)
 
+        # Same provenance rule as Classic's wizard: a goal the history
+        # suggester contributed to is HISTORY, one typed end to end is CUSTOM.
+        source_method = (
+            RepTargetGoal.SourceMethod.HISTORY
+            if parse_suggested_fields(request.POST)
+            else RepTargetGoal.SourceMethod.CUSTOM
+        )
         save_rep_target_goal(
             participant,
             goal_name,
             targets,
-            source_method=RepTargetGoal.SourceMethod.CUSTOM,
+            source_method=source_method,
         )
         # Score the pool already pulled at this view's GET entry -- local-DB
         # only -- so the leaderboard reflects the new targets immediately.

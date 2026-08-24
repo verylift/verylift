@@ -106,6 +106,11 @@ def _to_kg(raw, unit: str, *, allow_non_positive: bool = False) -> Decimal | Non
         value = Decimal(str(raw))
     except (InvalidOperation, ValueError, TypeError):
         return None
+    # Decimal("NaN")/Decimal("Infinity") parse fine but blow up in the
+    # comparison below (InvalidOperation) or in from_display_weight's
+    # quantize -- a crafted POST used to 500 both goal-setup views.
+    if not value.is_finite():
+        return None
     if not allow_non_positive and value <= 0:
         return None
     return from_display_weight(value, unit)

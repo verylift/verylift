@@ -36,6 +36,10 @@
 
     <form method="post" action="{% url 'challenges:goal-setup' challenge.pk %}">
       {% csrf_token %}
+      {# Which cells "Suggest targets" filled (vs. typed) -- echoed back by #}
+      {# the server on re-render so the styling survives a failed save,     #}
+      {# same job as Classic's computed_fields input.                       #}
+      <input type="hidden" name="suggested_fields" data-suggested-fields-input value="{{ suggested_fields }}">
 
       <div class="mb-6">
         <label for="id_goal_name" class="block text-sm font-medium text-content-body mb-1">
@@ -70,12 +74,14 @@
               <td class="py-2 pl-2 pr-1 sm:px-3 text-right whitespace-nowrap">
                 <input type="number" step="any" inputmode="decimal" name="{{ lift.weight_field }}" value="{{ lift.weight_value }}"
                        aria-describedby="{{ lift.weight_field }}-unit"
-                       class="w-16 sm:w-24 bg-surface-card text-content-body border border-line rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:border-accent">
+                       {% if lift.weight_suggested %}data-suggested="1"{% endif %}
+                       class="w-16 sm:w-24 border border-line rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:border-accent {% if lift.weight_suggested %}text-content-muted bg-surface-sunken{% else %}bg-surface-card text-content-body{% endif %}">
                 <span id="{{ lift.weight_field }}-unit" class="ml-1 text-xs text-content-muted">{{ display_unit }}</span>
               </td>
               <td class="py-2 pl-1 pr-2 sm:px-3">
                 <input type="number" min="1" max="999" name="{{ lift.reps_field }}" value="{{ lift.reps_value }}"
-                       class="w-16 sm:w-24 bg-surface-card text-content-body border border-line rounded px-2 py-1.5 text-sm focus:outline-none focus:border-accent">
+                       {% if lift.reps_suggested %}data-suggested="1"{% endif %}
+                       class="w-16 sm:w-24 border border-line rounded px-2 py-1.5 text-sm focus:outline-none focus:border-accent {% if lift.reps_suggested %}text-content-muted bg-surface-sunken{% else %}bg-surface-card text-content-body{% endif %}">
               </td>
             </tr>
             {% endfor %}
@@ -95,4 +101,27 @@
         <a href="{% url 'challenges:goal-setup' challenge.pk %}?cancel=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "Cancel" %}</a>
       </div>
     </form>
+
+<script>
+  // Editing a suggested cell pins it: the participant now owns the value,
+  // so drop the suggested styling and take it out of the hidden
+  // suggested_fields set -- same rule as Classic's markTyped.
+  (function () {
+    var hidden = document.querySelector("[data-suggested-fields-input]");
+    if (!hidden) return;
+    var SUGGESTED = ["text-content-muted", "bg-surface-sunken"];
+    var PINNED = ["bg-surface-card", "text-content-body"];
+    document.querySelectorAll("[data-suggested]").forEach(function (el) {
+      el.addEventListener("input", function () {
+        SUGGESTED.forEach(function (c) { el.classList.remove(c); });
+        PINNED.forEach(function (c) { el.classList.add(c); });
+        delete el.dataset.suggested;
+        hidden.value = hidden.value
+          .split(",")
+          .filter(function (name) { return name && name !== el.name; })
+          .join(",");
+      });
+    });
+  })();
+</script>
 {% endblock %}
