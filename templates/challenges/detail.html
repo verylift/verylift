@@ -35,12 +35,18 @@
         <div>
           {% trans "Not set" as not_set %}
           <dt class="text-xs font-medium text-content-muted uppercase tracking-wide">{% trans "Your Goal" %}</dt>
+          {# A participant has exactly one of the two goal FKs set (mode is #}
+          {# fixed and whole-challenge), so chaining them covers both modes #}
+          {# -- reading only custom_goal showed "Not set" to every Rep      #}
+          {# Target participant with a locked goal.                         #}
+          {% with active_goal=participant.custom_goal|default:participant.rep_target_goal %}
           <dd class="text-sm font-semibold text-accent">
-            {{ participant.custom_goal.name|default:not_set }}
-            {% if participant.custom_goal %}
-            <span class="ml-2 text-xs text-content-muted font-normal">{% blocktrans with date=participant.custom_goal.created_at|date:"M j, Y" %}Locked {{ date }}{% endblocktrans %}</span>
+            {{ active_goal.name|default:not_set }}
+            {% if active_goal %}
+            <span class="ml-2 text-xs text-content-muted font-normal">{% blocktrans with date=active_goal.created_at|date:"M j, Y" %}Locked {{ date }}{% endblocktrans %}</span>
             {% endif %}
           </dd>
+          {% endwith %}
         </div>
       </dl>
 

@@ -17,7 +17,9 @@ from challenges.tests.factories import (
     ChallengeFactory,
     ChallengeParticipantFactory,
     CustomGoalFactory,
+    RepTargetGoalFactory,
     make_custom_challenge,
+    make_rep_target_challenge,
 )
 from liftosaur.models import LiftosaurSyncLog
 from liftosaur.tests.factories import LiftHistoryFactory
@@ -285,6 +287,29 @@ class TestHeader:
         assert "Big Lifter" in content
         assert "Intermediate" in content
         assert "Active" in content
+
+    def test_rep_target_goal_shown_in_header(self, db, mock_sync):
+        # Regression: the header read only participant.custom_goal, so every
+        # Rep Target participant with a locked goal saw "Not set" above their
+        # own rendered goal table.
+        challenge = make_rep_target_challenge(
+            lifts=["Push Up"], status=Challenge.Status.ACTIVE
+        )
+        user = UserFactory()
+        participant = ChallengeParticipantFactory(
+            challenge=challenge,
+            user=user,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        )
+        goal = RepTargetGoalFactory(participant=participant, name="Summer Reps")
+        participant.rep_target_goal = goal
+        participant.save(update_fields=["rep_target_goal"])
+        client = Client()
+        client.force_login(user)
+        resp = client.get(reverse("challenges:detail", args=[challenge.pk]))
+        content = resp.content.decode()
+        assert "Summer Reps" in content
+        assert "Not set" not in content
 
 
 class TestLeaderboard:

@@ -18,7 +18,11 @@ from django.utils.translation import gettext
 
 from accounts.timezones import is_valid_timezone
 from accounts.units import to_display_weight
-from challenges.custom_goals import detach_active_goal, grid_field_name
+from challenges.custom_goals import (
+    _bodyweight_added_lift_names,
+    detach_active_goal,
+    grid_field_name,
+)
 from challenges.models import (
     Challenge,
     ChallengeInviteLink,
@@ -1406,24 +1410,27 @@ def _rep_target_point_columns(target_reps, target_weight, current_points):
     this lift (``None`` if they haven't scored it yet); the matching column
     is flagged ``is_current_best``, mirroring Classic's ``cell.is_current_best``.
     """
-    columns = []
-    for target_points in range(1, 11):
-        reps_needed = None
-        for reps in range(1, target_reps + 1):
-            points = best_score_for_rep_target(
-                reps, target_weight, target_reps, target_weight
-            )
-            if points is not None and points >= target_points:
-                reps_needed = reps
-                break
-        columns.append(
-            {
-                "points": target_points,
-                "reps": reps_needed,
-                "is_current_best": current_points == target_points,
-            }
+    # Points are monotone in reps, so one pass over 1..target_reps finds the
+    # first rep count reaching every point value -- no per-column rescan.
+    first_reps_for_points: dict[int, int] = {}
+    for reps in range(1, target_reps + 1):
+        points = best_score_for_rep_target(
+            reps, target_weight, target_reps, target_weight
         )
-    return columns
+        if not points:
+            continue
+        for target_points in range(1, min(points, 10) + 1):
+            first_reps_for_points.setdefault(target_points, reps)
+        if len(first_reps_for_points) == 10:
+            break
+    return [
+        {
+            "points": target_points,
+            "reps": first_reps_for_points.get(target_points),
+            "is_current_best": current_points == target_points,
+        }
+        for target_points in range(1, 11)
+    ]
 
 
 def build_rep_target_personal_data(user, challenge, participant):
@@ -1481,10 +1488,26 @@ def build_rep_target_personal_data(user, challenge, participant):
         )
     )
 
+    # Batched lookups, one query each however many lifts the goal holds: the
+    # bodyweight-added set, and the LiftHistory fallback for lifts with no
+    # point event (same idiom as fetching the events once above).
+    bw_added_lifts = _bodyweight_added_lift_names(set(lift_names))
+    fallback_lifts = [
+        lift
+        for lift in lift_names
+        if lift not in current_best_by_lift and not any(e.lift == lift for e in events)
+    ]
+    fallback_rows_by_lift: dict[str, list] = {}
+    if fallback_lifts:
+        for row in LiftHistory.objects.filter(
+            user=user, lift__in=fallback_lifts, performed_at__gte=window_start.date()
+        ):
+            fallback_rows_by_lift.setdefault(row.lift, []).append(row)
+
     summary_cards = []
     for lift in lift_names:
         target_weight, target_reps = targets_by_lift[lift]
-        is_bw_added = is_bodyweight_added_lift(lift)
+        is_bw_added = lift in bw_added_lifts
         card = {
             "lift": lift,
             "is_bodyweight_added": is_bw_added,
@@ -1518,23 +1541,21 @@ def build_rep_target_personal_data(user, challenge, participant):
                     card["reps_gap"] = max(next_reps - progress_reps, 1)
                     # A reps-based closeness fraction, not a weight one -- the
                     # weight gate is already met for a scored card, so the
-                    # only thing left to close is reps. Comparable against the
-                    # same CHALLENGES_ENDGAME_GAP_FRACTION threshold Classic's
-                    # weight-based fraction uses; both are unit-independent
-                    # "how close, proportionally" numbers.
-                    card["next_point_gap_fraction"] = Decimal(next_reps) / Decimal(
-                        target_reps
-                    )
+                    # only thing left to close is reps. Same convention as
+                    # Classic's _next_point_gap: the REMAINING gap over the
+                    # target (not the total the next point requires), so it's
+                    # comparable against CHALLENGES_ENDGAME_GAP_FRACTION and
+                    # shrinks as the lifter closes in.
+                    card["next_point_gap_fraction"] = Decimal(
+                        card["reps_gap"]
+                    ) / Decimal(target_reps)
         else:
             lift_window_events = [e for e in events if e.lift == lift]
             candidate_rows = [(e.weight, e.performed_at) for e in lift_window_events]
             if not candidate_rows:
-                fallback_rows = LiftHistory.objects.filter(
-                    user=user, lift=lift, performed_at__gte=window_start.date()
-                )
                 candidate_rows = [
                     (row.weight_kg, row.performed_at)
-                    for row in fallback_rows
+                    for row in fallback_rows_by_lift.get(lift, [])
                     if not (is_bw_added and is_assisted_equipment(row.equipment))
                 ]
             if candidate_rows:
@@ -1745,11 +1766,12 @@ def build_rep_target_participant_chart(
         )
     }
 
+    bw_added_lifts = _bodyweight_added_lift_names(set(targets_by_lift))
     target_rows = []
     point_rows = []
     for lift in sorted(targets_by_lift):
         target_weight, target_reps = targets_by_lift[lift]
-        is_bw_added = is_bodyweight_added_lift(lift)
+        is_bw_added = lift in bw_added_lifts
         current_best = current_best_by_lift.get(lift)
         points = current_best.points_earned if current_best is not None else 0
         target_rows.append(
@@ -2140,8 +2162,10 @@ def build_rep_target_goal_context(
     unit = user.unit_preference
     targets = targets or {}
     suggested_fields = suggested_fields or set()
+    configured = covered_lift_names(challenge)
+    bw_added_lifts = _bodyweight_added_lift_names(set(configured))
     lifts = []
-    for lift_index, lift in enumerate(sorted(covered_lift_names(challenge))):
+    for lift_index, lift in enumerate(sorted(configured)):
         weight_field, reps_field = rep_target_field_names(lift_index)
         if field_values is not None:
             weight_value = field_values.get(weight_field, "")
@@ -2155,7 +2179,7 @@ def build_rep_target_goal_context(
         lifts.append(
             {
                 "name": lift,
-                "is_bodyweight_added": is_bodyweight_added_lift(lift),
+                "is_bodyweight_added": lift in bw_added_lifts,
                 "weight_field": weight_field,
                 "weight_value": weight_value,
                 "weight_suggested": weight_field in suggested_fields,

@@ -2,7 +2,7 @@
 sibling of build_personal_data: a progress-bar-per-lift summary instead of a
 rep-max ladder, reusing Classic's close-to-goal/endgame flagging."""
 
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
@@ -26,10 +26,14 @@ pytestmark = pytest.mark.django_db
 LIFT = "Push Up"
 
 
-def _setup(*, target_weight=Decimal("0"), target_reps=20, start_date=None):
+def _setup(
+    *, target_weight=Decimal("0"), target_reps=20, start_date=None, end_date=None
+):
     kwargs = {"history_window": Challenge.HistoryWindow.FROM_START}
     if start_date is not None:
         kwargs["start_date"] = start_date
+    if end_date is not None:
+        kwargs["end_date"] = end_date
     challenge = make_rep_target_challenge(lifts=[LIFT], **kwargs)
     user = UserFactory(unit_preference="kg")
     participant = ChallengeParticipantFactory(
@@ -104,6 +108,33 @@ class TestBuildRepTargetPersonalData:
         # 14/20 is the first rep count that scores more than the current 6
         # points (floor(10*14/20) = 7); two more reps than the 12 performed.
         assert card["reps_gap"] == 2
+
+    def test_endgame_nudge_fires_on_the_remaining_reps_gap(self):
+        # Regression: the fraction was next_reps/target_reps -- the TOTAL the
+        # next point requires, >= ~0.2 on any scored card -- so the endgame
+        # nudge could never fire in this mode, and was worst exactly when
+        # closest (19/20 reps computed 1.0). It must be the REMAINING gap.
+        today = timezone.localdate()
+        user, challenge, participant = _setup(
+            target_weight=Decimal("0"),
+            target_reps=20,
+            start_date=today - timedelta(days=30),
+            end_date=today + timedelta(days=3),
+        )
+        PointEarnEventFactory(
+            user=user,
+            challenge=challenge,
+            lift=LIFT,
+            reps=19,
+            weight=Decimal("0.00"),
+            points_earned=9,
+            is_current_best=True,
+        )
+        data = build_rep_target_personal_data(user, challenge, participant)
+        card = data["summary_cards"][0]
+        # One rep short of the 20 that earn the tenth point: 1/20.
+        assert card["next_point_gap_fraction"] == Decimal("0.05")
+        assert card["endgame_suggestion"] == "next_point"
 
     def test_maxed_card_has_no_reps_gap(self):
         user, challenge, participant = _setup(
