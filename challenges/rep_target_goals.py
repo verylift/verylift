@@ -188,6 +188,10 @@ def detach_active_rep_target_goal(participant) -> None:
     if participant.rep_target_goal_id is None:
         return
     goal = participant.rep_target_goal
-    goal.name = f"{goal.name} [{goal.id}]"
+    # Truncate so name + suffix fits max_length=100 -- a 62+ char goal name
+    # would otherwise overflow and 500 the leave/bail path. The detached name
+    # is never surfaced, so losing its tail is harmless.
+    suffix = f" [{goal.id}]"
+    goal.name = f"{goal.name[: 100 - len(suffix)]}{suffix}"
     goal.save(update_fields=["name"])
     participant.rep_target_goal = None

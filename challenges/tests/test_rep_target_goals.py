@@ -142,6 +142,24 @@ class TestDetachActiveRepTargetGoal:
         detach_active_rep_target_goal(participant)
         assert participant.rep_target_goal_id is None
 
+    def test_max_length_name_survives_the_rename(self):
+        # Regression: appending " [uuid]" to a 62+ char goal name overflowed
+        # name's max_length=100 and 500'd the leave/bail path.
+        challenge = make_rep_target_challenge(lifts=[LIFT])
+        participant = ChallengeParticipantFactory(
+            challenge=challenge,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        )
+        goal = RepTargetGoalFactory(participant=participant, name="x" * 100)
+        participant.rep_target_goal = goal
+        participant.save(update_fields=["rep_target_goal"])
+
+        detach_active_rep_target_goal(participant)
+
+        goal.refresh_from_db()
+        assert len(goal.name) <= 100
+        assert goal.name.endswith(f"[{goal.id}]")
+
 
 class TestRepTargetGoalSetupView:
     def test_get_renders_one_row_per_lift(self):
@@ -197,6 +215,28 @@ class TestRepTargetGoalSetupView:
         )
         assert response.status_code == 200
         assert response.context["errors"]
+
+    def test_over_long_name_is_an_error_not_a_crash(self):
+        # The template's maxlength stops honest input at 100; a crafted POST
+        # used to reach RepTargetGoal.objects.create and 500 with DataError.
+        challenge = make_rep_target_challenge(lifts=[LIFT])
+        user = UserFactory()
+        participant = ChallengeParticipantFactory(
+            challenge=challenge,
+            user=user,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        )
+        client = Client()
+        client.force_login(user)
+        weight_field, reps_field = rep_target_field_names(0)
+        response = client.post(
+            reverse("challenges:goal-setup", args=[challenge.pk]),
+            {"name": "x" * 101, "action": "save", weight_field: "0", reps_field: "20"},
+        )
+        assert response.status_code == 200
+        assert response.context["errors"]
+        participant.refresh_from_db()
+        assert not participant.has_goal_configured
 
     def test_suggest_action_prefills_without_saving(self):
         challenge = make_rep_target_challenge(lifts=[LIFT])

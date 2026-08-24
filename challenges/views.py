@@ -889,6 +889,11 @@ def _rep_target_goal_setup_view(request, challenge, participant):
             )
             return render(request, "challenges/rep_target_goal_setup.html", context)
 
+        # The template caps the input at 100 (RepTargetGoal.name's
+        # max_length), so this only trips on a crafted POST -- without it the
+        # save is a DataError 500.
+        if len(goal_name) > 100:
+            errors.append(gettext("Goal name must be 100 characters or fewer."))
         other_errors = errors + rep_target_goal_is_complete(targets, challenge)
         if other_errors:
             context = build_rep_target_goal_context(

@@ -322,6 +322,18 @@ class TestDetachActiveGoal:
         assert participant.custom_goal_id == new_goal.id
         assert CustomGoal.objects.filter(participant=participant).count() == 2
 
+    def test_max_length_name_survives_the_rename(self, participant, challenge):
+        # Regression: appending " [uuid]" to a 62+ char goal name overflowed
+        # name's max_length=100 and 500'd the leave/bail path.
+        _name, targets, _, *_ = parse_custom_goal_json(full_json(), challenge, "kg")
+        goal = save_custom_goal(participant, "x" * 100, targets)
+
+        detach_active_goal(participant)
+
+        goal.refresh_from_db()
+        assert len(goal.name) <= 100
+        assert goal.name.endswith(f"[{goal.id}]")
+
     def test_noop_when_no_goal_configured(self, participant):
         detach_active_goal(participant)
         assert participant.custom_goal_id is None
