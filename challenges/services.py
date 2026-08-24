@@ -41,6 +41,7 @@ from scoring.domain.calculator import (
     format_added_weight,
     is_assisted_equipment,
     is_bodyweight_added_lift,
+    points_for_rep_count,
 )
 from scoring.models import PointEarnEvent
 from scoring.services import score_pooled_history
@@ -1202,9 +1203,15 @@ def _default_manual_rep_count(most_recent_event):
 
 
 def _standards_row_for_lift(lift, params, *, threshold_at, current_best, rep_columns):
-    """Build one lift's standards-table row (10RM..1RM cells)."""
+    """Build one lift's standards-table row (10RM..1RM cells).
+
+    ``rep_columns`` is the ``[{"reps": n, "points": points_for_rep_count(n)}]``
+    list built alongside the header row, so column order/count can never
+    drift between the header's point labels and each row's cells.
+    """
     cells = []
-    for reps in rep_columns:
+    for col in rep_columns:
+        reps = col["reps"]
         cell = {"reps": reps, "weight": None, "is_current_best": False}
         if threshold_at is not None:
             cell["weight"] = _weight_display(
@@ -1378,6 +1385,47 @@ def _next_reps_for_rep_target(current_points, target_reps, target_weight) -> int
     return None
 
 
+def _rep_target_point_columns(target_reps, target_weight, current_points):
+    """Build the 10-column ``[{points, reps, is_current_best}]`` ladder for one
+    lift's Rep Target goal -- the "how many reps for N points" sibling of
+    Classic's rep-max table ("how much weight for N points"), both driven by
+    the same 10-point scale. Reuses ``best_score_for_rep_target`` itself
+    (``performed_weight == target_weight``, satisfying the gate exactly)
+    rather than inverting its round-half-up formula by hand, the same
+    reasoning :func:`_next_reps_for_rep_target` documents.
+
+    A low ``target_reps`` can make some point values unreachable at exactly
+    that rep count (e.g. target_reps=5 jumps straight from 0 to 2 points at
+    1 rep -- there's no reps count that scores exactly 1) -- the minimal reps
+    that scores AT LEAST that many points is shown instead, so consecutive
+    columns may repeat the same rep count. This mirrors
+    best_score_for_rep_target's own documented behavior, not a bug in the
+    column builder.
+
+    ``current_points`` is the participant's actual current-best score for
+    this lift (``None`` if they haven't scored it yet); the matching column
+    is flagged ``is_current_best``, mirroring Classic's ``cell.is_current_best``.
+    """
+    columns = []
+    for target_points in range(1, 11):
+        reps_needed = None
+        for reps in range(1, target_reps + 1):
+            points = best_score_for_rep_target(
+                reps, target_weight, target_reps, target_weight
+            )
+            if points is not None and points >= target_points:
+                reps_needed = reps
+                break
+        columns.append(
+            {
+                "points": target_points,
+                "reps": reps_needed,
+                "is_current_best": current_points == target_points,
+            }
+        )
+    return columns
+
+
 def build_rep_target_personal_data(user, challenge, participant):
     """The REP_TARGET sibling of :func:`build_personal_data`.
 
@@ -1392,6 +1440,15 @@ def build_rep_target_personal_data(user, challenge, participant):
     and reps-to-next-point gap slot into that same vocabulary cleanly enough
     that a second set of near-duplicate CHALLENGES_* settings would only add
     surface area for the same UX concept.
+
+    Each card also carries ``point_columns`` (see
+    :func:`_rep_target_point_columns`) -- unused by the summary cards
+    themselves, but consumed by the "Goals" tab
+    (templates/challenges/_rep_target_goal_tab.html), the Rep Target
+    equivalent of Classic's rep-max ladder table: 10 columns of "reps needed
+    for N points" instead of Classic's 10 columns of "weight needed for N
+    points", with the matching column highlighted the same way Classic
+    highlights its one current-best cell.
 
     Returns None under the same conditions as build_personal_data: no
     effective window start, or the participant hasn't configured a goal yet.
@@ -1503,6 +1560,9 @@ def build_rep_target_personal_data(user, challenge, participant):
                     }
                 )
 
+        card["point_columns"] = _rep_target_point_columns(
+            target_reps, target_weight, card.get("points_earned")
+        )
         summary_cards.append(card)
 
     _flag_close_to_goal(summary_cards)
@@ -1510,6 +1570,7 @@ def build_rep_target_personal_data(user, challenge, participant):
 
     return {
         "summary_cards": summary_cards,
+        "point_range": list(range(1, 11)),
         "display_unit": display_unit,
         "goal_label": goal_label,
     }
@@ -1594,7 +1655,9 @@ def build_personal_data(user, challenge, participant):
     ):
         most_recent_event_by_lift.setdefault(event.lift, event)
 
-    rep_columns = list(range(10, 0, -1))
+    rep_columns = [
+        {"reps": n, "points": points_for_rep_count(n)} for n in range(10, 0, -1)
+    ]
 
     summary_cards = []
     standards_rows = []
@@ -1689,7 +1752,9 @@ def build_participant_chart(viewer, challenge, subject_participant) -> dict | No
         )
     }
 
-    rep_columns = list(range(10, 0, -1))
+    rep_columns = [
+        {"reps": n, "points": points_for_rep_count(n)} for n in range(10, 0, -1)
+    ]
 
     standards_rows = []
     point_rows = []
@@ -1912,7 +1977,9 @@ def build_custom_goal_context(
         "is_json_method": method == CustomGoal.SourceMethod.JSON,
         "show_calculator": method == CustomGoal.SourceMethod.CUSTOM,
         "display_unit": unit,
-        "rep_range": list(range(10, 0, -1)),
+        "rep_range": [
+            {"reps": n, "points": points_for_rep_count(n)} for n in range(10, 0, -1)
+        ],
         "lifts": lifts,
         "goal_name": goal_name,
         "targets_json": targets_json,
@@ -1926,6 +1993,9 @@ def build_custom_goal_context(
     }
 
 
+REP_TARGET_DEFAULT_BW_REPS = 10
+
+
 def build_rep_target_goal_context(
     user,
     challenge,
@@ -1934,36 +2004,46 @@ def build_rep_target_goal_context(
     targets=None,
     errors=None,
     source_note="",
-    no_history_lifts=None,
 ) -> dict:
     """Build the render context for the Rep Target goal-setup form.
 
     ``targets`` is a ``{lift: (target_weight_kg, target_reps)}`` table used to
     prefill the grid -- a "Suggest targets" history suggestion, or a
-    partially-parsed submission on a failed save. ``no_history_lifts`` (from
-    :func:`challenges.goal_builders.suggest_rep_targets_from_history`) marks
-    lifts the suggester couldn't prefill, so the template can say so rather
-    than silently leaving the row blank.
+    partially-parsed submission on a failed save. A lift the suggester
+    couldn't prefill (:func:`challenges.goal_builders.suggest_rep_targets_from_history`)
+    is surfaced via a toast in the view, not a per-row flag here -- an
+    inline grid row broke the grid's spacing (UAT feedback).
     """
     unit = user.unit_preference
     targets = targets or {}
-    no_history_lifts = no_history_lifts or set()
     lifts = []
     for lift_index, lift in enumerate(sorted(covered_lift_names(challenge))):
         weight_field, reps_field = rep_target_field_names(lift_index)
+        is_bw_added = is_bodyweight_added_lift(lift)
         weight_kg, reps = targets.get(lift, (None, None))
-        weight_value = ""
         if weight_kg is not None:
             weight_value, _ = to_display_weight(weight_kg, unit)
+        elif is_bw_added:
+            # Added weight defaults to 0.0 (bodyweight-only) rather than
+            # blank -- that's the common case, and 0.0 is itself a valid target.
+            weight_value = "0.0"
+        else:
+            weight_value = ""
+        if reps is None and is_bw_added:
+            # No history to suggest reps from either -- 10 is a reasonable
+            # bodyweight-only starting target, same reasoning as the 0.0
+            # weight default just above.
+            reps_value = REP_TARGET_DEFAULT_BW_REPS
+        else:
+            reps_value = reps if reps is not None else ""
         lifts.append(
             {
                 "name": lift,
-                "is_bodyweight_added": is_bodyweight_added_lift(lift),
+                "is_bodyweight_added": is_bw_added,
                 "weight_field": weight_field,
                 "weight_value": weight_value,
                 "reps_field": reps_field,
-                "reps_value": reps if reps is not None else "",
-                "needs_decision": lift in no_history_lifts,
+                "reps_value": reps_value,
             }
         )
     return {

@@ -302,7 +302,6 @@
     <section class="bg-surface-card border border-line-subtle rounded p-6 mb-6">
       <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
         <h2 class="text-lg font-semibold text-content-strong">{% trans "Your Performance" %}</h2>
-        {% if not is_rep_target_mode %}
         <div class="inline-flex rounded border border-line-subtle overflow-hidden text-sm">
           <button type="button" id="tab-summary-btn"
                   class="px-4 py-2 font-medium bg-accent text-accent-on"
@@ -311,7 +310,6 @@
                   class="px-4 py-2 font-medium bg-surface-card text-content-body"
                   onclick="showPersonalTab('standards')">{% trans "Goals" %}</button>
         </div>
-        {% endif %}
       </div>
 
       <div id="tab-summary">
@@ -326,15 +324,20 @@
         </div>
       </div>
 
-      {% if not is_rep_target_mode %}
       <div id="tab-standards" class="hidden">
+        {% if is_rep_target_mode %}
+        {% include "challenges/_rep_target_goal_tab.html" with personal_data=personal_data %}
+        {% else %}
         <div class="overflow-auto max-h-[70vh] snap-y snap-mandatory scroll-pt-[37px]">
           <table class="text-sm text-left w-full border-separate border-spacing-0">
             <thead>
               <tr class="text-content-muted">
                 <th class="py-2 pr-4 font-medium whitespace-nowrap sticky top-0 left-0 z-30 bg-surface-card border-r border-b border-line-subtle">{% trans "Lift" %}</th>
-                {% for reps in personal_data.rep_columns %}
-                <th class="py-2 px-3 font-medium text-right font-mono sticky top-0 z-20 bg-surface-card border-b border-line-subtle">{{ reps }}RM</th>
+                {% for col in personal_data.rep_columns %}
+                <th class="py-2 px-3 font-medium text-right font-mono sticky top-0 z-20 bg-surface-card border-b border-line-subtle">
+                  <span class="block">{{ col.reps }}RM</span>
+                  <span class="block text-[10px] font-normal text-content-subtle">{{ col.points }}pt</span>
+                </th>
                 {% endfor %}
               </tr>
             </thead>
@@ -355,8 +358,8 @@
           </table>
         </div>
         <p class="text-xs text-content-muted mt-2">{% blocktrans with unit=personal_data.display_unit %}Thresholds shown in {{ unit }}{% endblocktrans %} {% trans "for your custom goal." %}</p>
+        {% endif %}
       </div>
-      {% endif %}
     </section>
     <style>
       /* Self-report flip card (TASK-25). Front/back are both always in the

@@ -332,7 +332,8 @@ def test_grid_columns_render_10rm_to_1rm_left_to_right(user, challenge):
     # and the personal-data standards table both render 10RM..1RM left to
     # right); the custom-goal grid must not diverge from it.
     ctx = build_custom_goal_context(user, challenge)
-    assert ctx["rep_range"] == list(range(10, 0, -1))
+    assert [col["reps"] for col in ctx["rep_range"]] == list(range(10, 0, -1))
+    assert [col["points"] for col in ctx["rep_range"]] == list(range(1, 11))
     assert [cell["rep"] for cell in ctx["lifts"][0]["cells"]] == list(range(10, 0, -1))
 
 
