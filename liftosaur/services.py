@@ -567,6 +567,17 @@ def sync_user_lifts(user, force: bool = False, full_backfill: bool = False) -> i
         _mark_sync_log_failed(sync_log, str(exc), user=user)
         logger.exception("Liftosaur lift sync failed for user %s", user.id)
         return 0
+    except (urllib.error.URLError, OSError) as exc:
+        # A slow/unreachable Liftosaur API. OSError also catches the bare
+        # TimeoutError a read-phase timeout surfaces as (TimeoutError is an
+        # OSError subclass) -- core.http.send_request's docstring only
+        # promises urllib.error.URLError for network failures, which a
+        # read-phase timeout isn't one of. Degrade exactly like the API-error
+        # branch: a 500 reaching the user for a transient network hiccup is
+        # strictly worse than showing whatever is already pooled.
+        _mark_sync_log_failed(sync_log, f"Network error: {exc}", user=user)
+        logger.exception("Liftosaur lift sync network error for user %s", user.id)
+        return 0
     except OperationalError as exc:
         # A write-lock loss that outlived the pool write's own retries. Degrade
         # exactly like the API-error branch does — return 0 so callers treat it
