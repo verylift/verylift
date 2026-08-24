@@ -50,7 +50,9 @@
         <table class="text-sm text-left w-full border-separate border-spacing-0">
           <thead>
             <tr class="text-content-muted">
-              <th class="py-2 pr-2 sm:pr-4 font-medium">{% trans "Lift" %}</th>
+              {# w-full parks the leftover width here so the input columns #}
+              {# size to their fields rather than being stretched.         #}
+              <th class="py-2 pr-2 sm:pr-4 font-medium w-full">{% trans "Lift" %}</th>
               {# Headers stay left-aligned like the rest of the app's tables; #}
               {# only numeric display columns right-align, and these label    #}
               {# input fields rather than figures.                            #}

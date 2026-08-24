@@ -17,7 +17,9 @@ point_range, display_unit.
   <table class="text-sm text-left w-full border-separate border-spacing-0">
     <thead>
       <tr class="text-content-muted">
-        <th class="py-2 pr-2 sm:pr-4 font-medium sticky left-0 z-10 bg-surface-card">{% trans "Lift" %}</th>
+        {# w-full parks the table's leftover width here, so the numeric #}
+        {# columns size to their content instead of being stretched.    #}
+        <th class="py-2 pr-2 sm:pr-4 font-medium w-full sticky left-0 z-10 bg-surface-card">{% trans "Lift" %}</th>
         <th class="py-2 pl-2 pr-1 sm:pl-3 font-medium text-right font-mono whitespace-nowrap">{% trans "Weight" %}</th>
         {% for points in point_range %}
         <th class="py-2 px-2 font-medium text-right font-mono whitespace-nowrap">{{ points }}pt</th>
