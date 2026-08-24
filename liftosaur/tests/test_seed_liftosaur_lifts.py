@@ -24,7 +24,9 @@ EXPECTED_BUILTIN_LIFTS = {row["name"] for row in _fixture_data()["lifts"]}
 EXPECTED_ALIASES = {
     row["from_name"]: row["to_name"] for row in _fixture_data()["aliases"]
 }
-EXPECTED_BODYWEIGHT_ADDED = {"Pull-up", "Chin-up", "Dip"}
+EXPECTED_BODYWEIGHT_ADDED = {
+    row["name"] for row in _fixture_data()["lifts"] if row["is_bodyweight_added"]
+}
 
 
 @pytest.mark.django_db

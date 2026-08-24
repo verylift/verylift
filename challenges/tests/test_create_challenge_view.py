@@ -1,13 +1,15 @@
-"""Tests for the Create Challenge wizard (TASK-15, rebuilt TASK-247, TASK-248).
+"""Tests for the Create Challenge wizard (TASK-15, rebuilt TASK-247, TASK-248,
+issue #85).
 
 The wizard is a session-tracked, one-step-per-request flow (mirrors
-accounts.onboarding_view): a fixed name -> dates -> lifts, since every
+accounts.onboarding_view): a fixed name -> dates -> mode -> lifts. Every
 challenge is CUSTOM (TASK-248) -- the owner no longer picks a
 chart-generation standard at all; each participant builds their own goal
-chart at join, via goal_setup_view. TASK-272 removed the fourth (invitees)
-step, so submitting "lifts" is now what creates the Challenge, always with
-fixed history_window/plate_unit/smallest_plate, and it hands off to the share
-screen carrying the challenge's invite link.
+chart at join, via goal_setup_view. Issue #85 inserted the "mode" step
+(Classic vs Rep Target) right after dates; TASK-272 removed the old fourth
+(invitees) step, so submitting "lifts" is still what creates the Challenge,
+always with fixed history_window/plate_unit/smallest_plate, and it hands off
+to the share screen carrying the challenge's invite link.
 """
 
 import re
@@ -62,12 +64,14 @@ def _complete_wizard(
     name="Spring Showdown",
     start_date="2027-03-01",
     end_date="2027-06-01",
+    mode=Challenge.Mode.CLASSIC,
     lift_pks,
 ):
-    """Walk all three wizard steps and return the final (lifts) response."""
+    """Walk all four wizard steps and return the final (lifts) response."""
     url = reverse("challenges:create")
     client.post(url, {"name": name})
     client.post(url, {"start_date": start_date, "end_date": end_date})
+    client.post(url, {"mode": mode})
     return client.post(url, {"lifts": list(lift_pks)})
 
 
@@ -113,6 +117,11 @@ class TestWizardShellCentering:
         assert b"data-wizard-shell" in dates_step.content
 
         authed_client.post(url, {"start_date": "2027-03-01", "end_date": "2027-06-01"})
+        mode_step = authed_client.get(url)
+        assert mode_step.context["step"] == "mode"
+        assert b"data-wizard-shell" in mode_step.content
+
+        authed_client.post(url, {"mode": Challenge.Mode.CLASSIC})
         lifts_step = authed_client.get(url)
         assert lifts_step.context["step"] == "lifts"
         assert b"data-wizard-shell" in lifts_step.content
@@ -132,8 +141,9 @@ class TestWizardStepProgression:
         response = authed_client.get(reverse("challenges:create"))
         assert response.context["step"] == "name"
         assert response.context["step_number"] == 1
-        # Fixed 3-step wizard: name, dates, lifts (TASK-248, TASK-272).
-        assert response.context["total_steps"] == 3
+        # Fixed 4-step wizard: name, dates, mode, lifts (TASK-248, TASK-272,
+        # issue #85).
+        assert response.context["total_steps"] == 4
 
     def test_name_step_advances_to_dates(self, authed_client):
         url = reverse("challenges:create")
@@ -151,7 +161,7 @@ class TestWizardStepProgression:
         assert response.context["step"] == "name"
         assert Challenge.objects.count() == 0
 
-    def test_dates_step_advances_to_lifts(self, authed_client):
+    def test_dates_step_advances_to_mode(self, authed_client):
         url = reverse("challenges:create")
         authed_client.post(url, {"name": "Spring Showdown"})
         response = authed_client.post(
@@ -159,9 +169,29 @@ class TestWizardStepProgression:
         )
         assert response.status_code == 302
         followed = authed_client.get(url)
-        assert followed.context["step"] == "lifts"
+        assert followed.context["step"] == "mode"
         assert followed.context["step_number"] == 3
-        assert followed.context["total_steps"] == 3
+        assert followed.context["total_steps"] == 4
+
+    def test_mode_step_advances_to_lifts(self, authed_client):
+        url = reverse("challenges:create")
+        authed_client.post(url, {"name": "Spring Showdown"})
+        authed_client.post(url, {"start_date": "2027-03-01", "end_date": "2027-06-01"})
+        response = authed_client.post(url, {"mode": Challenge.Mode.CLASSIC})
+        assert response.status_code == 302
+        followed = authed_client.get(url)
+        assert followed.context["step"] == "lifts"
+        assert followed.context["step_number"] == 4
+        assert followed.context["total_steps"] == 4
+
+    def test_invalid_mode_rejected_and_stays_on_mode_step(self, authed_client):
+        url = reverse("challenges:create")
+        authed_client.post(url, {"name": "Spring Showdown"})
+        authed_client.post(url, {"start_date": "2027-03-01", "end_date": "2027-06-01"})
+        response = authed_client.post(url, {"mode": "not-a-real-mode"})
+        assert response.status_code == 200
+        assert response.context["step"] == "mode"
+        assert Challenge.objects.count() == 0
 
     def test_end_date_before_start_date_rejected(self, authed_client):
         url = reverse("challenges:create")
@@ -190,6 +220,7 @@ class TestWizardStepProgression:
         url = reverse("challenges:create")
         authed_client.post(url, {"name": "Spring Showdown"})
         authed_client.post(url, {"start_date": "2027-03-01", "end_date": "2027-06-01"})
+        authed_client.post(url, {"mode": Challenge.Mode.CLASSIC})
         response = authed_client.post(
             url, {"lifts": [str(known_lifts["Bench Press"].pk)]}
         )
@@ -201,6 +232,7 @@ class TestWizardStepProgression:
         url = reverse("challenges:create")
         authed_client.post(url, {"name": "Spring Showdown"})
         authed_client.post(url, {"start_date": "2027-03-01", "end_date": "2027-06-01"})
+        authed_client.post(url, {"mode": Challenge.Mode.CLASSIC})
         response = authed_client.post(url, {"lifts": []})
         assert response.status_code == 200
         assert response.context["step"] == "lifts"
@@ -211,6 +243,7 @@ class TestWizardStepProgression:
         url = reverse("challenges:create")
         authed_client.post(url, {"name": "Spring Showdown"})
         authed_client.post(url, {"start_date": "2027-03-01", "end_date": "2027-06-01"})
+        authed_client.post(url, {"mode": Challenge.Mode.CLASSIC})
         response = authed_client.post(
             url, {"lifts": ["00000000-0000-0000-0000-000000000000"]}
         )
@@ -242,13 +275,11 @@ class TestWizardStepProgression:
         followed = authed_client.get(url)
         assert followed.context["step"] == "name"
 
-    def test_back_from_lifts_returns_to_dates_prefilled(self, authed_client):
-        """Lifts is the last step now (TASK-272), so ?back=1 from it goes to
-        dates — there is no step after lifts to come back from."""
+    def test_back_from_mode_returns_to_dates_prefilled(self, authed_client):
         url = reverse("challenges:create")
         authed_client.post(url, {"name": "Spring Showdown"})
         authed_client.post(url, {"start_date": "2027-03-01", "end_date": "2027-06-01"})
-        assert authed_client.get(url).context["step"] == "lifts"
+        assert authed_client.get(url).context["step"] == "mode"
 
         response = authed_client.get(url, {"back": "1"})
 
@@ -257,15 +288,30 @@ class TestWizardStepProgression:
         assert 'value="2027-03-01"' in content
         assert Challenge.objects.count() == 0
 
+    def test_back_from_lifts_returns_to_mode_prefilled(self, authed_client):
+        """Lifts is the last step now (TASK-272, issue #85)."""
+        url = reverse("challenges:create")
+        authed_client.post(url, {"name": "Spring Showdown"})
+        authed_client.post(url, {"start_date": "2027-03-01", "end_date": "2027-06-01"})
+        authed_client.post(url, {"mode": Challenge.Mode.REP_TARGET})
+        assert authed_client.get(url).context["step"] == "lifts"
+
+        response = authed_client.get(url, {"back": "1"})
+
+        assert response.context["step"] == "mode"
+        assert response.context["form"].initial["mode"] == Challenge.Mode.REP_TARGET
+        assert Challenge.objects.count() == 0
+
 
 class TestLiftPickerStep:
     def _lift_rows(self, content):
         return re.findall(r"<label[^>]*data-lift-row[^>]*>", content)
 
-    def _goto_lifts_step(self, authed_client):
+    def _goto_lifts_step(self, authed_client, mode=Challenge.Mode.CLASSIC):
         url = reverse("challenges:create")
         authed_client.post(url, {"name": "Spring Showdown"})
         authed_client.post(url, {"start_date": "2027-03-01", "end_date": "2027-06-01"})
+        authed_client.post(url, {"mode": mode})
         return authed_client.get(url)
 
     def test_renders_every_seeded_lift(self, authed_client):
@@ -273,10 +319,12 @@ class TestLiftPickerStep:
         rows = self._lift_rows(content)
         assert len(rows) == 139
 
-    def test_classics_pre_checked_on_fresh_form(self, authed_client):
+    def test_nothing_pre_checked_on_fresh_form(self, authed_client):
+        """No silent default preset (issue #85 follow-up) -- an owner picks a
+        tab and hits its "Select all", or checks lifts by hand."""
         content = self._goto_lifts_step(authed_client).content.decode()
         checked = re.findall(r'<input[^>]*name="lifts"[^>]*checked[^>]*>', content)
-        assert len(checked) == 14
+        assert len(checked) == 0
 
     def test_search_input_rendered(self, authed_client):
         content = self._goto_lifts_step(authed_client).content.decode()
@@ -289,7 +337,7 @@ class TestLiftPickerStep:
     def test_popular_group_heading_rendered(self, authed_client):
         content = self._goto_lifts_step(authed_client).content.decode()
         assert "Popular" in content
-        assert "All lifts" in content
+        assert "All Lifts" in content
 
 
 class TestNoAdvancedFields:
@@ -302,6 +350,8 @@ class TestNoAdvancedFields:
         authed_client.post(url, {"name": "Spring Showdown"})
         steps_content.append(authed_client.get(url).content.decode())  # dates
         authed_client.post(url, {"start_date": "2027-03-01", "end_date": "2027-06-01"})
+        steps_content.append(authed_client.get(url).content.decode())  # mode
+        authed_client.post(url, {"mode": Challenge.Mode.CLASSIC})
         steps_content.append(authed_client.get(url).content.decode())  # lifts
 
         for content in steps_content:
@@ -349,6 +399,22 @@ class TestFullWizardCreatesChallenge:
             ChallengeLift.objects.filter(challenge=comp).values_list("name", flat=True)
         )
         assert names == {"Bench Press", "Back Squat"}
+
+    def test_mode_defaults_to_classic(self, authed_client, creator, known_lifts):
+        _complete_wizard(authed_client, lift_pks=[known_lifts["Bench Press"].pk])
+        comp = Challenge.objects.get(creator=creator)
+        assert comp.mode == Challenge.Mode.CLASSIC
+
+    def test_rep_target_mode_persisted_when_chosen(
+        self, authed_client, creator, known_lifts
+    ):
+        _complete_wizard(
+            authed_client,
+            mode=Challenge.Mode.REP_TARGET,
+            lift_pks=[known_lifts["Bench Press"].pk],
+        )
+        comp = Challenge.objects.get(creator=creator)
+        assert comp.mode == Challenge.Mode.REP_TARGET
 
     def test_history_window_defaults_to_from_start(
         self, authed_client, creator, known_lifts

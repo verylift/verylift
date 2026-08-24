@@ -488,6 +488,22 @@ class TestBackfillLiftHistory:
         assert log.success is False
         assert "boom" in log.error_detail
 
+    def test_network_timeout_marks_log_failed_and_returns_zero(self):
+        """A read-phase timeout surfaces as a bare TimeoutError, not
+        urllib.error.URLError -- this must degrade the same way an API error
+        does, not escape as an unhandled 500 reaching the user."""
+        user = UserFactory(liftosaur_api_key="key")
+        client = _stub_client()
+        client.get_history.side_effect = TimeoutError("The read operation timed out")
+
+        with patch("liftosaur.services.LiftosaurClient", return_value=client):
+            pooled = sync_user_lifts(user)
+
+        assert pooled == 0
+        log = LiftosaurSyncLog.objects.get(user=user)
+        assert log.success is False
+        assert "timed out" in log.error_detail
+
     def test_performs_no_scoring(self):
         # The pure pull primitive keeps the pool fresh and does zero scoring:
         # no PointEarnEvent is ever created as a side effect of syncing lifts.

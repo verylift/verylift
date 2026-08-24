@@ -22,6 +22,15 @@ class TestToDisplayWeight:
         value, _ = to_display_weight(Decimal("80.456"), "kg")
         assert value == Decimal("80.5")
 
+    def test_whole_weight_renders_without_a_trailing_zero(self):
+        # str() is what a template renders, and it is the only place the
+        # trimming is observable: Decimal("135") == Decimal("135.0"), so an
+        # equality assertion cannot catch a regression here.
+        assert str(to_display_weight(Decimal("135.00"), "kg")[0]) == "135"
+
+    def test_fractional_weight_keeps_its_decimal(self):
+        assert str(to_display_weight(Decimal("152.60"), "kg")[0]) == "152.6"
+
     def test_none_value_returns_none_with_label(self):
         value, label = to_display_weight(None, "lb")
         assert value is None

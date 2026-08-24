@@ -95,6 +95,15 @@ The app is server-rendered Django templates with HTMX layered in for same-page i
 - **Tables**: plain HTML `<table>` markup styled with Tailwind utility classes — no table library.
 - **Charts**: Chart.js, vendored as a static file under `static/vendor/` (never CDN) — consistent with self-hosting the rest of the stack, and it means no package manager silently flags/updates it. Bump the pinned version deliberately via `just update-chartjs`, reviewed via PR like any other dependency bump.
 
+## Copy standards
+
+User-facing text (`{% trans %}`/`{% blocktrans %}` strings, `messages.*()` text, form labels/help text, button/link labels) should read like a human product writer wrote it, not an LLM. This does not apply to Python docstrings or code comments — those follow the engineering-comment conventions elsewhere in this file and are fine as-is.
+
+- **Avoid em dashes.** Use a period, comma, semicolon, or a plain conjunction instead. One stray em dash isn't a crisis, but copy shouldn't be full of them.
+- **State a fact once.** If a page already has a persistent, prominent warning (e.g. a yellow "this is permanent" banner), don't restate the same fact in a second, transient message on the same page. Pick the one place it belongs and cut it everywhere else.
+- **Short and direct.** No triplet lists of adjectives, no "it's not just X, it's Y" construction, no throat-clearing qualifiers ("simply", "just", "essentially") padding a sentence that doesn't need them.
+- **Match the surrounding page's register.** Read the other copy on the page/flow before writing new copy for it, and write the new line the way that page's author would have.
+
 ## Testing standards
 
 See the **Testing standards** section of `AGENTS.md` — it is the canonical version and applies to everyone touching this repo, not just this agent. Read it before writing tests. In particular, hitting the 95% coverage floor does not license tests that restate a template string, re-assert a Django default, or echo back a factory kwarg.

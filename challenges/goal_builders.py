@@ -11,11 +11,13 @@ place one is ever written to storage at all, via :func:`standards_source_detail`
 """
 
 import logging
+import math
 from datetime import UTC, datetime, timedelta
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import ROUND_CEILING, ROUND_HALF_UP, Decimal
 
 from accounts.units import from_display_weight, to_display_weight
 from challenges.models import CustomGoal
+from challenges.rep_target_goals import MAX_TARGET_REPS
 from challenges.standards import covered_lift_names
 from fitnessvolt import services as fitnessvolt_services
 from liftosaur.models import LiftHistory
@@ -334,6 +336,122 @@ def suggest_from_history(
             user.id,
         )
     return table, needs_decision, assisted_only_lifts
+
+
+REP_TARGET_SUGGESTED_REPS = 5
+# Bodyweight-added lifts target bodyweight itself, so reps carry the whole
+# goal: ask for half again the best set in the window.
+REP_TARGET_BODYWEIGHT_UPLIFT = Decimal("1.5")
+_REP_TARGET_ROUNDING_LB = Decimal("5")
+
+
+def _ceil_to_5lb(weight_kg: Decimal) -> Decimal:
+    """Round a computed target UP to the nearest 5 lb, in kg.
+
+    Always rounds up, never to the nearest or down: this is used to turn an
+    uplifted historical max into a target that is guaranteed to still sit
+    above that max after rounding (a floor or nearest-rounding could round
+    the uplift itself away for a small uplift/max combination, silently
+    undoing the "must be a new goal, not one you've already hit" guarantee).
+    Unlike :func:`_round_to_increment`, the rounding unit is hardcoded to lb
+    rather than the participant's ``unit_preference``: "the nearest 5 lb" is
+    a product decision about how coarse the suggestion should be, not a
+    display concern, so it doesn't follow kg/lb display choice the way a
+    rep-max ladder rung does.
+    """
+    display_lb, _ = to_display_weight(weight_kg, "lb")
+    steps = (display_lb / _REP_TARGET_ROUNDING_LB).to_integral_value(
+        rounding=ROUND_CEILING
+    )
+    return from_display_weight(steps * _REP_TARGET_ROUNDING_LB, "lb")
+
+
+def suggest_rep_targets_from_history(
+    user, challenge, *, lookback_days, uplift
+) -> tuple[dict[str, tuple[Decimal, int]], list[str]]:
+    """Build a suggested ``{lift: (target_weight_kg, target_reps)}`` table from
+    Liftosaur/pooled LiftHistory, for the Rep Target goal-setup "Suggest
+    targets" convenience (issue #85).
+
+    For a regular (non-bodyweight-added) lift, the target is the heaviest
+    weight recorded in the window, uplifted by ``uplift`` (the same
+    ``CHALLENGES_GOAL_SUGGESTION_UPLIFT`` fraction Classic's ladder builder
+    uses) and rounded UP to the nearest 5 lb (:func:`_ceil_to_5lb`), at a
+    fixed ``REP_TARGET_SUGGESTED_REPS``-rep target. Scoring gates on raw
+    performed weight >= target weight (``best_score_for_rep_target``), so a
+    target derived from e1RM/Epley math on the lifter's own sets -- however it
+    was reshaped -- is mathematically guaranteed to sit at or below a weight
+    they already lifted, which is exactly why that approach (an earlier
+    version of this function) suggested "goals" the lifter had already scored
+    10/10 points on before even confirming them (UAT feedback). Uplifting the
+    raw historical max and rounding up, rather than down, guarantees the
+    opposite: the target sits strictly above anything already logged, so a
+    freshly confirmed goal always starts at 0 points, with the smallest step
+    up that still clears the rounding as the "good chance to score soon"
+    case.
+
+    Bodyweight-added lifts (Pull-up/Chin-up/Dip/Pistol Squat) reach the same
+    "must not arrive pre-completed" outcome from the other direction. Their
+    stored weight is added weight, so targeting 0 means targeting bodyweight
+    itself: the gate is whatever the lifter already carries, and reps become
+    the only axis left to grow. The target is
+    ``REP_TARGET_BODYWEIGHT_UPLIFT`` x the most reps managed in the window,
+    rounded up and clamped to ``MAX_TARGET_REPS``. Taking the best set
+    verbatim, as this used to, handed back a goal the lifter had by
+    definition already completed.
+
+    Assisted-equipment rows on bodyweight-added lifts are skipped (their
+    recorded weight is net total load, not added weight, and isn't comparable
+    -- same rule as suggest_from_history). Returns
+    ``({lift: (weight_kg, reps)}, lifts_with_no_history)``.
+    """
+    configured = sorted(covered_lift_names(challenge))
+    cutoff = (datetime.now(tz=UTC) - timedelta(days=lookback_days)).date()
+
+    table: dict[str, tuple[Decimal, int]] = {}
+    no_history: list[str] = []
+
+    for lift in configured:
+        is_added = is_bodyweight_added_lift(lift)
+        rows = LiftHistory.objects.filter(
+            user=user, lift=lift, performed_at__gte=cutoff
+        )
+        if is_added:
+            # Target bodyweight itself (0 added weight), so the weight gate is
+            # whatever the lifter already carries and reps are the only axis
+            # left to grow. Then ask for half again the most they have managed
+            # in the window: taking their best set verbatim, as this used to,
+            # handed them a goal they had by definition already completed.
+            best_reps = max(
+                (row.reps for row in rows if not is_assisted_equipment(row.equipment)),
+                default=None,
+            )
+            if best_reps is None:
+                no_history.append(lift)
+            else:
+                target_reps = math.ceil(best_reps * REP_TARGET_BODYWEIGHT_UPLIFT)
+                table[lift] = (
+                    Decimal("0"),
+                    min(max(target_reps, 1), MAX_TARGET_REPS),
+                )
+            continue
+
+        weights = [row.weight_kg for row in rows]
+        if not weights:
+            no_history.append(lift)
+        else:
+            target_weight = _ceil_to_5lb(max(weights) * (1 + Decimal(str(uplift))))
+            table[lift] = (target_weight, REP_TARGET_SUGGESTED_REPS)
+
+    if no_history:
+        logger.warning(
+            "Rep target history suggestion: lift(s) %s for user %s have no "
+            "usable history in the last %s day(s)",
+            no_history,
+            user.id,
+            lookback_days,
+        )
+    return table, no_history
 
 
 def default_goal_name(method, *, tier=None, population=None, uplift=None) -> str:

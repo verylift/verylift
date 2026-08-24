@@ -735,7 +735,10 @@ class TestStandardsTable:
     ):
         resp = _get(authed_client, challenge)
         data = resp.context["personal_data"]
-        assert data["rep_columns"] == [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+        assert [col["reps"] for col in data["rep_columns"]] == list(range(10, 0, -1))
+        # 1RM is worth 10 points down to 10RM worth 1 (points_for_rep_count),
+        # so the point labels ascend as the rep columns descend.
+        assert [col["points"] for col in data["rep_columns"]] == list(range(1, 11))
         row = next(r for r in data["standards_rows"] if r["lift"] == "Squat")
         for cell in row["cells"]:
             assert cell["weight"] == _expected_threshold(cell["reps"])
@@ -753,9 +756,9 @@ class TestStandardsTable:
         # (hardest) rightmost, matching the goal-setup page (TASK-99).
         resp = _get(authed_client, challenge)
         data = resp.context["personal_data"]
-        assert data["rep_columns"] == list(range(10, 0, -1))
-        assert data["rep_columns"][0] == 10
-        assert data["rep_columns"][-1] == 1
+        assert [col["reps"] for col in data["rep_columns"]] == list(range(10, 0, -1))
+        assert data["rep_columns"][0]["reps"] == 10
+        assert data["rep_columns"][-1]["reps"] == 1
         row = next(r for r in data["standards_rows"] if r["lift"] == "Squat")
         assert [c["reps"] for c in row["cells"]] == list(range(10, 0, -1))
 

@@ -1,0 +1,169 @@
+{% extends "base/wizard.html" %}
+{% load i18n icons %}
+
+{% block title %}{% blocktrans with name=challenge.name %}Set Your Goal — {{ name }}{% endblocktrans %}{% endblock %}
+
+{% block wizard_width %}max-w-4xl{% endblock %}
+
+{% block wizard_body %}
+    <h1 class="text-2xl font-bold text-content-strong mb-2">
+      {% trans "Set your rep target goal" %}
+    </h1>
+    <p class="text-sm text-content-muted mb-2 max-w-2xl">
+      {% blocktrans with name=challenge.name unit=display_unit %}
+      One target weight and rep count per lift in <strong>{{ name }}</strong>,
+      in {{ unit }}. A qualifying set is any at or above the target weight,
+      and reps earn points toward the target, up to 10.
+      {% endblocktrans %}
+    </p>
+    {% if source_note %}
+    <p class="text-sm text-content-muted mb-2 max-w-2xl">{{ source_note }}</p>
+    {% endif %}
+    <p class="text-sm font-medium text-warning mb-8 max-w-2xl">
+      {% trans "This goal is locked once you confirm it. There's no editing after you join." %}
+    </p>
+
+    {% if errors %}
+    <div class="mb-6 px-4 py-3 rounded bg-danger-light text-danger-dark text-sm">
+      <p class="font-medium mb-1">{% trans "Please fix the following:" %}</p>
+      <ul class="list-disc list-inside space-y-1">
+        {% for error in errors %}
+        <li>{{ error }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <form method="post" action="{% url 'challenges:goal-setup' challenge.pk %}">
+      {% csrf_token %}
+      {# Which cells "Suggest targets" filled (vs. typed) -- echoed back by #}
+      {# the server on re-render so the styling survives a failed save,     #}
+      {# same job as Classic's computed_fields input.                       #}
+      <input type="hidden" name="suggested_fields" data-suggested-fields-input value="{{ suggested_fields }}">
+
+      <div class="mb-6">
+        <label for="id_goal_name" class="block text-sm font-medium text-content-body mb-1">
+          {% trans "Goal name" %}
+        </label>
+        <input id="id_goal_name" type="text" name="name" value="{{ goal_name }}" maxlength="100"
+               placeholder="{% trans 'e.g. Calisthenics goals' %}"
+               class="w-full bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent">
+      </div>
+
+      <div class="overflow-x-auto mb-6">
+        <table class="text-sm text-left w-full border-separate border-spacing-0">
+          <thead>
+            <tr class="text-content-muted">
+              {# w-full parks the leftover width here so the input columns #}
+              {# size to their fields rather than being stretched.         #}
+              <th class="py-2 pr-2 sm:pr-4 font-medium w-full">{% trans "Lift" %}</th>
+              {# Every column but Lift is centered over its inputs, so the #}
+              {# label reads as belonging to the field beneath it.         #}
+              <th class="py-2 pl-2 pr-1 sm:px-3 font-medium text-center">{% trans "Weight" %}</th>
+              <th class="py-2 pl-1 pr-2 sm:px-3 font-medium text-center">{% trans "Reps" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for lift in lifts %}
+            <tr class="text-content-body border-b border-line-subtle" data-lift-row>
+              <td class="py-2 pr-2 sm:pr-4 font-medium text-content-strong">
+                <div class="flex items-center justify-between gap-1.5 w-full">
+                  <span>{{ lift.name }}{% if lift.is_bodyweight_added %} <span class="text-content-muted font-normal">({% trans "BW" %})</span>{% endif %}</span>
+                  <button type="button" data-clear-row
+                          class="shrink-0 text-content-muted hover:text-danger focus:outline-none"
+                          title="{% trans "Clear this row" %}"
+                          aria-label="{% trans "Clear this row" %}">
+                    {% icon "trash-2" css_class="h-3.5 w-3.5" %}
+                  </button>
+                </div>
+              </td>
+              {# Unit sits beside the field rather than in the header: which #}
+              {# unit you are typing matters most at the moment you type.    #}
+              <td class="py-2 pl-2 pr-1 sm:px-3 text-right whitespace-nowrap">
+                <input type="number" step="any" inputmode="decimal" name="{{ lift.weight_field }}" value="{{ lift.weight_value }}"
+                       aria-describedby="{{ lift.weight_field }}-unit"
+                       {% if lift.weight_suggested %}data-suggested="1"{% endif %}
+                       class="w-16 sm:w-24 border border-line rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:border-accent {% if lift.weight_suggested %}text-content-muted bg-surface-sunken{% else %}bg-surface-card text-content-body{% endif %}">
+                <span id="{{ lift.weight_field }}-unit" class="ml-1 text-xs text-content-muted">{{ display_unit }}</span>
+              </td>
+              <td class="py-2 pl-1 pr-2 sm:px-3">
+                <input type="number" min="1" max="999" name="{{ lift.reps_field }}" value="{{ lift.reps_value }}"
+                       {% if lift.reps_suggested %}data-suggested="1"{% endif %}
+                       class="w-16 sm:w-24 border border-line rounded px-2 py-1.5 text-sm focus:outline-none focus:border-accent {% if lift.reps_suggested %}text-content-muted bg-surface-sunken{% else %}bg-surface-card text-content-body{% endif %}">
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <button type="submit" name="action" value="suggest"
+                class="text-sm font-medium px-4 py-2 rounded border border-line-subtle text-content-body hover:bg-surface-sunken">
+          {% trans "Suggest targets" %}
+        </button>
+        <button type="button" data-clear-all
+                class="text-sm font-medium px-4 py-2 rounded border border-line-subtle text-content-muted hover:text-danger hover:bg-surface-sunken">
+          {% trans "Clear all" %}
+        </button>
+        <button type="submit" name="action" value="save"
+                class="bg-accent text-accent-on text-sm font-medium px-6 py-2 rounded hover:bg-accent-hover">
+          {% trans "Confirm Goal" %}
+        </button>
+        <a href="{% url 'challenges:goal-setup' challenge.pk %}?cancel=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "Cancel" %}</a>
+      </div>
+    </form>
+
+<script>
+  (function () {
+    var hidden = document.querySelector("[data-suggested-fields-input]");
+    var SUGGESTED = ["text-content-muted", "bg-surface-sunken"];
+    var PINNED = ["bg-surface-card", "text-content-body"];
+
+    // Editing (or clearing) a suggested cell pins it: the participant now
+    // owns the value, so drop the suggested styling and take it out of the
+    // hidden suggested_fields set -- same rule as Classic's markTyped.
+    function unmark(el) {
+      if (!el.dataset.suggested) return;
+      SUGGESTED.forEach(function (c) { el.classList.remove(c); });
+      PINNED.forEach(function (c) { el.classList.add(c); });
+      delete el.dataset.suggested;
+      if (hidden) {
+        hidden.value = hidden.value
+          .split(",")
+          .filter(function (name) { return name && name !== el.name; })
+          .join(",");
+      }
+    }
+
+    document.querySelectorAll("[data-suggested]").forEach(function (el) {
+      el.addEventListener("input", function () { unmark(el); });
+    });
+
+    // Blanks every grid input inside scope. Programmatic clears don't fire
+    // "input", so unmark explicitly -- emptied cells are ordinary blanks,
+    // not stale "suggested" ones (same recovery role as Classic's per-row
+    // clear).
+    function clearInputs(scope) {
+      scope.querySelectorAll("input[name^='target_']").forEach(function (el) {
+        el.value = "";
+        unmark(el);
+      });
+    }
+
+    document.querySelectorAll("[data-clear-row]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        var row = button.closest("[data-lift-row]");
+        if (row) clearInputs(row);
+      });
+    });
+
+    var clearAll = document.querySelector("[data-clear-all]");
+    if (clearAll) {
+      clearAll.addEventListener("click", function () {
+        clearInputs(document);
+      });
+    }
+  })();
+</script>
+{% endblock %}

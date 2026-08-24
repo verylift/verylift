@@ -322,6 +322,18 @@ class TestDetachActiveGoal:
         assert participant.custom_goal_id == new_goal.id
         assert CustomGoal.objects.filter(participant=participant).count() == 2
 
+    def test_max_length_name_survives_the_rename(self, participant, challenge):
+        # Regression: appending " [uuid]" to a 62+ char goal name overflowed
+        # name's max_length=100 and 500'd the leave/bail path.
+        _name, targets, _, *_ = parse_custom_goal_json(full_json(), challenge, "kg")
+        goal = save_custom_goal(participant, "x" * 100, targets)
+
+        detach_active_goal(participant)
+
+        goal.refresh_from_db()
+        assert len(goal.name) <= 100
+        assert goal.name.endswith(f"[{goal.id}]")
+
     def test_noop_when_no_goal_configured(self, participant):
         detach_active_goal(participant)
         assert participant.custom_goal_id is None
@@ -332,7 +344,8 @@ def test_grid_columns_render_10rm_to_1rm_left_to_right(user, challenge):
     # and the personal-data standards table both render 10RM..1RM left to
     # right); the custom-goal grid must not diverge from it.
     ctx = build_custom_goal_context(user, challenge)
-    assert ctx["rep_range"] == list(range(10, 0, -1))
+    assert [col["reps"] for col in ctx["rep_range"]] == list(range(10, 0, -1))
+    assert [col["points"] for col in ctx["rep_range"]] == list(range(1, 11))
     assert [cell["rep"] for cell in ctx["lifts"][0]["cells"]] == list(range(10, 0, -1))
 
 
@@ -583,7 +596,8 @@ class TestSetupView:
         content = response.content.decode()
         assert "is missing targets" in content
         # The two valid cells are preserved (display-formatted) for correction.
-        assert 'value="80.0"' in content
+        # A whole weight keeps no trailing ".0" (accounts.units.trim_whole_weight).
+        assert 'value="80"' in content
 
     def test_grid_blank_name_defaults_and_saves(
         self, authed_client, participant, challenge

@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-23 00:51+0000\n"
+"POT-Creation-Date: 2026-08-24 22:58+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -97,7 +97,7 @@ msgstr "Demasiados intentos. Inténtalo de nuevo en un minuto."
 msgid "You must accept the Terms of Service and Privacy Policy."
 msgstr "Debes aceptar los Términos de Servicio y la Política de Privacidad."
 
-#: accounts/views.py:326 challenges/views.py:133
+#: accounts/views.py:326 challenges/views.py:149
 msgid "Could not validate this Liftosaur API key."
 msgstr "No se pudo validar esta clave de API de Liftosaur."
 
@@ -220,24 +220,24 @@ msgid "Unknown lift \"%(lift_name)s\" — not configured for this challenge."
 msgstr ""
 "Ejercicio desconocido \"%(lift_name)s\" — no configurado para este reto."
 
-#: challenges/custom_goals.py:139
+#: challenges/custom_goals.py:144
 msgid "Could not parse JSON. Please paste a valid JSON object."
 msgstr "No se pudo analizar el JSON. Pega un objeto JSON válido."
 
-#: challenges/custom_goals.py:147
+#: challenges/custom_goals.py:152
 msgid "JSON payload must be an object with \"name\" and \"targets\" keys."
 msgstr "El JSON debe ser un objeto con las claves \"name\" y \"targets\"."
 
-#: challenges/custom_goals.py:155
+#: challenges/custom_goals.py:160
 msgid "JSON payload must include a non-empty \"name\" key."
 msgstr "El JSON debe incluir una clave \"name\" no vacía."
 
-#: challenges/custom_goals.py:160
+#: challenges/custom_goals.py:165
 #, python-format
 msgid "Unknown unit \"%(unit)s\"; use \"kg\" or \"lb\"."
 msgstr "Unidad desconocida \"%(unit)s\"; usa \"kg\" o \"lb\"."
 
-#: challenges/custom_goals.py:168
+#: challenges/custom_goals.py:173
 msgid ""
 "JSON payload must contain a \"targets\" object mapping lift names to rep-max "
 "weights."
@@ -245,14 +245,14 @@ msgstr ""
 "El JSON debe contener un objeto \"targets\" que asocie nombres de ejercicios "
 "con pesos máximos por repetición."
 
-#: challenges/custom_goals.py:185
+#: challenges/custom_goals.py:190
 #, python-format
 msgid "Targets for \"%(lift_name)s\" must be an object of rep count to weight."
 msgstr ""
 "Los objetivos de \"%(lift_name)s\" deben ser un objeto que asocie número de "
 "repeticiones con peso."
 
-#: challenges/custom_goals.py:250
+#: challenges/custom_goals.py:255
 #, python-format
 msgid ""
 "\"%(lift_name)s\" %(higher_rep)sRM target can't be heavier than its "
@@ -263,12 +263,12 @@ msgstr ""
 "que su objetivo de %(lower_rep)sRM — levantar más repeticiones nunca puede "
 "requerir más peso que menos repeticiones."
 
-#: challenges/custom_goals.py:306
+#: challenges/custom_goals.py:311
 #, python-format
 msgid "\"%(lift_name)s\" is missing targets for %(missing)s."
 msgstr "A \"%(lift_name)s\" le faltan objetivos para %(missing)s."
 
-#: challenges/forms.py:55 challenges/forms.py:356
+#: challenges/forms.py:55 challenges/forms.py:369
 msgid "Challenge name"
 msgstr "Nombre del reto"
 
@@ -276,74 +276,74 @@ msgstr "Nombre del reto"
 msgid "End date must be after start date."
 msgstr "La fecha de finalización debe ser posterior a la fecha de inicio."
 
-#: challenges/forms.py:109
+#: challenges/forms.py:129
 msgid "Select at least one lift."
 msgstr "Selecciona al menos un ejercicio."
 
-#: challenges/forms.py:178 challenges/forms.py:261
+#: challenges/forms.py:191 challenges/forms.py:274
 msgid "Enter a bodyweight greater than zero."
 msgstr "Introduce un peso corporal mayor que cero."
 
-#: challenges/forms.py:186
+#: challenges/forms.py:199
 msgid "Enter a stretch percentage (e.g. 10)."
 msgstr "Introduce un porcentaje de incremento (por ejemplo, 10)."
 
-#: challenges/forms.py:236 challenges/forms.py:244
+#: challenges/forms.py:249 challenges/forms.py:257
 #: templates/challenges/custom_goal_setup.html:135
 msgid "No rounding (exact)"
 msgstr "Sin redondeo (exacto)"
 
-#: challenges/forms.py:280
+#: challenges/forms.py:293
 msgid "Select a rounding increment."
 msgstr "Selecciona un incremento de redondeo."
 
-#: challenges/forms.py:307
+#: challenges/forms.py:320
 msgid "Select your sex."
 msgstr "Selecciona tu sexo."
 
-#: challenges/forms.py:311
+#: challenges/forms.py:324
 msgid "Select a population."
 msgstr "Selecciona una población."
 
-#: challenges/forms.py:326
+#: challenges/forms.py:339
 msgid "Strength standards are not available right now."
 msgstr "Los estándares de fuerza no están disponibles en este momento."
 
-#: challenges/forms.py:332
+#: challenges/forms.py:345
 msgid "Select a tier."
 msgstr "Selecciona un nivel."
 
-#: challenges/forms.py:401 templates/challenges/_invite_link_section.html:58
+#: challenges/forms.py:414 templates/challenges/_invite_link_section.html:58
 #: templates/challenges/_invite_link_section.html:63
 #: templates/challenges/_invite_link_section.html:106
 msgid "Never expires"
 msgstr "Nunca expira"
 
-#: challenges/forms.py:410
+#: challenges/forms.py:423
 msgid "Unlimited"
 msgstr "Ilimitado"
 
-#: challenges/forms.py:437
+#: challenges/forms.py:450
 msgid "Expiry must be in the future."
 msgstr "La expiración debe ser en el futuro."
 
-#: challenges/forms.py:444
+#: challenges/forms.py:457
 msgid "Expiry can't be after the challenge ends."
 msgstr "La expiración no puede ser posterior a la finalización de este reto."
 
-#: challenges/forms.py:477
+#: challenges/forms.py:490 templates/challenges/rep_target_goal_setup.html:46
 msgid "Goal name"
 msgstr "Nombre del objetivo"
 
-#: challenges/forms.py:481 templates/challenges/custom_goal_setup.html:118
+#: challenges/forms.py:494 templates/challenges/custom_goal_setup.html:118
 msgid "e.g. Spring targets"
 msgstr "p. ej. Objetivos de primavera"
 
-#: challenges/forms.py:485
+#: challenges/forms.py:498
 msgid "Targets JSON"
 msgstr "JSON de objetivos"
 
-#: challenges/forms.py:555
+#: challenges/forms.py:568
 msgid ""
 "Some lift names in your JSON weren't recognized. Review them below and "
 "confirm to continue, or edit the JSON."
@@ -351,63 +351,96 @@ msgstr ""
 "Algunos nombres de ejercicios en tu JSON no fueron reconocidos. Revísalos a "
 "continuación y confirma para continuar, o edita el JSON."
 
-#: challenges/models.py:17 templates/challenges/detail.html:16
-#: templates/challenges/find.html:50 templates/challenges/find.html:104
+#: challenges/models.py:17 templates/challenges/create.html:93
+msgid "Classic"
+msgstr "Clásico"
+
+#: challenges/models.py:18 templates/challenges/create.html:93
+msgid "Rep Target"
+msgstr "Objetivo de repeticiones"
+
+#: challenges/models.py:21 templates/challenges/detail.html:16
+#: templates/challenges/find.html:52 templates/challenges/find.html:106
 msgid "Draft"
 msgstr "Borrador"
 
-#: challenges/models.py:18 templates/challenges/detail.html:18
-#: templates/challenges/find.html:48 templates/challenges/find.html:102
+#: challenges/models.py:22 templates/challenges/detail.html:18
+#: templates/challenges/find.html:50 templates/challenges/find.html:104
 msgid "Active"
 msgstr "Activo"
 
-#: challenges/models.py:19 templates/challenges/detail.html:22
-#: templates/challenges/find.html:52 templates/challenges/find.html:106
+#: challenges/models.py:23 templates/challenges/detail.html:22
+#: templates/challenges/find.html:54 templates/challenges/find.html:108
 msgid "Completed"
 msgstr "Completado"
 
-#: challenges/models.py:20 templates/challenges/detail.html:20
+#: challenges/models.py:24 templates/challenges/detail.html:20
 msgid "Cancelled"
 msgstr "Cancelado"
 
-#: challenges/models.py:27 templates/challenges/_history_window_section.html:51
+#: challenges/models.py:31 templates/challenges/_history_window_section.html:51
 msgid "From join date"
 msgstr "Desde la fecha de inscripción"
 
-#: challenges/models.py:28 templates/challenges/_history_window_section.html:49
+#: challenges/models.py:32 templates/challenges/_history_window_section.html:49
 msgid "From challenge start"
 msgstr "Desde el inicio del reto"
 
-#: challenges/models.py:205
+#: challenges/models.py:220
 msgid "Invited"
 msgstr "Invitado"
 
-#: challenges/models.py:206
+#: challenges/models.py:221
 msgid "Accepted"
 msgstr "Aceptado"
 
-#: challenges/models.py:207
+#: challenges/models.py:222
 msgid "Declined"
 msgstr "Rechazado"
 
-#: challenges/models.py:287 templates/challenges/goal_setup_method.html:32
+#: challenges/models.py:319 templates/challenges/goal_setup_method.html:32
 msgid "Strength standards"
 msgstr "Estándares de fuerza"
 
-#: challenges/models.py:288
+#: challenges/models.py:320 challenges/models.py:428
 msgid "Suggested from history"
 msgstr "Sugerido a partir del historial"
 
-#: challenges/models.py:289 templates/challenges/goal_setup_method.html:49
+#: challenges/models.py:321 challenges/models.py:429
+#: templates/challenges/goal_setup_method.html:49
 msgid "Manual entry"
 msgstr "Entrada manual"
 
-#: challenges/models.py:290 templates/challenges/custom_goal_setup.html:66
+#: challenges/models.py:322 templates/challenges/custom_goal_setup.html:66
 #: templates/challenges/goal_setup_method.html:57
 msgid "Paste JSON"
 msgstr "Pegar JSON"
 
-#: challenges/services.py:1594
+#: challenges/rep_target_goals.py:72
+#, python-format
+msgid "\"%(lift_name)s\" target weight must be a number."
+msgstr "El peso objetivo de \"%(lift_name)s\" debe ser un número."
+
+#: challenges/rep_target_goals.py:74
+#, python-format
+msgid "\"%(lift_name)s\" target weight must be a positive number."
+msgstr "El peso objetivo de \"%(lift_name)s\" debe ser un número positivo."
+
+#: challenges/rep_target_goals.py:82
+#, python-format
+msgid ""
+"\"%(lift_name)s\" target reps must be a whole number between 1 and "
+"%(max_reps)s."
+msgstr ""
+"Las repeticiones objetivo de \"%(lift_name)s\" deben ser un número entero "
+"entre 1 y %(max_reps)s."
+
+#: challenges/rep_target_goals.py:148
+#, python-format
+msgid "\"%(lift_name)s\" is missing a target."
+msgstr "A \"%(lift_name)s\" le falta un objetivo."
+
+#: challenges/services.py:1967
 #, python-format, python-brace-format
 msgid ""
 "Suggested from history: +{percent}% uplift, based on the last {days} days"
@@ -415,12 +448,12 @@ msgstr ""
 "Sugerido a partir del historial: +{percent}% de incremento, basado en los "
 "últimos {days} días"
 
-#: challenges/services.py:1600
+#: challenges/services.py:1973
 #, python-brace-format
 msgid "(rounded to the nearest {amount} {unit})"
 msgstr "(redondeado al {amount} {unit} más cercano)"
 
-#: challenges/services.py:1720
+#: challenges/services.py:2093
 msgid ""
 "Recent history for this lift is entirely machine-assisted, which can't be "
 "converted into a target."
@@ -428,38 +461,60 @@ msgstr ""
 "El historial reciente de este ejercicio es completamente asistido por "
 "máquina y no puede convertirse en un objetivo."
 
-#: challenges/services.py:1725
+#: challenges/services.py:2098
 msgid "No recent history or published standard for this lift yet."
 msgstr ""
 "Todavía no hay historial reciente ni un estándar publicado para este "
 "ejercicio."
 
-#: challenges/views.py:577
+#: challenges/views.py:602
 msgid "You were removed from this challenge and cannot rejoin with this link."
 msgstr ""
 "Se te eliminó de este reto y no puedes volver a unirte con este enlace."
 
-#: challenges/views.py:735
+#: challenges/views.py:760
 msgid "Challenge is not active"
 msgstr "El reto no está activo"
 
-#: challenges/views.py:843
+#: challenges/views.py:850 challenges/views.py:1073
+msgid ""
+"Couldn't refresh your Liftosaur history just now. Showing the history we "
+"already have."
+msgstr ""
+"No se pudo actualizar tu historial de Liftosaur ahora mismo. Se muestra el "
+"historial que ya tenemos."
+
+#: challenges/views.py:886
+#, python-format
+msgid "No recent history for %(lifts)s. Enter a target manually."
+msgid_plural "No recent history for %(lifts)s. Enter targets manually."
+msgstr[0] ""
+"No hay historial reciente para %(lifts)s. Introduce un objetivo manualmente."
+msgstr[1] ""
+"No hay historial reciente para %(lifts)s. Introduce los objetivos "
+"manualmente."
+
+#: challenges/views.py:899
+msgid ""
+"Blank fields were filled from your recent history; values you typed were "
+"kept. Review every row before confirming."
+msgstr ""
+"Los campos vacíos se rellenaron a partir de tu historial reciente; los "
+"valores que escribiste se conservaron. Revisa cada fila antes de confirmar."
+
+#: challenges/views.py:910
+msgid "Goal name must be 100 characters or fewer."
+msgstr "El nombre del objetivo debe tener 100 caracteres o menos."
+
+#: challenges/views.py:993
 msgid "This challenge has ended; goals can no longer be set."
 msgstr "Este reto ha terminado; ya no se pueden establecer objetivos."
 
-#: challenges/views.py:850
+#: challenges/views.py:1000
 msgid "Your chart for this challenge is locked and can't be changed."
 msgstr "Tu tabla para este desafío está bloqueada y no se puede cambiar."
 
-#: challenges/views.py:914
-msgid ""
-"Couldn't refresh your Liftosaur history just now — showing the history we "
-"already have."
-msgstr ""
-"No se pudo actualizar tu historial de Liftosaur ahora mismo; se muestra el "
-"historial que ya tenemos."
-
-#: challenges/views.py:1289
+#: challenges/views.py:1448
 msgid ""
 "Prefilled from FitnessVolt strength standards. Review every row before "
 "confirming — this chart is locked once you save it."
@@ -467,7 +522,7 @@ msgstr ""
 "Prellenado con los estándares de fuerza de FitnessVolt. Revisa cada fila "
 "antes de confirmar — esta tabla queda bloqueada en cuanto la guardes."
 
-#: challenges/views.py:1305
+#: challenges/views.py:1464
 #, python-brace-format
 msgid ""
 "Prefilled from your recent Liftosaur history, uplifted {percent}%. Review "
@@ -477,59 +532,59 @@ msgstr ""
 "del {percent}%. Revisa cada fila antes de confirmar — esta tabla queda "
 "bloqueada en cuanto la guardes."
 
-#: challenges/views.py:1389
+#: challenges/views.py:1548
 msgid "Set your goal to view this challenge."
 msgstr "Establece tu objetivo para ver este reto."
 
-#: challenges/views.py:1556
+#: challenges/views.py:1716
 msgid "Invalid rep count."
 msgstr "Número de repeticiones inválido."
 
-#: challenges/views.py:1561
+#: challenges/views.py:1721
 msgid "Invalid date."
 msgstr "Fecha inválida."
 
-#: challenges/views.py:1563
+#: challenges/views.py:1723
 msgid "Date cannot be in the future."
 msgstr "La fecha no puede ser futura."
 
-#: challenges/views.py:1574
+#: challenges/views.py:1734
 msgid "Could not log this lift."
 msgstr "No se pudo registrar este levantamiento."
 
-#: challenges/views.py:1580
+#: challenges/views.py:1740
 #, python-format
 msgid "Logged %(points)s point on %(lift)s."
 msgid_plural "Logged %(points)s points on %(lift)s."
 msgstr[0] "Registrado %(points)s punto en %(lift)s."
 msgstr[1] "Registrados %(points)s puntos en %(lift)s."
 
-#: challenges/views.py:1590
+#: challenges/views.py:1750
 msgid "Unknown lift for this challenge."
 msgstr "Levantamiento desconocido para este desafío."
 
-#: challenges/views.py:1666
+#: challenges/views.py:1826
 msgid "This challenge has already ended."
 msgstr "Este reto ya ha terminado."
 
-#: challenges/views.py:1680
+#: challenges/views.py:1840
 msgid "You cannot leave this challenge."
 msgstr "No puedes abandonar este reto."
 
-#: challenges/views.py:1688
+#: challenges/views.py:1851
 msgid "You have left the challenge."
 msgstr "Has abandonado el reto."
 
-#: challenges/views.py:1694 challenges/views.py:1702
-#: templates/challenges/detail.html:577
+#: challenges/views.py:1857 challenges/views.py:1865
+#: templates/challenges/detail.html:590
 msgid "Leave Challenge"
 msgstr "Abandonar Reto"
 
-#: challenges/views.py:1695
+#: challenges/views.py:1858
 msgid "leave"
 msgstr "abandonar"
 
-#: challenges/views.py:1697
+#: challenges/views.py:1860
 msgid ""
 "Leaving freezes your scoring — no further points will be earned for you in "
 "this challenge. Your past entries stay visible. This action cannot be undone."
@@ -537,46 +592,47 @@ msgstr ""
 "Abandonar congela tu puntuación — no ganarás más puntos en este reto. Tus "
 "entradas anteriores seguirán visibles. Esta acción no se puede deshacer."
 
-#: challenges/views.py:1798 templates/accounts/_avatar_section.html:117
+#: challenges/views.py:1961 templates/accounts/_avatar_section.html:117
 #: templates/challenges/_history_window_section.html:41
 #: templates/challenges/_invite_link_section.html:96
 #: templates/challenges/_rename_section.html:31
 #: templates/challenges/_summary_card.html:76
 #: templates/challenges/create.html:42 templates/challenges/create.html:76
-#: templates/challenges/create.html:136
-#: templates/challenges/custom_goal_setup.html:231
+#: templates/challenges/create.html:114 templates/challenges/create.html:189
+#: templates/challenges/custom_goal_setup.html:236
 #: templates/challenges/goal_setup_inputs.html:147
 #: templates/challenges/key_required.html:38
+#: templates/challenges/rep_target_goal_setup.html:113
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: challenges/views.py:1896
+#: challenges/views.py:2059
 msgid "This challenge can no longer be modified."
 msgstr "Este reto ya no se puede modificar."
 
-#: challenges/views.py:1915
+#: challenges/views.py:2078
 msgid "The creator cannot be removed from their own challenge."
 msgstr "El creador no puede ser eliminado de su propio reto."
 
-#: challenges/views.py:1931
+#: challenges/views.py:2094
 msgid "This participant cannot be removed."
 msgstr "Este participante no se puede eliminar."
 
-#: challenges/views.py:1945
+#: challenges/views.py:2108
 #, python-format
 msgid "%(name)s has been removed from the challenge."
 msgstr "%(name)s ha sido eliminado/a del reto."
 
-#: challenges/views.py:1952 challenges/views.py:1961
+#: challenges/views.py:2115 challenges/views.py:2124
 msgid "Remove Participant"
 msgstr "Eliminar Participante"
 
-#: challenges/views.py:1953
+#: challenges/views.py:2116
 #, python-format
 msgid "remove %(name)s from"
 msgstr "eliminar a %(name)s de"
 
-#: challenges/views.py:1955
+#: challenges/views.py:2118
 msgid ""
 "Removing freezes their scoring — no further points will be earned for them "
 "in this challenge. Their past entries stay on the leaderboard. They cannot "
@@ -587,27 +643,27 @@ msgstr ""
 "unirse, ni siquiera con un enlace de invitación. Esta acción no se puede "
 "deshacer."
 
-#: challenges/views.py:1974
+#: challenges/views.py:2137
 msgid "This challenge can no longer be closed."
 msgstr "Este reto ya no se puede cerrar."
 
-#: challenges/views.py:1983
+#: challenges/views.py:2146
 msgid "Challenge closed."
 msgstr "Reto cerrado."
 
-#: challenges/views.py:1989 challenges/views.py:1998
+#: challenges/views.py:2152 challenges/views.py:2161
 msgid "Close Challenge"
 msgstr "Cerrar Reto"
 
-#: challenges/views.py:1990
+#: challenges/views.py:2153
 msgid "close"
 msgstr "cerrar"
 
-#: challenges/views.py:1991
+#: challenges/views.py:2154
 msgid " early"
 msgstr " anticipadamente"
 
-#: challenges/views.py:1993
+#: challenges/views.py:2156
 msgid ""
 "Closing runs a final sync for every participant, locks the leaderboard, and "
 "notifies everyone that the challenge has ended. This action cannot be undone."
@@ -616,68 +672,68 @@ msgstr ""
 "clasificación y notifica a todos que el reto ha terminado. Esta acción no se "
 "puede deshacer."
 
-#: challenges/views.py:2027
+#: challenges/views.py:2190
 msgid "This challenge can no longer be renamed."
 msgstr "Este reto ya no se puede renombrar."
 
-#: challenges/views.py:2040
+#: challenges/views.py:2203
 msgid "Challenge name updated."
 msgstr "Nombre del reto actualizado."
 
-#: challenges/views.py:2082
+#: challenges/views.py:2245
 msgid "This challenge's point-eligible window can no longer be changed."
 msgstr ""
 "La ventana de elegibilidad de puntos de este desafío ya no se puede cambiar."
 
-#: challenges/views.py:2100
+#: challenges/views.py:2263
 msgid "Point-eligible window updated."
 msgstr "Ventana de elegibilidad de puntos actualizada."
 
-#: challenges/views.py:2157 challenges/views.py:2166 challenges/views.py:2222
-#: challenges/views.py:2231
+#: challenges/views.py:2320 challenges/views.py:2329 challenges/views.py:2385
+#: challenges/views.py:2394
 msgid "This challenge can no longer accept invites."
 msgstr "Este reto ya no puede aceptar invitaciones."
 
-#: challenges/views.py:2183
+#: challenges/views.py:2346
 msgid "A new invite link has been generated."
 msgstr "Se ha generado un nuevo enlace de invitación."
 
-#: challenges/views.py:2256
+#: challenges/views.py:2419
 msgid "The invite link has been updated."
 msgstr "El enlace de invitación se ha actualizado."
 
-#: challenges/views.py:2262
+#: challenges/views.py:2425
 msgid "Could not update the invite link."
 msgstr "No se pudo actualizar el enlace de invitación."
 
-#: challenges/views.py:2327
+#: challenges/views.py:2490
 msgid "This challenge's ownership can no longer be transferred."
 msgstr "La propiedad de este reto ya no se puede transferir."
 
-#: challenges/views.py:2352
+#: challenges/views.py:2515
 msgid "Ownership can only be transferred to an active, accepted participant."
 msgstr ""
 "La propiedad solo se puede transferir a un participante activo y aceptado."
 
-#: challenges/views.py:2377
+#: challenges/views.py:2540
 #, python-format
 msgid "Ownership transferred to %(name)s."
 msgstr "Propiedad transferida a %(name)s."
 
-#: challenges/views.py:2384 challenges/views.py:2395
+#: challenges/views.py:2547 challenges/views.py:2558
 msgid "Transfer Ownership"
 msgstr "Transferir Propiedad"
 
-#: challenges/views.py:2385
+#: challenges/views.py:2548
 msgid "transfer ownership of"
 msgstr "transferir la propiedad de"
 
-#: challenges/views.py:2386
+#: challenges/views.py:2549
 #, python-format
 msgid " to %(name)s"
 msgstr " a %(name)s"
 
-#: challenges/views.py:2388
+#: challenges/views.py:2551
 #, python-format
 msgid ""
 "%(name)s will gain full control of this challenge — closing, cancelling, "
@@ -690,24 +746,24 @@ msgstr ""
 "nuevo propietario puede transferirte la propiedad de vuelta, por lo que no "
 "puedes deshacer esto por tu cuenta."
 
-#: challenges/views.py:2413
+#: challenges/views.py:2576
 msgid "This challenge can no longer be cancelled."
 msgstr "Este reto ya no se puede cancelar."
 
-#: challenges/views.py:2423
+#: challenges/views.py:2586
 msgid "Challenge cancelled."
 msgstr "Reto cancelado."
 
-#: challenges/views.py:2429 challenges/views.py:2438
+#: challenges/views.py:2592 challenges/views.py:2601
 #: templates/challenges/settings.html:45
 msgid "Cancel Challenge"
 msgstr "Cancelar Reto"
 
-#: challenges/views.py:2430
+#: challenges/views.py:2593
 msgid "cancel"
 msgstr "cancelar"
 
-#: challenges/views.py:2432
+#: challenges/views.py:2595
 msgid ""
 "Cancelling voids the challenge entirely — no final sync runs, no scores are "
 "recorded, and no closing notifications are sent. The challenge is removed "
@@ -718,15 +774,15 @@ msgstr ""
 "cierre. El reto se elimina de la lista de Buscar Retos. Esta acción no se "
 "puede deshacer."
 
-#: challenges/views.py:2440 templates/accounts/delete_account.html:77
+#: challenges/views.py:2603 templates/accounts/delete_account.html:77
 msgid "Go Back"
 msgstr "Volver"
 
-#: challenges/views.py:2473
+#: challenges/views.py:2636
 msgid "Only draft challenges can be deleted."
 msgstr "Solo se pueden eliminar los retos en borrador."
 
-#: challenges/views.py:2477
+#: challenges/views.py:2640
 msgid "Draft challenge deleted."
 msgstr "Reto en borrador eliminado."
 
@@ -1422,6 +1478,7 @@ msgstr "Un momento…"
 
 #: templates/accounts/timezone_detect.html:14
 #: templates/challenges/create.html:40 templates/challenges/create.html:74
+#: templates/challenges/create.html:112
 #: templates/challenges/goal_setup_inputs.html:143
 #: templates/challenges/goal_setup_method.html:67
 #: templates/registration/onboarding_connect_tracker.html:112
@@ -1579,49 +1636,72 @@ msgstr "Bloqueado %(date)s"
 
 #: templates/challenges/_participant_chart.html:21
 #: templates/challenges/_participant_chart.html:42
+#: templates/challenges/_rep_target_summary_card.html:18
 #: templates/challenges/_summary_card.html:45
 #, python-format
 msgid "%(points)s pts"
 msgstr "%(points)s pts"
 
 #: templates/challenges/_participant_chart.html:24
-#: templates/challenges/_participant_chart.html:89
+#: templates/challenges/_participant_chart.html:99
 msgid "Close"
 msgstr "Cerrar"
 
 #: templates/challenges/_participant_chart.html:44
+#: templates/challenges/_participant_chart.html:67
+#: templates/challenges/_rep_target_goal_table.html:48
+#: templates/challenges/_rep_target_summary_card.html:14
 #: templates/challenges/_summary_card.html:47
-msgid "reps"
-msgstr "repeticiones"
+#: templates/challenges/custom_goal_setup.html:175
+#: templates/challenges/detail.html:339
+msgid "rep"
+msgid_plural "reps"
+msgstr[0] "repetición"
+msgstr[1] "repeticiones"
 
 #: templates/challenges/_participant_chart.html:47
 msgid "No points yet"
 msgstr "Sin puntos todavía"
 
-#: templates/challenges/_participant_chart.html:57
+#: templates/challenges/_participant_chart.html:56
+#: templates/challenges/_rep_target_goal_tab.html:10
+#, python-format
+msgid "Weight shown in %(unit)s"
+msgstr "Peso mostrado en %(unit)s"
+
+#: templates/challenges/_participant_chart.html:56
+msgid "Highlighted column = the points this lifter's best set earned."
+msgstr ""
+"Columna resaltada = los puntos que consiguió el mejor intento de este atleta."
+
+#: templates/challenges/_participant_chart.html:63
+#: templates/challenges/_rep_target_goal_table.html:22
 #: templates/challenges/custom_goal_setup.html:169
-#: templates/challenges/detail.html:166 templates/challenges/detail.html:326
+#: templates/challenges/detail.html:168 templates/challenges/detail.html:335
+#: templates/challenges/rep_target_goal_setup.html:59
 msgid "Lift"
 msgstr "Ejercicio"
 
-#: templates/challenges/_participant_chart.html:67
-#: templates/challenges/detail.html:336
+#: templates/challenges/_participant_chart.html:76
+#: templates/challenges/_rep_target_goal_table.html:33
+#: templates/challenges/detail.html:348
+#: templates/challenges/rep_target_goal_setup.html:71
 msgid "BW"
 msgstr "PC"
 
-#: templates/challenges/_participant_chart.html:80
-#: templates/challenges/detail.html:348
+#: templates/challenges/_participant_chart.html:89
+#: templates/challenges/detail.html:360
 #, python-format
 msgid "Thresholds shown in %(unit)s"
 msgstr "Umbrales mostrados en %(unit)s"
 
-#: templates/challenges/_participant_chart.html:80
+#: templates/challenges/_participant_chart.html:89
 msgid "Highlighted cell = the target this lifter's best set satisfied."
 msgstr ""
 "Celda resaltada = el objetivo que cumplió la mejor serie de este "
 "participante."
 
-#: templates/challenges/_participant_chart.html:86
+#: templates/challenges/_participant_chart.html:96
 msgid "This participant hasn't set their goal yet."
 msgstr "Este participante todavía no ha configurado su objetivo."
 
@@ -1660,19 +1740,71 @@ msgstr "Guardando nombre…"
 msgid "Edit challenge name"
 msgstr "Editar nombre del reto"
 
-#: templates/challenges/_summary_card.html:40
-#, python-format
-msgid "Log a set for %(lift)s"
-msgstr "Registrar una serie de %(lift)s"
+#: templates/challenges/_rep_target_goal_tab.html:10
+msgid "for your rep target goal."
+msgstr "para tu objetivo de repeticiones."
 
+#: templates/challenges/_rep_target_goal_table.html:23
+#: templates/challenges/rep_target_goal_setup.html:62
+msgid "Weight"
+msgstr "Peso"
+
+#: templates/challenges/_rep_target_summary_card.html:14
+#, python-format
+msgid "Target: <span class=\"font-mono\">%(weight)s</span>"
+msgstr "Objetivo: <span class=\"font-mono\">%(weight)s</span>"
+
+#: templates/challenges/_rep_target_summary_card.html:23
+#, python-format
+msgid ""
+"<span class=\"font-mono\">%(progress)s</span>/<span class=\"font-"
+"mono\">%(target)s</span> reps"
+msgstr ""
+"<span class=\"font-mono\">%(progress)s</span>/<span class=\"font-"
+"mono\">%(target)s</span> repeticiones"
+
+#: templates/challenges/_rep_target_summary_card.html:28
+#: templates/challenges/detail.html:106
+#, python-format
+msgid "%(counter)s more rep for your next point on %(lift)s."
+msgid_plural "%(counter)s more reps for your next point on %(lift)s."
+msgstr[0] "%(counter)s repetición más para tu siguiente punto en %(lift)s."
+msgstr[1] "%(counter)s repeticiones más para tu siguiente punto en %(lift)s."
+
+#: templates/challenges/_rep_target_summary_card.html:33
 #: templates/challenges/_summary_card.html:52
 msgid "Close to goal"
 msgstr "Cerca del objetivo"
 
+#: templates/challenges/_rep_target_summary_card.html:36
 #: templates/challenges/_summary_card.html:55
 #, python-format
 msgid "Best logged: <span class=\"font-mono\">%(weight)s</span>"
 msgstr "Mejor registrado: <span class=\"font-mono\">%(weight)s</span>"
+
+#: templates/challenges/_rep_target_summary_card.html:36
+#, python-format
+msgid "(%(date)s)"
+msgstr "(%(date)s)"
+
+#: templates/challenges/_rep_target_summary_card.html:40
+#, python-format
+msgid ""
+"Add <span class=\"font-mono\">%(gap)s</span> %(unit)s to start scoring on "
+"%(lift)s."
+msgstr ""
+"Añade <span class=\"font-mono\">%(gap)s</span> %(unit)s para empezar a "
+"puntuar en %(lift)s."
+
+#: templates/challenges/_rep_target_summary_card.html:44
+#: templates/challenges/_summary_card.html:68
+msgid "No data yet"
+msgstr "Aún no hay datos"
+
+#: templates/challenges/_summary_card.html:40
+#, python-format
+msgid "Log a set for %(lift)s"
+msgstr "Registrar una serie de %(lift)s"
 
 #: templates/challenges/_summary_card.html:55
 #, python-format
@@ -1712,10 +1844,6 @@ msgstr ""
 "Has registrado este ejercicio antes, pero no desde entonces. Registra un "
 "nuevo set para empezar."
 
-#: templates/challenges/_summary_card.html:68
-msgid "No data yet"
-msgstr "Aún no hay datos"
-
 #: templates/challenges/_summary_card.html:92
 msgid "Previous rep count"
 msgstr "Número de repeticiones anterior"
@@ -1725,7 +1853,7 @@ msgid "Next rep count"
 msgstr "Siguiente número de repeticiones"
 
 #: templates/challenges/_summary_card.html:112
-#: templates/challenges/detail.html:168 templates/challenges/detail.html:216
+#: templates/challenges/detail.html:170 templates/challenges/detail.html:218
 #: templates/challenges/invite_accept.html:208 templates/dashboard.html:149
 msgid "Date"
 msgstr "Fecha"
@@ -1735,7 +1863,7 @@ msgstr "Fecha"
 msgid "Are you sure you want to %(verb)s <strong>%(name)s</strong>%(suffix)s?"
 msgstr "¿Seguro que quieres %(verb)s <strong>%(name)s</strong>%(suffix)s?"
 
-#: templates/challenges/create.html:4 templates/challenges/create.html:134
+#: templates/challenges/create.html:4 templates/challenges/create.html:187
 #: templates/challenges/find.html:11
 msgid "Create Challenge"
 msgstr "Crear Reto"
@@ -1775,43 +1903,87 @@ msgstr "Fecha de Inicio"
 msgid "End Date"
 msgstr "Fecha de Finalización"
 
-#: templates/challenges/create.html:72 templates/challenges/create.html:132
-#: templates/challenges/custom_goal_setup.html:222
+#: templates/challenges/create.html:72 templates/challenges/create.html:110
+#: templates/challenges/create.html:185
+#: templates/challenges/custom_goal_setup.html:227
 #: templates/challenges/goal_setup_inputs.html:141
 #: templates/policies/policy_list.html:10
 msgid "Back"
 msgstr "Atrás"
 
 #: templates/challenges/create.html:81
-msgid "Choose your lifts"
-msgstr "Elige tus ejercicios"
+msgid "Choose a scoring mode"
+msgstr "Elige un modo de puntuación"
 
 #: templates/challenges/create.html:83
 msgid ""
-"This lift list applies to every participant for the whole challenge — each "
-"person's goal chart will cover exactly these lifts."
+"This applies to the whole challenge and can't be changed once you continue."
+msgstr ""
+"Esto se aplica a todo el desafío y no se puede cambiar una vez que continúes."
+
+#: templates/challenges/create.html:97
+msgid ""
+"Score against a personal rep-max weight chart — a target weight for each rep "
+"count, 1 through 10."
+msgstr ""
+"Puntúa contra una tabla personal de peso máximo por repetición — un peso "
+"objetivo para cada número de repeticiones, del 1 al 10."
+
+#: templates/challenges/create.html:99
+msgid ""
+"Score against a single reps-at-a-weight goal per exercise — well suited to "
+"calisthenics like push-ups, dips, and pull-ups."
+msgstr ""
+"Puntúa contra un único objetivo de repeticiones a un peso por ejercicio — "
+"ideal para calistenia como flexiones, fondos y dominadas."
+
+#: templates/challenges/create.html:119
+msgid "Choose your lifts"
+msgstr "Elige tus ejercicios"
+
+#: templates/challenges/create.html:125
+msgid ""
+"This lift list applies to every participant for the whole challenge. Each "
+"person's goal chart will cover exactly these lifts. \"All Lifts\" holds "
+"everything; \"Popular\" and \"Calisthenics\" are curated shortcuts into the "
+"same list."
 msgstr ""
 "Esta lista de ejercicios se aplica a todos los participantes durante todo el "
-"desafío — el gráfico de objetivos de cada persona cubrirá exactamente estos "
-"ejercicios."
+"desafío. El gráfico de objetivos de cada persona cubrirá exactamente estos "
+"ejercicios. «Todos los ejercicios» incluye todo; «Populares» y «Calistenia» "
+"son accesos directos seleccionados a la misma lista."
 
-#: templates/challenges/create.html:91
+#: templates/challenges/create.html:133
 msgid "Search lifts…"
 msgstr "Buscar ejercicios…"
 
-#: templates/challenges/create.html:94
+#: templates/challenges/create.html:139
+msgid "selected"
+msgstr "seleccionados"
+
+#: templates/challenges/create.html:143
+msgid "Select all"
+msgstr "Seleccionar todo"
+
+#: templates/challenges/create.html:146
+#: templates/challenges/rep_target_goal_setup.html:107
 msgid "Clear all"
 msgstr "Borrar todo"
 
-#: templates/challenges/create.html:99
+#: templates/challenges/create.html:155
+msgid "All Lifts"
+msgstr "Todos los ejercicios"
+
+#: templates/challenges/create.html:159
 msgid "Popular"
 msgstr "Populares"
 
-#: templates/challenges/create.html:115
-msgid "All lifts"
-msgstr "Todos los ejercicios"
+#: templates/challenges/create.html:163
+msgid "Calisthenics"
+msgstr "Calistenia"
 
 #: templates/challenges/custom_goal_setup.html:4
+#: templates/challenges/rep_target_goal_setup.html:4
 #, python-format
 msgid "Set Your Goal — %(name)s"
 msgstr "Establecer Tu Objetivo — %(name)s"
@@ -1856,6 +2028,7 @@ msgstr ""
 "después de unirte."
 
 #: templates/challenges/custom_goal_setup.html:45
+#: templates/challenges/rep_target_goal_setup.html:28
 msgid "Please fix the following:"
 msgstr "Corrige lo siguiente:"
 
@@ -1970,31 +2143,34 @@ msgstr ""
 "Calcular omitió estos levantamientos porque sus pesos fijados aumentan con "
 "las repeticiones — corrige los valores fijados primero: "
 
-#: templates/challenges/custom_goal_setup.html:185
-#: templates/challenges/custom_goal_setup.html:186
+#: templates/challenges/custom_goal_setup.html:190
+#: templates/challenges/custom_goal_setup.html:191
+#: templates/challenges/rep_target_goal_setup.html:74
+#: templates/challenges/rep_target_goal_setup.html:75
 msgid "Clear this row"
 msgstr "Borrar esta fila"
 
-#: templates/challenges/custom_goal_setup.html:214
+#: templates/challenges/custom_goal_setup.html:219
 msgid "This challenge has no lifts configured."
 msgstr "Este reto no tiene ejercicios configurados."
 
-#: templates/challenges/custom_goal_setup.html:227
+#: templates/challenges/custom_goal_setup.html:232
+#: templates/challenges/rep_target_goal_setup.html:111
 msgid "Confirm Goal"
 msgstr "Confirmar Objetivo"
 
-#: templates/challenges/custom_goal_setup.html:230
+#: templates/challenges/custom_goal_setup.html:235
 #: templates/challenges/goal_setup_inputs.html:146
 msgid "Cancel and discard everything entered so far?"
 msgstr "¿Cancelar y descartar todo lo introducido hasta ahora?"
 
-#: templates/challenges/detail.html:28 templates/challenges/find.html:32
-#: templates/challenges/find.html:124
+#: templates/challenges/detail.html:28 templates/challenges/find.html:33
+#: templates/challenges/find.html:130
 msgid "Start"
 msgstr "Inicio"
 
-#: templates/challenges/detail.html:32 templates/challenges/find.html:33
-#: templates/challenges/find.html:128
+#: templates/challenges/detail.html:32 templates/challenges/find.html:34
+#: templates/challenges/find.html:134
 msgid "End"
 msgstr "Fin"
 
@@ -2018,12 +2194,12 @@ msgstr "Posición"
 msgid "Participant"
 msgstr "Participante"
 
-#: templates/challenges/detail.html:68 templates/challenges/detail.html:167
+#: templates/challenges/detail.html:68 templates/challenges/detail.html:169
 msgid "Points"
 msgstr "Puntos"
 
-#: templates/challenges/detail.html:79 templates/challenges/find.html:44
-#: templates/challenges/find.html:99
+#: templates/challenges/detail.html:79 templates/challenges/find.html:45
+#: templates/challenges/find.html:101
 #: templates/challenges/participant_chart.html:10
 #: templates/challenges/settings.html:10 templates/challenges/share.html:21
 #: templates/dashboard.html:86 templates/dashboard.html:204
@@ -2042,7 +2218,7 @@ msgstr "Aún no hay puntuaciones."
 msgid "Final stretch"
 msgstr "Recta final"
 
-#: templates/challenges/detail.html:106
+#: templates/challenges/detail.html:108
 #, python-format
 msgid ""
 "<span class=\"font-mono\">%(gap)s</span> %(unit)s away from your next point "
@@ -2051,7 +2227,7 @@ msgstr ""
 "<span class=\"font-mono\">%(gap)s</span> %(unit)s de distancia de tu próximo "
 "punto en %(lift)s."
 
-#: templates/challenges/detail.html:108
+#: templates/challenges/detail.html:110
 #, python-format
 msgid ""
 "<span class=\"font-mono\">%(gap)s</span> %(unit)s away from your first point "
@@ -2060,13 +2236,13 @@ msgstr ""
 "<span class=\"font-mono\">%(gap)s</span> %(unit)s de distancia de tu primer "
 "punto en %(lift)s, o"
 
-#: templates/challenges/detail.html:110
+#: templates/challenges/detail.html:112
 msgid "more rep at this weight."
 msgid_plural "more reps at this weight."
 msgstr[0] "repetición más a este peso."
 msgstr[1] "repeticiones más a este peso."
 
-#: templates/challenges/detail.html:113
+#: templates/challenges/detail.html:115
 #, python-format
 msgid "more rep at this weight would earn your first point on %(lift)s."
 msgid_plural ""
@@ -2074,7 +2250,7 @@ msgid_plural ""
 msgstr[0] "repetición más a este peso te daría tu primer punto en %(lift)s."
 msgstr[1] "repeticiones más a este peso te darían tu primer punto en %(lift)s."
 
-#: templates/challenges/detail.html:115
+#: templates/challenges/detail.html:117
 #, python-format
 msgid ""
 "<span class=\"font-mono\">%(gap)s</span> %(unit)s away from your first point "
@@ -2083,77 +2259,77 @@ msgstr ""
 "<span class=\"font-mono\">%(gap)s</span> %(unit)s de distancia de tu primer "
 "punto en %(lift)s."
 
-#: templates/challenges/detail.html:137 templates/challenges/detail.html:190
+#: templates/challenges/detail.html:139 templates/challenges/detail.html:192
 #: templates/challenges/invite_accept.html:142
 msgid "Points Over Time"
 msgstr "Puntos a lo Largo del Tiempo"
 
-#: templates/challenges/detail.html:146 templates/challenges/detail.html:192
+#: templates/challenges/detail.html:148 templates/challenges/detail.html:194
 msgid "Points by Lift"
 msgstr "Puntos por Ejercicio"
 
-#: templates/challenges/detail.html:158 templates/challenges/detail.html:194
+#: templates/challenges/detail.html:160 templates/challenges/detail.html:196
 msgid "Recent Activity"
 msgstr "Actividad Reciente"
 
-#: templates/challenges/detail.html:165
+#: templates/challenges/detail.html:167
 msgid "Lifter"
 msgstr "Participante"
 
-#: templates/challenges/detail.html:184
+#: templates/challenges/detail.html:186
 msgid "No scoring activity yet."
 msgstr "Aún no hay actividad de puntuación."
 
-#: templates/challenges/detail.html:219
+#: templates/challenges/detail.html:221
 #: templates/challenges/invite_accept.html:211 templates/dashboard.html:152
 msgid "Cumulative Points"
 msgstr "Puntos Acumulados"
 
-#: templates/challenges/detail.html:253
+#: templates/challenges/detail.html:255
 msgid "Points Earned"
 msgstr "Puntos Obtenidos"
 
-#: templates/challenges/detail.html:302
+#: templates/challenges/detail.html:304
 msgid "Your Performance"
 msgstr "Tu Rendimiento"
 
-#: templates/challenges/detail.html:306
+#: templates/challenges/detail.html:308
 msgid "Summary"
 msgstr "Resumen"
 
-#: templates/challenges/detail.html:309
+#: templates/challenges/detail.html:311
 msgid "Goals"
 msgstr "Objetivos"
 
-#: templates/challenges/detail.html:348
+#: templates/challenges/detail.html:360
 msgid "for your custom goal."
 msgstr "para tu objetivo personalizado."
 
-#: templates/challenges/detail.html:487
+#: templates/challenges/detail.html:500
 msgid "Current best"
 msgstr "Mejor actual"
 
-#: templates/challenges/detail.html:488
+#: templates/challenges/detail.html:501
 msgid "RM target"
 msgstr "Objetivo RM"
 
-#: templates/challenges/detail.html:497 templates/dashboard.html:207
+#: templates/challenges/detail.html:510 templates/dashboard.html:207
 msgid "pts"
 msgstr "pts"
 
-#: templates/challenges/detail.html:509
+#: templates/challenges/detail.html:522
 msgid "No points to gain"
 msgstr "No hay puntos que ganar"
 
-#: templates/challenges/detail.html:510
+#: templates/challenges/detail.html:523
 msgid "Confirm — I did this"
 msgstr "Confirmar — Lo hice"
 
-#: templates/challenges/detail.html:570
+#: templates/challenges/detail.html:583
 msgid "Manage Challenge"
 msgstr "Gestionar Reto"
 
-#: templates/challenges/detail.html:582
+#: templates/challenges/detail.html:595
 #, python-format
 msgid "Owner: %(owner)s"
 msgstr "Propietario: %(owner)s"
@@ -2178,19 +2354,23 @@ msgstr "Ocultar completadas"
 msgid "Challenge"
 msgstr "Reto"
 
-#: templates/challenges/find.html:31 templates/policies/policy_detail.html:55
+#: templates/challenges/find.html:31 templates/challenges/find.html:126
+msgid "Mode"
+msgstr "Modo"
+
+#: templates/challenges/find.html:32 templates/policies/policy_detail.html:55
 msgid "Status"
 msgstr "Estado"
 
-#: templates/challenges/find.html:34 templates/challenges/find.html:132
+#: templates/challenges/find.html:35 templates/challenges/find.html:138
 msgid "Leader"
 msgstr "Líder"
 
-#: templates/challenges/find.html:35
+#: templates/challenges/find.html:36
 msgid "Actions"
 msgstr "Acciones"
 
-#: templates/challenges/find.html:59 templates/challenges/find.html:135
+#: templates/challenges/find.html:61 templates/challenges/find.html:141
 #, python-format
 msgid ""
 "%(name)s <span class=\"text-content-subtle\">·</span> <span class=\"font-"
@@ -2199,33 +2379,33 @@ msgstr ""
 "%(name)s <span class=\"text-content-subtle\">·</span> <span class=\"font-"
 "mono\">%(points)s</span> pts"
 
-#: templates/challenges/find.html:61 templates/challenges/find.html:137
+#: templates/challenges/find.html:63 templates/challenges/find.html:143
 msgid "No scores yet"
 msgstr "Aún no hay puntuaciones"
 
-#: templates/challenges/find.html:71 templates/challenges/find.html:114
+#: templates/challenges/find.html:73 templates/challenges/find.html:116
 msgid "Delete this draft challenge? This cannot be undone."
 msgstr "¿Eliminar este reto en borrador? Esta acción no se puede deshacer."
 
-#: templates/challenges/find.html:73 templates/challenges/find.html:116
+#: templates/challenges/find.html:75 templates/challenges/find.html:118
 msgid "Delete draft challenge"
 msgstr "Eliminar reto en borrador"
 
-#: templates/challenges/find.html:147
+#: templates/challenges/find.html:153
 msgid "No challenges to show."
 msgstr "No hay retos para mostrar."
 
-#: templates/challenges/find.html:155 templates/challenges/find.html:157
+#: templates/challenges/find.html:161 templates/challenges/find.html:163
 #: templates/dashboard.html:66
 msgid "Previous"
 msgstr "Anterior"
 
-#: templates/challenges/find.html:161
+#: templates/challenges/find.html:167
 #, python-format
 msgid "Page %(number)s of %(num_pages)s"
 msgstr "Página %(number)s de %(num_pages)s"
 
-#: templates/challenges/find.html:166 templates/challenges/find.html:168
+#: templates/challenges/find.html:172 templates/challenges/find.html:174
 #: templates/dashboard.html:70
 msgid "Next"
 msgstr "Siguiente"
@@ -2630,6 +2810,47 @@ msgstr ""
 #: templates/challenges/settings.html:10
 msgid "Back to challenge"
 msgstr "Volver a el reto"
+
+#: templates/challenges/rep_target_goal_setup.html:10
+msgid "Set your rep target goal"
+msgstr "Define tu objetivo de repeticiones"
+
+#: templates/challenges/rep_target_goal_setup.html:13
+#, python-format
+msgid ""
+"\n"
+"      One target weight and rep count per lift in <strong>%(name)s</"
+"strong>,\n"
+"      in %(unit)s. A qualifying set is any at or above the target weight,\n"
+"      and reps earn points toward the target, up to 10.\n"
+"      "
+msgstr ""
+"\n"
+"      Un peso objetivo y número de repeticiones por ejercicio en "
+"<strong>%(name)s</strong>,\n"
+"      en %(unit)s. Una serie válida es cualquiera igual o superior al peso "
+"objetivo,\n"
+"      y las repeticiones suman puntos hacia el objetivo, hasta 10.\n"
+"      "
+
+#: templates/challenges/rep_target_goal_setup.html:23
+msgid ""
+"This goal is locked once you confirm it. There's no editing after you join."
+msgstr ""
+"Este objetivo queda bloqueado en cuanto lo confirmes. No se puede editar "
+"después de unirte."
+
+#: templates/challenges/rep_target_goal_setup.html:49
+msgid "e.g. Calisthenics goals"
+msgstr "p. ej. Objetivos de calistenia"
+
+#: templates/challenges/rep_target_goal_setup.html:63
+msgid "Reps"
+msgstr "Reps"
+
+#: templates/challenges/rep_target_goal_setup.html:103
+msgid "Suggest targets"
+msgstr "Sugerir objetivos"
 
 #: templates/challenges/settings.html:4
 #, python-format

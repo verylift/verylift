@@ -9,30 +9,32 @@ those behaviors are exercised.
 import pytest
 
 from challenges.forms import CreateChallengeLiftsForm
-from challenges.lift_presets import CLASSIC_LIFT_NAMES
 from liftosaur.models import Lift
 
 pytestmark = pytest.mark.django_db
 
 
-class TestClassicsPreset:
-    def test_unbound_form_pre_checks_exactly_the_classics(self):
+class TestLiftTabMembership:
+    def test_unbound_form_pre_checks_nothing(self):
+        """No silent default preset (issue #85 follow-up): the picker's
+        "Popular"/"Calisthenics" tabs are select-all shortcuts an owner
+        chooses, not a pre-applied default they might not notice."""
         form = CreateChallengeLiftsForm()
-        expected = set(
-            Lift.objects.filter(name__in=CLASSIC_LIFT_NAMES).values_list(
-                "pk", flat=True
-            )
-        )
-        assert len(expected) == 14
-        assert set(form.fields["lifts"].initial) == expected
+        assert not form.fields["lifts"].initial
 
-    def test_bound_form_does_not_force_classics_over_posted_data(self):
+    def test_bound_form_keeps_posted_selection(self):
         bench = Lift.objects.get(name="Bench Press")
         form = CreateChallengeLiftsForm(data={"lifts": [bench.pk]})
         assert form.is_valid()
-        # Bound form keeps the POSTed selection; the Classics initial is not
-        # applied on top of it.
         assert set(form.cleaned_data["lifts"].values_list("pk", flat=True)) == {
             bench.pk
         }
-        assert not form.fields["lifts"].initial
+
+    def test_tab_presets_are_subsets_of_the_full_catalogue(self):
+        """The tabs filter one rendered list rather than adding lifts of their
+        own, so a name in either preset must exist in the queryset backing it
+        or its rows would silently go missing from that tab."""
+        form = CreateChallengeLiftsForm()
+        catalogue = set(form.fields["lifts"].queryset.values_list("name", flat=True))
+        assert form.classic_lift_names <= catalogue
+        assert form.calisthenics_lift_names <= catalogue

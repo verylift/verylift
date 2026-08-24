@@ -44,7 +44,7 @@ default-selection rule).
       {% if card.state == "scored" %}
       <p class="text-2xl font-bold text-accent font-mono">{% blocktrans with points=card.points_earned %}{{ points }} pts{% endblocktrans %}</p>
       <p class="text-sm text-content-body mt-1">
-        <span class="font-mono">{{ card.weight }}</span>{% if card.weight != "BW" %} {{ display_unit }}{% endif %} × <span class="font-mono">{{ card.reps }}</span> {% trans "reps" %} ({{ card.date }})
+        <span class="font-mono">{{ card.weight }}</span>{% if card.weight != "BW" %} {{ display_unit }}{% endif %} × <span class="font-mono">{{ card.reps }}</span> {% blocktrans count counter=card.reps %}rep{% plural %}reps{% endblocktrans %} ({{ card.date }})
       </p>
       <p class="text-xs text-content-muted mt-1">{{ card.tier_satisfied }}</p>
       {% elif card.state == "no_points" %}

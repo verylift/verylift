@@ -5,6 +5,7 @@ import time
 import pytest
 from django.core.management import call_command
 from django.test import Client
+from django.utils import timezone
 
 from accounts.timezones import DETECT_COOKIE_NAME
 
@@ -149,3 +150,27 @@ def django_db_setup(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
         call_command("seed_liftosaur_lifts")
         call_command("seed_fitnessvolt_lifts")
+
+
+@pytest.fixture(autouse=True)
+def _reset_timezone_activation():
+    """Clear Django's thread-local timezone around every test.
+
+    ``timezone.activate()`` is thread-local and Django never resets it, and
+    UserTimezoneMiddleware only calls ``deactivate()`` on its "no opinion"
+    branch, so a request that resolves to a real zone leaves that zone
+    active. A live server re-runs the middleware on the next request, but a
+    test process just keeps the state, and the next test in that worker
+    inherits it.
+
+    That matters because a naive datetime is read in whatever zone is
+    active: a form posting "2026-08-26T18:29" stores a different instant
+    under America/Toronto than under UTC. The result is wrong by the UTC
+    offset rather than by a rounding margin, and since it only happens when
+    the two tests share a worker, it reads as an intermittent failure that
+    passes on re-run (challenges/tests/test_invite_link_update_view.py was
+    the one that surfaced it).
+    """
+    timezone.deactivate()
+    yield
+    timezone.deactivate()

@@ -38,3 +38,14 @@ class TestChallengeParticipantModel:
         participant.refresh_from_db()
         assert participant.custom_goal_id == goal.id
         assert participant.has_goal_configured is True
+
+    def test_rep_target_goal_can_be_set(self):
+        from challenges.tests.factories import RepTargetGoalFactory
+
+        participant = ChallengeParticipantFactory()
+        goal = RepTargetGoalFactory(participant=participant)
+        participant.rep_target_goal = goal
+        participant.save(update_fields=["rep_target_goal"])
+        participant.refresh_from_db()
+        assert participant.rep_target_goal_id == goal.id
+        assert participant.has_goal_configured is True

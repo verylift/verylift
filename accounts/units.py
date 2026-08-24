@@ -16,12 +16,35 @@ LB_TO_KG = Decimal("0.453592")
 KG_TO_LB = Decimal(1) / LB_TO_KG
 
 
+def trim_whole_weight(value):
+    """Drop a trailing ".0" so a whole weight reads as "135", not "135.0".
+
+    Display weights are quantized to 0.1, which is the precision a genuinely
+    fractional weight needs ("102.5") but reads as noise on the majority that
+    land on a whole number. Only whole values are trimmed, so a real fraction
+    keeps its decimal. This mirrors what
+    :func:`scoring.domain.calculator.format_added_weight` already did for
+    bodyweight-added lifts, which is why those never showed a stray ".0".
+
+    Numerically a no-op -- ``Decimal("135") == Decimal("135.0")`` -- so
+    callers comparing or doing arithmetic on the result are unaffected, as
+    are the round-trips back through :func:`from_display_weight`.
+    """
+    if value is None:
+        return None
+    if value == value.to_integral_value():
+        return value.quantize(Decimal("1"))
+    return value
+
+
 def to_display_weight(kg_value, unit_preference):
     """Convert a stored kg weight to the user's preferred display unit.
 
     Returns a (display_value, unit_label) tuple. display_value is a Decimal
-    rounded to one decimal place, or None when kg_value is None. unit_label is
-    "kg" or "lb". Raises ValueError for any other unit_preference.
+    rounded to one decimal place with a trailing ".0" trimmed off a whole
+    number (see :func:`trim_whole_weight`), or None when kg_value is None.
+    unit_label is "kg" or "lb". Raises ValueError for any other
+    unit_preference.
     """
     if unit_preference not in (KG, LB):
         raise ValueError(f"Unknown unit preference: {unit_preference!r}")
@@ -33,7 +56,8 @@ def to_display_weight(kg_value, unit_preference):
     value = Decimal(kg_value)
     if unit_preference == LB:
         value = value * KG_TO_LB
-    return value.quantize(Decimal("0.1"), rounding=ROUND_HALF_UP), label
+    quantized = value.quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
+    return trim_whole_weight(quantized), label
 
 
 def from_display_weight(display_value, unit_preference):

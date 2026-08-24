@@ -106,6 +106,11 @@ def _to_kg(raw, unit: str, *, allow_non_positive: bool = False) -> Decimal | Non
         value = Decimal(str(raw))
     except (InvalidOperation, ValueError, TypeError):
         return None
+    # Decimal("NaN")/Decimal("Infinity") parse fine but blow up in the
+    # comparison below (InvalidOperation) or in from_display_weight's
+    # quantize -- a crafted POST used to 500 both goal-setup views.
+    if not value.is_finite():
+        return None
     if not allow_non_positive and value <= 0:
         return None
     return from_display_weight(value, unit)
@@ -397,6 +402,10 @@ def detach_active_goal(participant) -> None:
     if participant.custom_goal_id is None:
         return
     goal = participant.custom_goal
-    goal.name = f"{goal.name} [{goal.id}]"
+    # Truncate so name + suffix fits max_length=100 -- a 62+ char goal name
+    # would otherwise overflow and 500 the leave/bail path. The detached name
+    # is never surfaced, so losing its tail is harmless.
+    suffix = f" [{goal.id}]"
+    goal.name = f"{goal.name[: 100 - len(suffix)]}{suffix}"
     goal.save(update_fields=["name"])
     participant.custom_goal = None

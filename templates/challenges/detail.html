@@ -35,12 +35,18 @@
         <div>
           {% trans "Not set" as not_set %}
           <dt class="text-xs font-medium text-content-muted uppercase tracking-wide">{% trans "Your Goal" %}</dt>
+          {# A participant has exactly one of the two goal FKs set (mode is #}
+          {# fixed and whole-challenge), so chaining them covers both modes #}
+          {# -- reading only custom_goal showed "Not set" to every Rep      #}
+          {# Target participant with a locked goal.                         #}
+          {% with active_goal=participant.custom_goal|default:participant.rep_target_goal %}
           <dd class="text-sm font-semibold text-accent">
-            {{ participant.custom_goal.name|default:not_set }}
-            {% if participant.custom_goal %}
-            <span class="ml-2 text-xs text-content-muted font-normal">{% blocktrans with date=participant.custom_goal.created_at|date:"M j, Y" %}Locked {{ date }}{% endblocktrans %}</span>
+            {{ active_goal.name|default:not_set }}
+            {% if active_goal %}
+            <span class="ml-2 text-xs text-content-muted font-normal">{% blocktrans with date=active_goal.created_at|date:"M j, Y" %}Locked {{ date }}{% endblocktrans %}</span>
             {% endif %}
           </dd>
+          {% endwith %}
         </div>
       </dl>
 
@@ -102,7 +108,9 @@
     <section class="border-2 border-accent bg-accent-subtle rounded p-6 mb-6">
       <span class="inline-block text-xs font-medium px-2 py-0.5 mb-2 rounded bg-accent text-accent-on">{% trans "Final stretch" %}</span>
       <p class="text-sm text-content-body">
-        {% if card.endgame_suggestion == "next_point" %}
+        {% if card.endgame_suggestion == "next_point" and is_rep_target_mode %}
+        {% blocktrans count counter=card.reps_gap with lift=card.lift %}{{ counter }} more rep for your next point on {{ lift }}.{% plural %}{{ counter }} more reps for your next point on {{ lift }}.{% endblocktrans %}
+        {% elif card.endgame_suggestion == "next_point" %}
         {% blocktrans with gap=card.next_point_weight_gap unit=personal_data.display_unit lift=card.lift %}<span class="font-mono">{{ gap }}</span> {{ unit }} away from your next point on {{ lift }}.{% endblocktrans %}
         {% elif card.endgame_suggestion_via == "both" %}
         {% blocktrans with gap=card.weight_gap unit=personal_data.display_unit lift=card.lift %}<span class="font-mono">{{ gap }}</span> {{ unit }} away from your first point on {{ lift }}, or{% endblocktrans %}
@@ -313,19 +321,29 @@
       <div id="tab-summary">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
           {% for card in personal_data.summary_cards %}
+          {% if is_rep_target_mode %}
+          {% include "challenges/_rep_target_summary_card.html" with card=card display_unit=personal_data.display_unit challenge=challenge %}
+          {% else %}
           {% include "challenges/_summary_card.html" with card=card display_unit=personal_data.display_unit challenge=challenge %}
+          {% endif %}
           {% endfor %}
         </div>
       </div>
 
       <div id="tab-standards" class="hidden">
+        {% if is_rep_target_mode %}
+        {% include "challenges/_rep_target_goal_tab.html" with personal_data=personal_data %}
+        {% else %}
         <div class="overflow-auto max-h-[70vh] snap-y snap-mandatory scroll-pt-[37px]">
           <table class="text-sm text-left w-full border-separate border-spacing-0">
             <thead>
               <tr class="text-content-muted">
                 <th class="py-2 pr-4 font-medium whitespace-nowrap sticky top-0 left-0 z-30 bg-surface-card border-r border-b border-line-subtle">{% trans "Lift" %}</th>
-                {% for reps in personal_data.rep_columns %}
-                <th class="py-2 px-3 font-medium text-right font-mono sticky top-0 z-20 bg-surface-card border-b border-line-subtle">{{ reps }}RM</th>
+                {% for col in personal_data.rep_columns %}
+                <th class="py-2 px-3 font-medium text-right font-mono sticky top-0 z-20 bg-surface-card border-b border-line-subtle">
+                  <span class="block">{{ col.points }}pt</span>
+                  <span class="block text-[10px] font-normal text-content-subtle">{{ col.reps }} {% blocktrans count counter=col.reps %}rep{% plural %}reps{% endblocktrans %}</span>
+                </th>
                 {% endfor %}
               </tr>
             </thead>
@@ -336,8 +354,8 @@
                   {{ row.lift }}{% if row.is_bodyweight_added %} <span class="text-content-muted font-normal">({% trans "BW" %})</span>{% endif %}
                 </td>
                 {% for cell in row.cells %}
-                <td class="py-2 px-3 text-right font-mono border-b border-line-subtle {% if cell.is_current_best %}bg-accent-subtle font-semibold text-accent{% endif %}">
-                  {{ cell.weight }}
+                <td class="py-2 px-3 text-right font-mono whitespace-nowrap border-b border-line-subtle {% if cell.is_current_best %}bg-accent-subtle font-semibold text-accent{% endif %}">
+                  {{ cell.weight }}{% if cell.weight and cell.weight != "BW" %}<span class="ml-0.5 text-[10px] font-sans font-normal {% if cell.is_current_best %}text-accent{% else %}text-content-subtle{% endif %}">{{ personal_data.display_unit }}</span>{% endif %}
                 </td>
                 {% endfor %}
               </tr>
@@ -346,6 +364,7 @@
           </table>
         </div>
         <p class="text-xs text-content-muted mt-2">{% blocktrans with unit=personal_data.display_unit %}Thresholds shown in {{ unit }}{% endblocktrans %} {% trans "for your custom goal." %}</p>
+        {% endif %}
       </div>
     </section>
     <style>

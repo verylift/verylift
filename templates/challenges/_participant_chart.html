@@ -41,7 +41,7 @@ showPersonalTab() getElementById lookups (D7).
       {% if row.points_earned > 0 %}
       <p class="text-2xl font-bold text-accent font-mono">{% blocktrans with points=row.points_earned %}{{ points }} pts{% endblocktrans %}</p>
       <p class="text-sm text-content-body mt-1">
-        <span class="font-mono">{{ row.weight }}</span>{% if row.weight != "BW" %} {{ chart.display_unit }}{% endif %} × <span class="font-mono">{{ row.reps }}</span> {% trans "reps" %} ({{ row.date }})
+        <span class="font-mono">{{ row.weight }}</span>{% if row.weight != "BW" %} {{ chart.display_unit }}{% endif %} × <span class="font-mono">{{ row.reps }}</span> {% blocktrans count counter=row.reps %}rep{% plural %}reps{% endblocktrans %} ({{ row.date }})
       </p>
       {% else %}
       <p class="text-sm text-content-muted italic">{% trans "No points yet" %}</p>
@@ -50,13 +50,22 @@ showPersonalTab() getElementById lookups (D7).
     {% endfor %}
   </div>
 
+  {% if chart.is_rep_target %}
+  {% include "challenges/_rep_target_goal_table.html" with rows=chart.target_rows point_range=chart.point_range display_unit=chart.display_unit %}
+  <p class="text-xs text-content-muted mt-2">
+    {% blocktrans with unit=chart.display_unit %}Weight shown in {{ unit }}{% endblocktrans %}. {% trans "Highlighted column = the points this lifter's best set earned." %}
+  </p>
+  {% else %}
   <div class="overflow-auto max-h-[70vh] snap-y snap-mandatory scroll-pt-[37px]">
     <table class="text-sm text-left w-full border-separate border-spacing-0">
       <thead>
         <tr class="text-content-muted">
           <th class="py-2 pr-4 font-medium whitespace-nowrap sticky top-0 left-0 z-30 bg-surface-card border-r border-b border-line-subtle">{% trans "Lift" %}</th>
-          {% for reps in chart.rep_columns %}
-          <th class="py-2 px-3 font-medium text-right font-mono sticky top-0 z-20 bg-surface-card border-b border-line-subtle">{{ reps }}RM</th>
+          {% for col in chart.rep_columns %}
+          <th class="py-2 px-3 font-medium text-right font-mono sticky top-0 z-20 bg-surface-card border-b border-line-subtle">
+            <span class="block">{{ col.points }}pt</span>
+            <span class="block text-[10px] font-normal text-content-subtle">{{ col.reps }} {% blocktrans count counter=col.reps %}rep{% plural %}reps{% endblocktrans %}</span>
+          </th>
           {% endfor %}
         </tr>
       </thead>
@@ -67,8 +76,8 @@ showPersonalTab() getElementById lookups (D7).
             {{ row.lift }}{% if row.is_bodyweight_added %} <span class="text-content-muted font-normal">({% trans "BW" %})</span>{% endif %}
           </td>
           {% for cell in row.cells %}
-          <td class="py-2 px-3 text-right font-mono border-b border-line-subtle {% if cell.is_current_best %}bg-accent-subtle font-semibold text-accent{% endif %}">
-            {{ cell.weight }}
+          <td class="py-2 px-3 text-right font-mono whitespace-nowrap border-b border-line-subtle {% if cell.is_current_best %}bg-accent-subtle font-semibold text-accent{% endif %}">
+            {{ cell.weight }}{% if cell.weight and cell.weight != "BW" %}<span class="ml-0.5 text-[10px] font-sans font-normal {% if cell.is_current_best %}text-accent{% else %}text-content-subtle{% endif %}">{{ chart.display_unit }}</span>{% endif %}
           </td>
           {% endfor %}
         </tr>
@@ -79,6 +88,7 @@ showPersonalTab() getElementById lookups (D7).
   <p class="text-xs text-content-muted mt-2">
     {% blocktrans with unit=chart.display_unit %}Thresholds shown in {{ unit }}{% endblocktrans %}. {% trans "Highlighted cell = the target this lifter's best set satisfied." %}
   </p>
+  {% endif %}
 </section>
 {% else %}
 <section class="bg-surface-card border border-line-subtle rounded p-6">

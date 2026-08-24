@@ -1,0 +1,10 @@
+{% load i18n %}
+{% comment %}
+"Goals" tab for a REP_TARGET challenge (issue #85) -- the sibling of the
+Classic rep-max ladder table (detail.html's #tab-standards). The table
+itself is shared with the co-participant chart; only the caption differs.
+
+Context: personal_data (build_rep_target_personal_data's return value).
+{% endcomment %}
+{% include "challenges/_rep_target_goal_table.html" with rows=personal_data.summary_cards point_range=personal_data.point_range display_unit=personal_data.display_unit %}
+<p class="text-xs text-content-muted mt-2">{% blocktrans with unit=personal_data.display_unit %}Weight shown in {{ unit }}{% endblocktrans %} {% trans "for your rep target goal." %}</p>

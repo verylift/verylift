@@ -212,3 +212,43 @@ def best_score_for_set(
         if satisfies_threshold(effective_reps, performed_weight, n, threshold):
             return (points_for_rep_count(n), n)
     return None
+
+
+def best_score_for_rep_target(
+    performed_reps: int,
+    performed_weight: Decimal,
+    target_reps: int,
+    target_weight: Decimal,
+) -> int | None:
+    """Score a set against a Rep Target goal's single (weight, reps) pair.
+
+    Unlike best_score_for_set, weight is a GATE here, not a tradeoff axis:
+    there is only one weight to hit, so ``performed_weight >= target_weight``
+    is a strict pass/fail with no substitution of extra reps for missing
+    weight. Returns ``None`` when the gate fails -- the same "no threshold
+    met" signal best_score_for_set returns, so callers (scoring.services)
+    persist it the same way (a zero-point audit row, never current-best).
+
+    When the gate passes, points scale with reps performed toward the target,
+    capped at the target (extra reps beyond it earn nothing more):
+    ``floor(10 * min(performed_reps, target_reps) / target_reps)``.
+
+    Flooring, not rounding. Round-half-up awarded the full 10 points at 95%
+    of the target, so the rep count the participant actually chose was never
+    the one that earned full marks: a 32-rep target maxed out at 31, a
+    100-rep target at 95 (UAT). Flooring makes every tier an honest fraction
+    of the target -- N points needs N/10 of the reps, and 10 points needs all
+    of them.
+
+    A single qualifying rep against a very high target_reps can legitimately
+    score 0 points (issue #85 open question #3) -- accepted by design: the
+    weight gate alone already tells the lifter they're "on the board", and
+    best-set-replaces-old aggregation means any later, better set overwrites
+    this one upward. Flooring every qualifying set at 1 point would make an
+    arbitrarily large target_reps trivially farmable for free points.
+    """
+    if performed_weight < target_weight:
+        return None
+    effective_reps = min(performed_reps, target_reps)
+    points = (10 * effective_reps) // target_reps
+    return max(0, min(10, points))
