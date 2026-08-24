@@ -50,6 +50,12 @@ showPersonalTab() getElementById lookups (D7).
     {% endfor %}
   </div>
 
+  {% if chart.is_rep_target %}
+  {% include "challenges/_rep_target_goal_table.html" with rows=chart.target_rows point_range=chart.point_range display_unit=chart.display_unit %}
+  <p class="text-xs text-content-muted mt-2">
+    {% blocktrans with unit=chart.display_unit %}Weight shown in {{ unit }}{% endblocktrans %}. {% trans "Highlighted column = the points this lifter's best set earned." %}
+  </p>
+  {% else %}
   <div class="overflow-auto max-h-[70vh] snap-y snap-mandatory scroll-pt-[37px]">
     <table class="text-sm text-left w-full border-separate border-spacing-0">
       <thead>
@@ -82,6 +88,7 @@ showPersonalTab() getElementById lookups (D7).
   <p class="text-xs text-content-muted mt-2">
     {% blocktrans with unit=chart.display_unit %}Thresholds shown in {{ unit }}{% endblocktrans %}. {% trans "Highlighted cell = the target this lifter's best set satisfied." %}
   </p>
+  {% endif %}
 </section>
 {% else %}
 <section class="bg-surface-card border border-line-subtle rounded p-6">

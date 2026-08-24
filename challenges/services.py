@@ -1705,6 +1705,111 @@ def build_personal_data(user, challenge, participant):
     }
 
 
+def build_rep_target_participant_chart(
+    viewer, challenge, subject_participant
+) -> dict | None:
+    """The REP_TARGET sibling of :func:`build_participant_chart`.
+
+    Same peer-view contract: the subject's locked targets and scored points
+    only, in the ``viewer``'s unit_preference, with none of the self-directed
+    coaching signals. The table it feeds is the reps-per-point ladder rather
+    than Classic's weight-per-point one, so the row shape matches what
+    _rep_target_goal_table.html renders for the subject's own Goals tab.
+
+    Provenance is thinner than Classic's by construction: RepTargetGoal
+    records only a source_method, with no source_detail, so there is no
+    standards attribution to surface and no uplift/lookback sentence to
+    compose.
+
+    Returns None when the subject has not finished goal setup
+    (``rep_target_goal_id is None``), same signal the caller already handles.
+    """
+    if subject_participant.rep_target_goal_id is None:
+        return None
+
+    subject_user = subject_participant.user
+    goal = subject_participant.rep_target_goal
+    display_unit = viewer.unit_preference
+    targets_by_lift = {
+        target.lift: (target.target_weight, target.target_reps)
+        for target in goal.targets.all()
+    }
+
+    # Window-independent, matching the leaderboard and Classic's chart
+    # (D5/TASK-164): a rejoin resets joined_at, which would otherwise blank
+    # rows for points that still stand on the leaderboard.
+    current_best_by_lift = {
+        event.lift: event
+        for event in PointEarnEvent.objects.filter(
+            user=subject_user, challenge=challenge, is_current_best=True
+        )
+    }
+
+    target_rows = []
+    point_rows = []
+    for lift in sorted(targets_by_lift):
+        target_weight, target_reps = targets_by_lift[lift]
+        is_bw_added = is_bodyweight_added_lift(lift)
+        current_best = current_best_by_lift.get(lift)
+        points = current_best.points_earned if current_best is not None else 0
+        target_rows.append(
+            {
+                "lift": lift,
+                "is_bodyweight_added": is_bw_added,
+                "target_weight": _weight_display(
+                    target_weight, lift, display_unit, challenge, snap=False
+                ),
+                "target_reps": target_reps,
+                "point_columns": _rep_target_point_columns(
+                    target_reps,
+                    target_weight,
+                    points if current_best is not None else None,
+                ),
+            }
+        )
+        point_rows.append(
+            {
+                "lift": lift,
+                "points_earned": points,
+                "weight": (
+                    _weight_display(
+                        current_best.weight, lift, display_unit, challenge, snap=False
+                    )
+                    if current_best is not None
+                    else None
+                ),
+                "reps": current_best.reps if current_best is not None else None,
+                "date": current_best.performed_at if current_best is not None else None,
+                "is_bodyweight_added": is_bw_added,
+            }
+        )
+
+    logger.debug(
+        "Built rep target participant chart for subject %s in challenge %s: %d lift(s)",
+        subject_user.id,
+        challenge.pk,
+        len(target_rows),
+    )
+
+    return {
+        "subject_name": subject_user.display_name or subject_user.username,
+        "goal_name": goal.name,
+        "locked_at": goal.created_at,
+        "provenance": {
+            "method_label": goal.get_source_method_display(),
+            "is_standards": False,
+            "snapshot_version": None,
+            "history_sentence": None,
+        },
+        "is_rep_target": True,
+        "target_rows": target_rows,
+        "point_rows": point_rows,
+        "point_range": list(range(1, 11)),
+        "display_unit": display_unit,
+        "total_points": sum(row["points_earned"] for row in point_rows),
+    }
+
+
 def build_participant_chart(viewer, challenge, subject_participant) -> dict | None:
     """Build a read-only view of a co-participant's locked goal chart.
 
@@ -1720,7 +1825,15 @@ def build_participant_chart(viewer, challenge, subject_participant) -> dict | No
     (``custom_goal_id is None`` — an ACCEPTED participant who joined but has
     not completed the wizard); the caller renders a "hasn't set a goal yet"
     state.
+
+    Dispatches to :func:`build_rep_target_participant_chart` for a REP_TARGET
+    challenge, mirroring how build_personal_data splits by mode.
     """
+    if challenge.mode == Challenge.Mode.REP_TARGET:
+        return build_rep_target_participant_chart(
+            viewer, challenge, subject_participant
+        )
+
     if subject_participant.custom_goal_id is None:
         return None
 

@@ -16,7 +16,10 @@ from challenges.tests.factories import (
     ChallengeParticipantFactory,
     CustomGoalFactory,
     CustomGoalTargetFactory,
+    RepTargetGoalFactory,
+    RepTargetGoalTargetFactory,
     make_custom_challenge,
+    make_rep_target_challenge,
 )
 from scoring.services import get_user_standing
 from scoring.tests.factories import PointEarnEventFactory
@@ -460,3 +463,80 @@ class TestDetailPageLink:
         # Subject's row should still have a chart link
         subject_chart_url = chart_url(challenge, subject_participant)
         assert f'hx-get="{subject_chart_url}"' in body
+
+
+class TestRepTargetMode:
+    """A REP_TARGET challenge gets the same peer view Classic has, built from
+    RepTargetGoal instead of CustomGoal. Before this, build_participant_chart
+    only knew how to read custom_goal_id and returned None for every rep
+    target subject, so the page claimed they had not set a goal."""
+
+    @pytest.fixture
+    def rt_challenge(self, viewer):
+        return make_rep_target_challenge(
+            lifts=[LIFT], creator=viewer, status=Challenge.Status.ACTIVE
+        )
+
+    def _rep_target_participant(self, user, challenge, *, target_reps=20):
+        participant = _accept(
+            ChallengeParticipantFactory(user=user, challenge=challenge)
+        )
+        goal = RepTargetGoalFactory(participant=participant, name="Subject Reps")
+        RepTargetGoalTargetFactory(
+            goal=goal,
+            lift=LIFT,
+            target_weight=Decimal("0.00"),
+            target_reps=target_reps,
+        )
+        participant.rep_target_goal = goal
+        participant.save(update_fields=["rep_target_goal"])
+        return participant
+
+    def test_chart_renders_the_rep_ladder(self, viewer, subject, rt_challenge):
+        self._rep_target_participant(viewer, rt_challenge)
+        subject_participant = self._rep_target_participant(subject, rt_challenge)
+
+        chart = build_participant_chart(viewer, rt_challenge, subject_participant)
+
+        assert chart is not None
+        assert chart["is_rep_target"] is True
+        assert chart["goal_name"] == "Subject Reps"
+        row = chart["target_rows"][0]
+        assert row["lift"] == LIFT
+        # Reps needed per point value, straight from best_score_for_rep_target:
+        # the tenth point takes the whole 20-rep target, not a rounded-down 19.
+        assert [col["reps"] for col in row["point_columns"]] == [
+            2,
+            4,
+            6,
+            8,
+            10,
+            12,
+            14,
+            16,
+            18,
+            20,
+        ]
+
+    def test_subject_without_a_goal_still_reports_none(
+        self, viewer, subject, rt_challenge
+    ):
+        self._rep_target_participant(viewer, rt_challenge)
+        no_goal = _accept(
+            ChallengeParticipantFactory(user=subject, challenge=rt_challenge)
+        )
+
+        assert build_participant_chart(viewer, rt_challenge, no_goal) is None
+
+    def test_view_renders_the_rep_target_table(self, viewer, subject, rt_challenge):
+        self._rep_target_participant(viewer, rt_challenge)
+        subject_participant = self._rep_target_participant(subject, rt_challenge)
+        client = Client()
+        client.force_login(viewer)
+
+        resp = client.get(chart_url(rt_challenge, subject_participant))
+
+        assert resp.status_code == 200
+        content = resp.content.decode()
+        assert "hasn't set their goal yet" not in content
+        assert "10pt" in content

@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-24 18:13+0000\n"
+"POT-Creation-Date: 2026-08-24 18:34+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -440,7 +440,7 @@ msgstr ""
 msgid "\"%(lift_name)s\" is missing a target."
 msgstr "A \"%(lift_name)s\" le falta un objetivo."
 
-#: challenges/services.py:1831
+#: challenges/services.py:1945
 #, python-format, python-brace-format
 msgid ""
 "Suggested from history: +{percent}% uplift, based on the last {days} days"
@@ -448,12 +448,12 @@ msgstr ""
 "Sugerido a partir del historial: +{percent}% de incremento, basado en los "
 "últimos {days} días"
 
-#: challenges/services.py:1837
+#: challenges/services.py:1951
 #, python-brace-format
 msgid "(rounded to the nearest {amount} {unit})"
 msgstr "(redondeado al {amount} {unit} más cercano)"
 
-#: challenges/services.py:1957
+#: challenges/services.py:2071
 msgid ""
 "Recent history for this lift is entirely machine-assisted, which can't be "
 "converted into a target."
@@ -461,7 +461,7 @@ msgstr ""
 "El historial reciente de este ejercicio es completamente asistido por "
 "máquina y no puede convertirse en un objetivo."
 
-#: challenges/services.py:1962
+#: challenges/services.py:2076
 msgid "No recent history or published standard for this lift yet."
 msgstr ""
 "Todavía no hay historial reciente ni un estándar publicado para este "
@@ -1637,13 +1637,13 @@ msgid "%(points)s pts"
 msgstr "%(points)s pts"
 
 #: templates/challenges/_participant_chart.html:24
-#: templates/challenges/_participant_chart.html:92
+#: templates/challenges/_participant_chart.html:99
 msgid "Close"
 msgstr "Cerrar"
 
 #: templates/challenges/_participant_chart.html:44
-#: templates/challenges/_participant_chart.html:61
-#: templates/challenges/_rep_target_goal_tab.html:36
+#: templates/challenges/_participant_chart.html:67
+#: templates/challenges/_rep_target_goal_table.html:42
 #: templates/challenges/_rep_target_summary_card.html:14
 #: templates/challenges/_summary_card.html:47
 #: templates/challenges/custom_goal_setup.html:173
@@ -1657,34 +1657,44 @@ msgstr[1] "repeticiones"
 msgid "No points yet"
 msgstr "Sin puntos todavía"
 
-#: templates/challenges/_participant_chart.html:57
-#: templates/challenges/_rep_target_goal_tab.html:18
+#: templates/challenges/_participant_chart.html:56
+#: templates/challenges/_rep_target_goal_tab.html:10
+#, python-format
+msgid "Weight shown in %(unit)s"
+msgstr "Peso mostrado en %(unit)s"
+
+#: templates/challenges/_participant_chart.html:56
+msgid "Highlighted column = the points this lifter's best set earned."
+msgstr "Columna resaltada = los puntos que consiguió el mejor intento de este atleta."
+
+#: templates/challenges/_participant_chart.html:63
+#: templates/challenges/_rep_target_goal_table.html:20
 #: templates/challenges/custom_goal_setup.html:169
 #: templates/challenges/detail.html:168 templates/challenges/detail.html:335
 #: templates/challenges/rep_target_goal_setup.html:53
 msgid "Lift"
 msgstr "Ejercicio"
 
-#: templates/challenges/_participant_chart.html:70
-#: templates/challenges/_rep_target_goal_tab.html:29
+#: templates/challenges/_participant_chart.html:76
+#: templates/challenges/_rep_target_goal_table.html:31
 #: templates/challenges/detail.html:348
 #: templates/challenges/rep_target_goal_setup.html:62
 msgid "BW"
 msgstr "PC"
 
-#: templates/challenges/_participant_chart.html:83
+#: templates/challenges/_participant_chart.html:89
 #: templates/challenges/detail.html:360
 #, python-format
 msgid "Thresholds shown in %(unit)s"
 msgstr "Umbrales mostrados en %(unit)s"
 
-#: templates/challenges/_participant_chart.html:83
+#: templates/challenges/_participant_chart.html:89
 msgid "Highlighted cell = the target this lifter's best set satisfied."
 msgstr ""
 "Celda resaltada = el objetivo que cumplió la mejor serie de este "
 "participante."
 
-#: templates/challenges/_participant_chart.html:89
+#: templates/challenges/_participant_chart.html:96
 msgid "This participant hasn't set their goal yet."
 msgstr "Este participante todavía no ha configurado su objetivo."
 
@@ -1723,20 +1733,15 @@ msgstr "Guardando nombre…"
 msgid "Edit challenge name"
 msgstr "Editar nombre del reto"
 
-#: templates/challenges/_rep_target_goal_tab.html:19
+#: templates/challenges/_rep_target_goal_tab.html:10
+msgid "for your rep target goal."
+msgstr "para tu objetivo de repeticiones."
+
+#: templates/challenges/_rep_target_goal_table.html:21
 #: templates/challenges/rep_target_goal_setup.html:54
 #, python-format
 msgid "Weight (%(unit)s)"
 msgstr "Peso (%(unit)s)"
-
-#: templates/challenges/_rep_target_goal_tab.html:44
-#, python-format
-msgid "Weight shown in %(unit)s"
-msgstr "Peso mostrado en %(unit)s"
-
-#: templates/challenges/_rep_target_goal_tab.html:44
-msgid "for your rep target goal."
-msgstr "para tu objetivo de repeticiones."
 
 #: templates/challenges/_rep_target_summary_card.html:14
 #, python-format

@@ -1,0 +1,49 @@
+{% load i18n %}
+{% comment %}
+The REP_TARGET goal table, shared by the subject's own "Goals" tab
+(_rep_target_goal_tab.html) and the read-only co-participant chart
+(_participant_chart.html). Classic's ladder charts "how much weight for N
+points"; since Rep Target scores against one fixed (weight, reps) pair per
+lift, this flips that around: one fixed weight per lift, and 10 columns of
+"how many reps at that weight for N points".
+
+Caption is deliberately not included -- the two callers word it differently
+("your" goal vs another lifter's) -- so each supplies its own.
+
+Context: rows (lift, is_bodyweight_added, target_weight, point_columns),
+point_range, display_unit.
+{% endcomment %}
+<div class="overflow-x-auto">
+  <table class="text-sm text-left w-full border-separate border-spacing-0">
+    <thead>
+      <tr class="text-content-muted">
+        <th class="py-2 pr-2 sm:pr-4 font-medium sticky left-0 z-10 bg-surface-card">{% trans "Lift" %}</th>
+        <th class="py-2 pl-2 pr-1 sm:pl-3 font-medium text-right font-mono whitespace-nowrap">{% blocktrans with unit=display_unit %}Weight ({{ unit }}){% endblocktrans %}</th>
+        {% for points in point_range %}
+        <th class="py-2 px-2 font-medium text-right font-mono whitespace-nowrap">{{ points }}pt</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr class="text-content-body">
+        <td class="py-2 pr-2 sm:pr-4 font-medium text-content-strong sticky left-0 z-10 bg-surface-card border-b border-line-subtle">
+          {{ row.lift }}{% if row.is_bodyweight_added %} <span class="text-content-muted font-normal">({% trans "BW" %})</span>{% endif %}
+        </td>
+        <td class="py-2 pl-2 pr-1 sm:pl-3 text-right font-mono whitespace-nowrap border-b border-line-subtle">
+          {{ row.target_weight }}
+        </td>
+        {% for col in row.point_columns %}
+        <td class="py-2 px-2 text-right font-mono whitespace-nowrap border-b border-line-subtle {% if col.is_current_best %}bg-accent-subtle font-semibold text-accent{% endif %}">
+          {# Fixed-width unit box so the numbers stay aligned down the column: #}
+          {# "rep" is narrower than "reps", which otherwise ragged the digits. #}
+          {# min-w rather than w so a longer translation grows instead of      #}
+          {# colliding with the next column.                                   #}
+          {{ col.reps }}<span class="ml-0.5 inline-block min-w-[1.6rem] text-left text-[10px] font-sans font-normal {% if col.is_current_best %}text-accent{% else %}text-content-subtle{% endif %}">{% blocktrans count counter=col.reps %}rep{% plural %}reps{% endblocktrans %}</span>
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
