@@ -33,7 +33,7 @@ Context: personal_data (build_rep_target_personal_data's return value).
         </td>
         {% for col in card.point_columns %}
         <td class="py-2 px-2 text-right font-mono whitespace-nowrap border-b border-line-subtle {% if col.is_current_best %}bg-accent-subtle font-semibold text-accent{% endif %}">
-          {{ col.reps }}<span class="ml-0.5 text-[10px] font-sans font-normal {% if col.is_current_best %}text-accent{% else %}text-content-subtle{% endif %}">{% trans "reps" %}</span>
+          {{ col.reps }}<span class="ml-0.5 text-[10px] font-sans font-normal {% if col.is_current_best %}text-accent{% else %}text-content-subtle{% endif %}">{% blocktrans count counter=col.reps %}rep{% plural %}reps{% endblocktrans %}</span>
         </td>
         {% endfor %}
       </tr>

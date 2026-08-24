@@ -41,7 +41,7 @@ showPersonalTab() getElementById lookups (D7).
       {% if row.points_earned > 0 %}
       <p class="text-2xl font-bold text-accent font-mono">{% blocktrans with points=row.points_earned %}{{ points }} pts{% endblocktrans %}</p>
       <p class="text-sm text-content-body mt-1">
-        <span class="font-mono">{{ row.weight }}</span>{% if row.weight != "BW" %} {{ chart.display_unit }}{% endif %} × <span class="font-mono">{{ row.reps }}</span> {% trans "reps" %} ({{ row.date }})
+        <span class="font-mono">{{ row.weight }}</span>{% if row.weight != "BW" %} {{ chart.display_unit }}{% endif %} × <span class="font-mono">{{ row.reps }}</span> {% blocktrans count counter=row.reps %}rep{% plural %}reps{% endblocktrans %} ({{ row.date }})
       </p>
       {% else %}
       <p class="text-sm text-content-muted italic">{% trans "No points yet" %}</p>
@@ -58,7 +58,7 @@ showPersonalTab() getElementById lookups (D7).
           {% for col in chart.rep_columns %}
           <th class="py-2 px-3 font-medium text-right font-mono sticky top-0 z-20 bg-surface-card border-b border-line-subtle">
             <span class="block">{{ col.points }}pt</span>
-            <span class="block text-[10px] font-normal text-content-subtle">{{ col.reps }} {% trans "reps" %}</span>
+            <span class="block text-[10px] font-normal text-content-subtle">{{ col.reps }} {% blocktrans count counter=col.reps %}rep{% plural %}reps{% endblocktrans %}</span>
           </th>
           {% endfor %}
         </tr>

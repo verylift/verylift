@@ -11,7 +11,7 @@ Context: card (a personal_data.summary_cards entry), display_unit, challenge.
 <div class="{% if card.close_to_goal %}border-2 border-warning-light{% else %}border border-line-subtle{% endif %} rounded p-4">
   <h3 class="text-sm font-semibold text-content-strong mb-2">{{ card.lift }}</h3>
   <p class="text-xs text-content-muted mb-3">
-    {% blocktrans with weight=card.target_weight reps=card.target_reps %}Target: <span class="font-mono">{{ weight }}</span>{% endblocktrans %}{% if card.target_weight != "BW" %} {{ display_unit }}{% endif %} × <span class="font-mono">{{ card.target_reps }}</span> {% trans "reps" %}
+    {% blocktrans with weight=card.target_weight reps=card.target_reps %}Target: <span class="font-mono">{{ weight }}</span>{% endblocktrans %}{% if card.target_weight != "BW" %} {{ display_unit }}{% endif %} × <span class="font-mono">{{ card.target_reps }}</span> {% blocktrans count counter=card.target_reps %}rep{% plural %}reps{% endblocktrans %}
   </p>
 
   {% if card.state == "scored" %}

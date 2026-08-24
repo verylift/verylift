@@ -336,7 +336,7 @@
                 {% for col in personal_data.rep_columns %}
                 <th class="py-2 px-3 font-medium text-right font-mono sticky top-0 z-20 bg-surface-card border-b border-line-subtle">
                   <span class="block">{{ col.points }}pt</span>
-                  <span class="block text-[10px] font-normal text-content-subtle">{{ col.reps }} {% trans "reps" %}</span>
+                  <span class="block text-[10px] font-normal text-content-subtle">{{ col.reps }} {% blocktrans count counter=col.reps %}rep{% plural %}reps{% endblocktrans %}</span>
                 </th>
                 {% endfor %}
               </tr>
