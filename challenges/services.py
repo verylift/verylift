@@ -2024,9 +2024,11 @@ def build_rep_target_goal_context(
         if weight_kg is not None:
             weight_value, _ = to_display_weight(weight_kg, unit)
         elif is_bw_added:
-            # Added weight defaults to 0.0 (bodyweight-only) rather than
-            # blank -- that's the common case, and 0.0 is itself a valid target.
-            weight_value = "0.0"
+            # Added weight defaults to 0 (bodyweight-only) rather than blank:
+            # that's the common case, and 0 is itself a valid target. Written
+            # without a trailing ".0" to match every other whole weight on the
+            # page (accounts.units.trim_whole_weight).
+            weight_value = "0"
         else:
             weight_value = ""
         if reps is None and is_bw_added:
