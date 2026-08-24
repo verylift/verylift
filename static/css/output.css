@@ -1170,6 +1170,10 @@ body {
   min-width: 1.25rem;
 }
 
+.min-w-\[1\.6rem\] {
+  min-width: 1.6rem;
+}
+
 .min-w-\[12rem\] {
   min-width: 12rem;
 }
