@@ -584,7 +584,8 @@ class TestSetupView:
         content = response.content.decode()
         assert "is missing targets" in content
         # The two valid cells are preserved (display-formatted) for correction.
-        assert 'value="80.0"' in content
+        # A whole weight keeps no trailing ".0" (accounts.units.trim_whole_weight).
+        assert 'value="80"' in content
 
     def test_grid_blank_name_defaults_and_saves(
         self, authed_client, participant, challenge
