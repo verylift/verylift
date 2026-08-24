@@ -70,8 +70,8 @@ showPersonalTab() getElementById lookups (D7).
             {{ row.lift }}{% if row.is_bodyweight_added %} <span class="text-content-muted font-normal">({% trans "BW" %})</span>{% endif %}
           </td>
           {% for cell in row.cells %}
-          <td class="py-2 px-3 text-right font-mono border-b border-line-subtle {% if cell.is_current_best %}bg-accent-subtle font-semibold text-accent{% endif %}">
-            {{ cell.weight }}
+          <td class="py-2 px-3 text-right font-mono whitespace-nowrap border-b border-line-subtle {% if cell.is_current_best %}bg-accent-subtle font-semibold text-accent{% endif %}">
+            {{ cell.weight }}{% if cell.weight and cell.weight != "BW" %}<span class="ml-0.5 text-[10px] font-sans font-normal {% if cell.is_current_best %}text-accent{% else %}text-content-subtle{% endif %}">{{ chart.display_unit }}</span>{% endif %}
           </td>
           {% endfor %}
         </tr>

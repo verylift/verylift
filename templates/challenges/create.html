@@ -118,7 +118,11 @@
     {% elif step == "lifts" %}
     <h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "Choose your lifts" %}</h1>
     <p class="text-sm text-content-muted mb-6">
-      {% trans "This lift list applies to every participant for the whole challenge — each person's goal chart will cover exactly these lifts. \"All Lifts\" holds everything; \"Popular\" and \"Calisthenics\" are just curated shortcuts into the same list." %}
+      {# blocktrans, not trans: xgettext truncates a trans msgid at the first #}
+      {# escaped quote, so the extracted msgid never matches the runtime      #}
+      {# string and the catalog guard in root/tests/test_translations.py      #}
+      {# fails. Literal quotes inside blocktrans extract fine.                #}
+      {% blocktrans %}This lift list applies to every participant for the whole challenge. Each person's goal chart will cover exactly these lifts. "All Lifts" holds everything; "Popular" and "Calisthenics" are curated shortcuts into the same list.{% endblocktrans %}
     </p>
     <form method="post" class="bg-surface-card border border-line-subtle rounded p-6">
       {% csrf_token %}
