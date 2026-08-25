@@ -119,6 +119,21 @@ class WgerCredentialsForm(forms.Form):
         return True
 
 
+class HevyKeyForm(forms.Form):
+    """Settings Hevy-key form. Saving only happens when a key is supplied."""
+
+    hevy_api_key = forms.CharField(required=False)
+
+    def save(self, user) -> bool:
+        """Persist the key when present. Returns whether a key was saved."""
+        api_key = self.cleaned_data["hevy_api_key"]
+        if not api_key:
+            return False
+        user.hevy_api_key = api_key
+        user.save(update_fields=["hevy_api_key"])
+        return True
+
+
 MAX_AVATAR_BYTES = 10 * 1024 * 1024
 MAX_AVATAR_PIXELS = 25_000_000
 

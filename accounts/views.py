@@ -27,6 +27,7 @@ from accounts.forms import (
     AvatarForm,
     DeleteAccountConfirmationForm,
     EmailForm,
+    HevyKeyForm,
     LanguageForm,
     LiftosaurKeyForm,
     NicknameForm,
@@ -61,6 +62,9 @@ from challenges.services import (
 )
 from core.http import is_htmx
 from core.models import SiteSettings
+from hevy_api.services import last_synced_at as hevy_last_synced_at
+from hevy_api.services import sync_user_lifts as sync_hevy_lifts
+from hevy_api.services import validate_hevy_key
 from liftosaur.services import (
     last_synced_at,
     sync_user_lifts,
@@ -696,6 +700,8 @@ _SETTINGS_SECTION_PARTIALS = {
     "remove_liftosaur_key": "accounts/_liftosaur_section.html",
     "wger_credentials": "accounts/_wger_section.html",
     "remove_wger_credentials": "accounts/_wger_section.html",
+    "hevy_key": "accounts/_hevy_section.html",
+    "remove_hevy_key": "accounts/_hevy_section.html",
     "workout_csv_import": "accounts/_workout_import_section.html",
     "unit_preference": "accounts/_unit_preference_section.html",
     "timezone": "accounts/_timezone_section.html",
@@ -769,6 +775,17 @@ def settings_view(request):
             user.wger_api_token = None
             user.save(update_fields=["wger_instance_url", "wger_api_token"])
             messages.success(request, gettext("Wger disconnected."))
+
+        elif posted_form_name == "hevy_key":
+            form = HevyKeyForm(request.POST)
+            form.is_valid()
+            if form.save(user):
+                messages.success(request, gettext("Hevy API key saved."))
+
+        elif posted_form_name == "remove_hevy_key":
+            user.hevy_api_key = None
+            user.save(update_fields=["hevy_api_key"])
+            messages.success(request, gettext("Hevy API key removed."))
 
         elif posted_form_name == "workout_csv_import":
             form = WorkoutCsvImportForm(request.POST, request.FILES, user=user)
@@ -865,8 +882,11 @@ def settings_view(request):
         "user_timezone": user.timezone,
         "timezone_groups": grouped_timezones(),
         "has_liftosaur_key": bool(user.liftosaur_api_key),
+        "masked_hevy_key": mask_api_key(user.hevy_api_key),
+        "has_hevy_key": bool(user.hevy_api_key),
         "avatar_error": avatar_error,
         "last_synced_at": last_synced_at(user),
+        "hevy_last_synced_at": hevy_last_synced_at(user),
         "workout_import_error": workout_import_error,
         "last_workout_imported_at": workout_import_last_imported_at(user),
         "has_wger_credentials": bool(user.wger_instance_url and user.wger_api_token),
@@ -1077,6 +1097,56 @@ def _wger_sync_now_response(request, user):
 
 @login_required
 @require_POST
+def hevy_sync_now_view(request):
+    """Force an immediate Hevy pull, then re-score every active challenge.
+
+    Mirrors sync_now_view for the Hevy source -- see that docstring.
+    """
+    user = request.user
+    if not user.hevy_api_key:
+        messages.error(request, gettext("Connect a Hevy API key first."))
+        return _hevy_sync_now_response(request, user)
+
+    participations = ChallengeParticipant.objects.filter(
+        user=user,
+        invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        challenge__status=Challenge.Status.ACTIVE,
+    ).select_related("challenge")
+
+    try:
+        sync_hevy_lifts(user, force=True)
+
+        count = 0
+        for participation in participations:
+            score_pooled_history(user=user, challenge=participation.challenge)
+            count += 1
+    except OperationalError:
+        logger.exception("Forced Hevy sync failed for user %s", user.id)
+        messages.error(
+            request,
+            gettext("Couldn't sync right now. Please try again in a moment."),
+        )
+        return _hevy_sync_now_response(request, user)
+
+    messages.success(
+        request,
+        gettext("Sync triggered for %(count)s challenge(s).") % {"count": count},
+    )
+    return _hevy_sync_now_response(request, user)
+
+
+def _hevy_sync_now_response(request, user):
+    if is_htmx(request):
+        return render(
+            request,
+            "accounts/_hevy_sync_status.html",
+            {"hevy_last_synced_at": hevy_last_synced_at(user), "oob_messages": True},
+        )
+    return redirect("accounts:settings")
+
+
+@login_required
+@require_POST
 @ratelimit(
     group="validate_key_user",
     key="user",
@@ -1143,6 +1213,39 @@ def validate_wger_credentials_view(request):
             {
                 "valid": False,
                 "message": gettext("Invalid credentials or connection error."),
+            }
+        )
+
+    return JsonResponse({"valid": True, "message": gettext("Connection successful.")})
+
+
+@login_required
+@require_POST
+@ratelimit(
+    group="validate_key_user",
+    key="user",
+    rate=validate_key_user_rate,
+    method="POST",
+)
+def validate_hevy_key_view(request):
+    """AJAX endpoint: validate a Hevy API key without saving it.
+
+    Mirrors validate_liftosaur_key_view -- see that docstring.
+    """
+    api_key = request.POST.get("api_key", "").strip()
+    if not api_key:
+        api_key = (request.user.hevy_api_key or "").strip()
+    if not api_key:
+        return JsonResponse(
+            {"valid": False, "message": gettext("No API key provided.")}
+        )
+
+    if not validate_hevy_key(api_key):
+        logger.warning("Hevy key validation failed for user %s", request.user.id)
+        return JsonResponse(
+            {
+                "valid": False,
+                "message": gettext("Invalid API key or connection error."),
             }
         )
 

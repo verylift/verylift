@@ -37,6 +37,7 @@ from challenges.rep_target_goals import (
     rep_target_field_names,
 )
 from challenges.standards import covered_lift_names
+from hevy_api.services import sync_user_lifts as sync_hevy_lifts
 from liftosaur.models import LiftHistory, LiftSource
 from liftosaur.services import sync_user_lifts
 from notifications.models import Notification
@@ -69,9 +70,14 @@ def sync_and_score(user, challenge, *, sync=True) -> None:
     ``sync=False`` to run scoring alone — used where a pull would be wrong (a
     locked challenge takes no writes) or redundant (the goal-setup POST already
     pulled on the matching GET).
+
+    Both live-sync trackers pull into the same shared pool, so a lifter could
+    in principle have both connected; each pull is independently cooldown-gated
+    and a no-op when its own API key is unset.
     """
     if sync:
         sync_user_lifts(user)
+        sync_hevy_lifts(user)
     score_pooled_history(user=user, challenge=challenge)
 
 

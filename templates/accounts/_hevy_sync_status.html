@@ -1,0 +1,7 @@
+{% load humanize i18n %}
+<div id="hevy-sync-status">
+  {% if hevy_last_synced_at %}
+  <p class="mt-3 text-xs text-content-muted">{% blocktrans with when=hevy_last_synced_at|naturaltime %}Last synced {{ when }}{% endblocktrans %}</p>
+  {% endif %}
+</div>
+{% if oob_messages %}{% include "components/_messages_oob.html" %}{% endif %}
