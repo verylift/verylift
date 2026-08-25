@@ -1,5 +1,6 @@
 """Tests for wger.services (TASK-311)."""
 
+import logging
 from datetime import timedelta
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
@@ -195,6 +196,55 @@ class TestSyncWgerLifts:
             sync_wger_lifts(user, force=True)
 
         assert LiftHistory.objects.get(user=user).lift == "Back Squat"
+
+    def test_barbell_qualifier_is_stripped_without_an_explicit_alias(self):
+        # The live-sync pull now runs the full six-stage resolution chain
+        # (core.lift_resolution), not just a bare alias-map lookup -- this
+        # fallback stage used to only apply to CSV imports.
+        user = self._user()
+        entries = [_log_entry()]
+        p1, p2 = _patch_units(STANDARD_WEIGHT_UNITS, STANDARD_REPETITION_UNITS)
+        with (
+            p1,
+            p2,
+            patch(
+                "wger.services.WgerClient.get_workout_logs",
+                return_value=(entries, False, 100),
+            ),
+            patch(
+                "wger.services.WgerClient.get_exercise_name",
+                return_value="Pendlay Row (Barbell)",
+            ),
+        ):
+            sync_wger_lifts(user, force=True)
+
+        assert LiftHistory.objects.get(user=user).lift == "Pendlay Row"
+
+    def test_fallback_stage_hit_logs_a_warning_naming_wger_sync(self, caplog):
+        user = self._user()
+        entries = [_log_entry()]
+        p1, p2 = _patch_units(STANDARD_WEIGHT_UNITS, STANDARD_REPETITION_UNITS)
+        with (
+            p1,
+            p2,
+            patch(
+                "wger.services.WgerClient.get_workout_logs",
+                return_value=(entries, False, 100),
+            ),
+            patch(
+                "wger.services.WgerClient.get_exercise_name",
+                return_value="TBar Row",
+            ),
+            caplog.at_level(logging.WARNING, logger="wger.services"),
+        ):
+            sync_wger_lifts(user, force=True)
+
+        assert LiftHistory.objects.get(user=user).lift == "T Bar Row"
+        fuzzy_warnings = [
+            r for r in caplog.records if "separator-insensitive fallback" in r.message
+        ]
+        assert len(fuzzy_warnings) == 1
+        assert "Wger sync" in fuzzy_warnings[0].message
 
     def test_lb_weight_converted_to_kg(self):
         user = self._user()

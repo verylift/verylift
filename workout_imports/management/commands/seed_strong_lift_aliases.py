@@ -4,7 +4,7 @@ from pathlib import Path
 
 from django.core.management.base import BaseCommand
 
-from workout_imports.models import StrongLiftAlias
+from core.models import LiftAlias, LiftAliasSource
 
 logger = logging.getLogger(__name__)
 
@@ -15,8 +15,8 @@ FIXTURE_PATH = (
 
 class Command(BaseCommand):
     help = (
-        "Seed StrongLiftAlias raw-name -> canonical-lift-name rows from the "
-        "fixture (idempotent)"
+        "Seed core.LiftAlias (source=strong) raw-name -> canonical-lift-name "
+        "rows from the fixture (idempotent)"
     )
 
     def handle(self, *args, **options):
@@ -25,7 +25,8 @@ class Command(BaseCommand):
 
         aliases_created = 0
         for row in data["aliases"]:
-            _, created = StrongLiftAlias.objects.update_or_create(
+            _, created = LiftAlias.objects.update_or_create(
+                source=LiftAliasSource.STRONG,
                 from_name=row["from_name"],
                 defaults={"to_name": row["to_name"]},
             )

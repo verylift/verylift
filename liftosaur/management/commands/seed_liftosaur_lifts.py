@@ -4,7 +4,8 @@ from pathlib import Path
 
 from django.core.management.base import BaseCommand
 
-from liftosaur.models import Lift, LiftAlias
+from core.models import LiftAlias, LiftAliasSource
+from liftosaur.models import Lift
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,7 @@ class Command(BaseCommand):
         aliases_created = 0
         for row in data["aliases"]:
             _, created = LiftAlias.objects.update_or_create(
+                source=LiftAliasSource.LIFTOSAUR,
                 from_name=row["from_name"],
                 defaults={"to_name": row["to_name"]},
             )

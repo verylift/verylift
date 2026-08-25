@@ -2,13 +2,15 @@ import factory
 from django.utils import timezone
 
 from accounts.tests.factories import UserFactory
-from wger.models import WgerLiftAlias, WgerSyncLog
+from core.models import LiftAlias, LiftAliasSource
+from wger.models import WgerSyncLog
 
 
 class WgerLiftAliasFactory(factory.django.DjangoModelFactory):
     class Meta:
-        model = WgerLiftAlias
+        model = LiftAlias
 
+    source = LiftAliasSource.WGER
     from_name = factory.Sequence(lambda n: f"Wger Exercise {n}")
     to_name = "Back Squat"
 

@@ -12,9 +12,10 @@ from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
 from accounts.units import LB_TO_KG
-from liftosaur.models import LiftSource
+from core.lift_resolution import LiftNameResolver, build_lift_alias_maps
+from core.models import LiftAliasSource
+from liftosaur.models import Lift, LiftSource
 from workout_imports.importers.base import ParsedSet, decode_csv_text
-from workout_imports.models import HevyLiftAlias
 
 logger = logging.getLogger(__name__)
 
@@ -95,12 +96,23 @@ class HevyImporter:
         distance_km / duration_seconds instead, which this importer doesn't
         score) or an unparseable start_time -- one bad row is logged and
         skipped, it never aborts the whole import. Exercise names are
-        resolved against HevyLiftAlias before being returned, so callers
-        never see Hevy's raw naming.
+        resolved through the shared tracker-agnostic resolution chain
+        (core.lift_resolution) against Hevy's aliases and the canonical
+        Liftosaur lift catalogue before being returned, so callers rarely see
+        Hevy's raw naming -- including equipment-qualifier and fuzzy-matching
+        fallback stages this importer didn't have before (e.g. a
+        "Pendlay Row (Barbell)"-shaped raw name now resolves the same way it
+        does for a Strong import).
         """
         text = decode_csv_text(file_obj)
         reader = csv.DictReader(io.StringIO(text))
-        alias_map = self._alias_map()
+        resolver = LiftNameResolver(
+            build_lift_alias_maps(
+                LiftAliasSource.HEVY, Lift.objects.values_list("name", flat=True)
+            ),
+            source_label="Hevy CSV import",
+            logger=logger,
+        )
 
         parsed: list[ParsedSet] = []
         for row in reader:
@@ -133,7 +145,7 @@ class HevyImporter:
                 continue
 
             weight_kg = (weight_lbs * LB_TO_KG).quantize(Decimal("0.01"))
-            lift = alias_map.get(exercise.lower(), exercise)
+            lift = resolver.resolve(exercise)
             parsed.append(
                 ParsedSet(
                     lift=lift,
@@ -144,17 +156,3 @@ class HevyImporter:
             )
 
         return parsed
-
-    @staticmethod
-    def _alias_map() -> dict[str, str]:
-        """Return ``{from_name.lower(): to_name}`` for every seeded Hevy alias.
-
-        Mirrors liftosaur.services._alias_map: one query for the whole file
-        instead of one HevyLiftAlias SELECT per row.
-        """
-        return {
-            from_name.lower(): to_name
-            for from_name, to_name in HevyLiftAlias.objects.values_list(
-                "from_name", "to_name"
-            )
-        }

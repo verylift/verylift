@@ -5,8 +5,9 @@ import json
 import pytest
 from django.core.management import call_command
 
+from core.models import LiftAlias, LiftAliasSource
 from liftosaur.management.commands.seed_liftosaur_lifts import FIXTURE_PATH
-from liftosaur.models import Lift, LiftAlias
+from liftosaur.models import Lift
 from liftosaur.services import canonical_lift_name, liftosaur_builtin_lift_names
 from scoring.domain.calculator import is_bodyweight_added_lift
 
@@ -37,8 +38,13 @@ class TestSeedLiftosaurLiftsCommand:
 
     def test_seeds_all_aliases(self):
         call_command("seed_liftosaur_lifts")
-        assert dict(LiftAlias.objects.values_list("from_name", "to_name")) == (
-            EXPECTED_ALIASES
+        assert (
+            dict(
+                LiftAlias.objects.filter(source=LiftAliasSource.LIFTOSAUR).values_list(
+                    "from_name", "to_name"
+                )
+            )
+            == EXPECTED_ALIASES
         )
 
     def test_seeds_bodyweight_added_quality(self):
@@ -52,18 +58,27 @@ class TestSeedLiftosaurLiftsCommand:
         call_command("seed_liftosaur_lifts")
         call_command("seed_liftosaur_lifts")
         assert Lift.objects.count() == len(EXPECTED_BUILTIN_LIFTS)
-        assert LiftAlias.objects.count() == len(EXPECTED_ALIASES)
+        assert LiftAlias.objects.filter(
+            source=LiftAliasSource.LIFTOSAUR
+        ).count() == len(EXPECTED_ALIASES)
 
     def test_reseeding_restores_edited_rows(self):
         """update_or_create means a re-run reconciles rows back to the fixture."""
         call_command("seed_liftosaur_lifts")
         Lift.objects.filter(name="Pull-up").update(is_bodyweight_added=False)
-        LiftAlias.objects.filter(from_name="Squat").update(to_name="Front Squat")
+        LiftAlias.objects.filter(
+            source=LiftAliasSource.LIFTOSAUR, from_name="Squat"
+        ).update(to_name="Front Squat")
 
         call_command("seed_liftosaur_lifts")
 
         assert Lift.objects.get(name="Pull-up").is_bodyweight_added is True
-        assert LiftAlias.objects.get(from_name="Squat").to_name == "Back Squat"
+        assert (
+            LiftAlias.objects.get(
+                source=LiftAliasSource.LIFTOSAUR, from_name="Squat"
+            ).to_name
+            == "Back Squat"
+        )
 
 
 @pytest.mark.django_db
@@ -82,7 +97,11 @@ class TestDbBackedLookups:
         assert canonical_lift_name("Some Novel Lift") == "Some Novel Lift"
 
     def test_canonical_lift_name_follows_admin_edits(self):
-        LiftAlias.objects.create(from_name="Weighted Pullup", to_name="Pull-up")
+        LiftAlias.objects.create(
+            source=LiftAliasSource.LIFTOSAUR,
+            from_name="Weighted Pullup",
+            to_name="Pull-up",
+        )
         assert canonical_lift_name("Weighted Pullup") == "Pull-up"
 
     def test_builtin_membership_from_db(self):

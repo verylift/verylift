@@ -5,9 +5,9 @@ import pytest
 from django.core.management import call_command
 
 from core.management.commands.seed_all import SEED_COMMANDS
+from core.models import LiftAlias, LiftAliasSource
 from fitnessvolt.models import FitnessVoltLiftAlias
-from liftosaur.models import Lift, LiftAlias
-from workout_imports.models import HevyLiftAlias
+from liftosaur.models import Lift
 
 
 @pytest.mark.django_db
@@ -26,18 +26,20 @@ def test_seed_all_populates_reference_tables_idempotently():
     call_command("seed_all")
     counts = (
         Lift.objects.count(),
-        LiftAlias.objects.count(),
+        LiftAlias.objects.filter(source=LiftAliasSource.LIFTOSAUR).count(),
         FitnessVoltLiftAlias.objects.count(),
-        HevyLiftAlias.objects.count(),
+        LiftAlias.objects.filter(source=LiftAliasSource.HEVY).count(),
+        LiftAlias.objects.filter(source=LiftAliasSource.STRONG).count(),
     )
     assert all(count > 0 for count in counts)
 
     call_command("seed_all")
     assert counts == (
         Lift.objects.count(),
-        LiftAlias.objects.count(),
+        LiftAlias.objects.filter(source=LiftAliasSource.LIFTOSAUR).count(),
         FitnessVoltLiftAlias.objects.count(),
-        HevyLiftAlias.objects.count(),
+        LiftAlias.objects.filter(source=LiftAliasSource.HEVY).count(),
+        LiftAlias.objects.filter(source=LiftAliasSource.STRONG).count(),
     )
 
 

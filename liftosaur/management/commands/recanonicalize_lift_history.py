@@ -27,7 +27,8 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from challenges.models import Challenge, ChallengeParticipant
-from liftosaur.models import LiftAlias, LiftHistory
+from core.models import LiftAlias, LiftAliasSource
+from liftosaur.models import LiftHistory
 from scoring.services import score_pooled_history
 
 logger = logging.getLogger(__name__)
@@ -55,9 +56,9 @@ class Command(BaseCommand):
         dry_run = options["dry_run"]
         aliases = {
             from_name.lower(): to_name
-            for from_name, to_name in LiftAlias.objects.values_list(
-                "from_name", "to_name"
-            )
+            for from_name, to_name in LiftAlias.objects.filter(
+                source=LiftAliasSource.LIFTOSAUR
+            ).values_list("from_name", "to_name")
         }
 
         affected_users = set()

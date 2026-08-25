@@ -16,7 +16,9 @@ from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
 from accounts.units import LB_TO_KG
-from liftosaur.models import LiftAlias, LiftSource
+from core.lift_resolution import LiftNameResolver, build_lift_alias_maps
+from core.models import LiftAliasSource
+from liftosaur.models import Lift, LiftSource
 from workout_imports.importers.base import ParsedSet, decode_csv_text
 
 logger = logging.getLogger(__name__)
@@ -113,10 +115,21 @@ class LiftosaurImporter:
         Completed Reps or Completed Weight Value, an unrecognized Completed
         Weight Unit, an unparseable Workout DateTime, or a blank Exercise are
         skipped, not fatal.
+
+        Exercise names are resolved through the shared tracker-agnostic
+        resolution chain (core.lift_resolution) against Liftosaur's aliases
+        and the canonical lift catalogue -- including the equipment-qualifier
+        and fuzzy-matching fallback stages this importer didn't have before.
         """
         text = decode_csv_text(file_obj)
         reader = csv.DictReader(io.StringIO(text))
-        alias_map = self._alias_map()
+        resolver = LiftNameResolver(
+            build_lift_alias_maps(
+                LiftAliasSource.LIFTOSAUR, Lift.objects.values_list("name", flat=True)
+            ),
+            source_label="Liftosaur CSV import",
+            logger=logger,
+        )
 
         parsed: list[ParsedSet] = []
         for row in reader:
@@ -144,7 +157,7 @@ class LiftosaurImporter:
 
             weight_kg = weight_value * LB_TO_KG if unit == "lb" else weight_value
             weight_kg = weight_kg.quantize(Decimal("0.01"))
-            lift = alias_map.get(exercise.lower(), exercise)
+            lift = resolver.resolve(exercise)
             parsed.append(
                 ParsedSet(
                     lift=lift,
@@ -155,18 +168,3 @@ class LiftosaurImporter:
             )
 
         return parsed
-
-    @staticmethod
-    def _alias_map() -> dict[str, str]:
-        """Return ``{from_name.lower(): to_name}`` for every seeded alias.
-
-        Reuses liftosaur.models.LiftAlias -- the same table
-        liftosaur.services._alias_map draws from for the API-sync path -- since
-        a Liftosaur CSV export uses the same exercise names the API returns.
-        """
-        return {
-            from_name.lower(): to_name
-            for from_name, to_name in LiftAlias.objects.values_list(
-                "from_name", "to_name"
-            )
-        }

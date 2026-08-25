@@ -349,6 +349,54 @@ def _history_record(performed_date, exercise, completed):
 
 
 @pytest.mark.django_db
+class TestSyncUserLiftsFallbackResolutionStages:
+    """The live-sync pull now runs the full six-stage resolution chain
+    (core.lift_resolution) rather than a bare alias-map lookup -- these
+    fallback stages used to only apply to CSV imports. Consequence: on the
+    next sync, a raw exercise name that previously landed unmapped can now
+    silently resolve and start counting toward standings (accepted -- see
+    the PR description)."""
+
+    def test_barbell_qualifier_is_stripped_without_an_explicit_alias(self):
+        user = UserFactory(liftosaur_api_key="key")
+        performed = (datetime.now(tz=UTC) - timedelta(days=1)).date().isoformat()
+        history = [
+            (
+                [_history_record(performed, "Pendlay Row (Barbell)", "1x5 60kg")],
+                False,
+                None,
+            ),
+        ]
+        client = _stub_client(history=history)
+
+        with patch("liftosaur.services.LiftosaurClient", return_value=client):
+            sync_user_lifts(user)
+
+        assert LiftHistory.objects.get(user=user).lift == "Pendlay Row"
+
+    def test_fallback_stage_hit_logs_a_warning_naming_liftosaur_sync(self, caplog):
+        user = UserFactory(liftosaur_api_key="key")
+        performed = (datetime.now(tz=UTC) - timedelta(days=1)).date().isoformat()
+        history = [
+            ([_history_record(performed, "TBar Row", "1x5 60kg")], False, None),
+        ]
+        client = _stub_client(history=history)
+
+        with (
+            patch("liftosaur.services.LiftosaurClient", return_value=client),
+            caplog.at_level(logging.WARNING, logger="liftosaur.services"),
+        ):
+            sync_user_lifts(user)
+
+        assert LiftHistory.objects.get(user=user).lift == "T Bar Row"
+        fuzzy_warnings = [
+            r for r in caplog.records if "separator-insensitive fallback" in r.message
+        ]
+        assert len(fuzzy_warnings) == 1
+        assert "Liftosaur sync" in fuzzy_warnings[0].message
+
+
+@pytest.mark.django_db
 class TestBackfillLiftHistory:
     def test_no_api_key_is_noop(self):
         user = UserFactory(liftosaur_api_key=None)
