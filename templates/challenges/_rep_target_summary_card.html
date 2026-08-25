@@ -12,14 +12,17 @@ markup here must always be a single complete replacement for itself.
 Two faces share one card, reusing the exact flip-card mechanism and JS
 (initManualLiftCard in detail.html) that Classic's card uses: the front is
 the read-only progress summary, the back is the self-report carousel. Unlike
-Classic (weight varies across ten fixed rep counts), Rep Target's weight is a
-single fixed gate -- the goal's own target_weight -- so the carousel instead
-pages through the ten point tiers, each entry claiming a different rep count
-at that same fixed weight (challenges.services._manual_targets_for_rep_target).
-data-mode="rep_target" is the only thing that tells the shared JS to word the
-tier label as "N pt target" instead of Classic's "NRM target"; every other
-field name and behaviour (paging, height sync, disabled-when-no-gain,
-confirm) is identical.
+Classic (the lifter picks WHICH rep-max rung to confirm, and weight varies
+per rung), Rep Target's weight is a single fixed gate -- the goal's own
+target_weight -- so the carousel is reps-first instead: the lifter picks HOW
+MANY REPS they did, and each stop shows what that scores. Stops are only the
+reps counts that earn a new, distinct point value, so the carousel has
+min(target_reps, 10) stops, not always 10
+(challenges.services._manual_targets_for_rep_target) -- the dots below follow
+that same count. data-mode="rep_target" is the only thing that tells the
+shared JS to word the label as "N pt target" instead of Classic's "NRM
+target"; every other field name and behaviour (paging, height sync,
+disabled-when-no-gain, confirm) is identical.
 
 Context: card (a personal_data.summary_cards entry), display_unit, challenge,
 start_rep_count (int, carousel's opening rep-count -- defaults to
@@ -115,7 +118,7 @@ and this fragment's post-submit render share one default-selection rule).
         </div>
 
         <div class="manual-dots flex justify-center gap-1 mb-3">
-          {% for i in "0123456789" %}
+          {% for stop in card.manual_targets %}
           <span class="manual-dot h-1.5 w-1.5 rounded-full bg-line-subtle transition-all"></span>
           {% endfor %}
         </div>

@@ -1568,76 +1568,77 @@ def _rep_target_point_columns(target_reps, target_weight, current_points):
 def _manual_targets_for_rep_target(
     lift, params, *, target_weight, target_reps, current_points
 ):
-    """Build the 1pt..10pt reps carousel a REP_TARGET summary card's
-    self-report carousel pages through -- the sibling of
-    :func:`_manual_targets_for_lift`.
+    """Build the reps-first self-report carousel a REP_TARGET summary card
+    pages through -- the sibling of :func:`_manual_targets_for_lift`.
 
-    Classic's free scoring axis is which rep-max rung was hit, so its
-    carousel varies weight across ten fixed rep counts. Rep Target's weight is
-    a single fixed gate (the goal's own ``target_weight``), so the carousel
-    instead varies reps across the ten point tiers, reusing
-    :func:`_rep_target_point_columns`'s own "fewest reps for N points"
-    table -- the same one the Goals tab renders -- so the carousel can never
-    show a rep count that drifts from what the Goals tab or scoring use.
+    Reps, not points, is the axis the lifter actually picks: unlike Classic
+    (whose free axis is which rep-max rung to confirm, with weight varying
+    per rung), Rep Target's weight is a single fixed gate -- the goal's own
+    ``target_weight`` -- so every stop asks "how many reps did you do" and
+    shows what that scores, never the other way around.
 
-    ``points_delta`` is computed by re-running ``best_score_for_rep_target``
-    on each entry's own reps, not by subtracting ``current_points`` from the
-    column's nominal ``points`` label: a small ``target_reps`` can make
-    several point tiers share the same minimum rep count (documented on
-    ``_rep_target_point_columns``), so confirming a "cheap" tier can actually
-    score more than its own label promises. Running the real scorer here is
-    what keeps the carousel's promise equal to the award, the same reasoning
-    Classic's own docstring gives.
+    Each stop is the fewest reps that earns a new, distinct point value,
+    computed by walking ``best_score_for_rep_target`` (the real scorer, not
+    an inversion of its formula) over ``1..target_reps`` and keeping only the
+    first rep count to reach each points value. Reps that score 0, or that
+    repeat a points value an earlier (fewer-reps) stop already reached, are
+    not real choices, so they are dropped rather than padded in to reach a
+    fixed count: the stop count is ``min(target_reps, 10)``, not always 10.
+
+    Because every stop's label IS the reps that earns its listed points
+    (both computed here from the same scorer that later awards the set),
+    confirming a stop can never score more or less than its own label
+    promises -- there is no rung-tie hazard to guard against here, unlike a
+    rep-max ladder where two Classic targets can tie.
     """
-    columns = _rep_target_point_columns(target_reps, target_weight, current_points)
     weight_display = _weight_display(
         target_weight, lift, params.display_unit, params.challenge, snap=False
     )
     current_points = current_points or 0
     targets = []
-    for col in columns:
-        reps = col["reps"]
-        points_if_logged = (
+    seen_points = set()
+    for reps in range(1, target_reps + 1):
+        points = (
             best_score_for_rep_target(reps, target_weight, target_reps, target_weight)
             or 0
         )
+        if points == 0 or points in seen_points:
+            continue
+        seen_points.add(points)
         targets.append(
             {
-                "points": col["points"],
+                "points": points,
                 "rep_count": reps,
                 "weight": weight_display,
-                "is_current_best": col["is_current_best"],
-                "points_delta": points_if_logged - current_points,
+                "is_current_best": points == current_points,
+                "points_delta": points - current_points,
             }
         )
+        if len(targets) == 10:
+            break
     return targets
 
 
-def _default_manual_rep_count_for_rep_target(
-    most_recent_event, target_reps, target_weight
-):
+def _default_manual_rep_count_for_rep_target(most_recent_event, manual_targets):
     """Starting rep count for a REP_TARGET summary card's self-report carousel
-    -- sibling of :func:`_default_manual_rep_count`, and deliberately named
-    and shaped the same way (a rep count, not a points tier) so the front-end
-    carousel widget can page/default both modes' carousels identically: every
-    entry in :func:`_manual_targets_for_rep_target` carries a ``rep_count``
-    field, exactly like Classic's, so this returns a value that always
-    matches one of them.
+    -- sibling of :func:`_default_manual_rep_count`.
 
     No scoring history for this lift, or a zero-point history, opens on the
-    easiest tier's (1 point) rep count -- the Rep Target equivalent of
-    Classic's 10RM fallback. Otherwise opens on the rep count the tier the
-    most recently logged event scored maps to, via the same
-    ``_rep_target_point_columns`` table the carousel itself is built from, so
-    the default can never point at a rep count the carousel doesn't actually
-    contain.
+    first (fewest-reps, lowest-points) stop -- the Rep Target equivalent of
+    Classic's 10RM fallback. Otherwise opens on the stop matching the most
+    recently logged event's own points. Matched against ``manual_targets``
+    itself (rather than re-derived) so the default always lands on a stop
+    that actually exists in the list, which can be shorter than 10 entries
+    for a small ``target_reps``.
     """
-    tier = 1
+    tier = None
     if most_recent_event is not None and most_recent_event.points_earned:
         tier = most_recent_event.points_earned
-    columns = _rep_target_point_columns(target_reps, target_weight, None)
-    entry = next((col for col in columns if col["points"] == tier), columns[0])
-    return entry["reps"]
+    if tier is not None:
+        match = next((t for t in manual_targets if t["points"] == tier), None)
+        if match is not None:
+            return match["rep_count"]
+    return manual_targets[0]["rep_count"]
 
 
 def build_rep_target_personal_data(user, challenge, participant):
@@ -1822,9 +1823,8 @@ def build_rep_target_personal_data(user, challenge, participant):
     _flag_endgame_suggestion(summary_cards, challenge)
 
     for card in summary_cards:
-        target_weight, target_reps = targets_by_lift[card["lift"]]
         card["manual_default_rep_count"] = _default_manual_rep_count_for_rep_target(
-            most_recent_event_by_lift.get(card["lift"]), target_reps, target_weight
+            most_recent_event_by_lift.get(card["lift"]), card["manual_targets"]
         )
 
     return {
