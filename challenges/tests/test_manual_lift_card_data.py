@@ -1,5 +1,10 @@
 """Tests for the self-report carousel data build_personal_data attaches to
-each summary card (TASK-25): manual_targets and manual_default_rep_count."""
+each summary card (TASK-25): manual_targets and manual_default_rep_count.
+
+manual_default_rep_count opens on the participant's current best (UAT
+follow-up), not their most recently logged set -- the opening stop must
+match the stop already flagged is_current_best and the points the card's
+front face shows."""
 
 from datetime import timedelta
 from decimal import Decimal
@@ -138,9 +143,14 @@ class TestManualTargets:
         assert card.get("close_to_goal") is True
         assert card["manual_default_rep_count"] == 10
 
-    def test_default_rep_count_uses_most_recent_event_not_current_best(
+    def test_default_rep_count_opens_on_current_best_not_most_recent_event(
         self, user, challenge, participant
     ):
+        """The regression this whole rule exists for: a lifter whose most
+        recent set scored worse than their current best (a deload, a
+        warm-up, a failed attempt) must still open the carousel on the best,
+        not on what they just did -- fails under the old
+        most-recent-event-wins behaviour (would open on 7RM here)."""
         _give_goal(participant, targets=_flat_targets())
         # Current best: 8 points (satisfies 3RM), logged first.
         PointEarnEventFactory(
@@ -163,7 +173,11 @@ class TestManualTargets:
         )
         data = build_personal_data(user, challenge, participant)
         card = data["summary_cards"][0]
-        assert card["manual_default_rep_count"] == 7
+        assert card["manual_default_rep_count"] == 3
+        flagged = [
+            t["rep_count"] for t in card["manual_targets"] if t["is_current_best"]
+        ]
+        assert card["manual_default_rep_count"] == flagged[0]
 
     @pytest.mark.parametrize(
         "nine_rm,expected_points",
@@ -209,13 +223,13 @@ class TestManualTargets:
         event = PointEarnEvent.objects.get(user=user, challenge=challenge, lift=LIFT)
         assert event.points_earned == ten_rm["points_delta"]
 
-    def test_default_rep_count_ignores_zero_point_events(
+    def test_default_rep_count_falls_back_when_only_zero_point_history_exists(
         self, user, challenge, participant
     ):
-        """A sub-threshold set is stored as a real zero-point PointEarnEvent, so
-        a lifter who has logged sets but never scored still has a most-recent
-        event. Deriving from it would give 11 - 0 == 11, a rep count no
-        carousel entry has, so it must fall back to the no-history default.
+        """A sub-threshold set is stored as a real zero-point PointEarnEvent
+        with is_current_best=False, so a lifter who has logged sets but never
+        scored still has no current-best row and takes the no-history
+        fallback, same as a lift with no history at all.
         """
         _give_goal(participant, targets=_flat_targets())
         PointEarnEventFactory(

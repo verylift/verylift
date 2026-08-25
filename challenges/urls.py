@@ -75,6 +75,11 @@ urlpatterns = [
         name="manual-lift",
     ),
     path(
+        "challenges/<uuid:pk>/manual-rep-target/",
+        views.manual_rep_target_view,
+        name="manual-rep-target",
+    ),
+    path(
         "challenges/<uuid:pk>/transfer/<uuid:user_id>/",
         views.transfer_ownership_view,
         name="transfer",

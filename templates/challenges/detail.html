@@ -436,7 +436,12 @@
       }
     </script>
     <script>
-      // Self-report flip card (TASK-25). Each card's back carries its own
+      // Self-report flip card (TASK-25), shared verbatim by both Classic's
+      // and REP_TARGET's summary cards (issue #85 follow-up) -- Rep Target's
+      // card sets data-mode="rep_target" purely to swap the tier label's
+      // wording ("N pt target" vs. Classic's "NRM target"); every other field
+      // (rep_count, weight, points_delta, is_current_best) and behaviour is
+      // identical between the two carousels. Each card's back carries its own
       // per-rep-count target grid as a json_script data island
       // (#manual-targets-<slug>) so paging the carousel is a pure client-side
       // re-render, never a round trip -- only Confirm submits (via the
@@ -498,13 +503,17 @@
         const confirmBtn = card.querySelector(".manual-confirm");
         const repInput = card.querySelector(".manual-rep-input");
 
+        const isRepTarget = card.dataset.mode === "rep_target";
+
         function render() {
           const t = targets[index];
           const unitSuffix = bodyweightAdded ? "" : " " + unit;
           valueEl.textContent = t.weight + unitSuffix + " × " + t.rep_count;
           labelEl.textContent = t.is_current_best
             ? "{% trans 'Current best' %}"
-            : t.rep_count + "{% trans 'RM target' %}";
+            : isRepTarget
+              ? t.points + "{% trans ' pt target' %}"
+              : t.rep_count + "{% trans 'RM target' %}";
           labelEl.classList.toggle("text-accent", t.is_current_best);
           labelEl.classList.toggle("font-semibold", t.is_current_best);
           // Points are 11 - rep_count, so every carousel position already has

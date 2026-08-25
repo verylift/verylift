@@ -50,6 +50,7 @@ from challenges.models import (
     RepTargetGoal,
 )
 from challenges.rep_target_goals import (
+    MAX_TARGET_REPS,
     detach_active_rep_target_goal,
     merge_suggested_fields,
     parse_rep_target_grid,
@@ -63,6 +64,7 @@ from challenges.services import (
     build_participant_chart,
     build_personal_data,
     build_rep_target_goal_context,
+    build_rep_target_personal_data,
     challenge_end_instant,
     close_challenge,
     create_challenge,
@@ -74,6 +76,7 @@ from challenges.services import (
     remove_participant,
     resolve_invite_token,
     submit_manual_lift,
+    submit_manual_rep_target_set,
     sync_and_score,
     transfer_ownership,
     update_invite_link,
@@ -1766,6 +1769,86 @@ def manual_lift_view(request, pk):
         "oob_messages": True,
     }
     return render(request, "challenges/_summary_card.html", context)
+
+
+@login_required
+@require_POST
+def manual_rep_target_view(request, pk):
+    """Self-report a completed set from the REP_TARGET Summary tab's flip-card
+    (issue #85 follow-up) -- the REP_TARGET sibling of ``manual_lift_view``.
+
+    Same membership/``has_goal_configured`` guard, same "always returns the
+    single affected card's fragment plus an OOB message" response shape, and
+    the same "carousel disables non-improving entries, so a 400 here means a
+    stale card or a hand-made request" caveat as Classic. The one input
+    difference: Rep Target's carousel varies reps, not weight, so there is no
+    weight field here -- ``submit_manual_rep_target_set`` always logs at the
+    goal's own fixed ``target_weight``.
+    """
+    challenge, participant = _require_challenge_member(request, pk)
+
+    if not participant.has_goal_configured:
+        raise PermissionDenied
+
+    lift = request.POST.get("lift", "")
+    try:
+        rep_count = int(request.POST.get("rep_count", ""))
+    except (TypeError, ValueError):
+        return HttpResponseBadRequest(gettext("Invalid rep count."))
+    if rep_count < 1 or rep_count > MAX_TARGET_REPS:
+        return HttpResponseBadRequest(gettext("Invalid rep count."))
+
+    try:
+        performed_at = date.fromisoformat(request.POST.get("performed_at", ""))
+    except ValueError:
+        return HttpResponseBadRequest(gettext("Invalid date."))
+    if performed_at > date.today():
+        return HttpResponseBadRequest(gettext("Date cannot be in the future."))
+
+    result = submit_manual_rep_target_set(
+        user=request.user,
+        challenge=challenge,
+        participant=participant,
+        lift=lift,
+        rep_count=rep_count,
+        performed_at=performed_at,
+    )
+    if result is None:
+        return HttpResponseBadRequest(gettext("Could not log this set."))
+    _history_row, points_earned = result
+
+    messages.success(
+        request,
+        ngettext(
+            "Logged %(points)s point on %(lift)s.",
+            "Logged %(points)s points on %(lift)s.",
+            points_earned,
+        )
+        % {"points": points_earned, "lift": lift},
+    )
+
+    personal_data = build_rep_target_personal_data(request.user, challenge, participant)
+    card = next((c for c in personal_data["summary_cards"] if c["lift"] == lift), None)
+    if card is None:
+        return HttpResponseBadRequest(gettext("Unknown lift for this challenge."))
+
+    logger.info(
+        "User %s self-reported %s reps on %s in challenge %s for %s point(s)",
+        request.user.id,
+        rep_count,
+        lift,
+        challenge.pk,
+        points_earned,
+    )
+
+    context = {
+        "card": card,
+        "display_unit": personal_data["display_unit"],
+        "challenge": challenge,
+        "start_rep_count": rep_count,
+        "oob_messages": True,
+    }
+    return render(request, "challenges/_rep_target_summary_card.html", context)
 
 
 @login_required

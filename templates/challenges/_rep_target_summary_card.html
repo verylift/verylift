@@ -1,46 +1,137 @@
-{% load i18n %}
+{% load i18n icons %}
 {% comment %}
-One "Your Performance" summary card for a REP_TARGET challenge (issue #85) --
-the sibling of _summary_card.html, but showing progress toward a single
-(target_weight, target_reps) goal instead of Classic's rep-max ladder + a
-self-report carousel. There is no manual self-report path for this mode
-(out of scope for issue #85).
+One "Your Performance" summary card for a REP_TARGET challenge (issue #85,
+manual self-report follow-up) -- the sibling of _summary_card.html, showing
+progress toward a single (target_weight, target_reps) goal instead of
+Classic's rep-max ladder. Rendered both inline, once per lift, inside
+detail.html's Summary tab grid, and standalone as the htmx response of
+manual_rep_target_view (challenges:manual-rep-target) -- the latter swaps
+outerHTML onto exactly this card's own #summary-card-<slug> wrapper, so the
+markup here must always be a single complete replacement for itself.
 
-Context: card (a personal_data.summary_cards entry), display_unit, challenge.
+Two faces share one card, reusing the exact flip-card mechanism and JS
+(initManualLiftCard in detail.html) that Classic's card uses: the front is
+the read-only progress summary, the back is the self-report carousel. Unlike
+Classic (the lifter picks WHICH rep-max rung to confirm, and weight varies
+per rung), Rep Target's weight is a single fixed gate -- the goal's own
+target_weight -- so the carousel is reps-first instead: the lifter picks HOW
+MANY REPS they did, and each stop shows what that scores. Stops are only the
+reps counts that earn a new, distinct point value, so the carousel has
+min(target_reps, 10) stops, not always 10
+(challenges.services._manual_targets_for_rep_target) -- the dots below follow
+that same count. data-mode="rep_target" is the only thing that tells the
+shared JS to word the label as "N pt target" instead of Classic's "NRM
+target"; every other field name and behaviour (paging, height sync,
+disabled-when-no-gain, confirm) is identical.
+
+Context: card (a personal_data.summary_cards entry), display_unit, challenge,
+start_rep_count (int, carousel's opening rep-count -- defaults to
+card.manual_default_rep_count when omitted so the detail.html initial render
+and this fragment's post-submit render share one default-selection rule).
 {% endcomment %}
-<div class="{% if card.close_to_goal %}border-2 border-warning-light{% else %}border border-line-subtle{% endif %} rounded p-4">
-  <h3 class="text-sm font-semibold text-content-strong mb-2">{{ card.lift }}</h3>
-  <p class="text-xs text-content-muted mb-3">
-    {% blocktrans with weight=card.target_weight reps=card.target_reps %}Target: <span class="font-mono">{{ weight }}</span>{% endblocktrans %}{% if card.target_weight != "BW" %} {{ display_unit }}{% endif %} × <span class="font-mono">{{ card.target_reps }}</span> {% blocktrans count counter=card.target_reps %}rep{% plural %}reps{% endblocktrans %}
-  </p>
+{% with slug=card.lift|slugify opening_rep=start_rep_count|default:card.manual_default_rep_count %}
+<div id="summary-card-{{ slug }}"
+     class="flip-card {% if card.close_to_goal %}border-2 border-warning-light{% else %}border border-line-subtle{% endif %} rounded p-4"
+     data-lift="{{ card.lift }}"
+     data-unit="{{ display_unit }}"
+     data-bodyweight-added="{% if card.is_bodyweight_added %}1{% else %}0{% endif %}"
+     data-mode="rep_target"
+     data-default-rep-count="{{ opening_rep }}"
+     data-targets-id="manual-targets-{{ slug }}">
+  <div class="flip-card-inner">
 
-  {% if card.state == "scored" %}
-  <p class="text-2xl font-bold text-accent font-mono">{% blocktrans with points=card.points_earned %}{{ points }} pts{% endblocktrans %}</p>
-  <div class="h-1.5 w-full bg-surface-sunken rounded-full overflow-hidden my-2">
-    <div class="h-full bg-accent" style="width: {% widthratio card.progress_reps card.target_reps 100 %}%"></div>
+    <div class="flip-card-front">
+      <div class="flex items-start justify-between gap-2 mb-2">
+        <h3 class="text-sm font-semibold text-content-strong">{{ card.lift }}</h3>
+        <button type="button" class="manual-flip-open flex-shrink-0 w-6 h-6 inline-flex items-center justify-center rounded-full bg-accent text-accent-on hover:opacity-90"
+                aria-label="{% blocktrans with lift=card.lift %}Log a set for {{ lift }}{% endblocktrans %}">
+          {% icon "plus" css_class="h-3.5 w-3.5" %}
+        </button>
+      </div>
+      <p class="text-xs text-content-muted mb-3">
+        {% blocktrans with weight=card.target_weight reps=card.target_reps %}Target: <span class="font-mono">{{ weight }}</span>{% endblocktrans %}{% if card.target_weight != "BW" %} {{ display_unit }}{% endif %} × <span class="font-mono">{{ card.target_reps }}</span> {% blocktrans count counter=card.target_reps %}rep{% plural %}reps{% endblocktrans %}
+      </p>
+
+      {% if card.state == "scored" %}
+      <p class="text-2xl font-bold text-accent font-mono">{% blocktrans with points=card.points_earned %}{{ points }} pts{% endblocktrans %}</p>
+      <div class="h-1.5 w-full bg-surface-sunken rounded-full overflow-hidden my-2">
+        <div class="h-full bg-accent" style="width: {% widthratio card.progress_reps card.target_reps 100 %}%"></div>
+      </div>
+      <p class="text-sm text-content-body">
+        {% blocktrans with progress=card.progress_reps target=card.target_reps %}<span class="font-mono">{{ progress }}</span>/<span class="font-mono">{{ target }}</span> reps{% endblocktrans %}
+        ({{ card.weight }}{% if card.weight != "BW" %} {{ display_unit }}{% endif %}, {{ card.date }})
+      </p>
+      {% if card.reps_gap is not None %}
+      <p class="text-xs text-content-muted mt-1">
+        {% blocktrans count counter=card.reps_gap with lift=card.lift %}{{ counter }} more rep for your next point on {{ lift }}.{% plural %}{{ counter }} more reps for your next point on {{ lift }}.{% endblocktrans %}
+      </p>
+      {% endif %}
+      {% elif card.state == "no_points" %}
+      {% if card.close_to_goal %}
+      <span class="inline-block text-xs font-medium px-2 py-0.5 mb-2 rounded bg-warning-light text-warning-dark">{% trans "Close to goal" %}</span>
+      {% endif %}
+      <p class="text-sm text-content-body">
+        {% blocktrans with weight=card.best_weight date=card.best_date %}Best logged: <span class="font-mono">{{ weight }}</span>{% endblocktrans %}{% if card.best_weight != "BW" %} {{ display_unit }}{% endif %} {% blocktrans with date=card.best_date %}({{ date }}){% endblocktrans %}
+      </p>
+      {% if card.weight_gap is not None %}
+      <p class="text-xs text-content-muted mt-1">
+        {% blocktrans with gap=card.weight_gap unit=display_unit lift=card.lift %}Add <span class="font-mono">{{ gap }}</span> {{ unit }} to start scoring on {{ lift }}.{% endblocktrans %}
+      </p>
+      {% endif %}
+      {% else %}
+      <p class="text-sm text-content-muted italic">{% trans "No data yet" %}</p>
+      {% endif %}
+    </div>
+
+    <div class="flip-card-back">
+      <div class="flex items-start justify-between gap-2 mb-3">
+        <h3 class="text-sm font-semibold text-content-strong">{{ card.lift }}</h3>
+        <button type="button" class="manual-flip-close flex-shrink-0 w-6 h-6 inline-flex items-center justify-center rounded-full border border-line-subtle text-content-muted hover:text-content-strong"
+                aria-label="{% trans 'Cancel' %}">
+          {% icon "x" css_class="h-3.5 w-3.5" %}
+        </button>
+      </div>
+
+      {% with target_id="manual-targets-"|add:slug %}{{ card.manual_targets|json_script:target_id }}{% endwith %}
+
+      <form class="manual-lift-form"
+            hx-post="{% url 'challenges:manual-rep-target' challenge.pk %}"
+            hx-target="#summary-card-{{ slug }}"
+            hx-swap="outerHTML">
+        <input type="hidden" name="lift" value="{{ card.lift }}">
+        <input type="hidden" name="rep_count" class="manual-rep-input" value="{{ opening_rep }}">
+
+        <div class="flex items-center justify-center gap-3 mb-1">
+          <button type="button" class="manual-prev w-7 h-7 inline-flex items-center justify-center rounded border border-line-subtle text-content-body hover:bg-surface-sunken disabled:opacity-40"
+                  aria-label="{% trans 'Previous rep count' %}">
+            {% icon "chevron-left" css_class="h-4 w-4" %}
+          </button>
+          <div class="text-center min-w-[7rem]">
+            <p class="manual-value text-lg font-bold font-mono text-content-strong"></p>
+            <p class="manual-label text-xs text-content-muted"></p>
+            <p class="manual-delta h-4 text-xs font-mono font-semibold"></p>
+          </div>
+          <button type="button" class="manual-next w-7 h-7 inline-flex items-center justify-center rounded border border-line-subtle text-content-body hover:bg-surface-sunken disabled:opacity-40"
+                  aria-label="{% trans 'Next rep count' %}">
+            {% icon "chevron-right" css_class="h-4 w-4" %}
+          </button>
+        </div>
+
+        <div class="manual-dots flex justify-center gap-1 mb-3">
+          {% for stop in card.manual_targets %}
+          <span class="manual-dot h-1.5 w-1.5 rounded-full bg-line-subtle transition-all"></span>
+          {% endfor %}
+        </div>
+
+        <label class="block text-xs text-content-muted mb-1" for="manual-date-{{ slug }}">{% trans "Date" %}</label>
+        <input id="manual-date-{{ slug }}" type="date" name="performed_at" value="{% now 'Y-m-d' %}" max="{% now 'Y-m-d' %}"
+               class="w-full mb-3 text-sm border border-line-subtle rounded px-2 py-1.5 bg-surface-card text-content-body">
+
+        <button type="submit" class="manual-confirm w-full text-sm font-semibold px-4 py-2 rounded bg-accent text-accent-on hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"></button>
+      </form>
+    </div>
+
   </div>
-  <p class="text-sm text-content-body">
-    {% blocktrans with progress=card.progress_reps target=card.target_reps %}<span class="font-mono">{{ progress }}</span>/<span class="font-mono">{{ target }}</span> reps{% endblocktrans %}
-    ({{ card.weight }}{% if card.weight != "BW" %} {{ display_unit }}{% endif %}, {{ card.date }})
-  </p>
-  {% if card.reps_gap is not None %}
-  <p class="text-xs text-content-muted mt-1">
-    {% blocktrans count counter=card.reps_gap with lift=card.lift %}{{ counter }} more rep for your next point on {{ lift }}.{% plural %}{{ counter }} more reps for your next point on {{ lift }}.{% endblocktrans %}
-  </p>
-  {% endif %}
-  {% elif card.state == "no_points" %}
-  {% if card.close_to_goal %}
-  <span class="inline-block text-xs font-medium px-2 py-0.5 mb-2 rounded bg-warning-light text-warning-dark">{% trans "Close to goal" %}</span>
-  {% endif %}
-  <p class="text-sm text-content-body">
-    {% blocktrans with weight=card.best_weight date=card.best_date %}Best logged: <span class="font-mono">{{ weight }}</span>{% endblocktrans %}{% if card.best_weight != "BW" %} {{ display_unit }}{% endif %} {% blocktrans with date=card.best_date %}({{ date }}){% endblocktrans %}
-  </p>
-  {% if card.weight_gap is not None %}
-  <p class="text-xs text-content-muted mt-1">
-    {% blocktrans with gap=card.weight_gap unit=display_unit lift=card.lift %}Add <span class="font-mono">{{ gap }}</span> {{ unit }} to start scoring on {{ lift }}.{% endblocktrans %}
-  </p>
-  {% endif %}
-  {% else %}
-  <p class="text-sm text-content-muted italic">{% trans "No data yet" %}</p>
-  {% endif %}
 </div>
+{% endwith %}
+{% if oob_messages %}{% include "components/_messages_oob.html" %}{% endif %}
