@@ -1,12 +1,17 @@
 """Tests for the seed_strong_lift_aliases command and its fixture."""
 
 import json
+from collections import Counter
 
 import pytest
 from django.core.management import call_command
 
 from liftosaur.management.commands.seed_liftosaur_lifts import (
     FIXTURE_PATH as LIFTOSAUR_FIXTURE_PATH,
+)
+from workout_imports.importers.strong import (
+    _normalize_lift_name,
+    _normalize_lift_name_strict,
 )
 from workout_imports.management.commands.seed_strong_lift_aliases import FIXTURE_PATH
 from workout_imports.models import StrongLiftAlias
@@ -35,6 +40,36 @@ def test_every_alias_to_name_matches_a_seeded_canonical_lift():
         to_name for to_name in EXPECTED_ALIASES.values() if to_name not in seeded_names
     }
     assert not unknown
+
+
+def _colliding_groups(names, normalize):
+    counts = Counter(normalize(name) for name in names)
+    colliding_keys = {key for key, count in counts.items() if count > 1}
+    return {
+        key: sorted(name for name in names if normalize(name) == key)
+        for key in colliding_keys
+    }
+
+
+def test_no_two_seeded_lift_names_collide_under_punctuation_normalization():
+    # StrongImporter's stage 3 treats "Chin Up" and "Chin-up" (or any other
+    # punctuation/casing variant) as the same lift. That's only safe as long
+    # as the seeded catalogue never contains two distinct lifts that fold to
+    # the same key -- otherwise this importer (and the guard below) would
+    # silently pool two different exercises' history together.
+    collisions = _colliding_groups(_seeded_lift_names(), _normalize_lift_name)
+    assert not collisions, collisions
+
+
+def test_no_two_seeded_lift_names_collide_under_separator_free_normalization():
+    # Stage 4's catch-all is strictly looser than stage 3 (it also folds
+    # "Chinup" onto "Chin-up"), so it needs its own, stricter version of the
+    # same safety property: a future catalogue addition like "Pull Up"
+    # alongside the existing "Pull-up", or "Situp" alongside "Sit Up", would
+    # make two distinct lifts collide and silently pool their history. This
+    # must fail CI before that ships, not surface later as a scoring bug.
+    collisions = _colliding_groups(_seeded_lift_names(), _normalize_lift_name_strict)
+    assert not collisions, collisions
 
 
 @pytest.mark.django_db

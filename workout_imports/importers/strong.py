@@ -68,6 +68,21 @@ def _normalize_lift_name(name: str) -> str:
     return _NON_ALNUM_RE.sub(" ", name.lower()).strip()
 
 
+def _normalize_lift_name_strict(name: str) -> str:
+    """Fold a lift name for the separator-free catch-all match (stage 4).
+
+    Lowercases and removes non-alphanumerics entirely rather than collapsing
+    them to a space, so "Chinup", "Chin-up", and "Chin Up" all normalize to
+    "chinup". Strictly looser than ``_normalize_lift_name`` -- every name it
+    equates, that function already equates too -- so it's only ever tried
+    after that one has already failed. Still operates on the whole raw
+    string with no equipment-qualifier stripping, so "Bench Press
+    (Dumbbell)" normalizes to "benchpressdumbbell", not "benchpress" --
+    the equipment-collapse guard holds here too.
+    """
+    return _NON_ALNUM_RE.sub("", name.lower())
+
+
 # Columns this importer actually reads. Strong's real export also carries
 # Duration, Distance, Seconds, Notes, Workout Notes, and RPE, but those
 # aren't needed to pool a strength set, so they aren't required here. This
@@ -161,7 +176,10 @@ class StrongImporter:
         reader = csv.DictReader(io.StringIO(text))
         alias_map = self._alias_map()
         canonical_map = self._canonical_map()
+        alias_map_strict = self._alias_map_strict()
+        canonical_map_strict = self._canonical_map_strict()
         warned_exercises: set[str] = set()
+        fuzzy_matched_exercises: set[str] = set()
 
         parsed: list[ParsedSet] = []
         for row in reader:
@@ -195,8 +213,24 @@ class StrongImporter:
                 continue
 
             weight_kg = (weight_lbs * LB_TO_KG).quantize(Decimal("0.01"))
-            lift, matched = self._resolve_lift(exercise, alias_map, canonical_map)
-            if not matched and exercise not in warned_exercises:
+            lift, status = self._resolve_lift(
+                exercise,
+                alias_map,
+                canonical_map,
+                alias_map_strict,
+                canonical_map_strict,
+            )
+            if status == "fuzzy" and exercise not in fuzzy_matched_exercises:
+                fuzzy_matched_exercises.add(exercise)
+                logger.warning(
+                    "Strong CSV import: exercise %r only resolved to "
+                    "canonical lift %r via separator-insensitive fallback "
+                    "matching (stage 4); consider adding an explicit "
+                    "StrongLiftAlias or double-checking this correspondence",
+                    exercise,
+                    lift,
+                )
+            elif status == "unmapped" and exercise not in warned_exercises:
                 warned_exercises.add(exercise)
                 logger.warning(
                     "Strong CSV import: exercise %r did not match any known "
@@ -217,8 +251,12 @@ class StrongImporter:
 
     @staticmethod
     def _resolve_lift(
-        exercise: str, alias_map: dict[str, str], canonical_map: dict[str, str]
-    ) -> tuple[str, bool]:
+        exercise: str,
+        alias_map: dict[str, str],
+        canonical_map: dict[str, str],
+        alias_map_strict: dict[str, str],
+        canonical_map_strict: dict[str, str],
+    ) -> tuple[str, str]:
         """Resolve a raw Strong exercise name to a canonical lift name.
 
         Tries, in order:
@@ -233,14 +271,24 @@ class StrongImporter:
         3. A case-insensitive, punctuation-tolerant match of the whole raw
            name against the canonical catalogue (catches "Chin Up" vs
            "Chin-up").
+        4. A separator-free catch-all: lowercase with every non-alphanumeric
+           character removed entirely (not just collapsed to a space),
+           matched against both the canonical catalogue and the alias-map
+           keys under the same folding (catches "Chinup", "TBar Row").
+           Strictly looser than stage 3, so it only ever fires once that one
+           has already missed. Still operates on the whole raw name --
+           equipment qualifiers are never stripped here, so the
+           dumbbell/machine collapse guard from stage 2 still holds.
 
-        Returns ``(lift_name, matched)``: ``matched`` is False only when
-        none of the above found anything, in which case ``lift_name`` is the
-        original ``exercise`` string, unchanged.
+        Returns ``(lift_name, status)``, where ``status`` is ``"matched"``
+        for stages 1-3, ``"fuzzy"`` when only stage 4 found it (a hit the
+        caller should surface -- loose matching stood in for a proper alias
+        or canonical entry), or ``"unmapped"`` when nothing did, in which
+        case ``lift_name`` is the original ``exercise`` string, unchanged.
         """
         hit = alias_map.get(exercise.lower())
         if hit:
-            return hit, True
+            return hit, "matched"
 
         qualifier_match = _TRAILING_QUALIFIER_RE.match(exercise)
         if qualifier_match:
@@ -249,16 +297,24 @@ class StrongImporter:
                 base = qualifier_match.group("base").strip()
                 hit = alias_map.get(base.lower())
                 if hit:
-                    return hit, True
+                    return hit, "matched"
                 hit = canonical_map.get(_normalize_lift_name(base))
                 if hit:
-                    return hit, True
+                    return hit, "matched"
 
         hit = canonical_map.get(_normalize_lift_name(exercise))
         if hit:
-            return hit, True
+            return hit, "matched"
 
-        return exercise, False
+        strict_key = _normalize_lift_name_strict(exercise)
+        hit = canonical_map_strict.get(strict_key)
+        if hit:
+            return hit, "fuzzy"
+        hit = alias_map_strict.get(strict_key)
+        if hit:
+            return hit, "fuzzy"
+
+        return exercise, "unmapped"
 
     @staticmethod
     def _alias_map() -> dict[str, str]:
@@ -282,5 +338,36 @@ class StrongImporter:
         """
         return {
             _normalize_lift_name(name): name
+            for name in Lift.objects.values_list("name", flat=True)
+        }
+
+    @staticmethod
+    def _alias_map_strict() -> dict[str, str]:
+        """Return ``{strict_normalized(from_name): to_name}`` for stage 4.
+
+        Same seeded StrongLiftAlias data as ``_alias_map``, just keyed under
+        the separator-free fold instead of a plain ``.lower()`` -- stage 4
+        needs this to catch a Strong export naming an exercise with no
+        separators at all against an alias whose ``from_name`` has them (or
+        vice versa).
+        """
+        return {
+            _normalize_lift_name_strict(from_name): to_name
+            for from_name, to_name in StrongLiftAlias.objects.values_list(
+                "from_name", "to_name"
+            )
+        }
+
+    @staticmethod
+    def _canonical_map_strict() -> dict[str, str]:
+        """Return ``{strict_normalized_name: name}`` for stage 4.
+
+        Same seeded Lift data as ``_canonical_map``, just keyed under the
+        separator-free fold. See ``_normalize_lift_name_strict`` for why
+        this is safe against the seeded catalogue today, and the guard test
+        in test_seed_strong_lift_aliases.py that keeps it that way.
+        """
+        return {
+            _normalize_lift_name_strict(name): name
             for name in Lift.objects.values_list("name", flat=True)
         }

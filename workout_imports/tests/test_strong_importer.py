@@ -207,6 +207,112 @@ class TestStrongImporterLiftResolutionChain:
         assert not [r for r in caplog.records if "did not match any known" in r.message]
 
 
+def _fuzzy_warnings(caplog):
+    return [r for r in caplog.records if "separator-insensitive fallback" in r.message]
+
+
+def _unmapped_warnings(caplog):
+    return [r for r in caplog.records if "did not match any known" in r.message]
+
+
+@pytest.mark.django_db
+class TestStrongImporterFuzzyFallback:
+    """Stage 4: the separator-free catch-all that runs after stages 1-3 miss.
+
+    Each of these raw names only resolves once every non-alphanumeric
+    character is stripped entirely (not just collapsed to a space), so
+    stages 1-3 all miss and only stage 4 catches them -- and a stage-4 hit
+    must be logged distinctly, since it's a "loose match stood in" signal
+    the user wants visible in development.
+    """
+
+    @pytest.mark.parametrize(
+        "raw_name,expected",
+        [
+            ("Chinup", "Chin-up"),
+            ("PullUp", "Pull-up"),
+            ("Pushup", "Push Up"),
+            ("SitUp", "Sit Up"),
+            ("TBar Row", "T Bar Row"),
+            ("Handstand Pushup", "Handstand Push Up"),
+        ],
+    )
+    def test_separator_free_name_resolves_via_stage_four(self, raw_name, expected):
+        rows = f"2024-01-01 09:15:00,Back day,1h,{raw_name},1,0,5,0,0,,,\n"
+        parsed = StrongImporter().parse(csv_file(rows))
+        assert parsed[0].lift == expected
+
+    @pytest.mark.parametrize(
+        "raw_name,expected",
+        [
+            ("Chinup", "Chin-up"),
+            ("PullUp", "Pull-up"),
+            ("Pushup", "Push Up"),
+            ("SitUp", "Sit Up"),
+            ("TBar Row", "T Bar Row"),
+            ("Handstand Pushup", "Handstand Push Up"),
+        ],
+    )
+    def test_separator_free_name_emits_the_fuzzy_warning(
+        self, raw_name, expected, caplog
+    ):
+        rows = f"2024-01-01 09:15:00,Back day,1h,{raw_name},1,0,5,0,0,,,\n"
+        with caplog.at_level("WARNING", logger="workout_imports.importers.strong"):
+            StrongImporter().parse(csv_file(rows))
+
+        fuzzy = _fuzzy_warnings(caplog)
+        assert len(fuzzy) == 1
+        assert raw_name in fuzzy[0].message
+        assert expected in fuzzy[0].message
+        assert not _unmapped_warnings(caplog)
+
+    @pytest.mark.parametrize(
+        "raw_name,expected",
+        [
+            ("Chin Up", "Chin-up"),
+            ("Chin-up", "Chin-up"),
+            ("Pendlay Row (Barbell)", "Pendlay Row"),
+            ("Overhead Press (Barbell)", "Overhead Press"),
+        ],
+    )
+    def test_names_matched_by_earlier_stages_do_not_emit_the_fuzzy_warning(
+        self, raw_name, expected, caplog
+    ):
+        rows = f"2024-01-01 09:15:00,Back day,1h,{raw_name},1,135,5,0,0,,,\n"
+        with caplog.at_level("WARNING", logger="workout_imports.importers.strong"):
+            parsed = StrongImporter().parse(csv_file(rows))
+        # Confirms these actually resolved (not just "happened not to be
+        # fuzzy" by virtue of being unmapped, which would also satisfy a
+        # bare not-fuzzy assertion).
+        assert parsed[0].lift == expected
+        assert not _fuzzy_warnings(caplog)
+        assert not _unmapped_warnings(caplog)
+
+    def test_dumbbell_qualifier_still_ends_up_unmapped_not_fuzzy_matched(self, caplog):
+        # The equipment-collapse guard has to hold through stage 4 too:
+        # "Bench Press (Dumbbell)" normalizes (separator-free) to
+        # "benchpressdumbbell", which must NOT match the "benchpress" key
+        # for the canonical "Bench Press" lift.
+        rows = "2024-01-01 09:15:00,Push day,1h,Bench Press (Dumbbell),1,50,10,0,0,,,\n"
+        with caplog.at_level("WARNING", logger="workout_imports.importers.strong"):
+            parsed = StrongImporter().parse(csv_file(rows))
+
+        assert parsed[0].lift == "Bench Press (Dumbbell)"
+        assert not _fuzzy_warnings(caplog)
+        unmapped = _unmapped_warnings(caplog)
+        assert len(unmapped) == 1
+        assert "Bench Press (Dumbbell)" in unmapped[0].message
+
+    def test_fuzzy_warning_is_deduped_per_distinct_raw_name(self, caplog):
+        rows = (
+            "2024-01-01 09:15:00,Back day,1h,Chinup,1,0,5,0,0,,,\n"
+            "2024-01-01 09:16:00,Back day,1h,Chinup,2,0,6,0,0,,,\n"
+        )
+        with caplog.at_level("WARNING", logger="workout_imports.importers.strong"):
+            StrongImporter().parse(csv_file(rows))
+        assert len(_fuzzy_warnings(caplog)) == 1
+
+
 @pytest.mark.django_db
 class TestStrongImporterRealExport:
     """Parses an actual Strong app export rather than a hand-written fixture.
