@@ -17,6 +17,8 @@
   <h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "Connect your Wger account" %}</h1>
 {% elif app == "hevy" %}
   <h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "Import your Hevy history" %}</h1>
+{% elif app == "strong" %}
+  <h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "Import your Strong history" %}</h1>
 {% else %}
   <h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "Connect your Liftosaur account" %}</h1>
 {% endif %}
@@ -51,59 +53,74 @@
     <p class="mb-6 text-xs text-content-subtle">
       {% trans "You can find your API token in your Wger account under the API page." %}
     </p>
-  {% else %}
-    {% if app == "liftosaur" %}
-      <div class="mb-2">
-        <label for="id_liftosaur_api_key" class="block text-sm font-medium text-content-body mb-1">{% trans "Liftosaur API key" %}</label>
-        <input
-          type="text"
-          id="id_liftosaur_api_key"
-          name="liftosaur_api_key"
-          autocomplete="off"
-          class="w-full border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent"
-        >
-        {% if errors.liftosaur_api_key %}<p class="mt-1 text-xs text-danger-dark">{{ errors.liftosaur_api_key }}</p>{% endif %}
-      </div>
-      <p class="mb-4 text-xs text-content-subtle">
-        {% blocktrans %}For automated tracking, get your key from <a href="https://www.liftosaur.com/doc/api" target="_blank" rel="noopener" class="underline">Liftosaur's API docs</a>.{% endblocktrans %}
+  {% elif app == "liftosaur" %}
+    <div class="mb-2">
+      <label for="id_liftosaur_api_key" class="block text-sm font-medium text-content-body mb-1">{% trans "Liftosaur API key" %}</label>
+      <input
+        type="text"
+        id="id_liftosaur_api_key"
+        name="liftosaur_api_key"
+        autocomplete="off"
+        class="w-full border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent"
+      >
+      {% if errors.liftosaur_api_key %}<p class="mt-1 text-xs text-danger-dark">{{ errors.liftosaur_api_key }}</p>{% endif %}
+    </div>
+    <p class="mb-4 text-xs text-content-subtle">
+      {% blocktrans %}For automated tracking, get your key from <a href="https://www.liftosaur.com/doc/api" target="_blank" rel="noopener" class="underline">Liftosaur's API docs</a>.{% endblocktrans %}
+    </p>
+    <div class="mb-4">
+      {% include "components/_liftosaur_coupon_cta.html" %}
+    </div>
+    <div class="mb-4 border-t border-line-subtle pt-4">
+      <p class="text-sm text-content-muted mb-2">{% trans "Or upload a CSV export instead" %}</p>
+      <label
+        for="id_csv_file"
+        id="onboarding-csv-dropzone"
+        class="flex flex-col items-center justify-center text-center border-2 border-dashed border-line rounded px-4 py-6 cursor-pointer hover:border-accent hover:bg-surface-sunken transition-colors">
+        <span id="onboarding-csv-dropzone-label" class="text-sm text-content-body">
+          {% trans "Drop a CSV file here, or click to choose one" %}
+        </span>
+        <input type="file" id="id_csv_file" name="csv_file" accept=".csv" class="sr-only">
+      </label>
+      {% if errors.csv_file %}<p class="mt-2 text-xs text-danger-dark">{{ errors.csv_file }}</p>{% endif %}
+      <p class="mt-2 text-xs text-content-subtle">
+        {% trans "You can export your history by navigating to Me → Export history to CSV file and pressing Ok." %}
       </p>
-      <div class="mb-4">
-        {% include "components/_liftosaur_coupon_cta.html" %}
-      </div>
-      <div class="mb-4 border-t border-line-subtle pt-4">
-        <p class="text-sm text-content-muted mb-2">{% trans "Or upload a CSV export instead" %}</p>
-        <label
-          for="id_csv_file"
-          id="onboarding-csv-dropzone"
-          class="flex flex-col items-center justify-center text-center border-2 border-dashed border-line rounded px-4 py-6 cursor-pointer hover:border-accent hover:bg-surface-sunken transition-colors">
-          <span id="onboarding-csv-dropzone-label" class="text-sm text-content-body">
-            {% trans "Drop a CSV file here, or click to choose one" %}
-          </span>
-          <input type="file" id="id_csv_file" name="csv_file" accept=".csv" class="sr-only">
-        </label>
-        {% if errors.csv_file %}<p class="mt-2 text-xs text-danger-dark">{{ errors.csv_file }}</p>{% endif %}
-        <p class="mt-2 text-xs text-content-subtle">
-          {% trans "You can export your history by navigating to Me → Export history to CSV file and pressing Ok." %}
-        </p>
-      </div>
-    {% else %}
-      <div class="mb-4">
-        <label class="block text-sm font-medium text-content-body mb-1">{% trans "Hevy CSV export" %}</label>
-        <label
-          for="id_csv_file"
-          id="onboarding-csv-dropzone"
-          class="flex flex-col items-center justify-center text-center border-2 border-dashed border-line rounded px-4 py-6 cursor-pointer hover:border-accent hover:bg-surface-sunken transition-colors">
-          <span id="onboarding-csv-dropzone-label" class="text-sm text-content-body">
-            {% trans "Drop a CSV file here, or click to choose one" %}
-          </span>
-          <input type="file" id="id_csv_file" name="csv_file" accept=".csv" class="sr-only">
-        </label>
-        {% if errors.csv_file %}<p class="mt-2 text-xs text-danger-dark">{{ errors.csv_file }}</p>{% endif %}
-        <p class="mt-2 text-xs text-content-subtle">
-          {% blocktrans %}Learn how to export your data in <a href="https://help.hevyapp.com/hc/en-us/articles/38001424401943-How-to-Import-Strong-App-CSV-Files-and-Export-Your-Data-in-Hevy" target="_blank" rel="noopener" class="underline">Hevy's help center</a>.{% endblocktrans %}
-        </p>
-      </div>
-    {% endif %}
+    </div>
+  {% elif app == "hevy" %}
+    <div class="mb-4">
+      <label class="block text-sm font-medium text-content-body mb-1">{% trans "Hevy CSV export" %}</label>
+      <label
+        for="id_csv_file"
+        id="onboarding-csv-dropzone"
+        class="flex flex-col items-center justify-center text-center border-2 border-dashed border-line rounded px-4 py-6 cursor-pointer hover:border-accent hover:bg-surface-sunken transition-colors">
+        <span id="onboarding-csv-dropzone-label" class="text-sm text-content-body">
+          {% trans "Drop a CSV file here, or click to choose one" %}
+        </span>
+        <input type="file" id="id_csv_file" name="csv_file" accept=".csv" class="sr-only">
+      </label>
+      {% if errors.csv_file %}<p class="mt-2 text-xs text-danger-dark">{{ errors.csv_file }}</p>{% endif %}
+      <p class="mt-2 text-xs text-content-subtle">
+        {% blocktrans %}Learn how to export your data in <a href="https://help.hevyapp.com/hc/en-us/articles/38001424401943-How-to-Import-Strong-App-CSV-Files-and-Export-Your-Data-in-Hevy" target="_blank" rel="noopener" class="underline">Hevy's help center</a>.{% endblocktrans %}
+      </p>
+    </div>
+  {% else %}
+    <div class="mb-4">
+      <label class="block text-sm font-medium text-content-body mb-1">{% trans "Strong CSV export" %}</label>
+      <label
+        for="id_csv_file"
+        id="onboarding-csv-dropzone"
+        class="flex flex-col items-center justify-center text-center border-2 border-dashed border-line rounded px-4 py-6 cursor-pointer hover:border-accent hover:bg-surface-sunken transition-colors">
+        <span id="onboarding-csv-dropzone-label" class="text-sm text-content-body">
+          {% trans "Drop a CSV file here, or click to choose one" %}
+        </span>
+        <input type="file" id="id_csv_file" name="csv_file" accept=".csv" class="sr-only">
+      </label>
+      {% if errors.csv_file %}<p class="mt-2 text-xs text-danger-dark">{{ errors.csv_file }}</p>{% endif %}
+      <p class="mt-2 text-xs text-content-subtle">
+        {% trans "You can export your history from the Strong app under Settings → Export Data." %}
+      </p>
+    </div>
   {% endif %}
 
   <button
@@ -113,7 +130,7 @@
   </button>
 </form>
 
-{% if app == "liftosaur" or app == "hevy" %}
+{% if app != "wger" %}
 <script>
 (function () {
   // Same dropzone affordance as Settings' _workout_import_section.html:

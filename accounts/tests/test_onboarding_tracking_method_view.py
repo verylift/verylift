@@ -25,7 +25,7 @@ class TestOnboardingTrackingMethodView:
         assert response.status_code == 200
         assert b'name="tracking_app"' in response.content
 
-    @pytest.mark.parametrize("app", ["liftosaur", "wger", "hevy"])
+    @pytest.mark.parametrize("app", ["liftosaur", "wger", "hevy", "strong"])
     def test_choosing_a_tracking_app_goes_to_its_connect_step(self, client, app):
         client.force_login(UserFactory())
         response = client.post(
