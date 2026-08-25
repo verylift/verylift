@@ -2,9 +2,9 @@
 
 Multiple tracker apps' CSV exports land on the same upload endpoint; the
 backend auto-detects which app produced a given file by its header
-signature and dispatches to that importer. Hevy and Liftosaur are the
-supported formats so far -- adding another tracker is adding a new importer
-module and registering it below, not a new upload endpoint or view.
+signature and dispatches to that importer. Hevy, Liftosaur, and Strong are
+the supported formats so far -- adding another tracker is adding a new
+importer module and registering it below, not a new upload endpoint or view.
 """
 
 import csv
@@ -18,6 +18,7 @@ from workout_imports.importers.base import (
 )
 from workout_imports.importers.hevy import HevyImporter
 from workout_imports.importers.liftosaur import LiftosaurImporter
+from workout_imports.importers.strong import StrongImporter
 
 __all__ = [
     "REGISTRY",
@@ -29,7 +30,7 @@ __all__ = [
     "get_importer_for_header",
 ]
 
-REGISTRY: list[CsvImporter] = [HevyImporter(), LiftosaurImporter()]
+REGISTRY: list[CsvImporter] = [HevyImporter(), LiftosaurImporter(), StrongImporter()]
 
 
 def csv_header(file_obj) -> list[str]:

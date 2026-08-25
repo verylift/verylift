@@ -283,7 +283,7 @@ def register_view(request):
     )
 
 
-ONBOARDING_TRACKER_APPS = ("liftosaur", "wger", "hevy")
+ONBOARDING_TRACKER_APPS = ("liftosaur", "wger", "hevy", "strong")
 
 
 @login_required
@@ -386,8 +386,9 @@ def onboarding_connect_tracker_view(request, app):
     Generalized over whichever app was picked in step 1, showing only what
     that app actually supports: Liftosaur offers both an API key and a CSV
     upload; Wger (self-hostable, API-only, no CSV importer exists for it) is
-    instance URL + API token; Hevy (no live-sync integration merged yet) is
-    CSV upload only. Every field is independently optional -- a blank
+    instance URL + API token; Hevy and Strong (no live-sync integration
+    merged for either) are CSV upload only. Every field is independently
+    optional -- a blank
     submission just moves on, and submitting some but not all fields
     processes whichever were filled in without blocking on the others.
     Credentials are validated against the live API before saving, same as

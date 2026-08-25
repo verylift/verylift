@@ -1,5 +1,5 @@
 """Tests for the onboarding tracker-connect step (generalized over
-Liftosaur/Wger/Hevy)."""
+Liftosaur/Wger/Hevy/Strong)."""
 
 from unittest.mock import patch
 
@@ -40,6 +40,20 @@ def _hevy_csv_upload(name="export.csv", rows=None):
     )
 
 
+_STRONG_CSV_HEADER = (
+    "Date,Workout Name,Duration,Exercise Name,Set Order,Weight,Reps,"
+    "Distance,Seconds,Notes,Workout Notes,RPE\n"
+)
+
+
+def _strong_csv_upload(name="export.csv", rows=None):
+    if rows is None:
+        rows = "2024-01-01 09:15:00,Leg day,1h,Squat (Barbell),1,225,5,0,0,,,\n"
+    return SimpleUploadedFile(
+        name, (_STRONG_CSV_HEADER + rows).encode("utf-8"), content_type="text/csv"
+    )
+
+
 @pytest.mark.django_db
 class TestOnboardingConnectTrackerViewRouting:
     def test_anonymous_get_redirects_to_login(self, client):
@@ -61,7 +75,7 @@ class TestOnboardingConnectTrackerViewCouponCta:
         response = client.get(_url("liftosaur"))
         assert b'id="liftosaur-coupon-cta"' in response.content
 
-    @pytest.mark.parametrize("app", ["wger", "hevy"])
+    @pytest.mark.parametrize("app", ["wger", "hevy", "strong"])
     def test_other_apps_do_not_show_coupon_cta(self, client, app):
         client.force_login(UserFactory())
         response = client.get(_url(app))
@@ -358,6 +372,51 @@ class TestOnboardingConnectTrackerViewHevy:
         )
 
         response = client.post(_url("hevy"), {"csv_file": bogus})
+
+        assert response.status_code == 200
+        assert "Please upload a .csv file." in response.content.decode()
+
+
+@pytest.mark.django_db
+class TestOnboardingConnectTrackerViewStrong:
+    """Strong has no live-sync integration, so its connect page is CSV-only,
+    same shape as Hevy's -- no Liftosaur API-key field should leak in."""
+
+    def test_get_does_not_render_liftosaur_api_key_field(self, client):
+        client.force_login(UserFactory())
+        response = client.get(_url("strong"))
+        assert response.status_code == 200
+        assert b'name="liftosaur_api_key"' not in response.content
+        assert b'name="csv_file"' in response.content
+
+    def test_valid_csv_pools_sets_and_redirects(self, client):
+        user = UserFactory()
+        client.force_login(user)
+
+        response = client.post(_url("strong"), {"csv_file": _strong_csv_upload()})
+
+        assert response.status_code == 302
+        assert response["Location"] == reverse("accounts:onboarding-units")
+        assert LiftHistory.objects.filter(user=user).exists()
+
+    def test_blank_submission_skips_and_still_redirects(self, client):
+        user = UserFactory()
+        client.force_login(user)
+
+        response = client.post(_url("strong"), {})
+
+        assert response.status_code == 302
+        assert response["Location"] == reverse("accounts:onboarding-units")
+        assert not LiftHistory.objects.filter(user=user).exists()
+
+    def test_invalid_file_shows_friendly_error(self, client):
+        user = UserFactory()
+        client.force_login(user)
+        bogus = SimpleUploadedFile(
+            "notes.txt", b"not a csv at all", content_type="text/plain"
+        )
+
+        response = client.post(_url("strong"), {"csv_file": bogus})
 
         assert response.status_code == 200
         assert "Please upload a .csv file." in response.content.decode()

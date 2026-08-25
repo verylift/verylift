@@ -14,6 +14,10 @@ from workout_imports.importers.liftosaur import (
     REQUIRED_HEADERS as LIFTOSAUR_REQUIRED_HEADERS,
 )
 from workout_imports.importers.liftosaur import LiftosaurImporter
+from workout_imports.importers.strong import (
+    REQUIRED_HEADERS as STRONG_REQUIRED_HEADERS,
+)
+from workout_imports.importers.strong import StrongImporter
 
 HEVY_HEADER = [
     "title",
@@ -53,6 +57,21 @@ LIFTOSAUR_HEADER = [
     "Target Muscles",
     "Synergist Muscles",
     "Notes",
+]
+
+STRONG_HEADER = [
+    "Date",
+    "Workout Name",
+    "Duration",
+    "Exercise Name",
+    "Set Order",
+    "Weight",
+    "Reps",
+    "Distance",
+    "Seconds",
+    "Notes",
+    "Workout Notes",
+    "RPE",
 ]
 
 
@@ -97,6 +116,27 @@ class TestLiftosaurImporterDetect:
         assert LiftosaurImporter().source == LiftSource.LIFTOSAUR
 
 
+class TestStrongImporterDetect:
+    def test_matches_full_strong_header(self):
+        assert StrongImporter().detect(STRONG_HEADER) is True
+
+    def test_does_not_match_unrelated_header(self):
+        assert StrongImporter().detect(["date", "exercise", "sets", "reps"]) is False
+
+    def test_does_not_match_when_one_required_column_is_missing(self):
+        # Detection must be exact, not fuzzy: dropping a single required
+        # column (here, Weight) must flip the match to False, not still
+        # match on "close enough".
+        header = [h for h in STRONG_HEADER if h != "Weight"]
+        assert StrongImporter().detect(header) is False
+
+    def test_does_not_match_hevy_header(self):
+        assert StrongImporter().detect(HEVY_HEADER) is False
+
+    def test_source_is_strong(self):
+        assert StrongImporter().source == LiftSource.STRONG
+
+
 class TestGetImporterForHeader:
     def test_hevy_header_resolves_to_hevy_importer(self):
         importer = get_importer_for_header(HEVY_HEADER)
@@ -105,6 +145,10 @@ class TestGetImporterForHeader:
     def test_liftosaur_header_resolves_to_liftosaur_importer(self):
         importer = get_importer_for_header(LIFTOSAUR_HEADER)
         assert isinstance(importer, LiftosaurImporter)
+
+    def test_strong_header_resolves_to_strong_importer(self):
+        importer = get_importer_for_header(STRONG_HEADER)
+        assert isinstance(importer, StrongImporter)
 
     def test_unrecognized_header_returns_none(self):
         assert get_importer_for_header(["foo", "bar", "baz"]) is None
@@ -118,6 +162,9 @@ class TestGetImporterForHeader:
     def test_registry_contains_required_liftosaur_headers_subset(self):
         assert set(LIFTOSAUR_HEADER) >= LIFTOSAUR_REQUIRED_HEADERS
 
+    def test_registry_contains_required_strong_headers_subset(self):
+        assert set(STRONG_HEADER) >= STRONG_REQUIRED_HEADERS
+
 
 class TestDetectImporter:
     def test_recognized_csv_returns_matching_importer(self):
@@ -129,6 +176,11 @@ class TestDetectImporter:
         content = ",".join(LIFTOSAUR_HEADER) + "\n"
         importer = detect_importer(io.BytesIO(content.encode("utf-8")))
         assert isinstance(importer, LiftosaurImporter)
+
+    def test_recognized_strong_csv_returns_matching_importer(self):
+        content = ",".join(STRONG_HEADER) + "\n"
+        importer = detect_importer(io.BytesIO(content.encode("utf-8")))
+        assert isinstance(importer, StrongImporter)
 
     def test_unrecognized_csv_raises_friendly_error(self):
         content = "some,other,columns\na,b,c\n"
