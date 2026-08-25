@@ -57,7 +57,8 @@ class SiteSettings(models.Model):
 
 
 class LiftAliasSource(models.TextChoices):
-    """Which tracker's raw exercise-name vocabulary a LiftAlias row translates from.
+    """Which tracker/data source's raw exercise-name vocabulary a LiftAlias
+    row translates from.
 
     Deliberately its own enum rather than a reuse of liftosaur.models.LiftSource
     (the provenance tag on a pooled LiftHistory/PointEarnEvent row): that enum
@@ -73,6 +74,7 @@ class LiftAliasSource(models.TextChoices):
     HEVY = "hevy", _("Hevy")
     STRONG = "strong", _("Strong")
     WGER = "wger", _("Wger")
+    FITNESSVOLT = "fitnessvolt", _("FitnessVolt")
 
 
 class LiftAlias(models.Model):

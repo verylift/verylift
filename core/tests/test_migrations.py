@@ -192,3 +192,132 @@ class TestCopyLegacyLiftAliasesMigration:
         apps = executor.loader.project_state(_AFTER).apps
         LiftAlias = apps.get_model("core", "LiftAlias")
         assert LiftAlias.objects.using(connection.alias).count() == 4
+
+
+_BEFORE_FV = [
+    ("core", "0005_alter_liftalias_source"),
+    ("fitnessvolt", "0001_initial"),
+]
+_AFTER_FV = [
+    ("core", "0006_copy_fitnessvolt_lift_aliases"),
+    ("fitnessvolt", "0002_delete_fitnessvoltliftalias"),
+]
+
+
+@pytest.fixture
+def _before_fv_state(request):
+    """Migrate the schema down to just before core.0006 and return its ``apps``.
+
+    Unlike core_liftalias in the four-source consolidation above, this table
+    holds rows for every source (liftosaur/hevy/strong/wger/fitnessvolt) at
+    every point in this test module's migration range, so it must not be
+    blanket-truncated here -- core.0006's own reverse function already moves
+    every source="fitnessvolt" row out into fitnessvolt_liftalias as part of
+    walking the schema back to this state, leaving zero fitnessvolt rows in
+    core_liftalias and the real 16 fixture-seeded rows in
+    fitnessvolt_liftalias. Only fitnessvolt_liftalias needs clearing, so this
+    test's own dummy rows don't collide with the real ones on the from_slug
+    uniqueness constraint.
+    """
+    executor = _migrate(_BEFORE_FV)
+    with connection.cursor() as cursor:
+        cursor.execute("TRUNCATE TABLE fitnessvolt_liftalias")
+
+    def _restore():
+        call_command("migrate", verbosity=0)
+
+    request.addfinalizer(_restore)
+    return executor.loader.project_state(_BEFORE_FV).apps
+
+
+def _seed_legacy_fitnessvolt_rows(apps):
+    FitnessVoltLiftAlias = apps.get_model("fitnessvolt", "FitnessVoltLiftAlias")
+    FitnessVoltLiftAlias.objects.using(connection.alias).bulk_create(
+        [
+            FitnessVoltLiftAlias(
+                from_slug="migration-test-squat", to_name="Back Squat"
+            ),
+            FitnessVoltLiftAlias(
+                from_slug="migration-test-bench", to_name="Bench Press"
+            ),
+            FitnessVoltLiftAlias(
+                from_slug="migration-test-deadlift", to_name="Deadlift"
+            ),
+        ]
+    )
+
+
+class TestCopyFitnessVoltLiftAliasesMigration:
+    """Exercises core.0006_copy_fitnessvolt_lift_aliases against real
+    Postgres schema state, in both directions -- fitnessvolt's own version of
+    TestCopyLegacyLiftAliasesMigration above, for the fifth alias table that
+    the original four-source consolidation missed (TASK-89 mirrors
+    liftosaur.models.LiftAlias, same duplication pattern).
+    """
+
+    def test_forward_copies_fitnessvoltliftalias_into_the_unified_table(
+        self, _before_fv_state
+    ):
+        _seed_legacy_fitnessvolt_rows(_before_fv_state)
+
+        executor = _migrate(_AFTER_FV)
+
+        apps = executor.loader.project_state(_AFTER_FV).apps
+        LiftAlias = apps.get_model("core", "LiftAlias")
+        rows = set(
+            LiftAlias.objects.using(connection.alias)
+            .filter(source="fitnessvolt")
+            .values_list("source", "from_name", "to_name")
+        )
+        assert rows == {
+            ("fitnessvolt", "migration-test-squat", "Back Squat"),
+            ("fitnessvolt", "migration-test-bench", "Bench Press"),
+            ("fitnessvolt", "migration-test-deadlift", "Deadlift"),
+        }
+
+    def test_backward_restores_rows_and_clears_the_unified_table(
+        self, _before_fv_state
+    ):
+        _seed_legacy_fitnessvolt_rows(_before_fv_state)
+        _migrate(_AFTER_FV)
+
+        executor = _migrate(_BEFORE_FV)
+
+        apps = executor.loader.project_state(_BEFORE_FV).apps
+        FitnessVoltLiftAlias = apps.get_model("fitnessvolt", "FitnessVoltLiftAlias")
+        assert set(
+            FitnessVoltLiftAlias.objects.using(connection.alias).values_list(
+                "from_slug", "to_name"
+            )
+        ) == {
+            ("migration-test-squat", "Back Squat"),
+            ("migration-test-bench", "Bench Press"),
+            ("migration-test-deadlift", "Deadlift"),
+        }
+        LiftAlias = apps.get_model("core", "LiftAlias")
+        assert (
+            not LiftAlias.objects.using(connection.alias)
+            .filter(source="fitnessvolt")
+            .exists()
+        )
+
+    def test_backward_leaves_no_duplicate_rows_in_the_unified_table(
+        self, _before_fv_state
+    ):
+        # Regression: mirrors the equivalent guard above -- the reverse
+        # function must actually remove the copied rows from core.LiftAlias,
+        # or a re-forward hits the (source, from_name) uniqueness constraint.
+        _seed_legacy_fitnessvolt_rows(_before_fv_state)
+        _migrate(_AFTER_FV)
+
+        _migrate(_BEFORE_FV)
+        executor = _migrate(_AFTER_FV)
+
+        apps = executor.loader.project_state(_AFTER_FV).apps
+        LiftAlias = apps.get_model("core", "LiftAlias")
+        assert (
+            LiftAlias.objects.using(connection.alias)
+            .filter(source="fitnessvolt")
+            .count()
+            == 3
+        )

@@ -6,7 +6,6 @@ from django.core.management import call_command
 
 from core.management.commands.seed_all import SEED_COMMANDS
 from core.models import LiftAlias, LiftAliasSource
-from fitnessvolt.models import FitnessVoltLiftAlias
 from liftosaur.models import Lift
 
 
@@ -27,7 +26,7 @@ def test_seed_all_populates_reference_tables_idempotently():
     counts = (
         Lift.objects.count(),
         LiftAlias.objects.filter(source=LiftAliasSource.LIFTOSAUR).count(),
-        FitnessVoltLiftAlias.objects.count(),
+        LiftAlias.objects.filter(source=LiftAliasSource.FITNESSVOLT).count(),
         LiftAlias.objects.filter(source=LiftAliasSource.HEVY).count(),
         LiftAlias.objects.filter(source=LiftAliasSource.STRONG).count(),
     )
@@ -37,7 +36,7 @@ def test_seed_all_populates_reference_tables_idempotently():
     assert counts == (
         Lift.objects.count(),
         LiftAlias.objects.filter(source=LiftAliasSource.LIFTOSAUR).count(),
-        FitnessVoltLiftAlias.objects.count(),
+        LiftAlias.objects.filter(source=LiftAliasSource.FITNESSVOLT).count(),
         LiftAlias.objects.filter(source=LiftAliasSource.HEVY).count(),
         LiftAlias.objects.filter(source=LiftAliasSource.STRONG).count(),
     )

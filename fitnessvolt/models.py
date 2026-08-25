@@ -80,31 +80,3 @@ class FitnessVoltStandardCache(models.Model):
             f"{self.population} / {self.lift_slug} / {self.sex} / "
             f"{self.weight_class_label} @ {self.source_snapshot_version}"
         )
-
-
-class FitnessVoltLiftAlias(models.Model):
-    """Maps a FitnessVolt lift slug to the canonical standard lift name.
-
-    Mirrors liftosaur.models.LiftAlias exactly (see TASK-89). Without an
-    alias, a FitnessVolt /standards entry never matches a canonical lift and
-    is skipped during refresh_cache() rather than guessed at.
-    """
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    from_slug = models.CharField(
-        max_length=100,
-        unique=True,
-        help_text="Lift slug as FitnessVolt's /standards capability doc reports it.",
-    )
-    to_name = models.CharField(
-        max_length=100,
-        help_text="Canonical lift name used by the strength standards.",
-    )
-
-    class Meta:
-        db_table = "fitnessvolt_liftalias"
-        ordering = ["from_slug"]
-        verbose_name_plural = "FitnessVolt lift aliases"
-
-    def __str__(self):
-        return f"{self.from_slug} -> {self.to_name}"

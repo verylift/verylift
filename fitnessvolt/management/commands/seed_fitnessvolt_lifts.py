@@ -4,7 +4,7 @@ from pathlib import Path
 
 from django.core.management.base import BaseCommand
 
-from fitnessvolt.models import FitnessVoltLiftAlias
+from core.models import LiftAlias, LiftAliasSource
 
 logger = logging.getLogger(__name__)
 
@@ -15,8 +15,8 @@ FIXTURE_PATH = (
 
 class Command(BaseCommand):
     help = (
-        "Seed FitnessVoltLiftAlias slug -> canonical-lift-name rows from the "
-        "fixture (idempotent)"
+        "Seed core.LiftAlias (source=fitnessvolt) slug -> canonical-lift-name "
+        "rows from the fixture (idempotent)"
     )
 
     def handle(self, *args, **options):
@@ -25,8 +25,9 @@ class Command(BaseCommand):
 
         aliases_created = 0
         for row in data["aliases"]:
-            _, created = FitnessVoltLiftAlias.objects.update_or_create(
-                from_slug=row["from_slug"],
+            _, created = LiftAlias.objects.update_or_create(
+                source=LiftAliasSource.FITNESSVOLT,
+                from_name=row["from_slug"],
                 defaults={"to_name": row["to_name"]},
             )
             if created:
