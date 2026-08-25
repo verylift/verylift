@@ -19,16 +19,6 @@ git worktree add .claude/worktrees/short-description -b short-description
 ```
 Name the worktree/branch after the work it holds, not the agent run that produced it.
 
-## Quality Gate
-
-**Run this once, right before opening a PR for the first time** — not after every commit, and not repeatedly while still actively iterating on a change. It's a pre-PR gate, not a per-commit ritual; running it mid-development just burns time:
-```
-docker compose up -d db
-just ci
-```
-
-`just ci` runs lint + format check + tests — exactly what CI checks. If it fails locally, CI will fail. Fix all issues before opening the PR. Use `just fix` to auto-resolve ruff errors.
-
 ## Testing standards
 
 - Tests go in `<app>/tests/test_<thing>.py`, using the factory_boy factories in `<app>/tests/factories.py`.
