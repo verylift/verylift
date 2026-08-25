@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-25 14:16+0000\n"
+"POT-Creation-Date: 2026-08-25 18:10+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -440,7 +440,7 @@ msgstr ""
 msgid "\"%(lift_name)s\" is missing a target."
 msgstr "A \"%(lift_name)s\" le falta un objetivo."
 
-#: challenges/services.py:2204
+#: challenges/services.py:2188
 #, python-format, python-brace-format
 msgid ""
 "Suggested from history: +{percent}% uplift, based on the last {days} days"
@@ -448,12 +448,12 @@ msgstr ""
 "Sugerido a partir del historial: +{percent}% de incremento, basado en los "
 "últimos {days} días"
 
-#: challenges/services.py:2210
+#: challenges/services.py:2194
 #, python-brace-format
 msgid "(rounded to the nearest {amount} {unit})"
 msgstr "(redondeado al {amount} {unit} más cercano)"
 
-#: challenges/services.py:2330
+#: challenges/services.py:2314
 msgid ""
 "Recent history for this lift is entirely machine-assisted, which can't be "
 "converted into a target."
@@ -461,7 +461,7 @@ msgstr ""
 "El historial reciente de este ejercicio es completamente asistido por "
 "máquina y no puede convertirse en un objetivo."
 
-#: challenges/services.py:2335
+#: challenges/services.py:2319
 msgid "No recent history or published standard for this lift yet."
 msgstr ""
 "Todavía no hay historial reciente ni un estándar publicado para este "
@@ -600,7 +600,7 @@ msgstr ""
 #: templates/challenges/_history_window_section.html:41
 #: templates/challenges/_invite_link_section.html:96
 #: templates/challenges/_rename_section.html:31
-#: templates/challenges/_rep_target_summary_card.html:87
+#: templates/challenges/_rep_target_summary_card.html:90
 #: templates/challenges/_summary_card.html:76
 #: templates/challenges/create.html:42 templates/challenges/create.html:76
 #: templates/challenges/create.html:114 templates/challenges/create.html:189
@@ -853,24 +853,28 @@ msgstr "Mantener tus datos actualizados"
 msgid "Units & added-weight lifts"
 msgstr "Unidades y ejercicios con peso añadido"
 
-#: liftosaur/models.py:26
+#: liftosaur/models.py:25
 #: templates/registration/onboarding_tracking_method.html:28
 msgid "Liftosaur"
 msgstr "Liftosaur"
 
-#: liftosaur/models.py:27
+#: liftosaur/models.py:26
 msgid "Manual"
 msgstr "Manual"
 
-#: liftosaur/models.py:28
+#: liftosaur/models.py:27
 #: templates/registration/onboarding_tracking_method.html:30
 msgid "Hevy"
 msgstr "Hevy"
 
-#: liftosaur/models.py:29 templates/accounts/_wger_section.html:4
+#: liftosaur/models.py:28 templates/accounts/_wger_section.html:4
 #: templates/registration/onboarding_tracking_method.html:29
 msgid "Wger"
 msgstr "Wger"
+
+#: liftosaur/models.py:29
+msgid "Strong"
+msgstr "Strong"
 
 #: notifications/models.py:10
 msgid "Challenge Closed"
@@ -1368,9 +1372,11 @@ msgstr "Suelta un archivo CSV aquí, o haz clic para elegir uno"
 
 #: templates/accounts/_workout_import_section.html:46
 msgid ""
-"Currently supports: Hevy and Liftosaur exports. More tracker apps coming."
+"Currently supports: Hevy, Liftosaur, and Strong exports. More tracker apps "
+"coming."
 msgstr ""
-"Actualmente admite: exportaciones de Hevy y Liftosaur. Próximamente más apps."
+"Actualmente admite: exportaciones de Hevy, Liftosaur y Strong. Próximamente "
+"más apps."
 
 #: templates/accounts/_workout_import_section.html:51
 msgid "Import CSV"
@@ -1641,7 +1647,7 @@ msgstr "Bloqueado %(date)s"
 
 #: templates/challenges/_participant_chart.html:21
 #: templates/challenges/_participant_chart.html:42
-#: templates/challenges/_rep_target_summary_card.html:53
+#: templates/challenges/_rep_target_summary_card.html:56
 #: templates/challenges/_summary_card.html:45
 #, python-format
 msgid "%(points)s pts"
@@ -1655,7 +1661,7 @@ msgstr "Cerrar"
 #: templates/challenges/_participant_chart.html:44
 #: templates/challenges/_participant_chart.html:67
 #: templates/challenges/_rep_target_goal_table.html:48
-#: templates/challenges/_rep_target_summary_card.html:49
+#: templates/challenges/_rep_target_summary_card.html:52
 #: templates/challenges/_summary_card.html:47
 #: templates/challenges/custom_goal_setup.html:175
 #: templates/challenges/detail.html:345
@@ -1754,18 +1760,18 @@ msgstr "para tu objetivo de repeticiones."
 msgid "Weight"
 msgstr "Peso"
 
-#: templates/challenges/_rep_target_summary_card.html:44
+#: templates/challenges/_rep_target_summary_card.html:47
 #: templates/challenges/_summary_card.html:40
 #, python-format
 msgid "Log a set for %(lift)s"
 msgstr "Registrar una serie de %(lift)s"
 
-#: templates/challenges/_rep_target_summary_card.html:49
+#: templates/challenges/_rep_target_summary_card.html:52
 #, python-format
 msgid "Target: <span class=\"font-mono\">%(weight)s</span>"
 msgstr "Objetivo: <span class=\"font-mono\">%(weight)s</span>"
 
-#: templates/challenges/_rep_target_summary_card.html:58
+#: templates/challenges/_rep_target_summary_card.html:61
 #, python-format
 msgid ""
 "<span class=\"font-mono\">%(progress)s</span>/<span class=\"font-"
@@ -1774,7 +1780,7 @@ msgstr ""
 "<span class=\"font-mono\">%(progress)s</span>/<span class=\"font-"
 "mono\">%(target)s</span> repeticiones"
 
-#: templates/challenges/_rep_target_summary_card.html:63
+#: templates/challenges/_rep_target_summary_card.html:66
 #: templates/challenges/detail.html:112
 #, python-format
 msgid "%(counter)s more rep for your next point on %(lift)s."
@@ -1782,23 +1788,23 @@ msgid_plural "%(counter)s more reps for your next point on %(lift)s."
 msgstr[0] "%(counter)s repetición más para tu siguiente punto en %(lift)s."
 msgstr[1] "%(counter)s repeticiones más para tu siguiente punto en %(lift)s."
 
-#: templates/challenges/_rep_target_summary_card.html:68
+#: templates/challenges/_rep_target_summary_card.html:71
 #: templates/challenges/_summary_card.html:52
 msgid "Close to goal"
 msgstr "Cerca del objetivo"
 
-#: templates/challenges/_rep_target_summary_card.html:71
+#: templates/challenges/_rep_target_summary_card.html:74
 #: templates/challenges/_summary_card.html:55
 #, python-format
 msgid "Best logged: <span class=\"font-mono\">%(weight)s</span>"
 msgstr "Mejor registrado: <span class=\"font-mono\">%(weight)s</span>"
 
-#: templates/challenges/_rep_target_summary_card.html:71
+#: templates/challenges/_rep_target_summary_card.html:74
 #, python-format
 msgid "(%(date)s)"
 msgstr "(%(date)s)"
 
-#: templates/challenges/_rep_target_summary_card.html:75
+#: templates/challenges/_rep_target_summary_card.html:78
 #, python-format
 msgid ""
 "Add <span class=\"font-mono\">%(gap)s</span> %(unit)s to start scoring on "
@@ -1807,22 +1813,22 @@ msgstr ""
 "Añade <span class=\"font-mono\">%(gap)s</span> %(unit)s para empezar a "
 "puntuar en %(lift)s."
 
-#: templates/challenges/_rep_target_summary_card.html:79
+#: templates/challenges/_rep_target_summary_card.html:82
 #: templates/challenges/_summary_card.html:68
 msgid "No data yet"
 msgstr "Aún no hay datos"
 
-#: templates/challenges/_rep_target_summary_card.html:103
+#: templates/challenges/_rep_target_summary_card.html:106
 #: templates/challenges/_summary_card.html:92
 msgid "Previous rep count"
 msgstr "Número de repeticiones anterior"
 
-#: templates/challenges/_rep_target_summary_card.html:112
+#: templates/challenges/_rep_target_summary_card.html:115
 #: templates/challenges/_summary_card.html:101
 msgid "Next rep count"
 msgstr "Siguiente número de repeticiones"
 
-#: templates/challenges/_rep_target_summary_card.html:123
+#: templates/challenges/_rep_target_summary_card.html:126
 #: templates/challenges/_summary_card.html:112
 #: templates/challenges/detail.html:176 templates/challenges/detail.html:224
 #: templates/challenges/invite_accept.html:208 templates/dashboard.html:149

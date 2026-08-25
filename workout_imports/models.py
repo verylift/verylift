@@ -42,3 +42,33 @@ class HevyLiftAlias(models.Model):
 
     def __str__(self):
         return f"{self.from_name} -> {self.to_name}"
+
+
+class StrongLiftAlias(models.Model):
+    """Maps a raw Strong exercise name to the canonical standard lift name.
+
+    Mirrors fitnessvolt.models.FitnessVoltLiftAlias / liftosaur.models.LiftAlias
+    exactly. Strong's own exercise names won't match Liftosaur's LiftAlias
+    from_name values, so this is a separate table rather than a share of it.
+    Without an alias, a raw Strong exercise name is pooled unchanged and never
+    matches a canonical lift during scoring.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    from_name = models.CharField(
+        max_length=100,
+        unique=True,
+        help_text="Exercise name as Strong emits it in its CSV export.",
+    )
+    to_name = models.CharField(
+        max_length=100,
+        help_text="Canonical lift name used by the strength standards.",
+    )
+
+    class Meta:
+        db_table = "strong_liftalias"
+        ordering = ["from_name"]
+        verbose_name_plural = "Strong lift aliases"
+
+    def __str__(self):
+        return f"{self.from_name} -> {self.to_name}"
