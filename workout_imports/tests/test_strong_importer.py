@@ -113,6 +113,101 @@ class TestStrongImporterParse:
 
 
 @pytest.mark.django_db
+class TestStrongImporterLiftResolutionChain:
+    """The multi-stage resolution chain that replaced the bare alias lookup.
+
+    Regression coverage for the real UAT bug: a "Pendlay Row (Barbell)"
+    LiftHistory row that silently never pooled with the canonical
+    "Pendlay Row" lift because the raw name (equipment suffix and all) was
+    imported verbatim.
+    """
+
+    def test_barbell_qualifier_is_stripped_and_matched_without_an_alias(self):
+        # "Pendlay Row" is a seeded canonical lift but nothing here seeds a
+        # StrongLiftAlias for it -- resolution has to come purely from
+        # stripping "(Barbell)" and matching the bare canonical catalogue.
+        rows = "2024-01-01 09:15:00,Back day,1h,Pendlay Row (Barbell),1,135,5,0,0,,,\n"
+        parsed = StrongImporter().parse(csv_file(rows))
+        assert parsed[0].lift == "Pendlay Row"
+
+    def test_dumbbell_qualifier_does_not_collapse_onto_barbell_canonical_name(self):
+        # The highest-value guard here: a dumbbell variant must NOT resolve
+        # to the bare "Bench Press" canonical name (which implicitly means
+        # barbell), or dumbbell pressing would silently inflate barbell
+        # bench press standings. No canonical "Bench Press (Dumbbell)"
+        # variant exists in the seeded catalogue, so this must stay
+        # unmapped/verbatim rather than guess.
+        rows = "2024-01-01 09:15:00,Push day,1h,Bench Press (Dumbbell),1,50,10,0,0,,,\n"
+        parsed = StrongImporter().parse(csv_file(rows))
+        assert parsed[0].lift == "Bench Press (Dumbbell)"
+
+    def test_machine_qualifier_does_not_collapse_onto_bare_canonical_name(self):
+        rows = (
+            "2024-01-01 09:15:00,Push day,1h,Overhead Press (Machine),1,50,10,0,0,,,\n"
+        )
+        parsed = StrongImporter().parse(csv_file(rows))
+        assert parsed[0].lift == "Overhead Press (Machine)"
+
+    @pytest.mark.parametrize(
+        "raw_name,expected",
+        [
+            ("Chin Up", "Chin-up"),
+            ("chin up", "Chin-up"),
+            ("Pull Up", "Pull-up"),
+            ("PULL-UP", "Pull-up"),
+        ],
+    )
+    def test_case_and_punctuation_insensitive_match_against_canonical_catalogue(
+        self, raw_name, expected
+    ):
+        rows = f"2024-01-01 09:15:00,Back day,1h,{raw_name},1,0,5,0,0,,,\n"
+        parsed = StrongImporter().parse(csv_file(rows))
+        assert parsed[0].lift == expected
+
+    def test_explicit_alias_wins_over_algorithmic_barbell_stripping(self):
+        # An explicit alias is a human-confirmed mapping and must take
+        # priority even when the algorithmic chain would resolve the same
+        # raw name to something else.
+        StrongLiftAliasFactory(
+            from_name="Pendlay Row (Barbell)", to_name="Bent Over Row"
+        )
+        rows = "2024-01-01 09:15:00,Back day,1h,Pendlay Row (Barbell),1,135,5,0,0,,,\n"
+        parsed = StrongImporter().parse(csv_file(rows))
+        assert parsed[0].lift == "Bent Over Row"
+
+    def test_unmapped_exercise_still_imports_its_rows(self):
+        rows = (
+            "2024-01-01 09:15:00,Leg day,1h,Some Wholly Unknown Machine,1,90,8,0,0,,,\n"
+        )
+        parsed = StrongImporter().parse(csv_file(rows))
+        assert len(parsed) == 1
+        assert parsed[0].lift == "Some Wholly Unknown Machine"
+
+    def test_unmapped_exercise_emits_one_warning_per_distinct_name(self, caplog):
+        rows = (
+            "2024-01-01 09:15:00,Leg day,1h,Some Wholly Unknown Machine,1,90,8,0,0,,,\n"
+            "2024-01-01 09:16:00,Leg day,1h,Some Wholly Unknown Machine,2,95,6,0,0,,,\n"
+            "2024-01-01 09:17:00,Leg day,1h,Another Unknown Exercise,1,45,10,0,0,,,\n"
+        )
+        with caplog.at_level("WARNING", logger="workout_imports.importers.strong"):
+            StrongImporter().parse(csv_file(rows))
+
+        unmapped_warnings = [
+            r for r in caplog.records if "did not match any known" in r.message
+        ]
+        assert len(unmapped_warnings) == 2
+        messages = {r.message for r in unmapped_warnings}
+        assert any("Some Wholly Unknown Machine" in m for m in messages)
+        assert any("Another Unknown Exercise" in m for m in messages)
+
+    def test_mapped_exercise_does_not_emit_a_warning(self, caplog):
+        rows = "2024-01-01 09:15:00,Back day,1h,Pendlay Row (Barbell),1,135,5,0,0,,,\n"
+        with caplog.at_level("WARNING", logger="workout_imports.importers.strong"):
+            StrongImporter().parse(csv_file(rows))
+        assert not [r for r in caplog.records if "did not match any known" in r.message]
+
+
+@pytest.mark.django_db
 class TestStrongImporterRealExport:
     """Parses an actual Strong app export rather than a hand-written fixture.
 
@@ -159,8 +254,11 @@ class TestStrongImporterRealExport:
         with REAL_EXPORT_PATH.open("rb") as f:
             parsed = StrongImporter().parse(f)
         # First row: 2020-12-30 18:51:52, Snatch (Barbell), 40.0 lb x 3 reps.
+        # "Snatch (Barbell)" now resolves to the seeded "Snatch" canonical
+        # lift via the algorithmic barbell-qualifier-stripping stage, even
+        # though nothing here seeds a StrongLiftAlias for it.
         first = parsed[0]
-        assert first.lift == "Snatch (Barbell)"
+        assert first.lift == "Snatch"
         assert first.reps == 3
         assert first.weight_kg == Decimal("18.14")
 

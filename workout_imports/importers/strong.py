@@ -23,15 +23,50 @@ practice (e.g. a per-upload unit selector).
 import csv
 import io
 import logging
+import re
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
 from accounts.units import LB_TO_KG
-from liftosaur.models import LiftSource
+from liftosaur.models import Lift, LiftSource
 from workout_imports.importers.base import ParsedSet, decode_csv_text
 from workout_imports.models import StrongLiftAlias
 
 logger = logging.getLogger(__name__)
+
+# Matches a trailing "(Equipment)" qualifier Strong appends to its exercise
+# names, e.g. "Pendlay Row (Barbell)" -> base "Pendlay Row", qualifier
+# "Barbell". Only a single, non-nested parenthetical at the very end counts;
+# this deliberately isn't used to strip parens anywhere else in a name.
+_TRAILING_QUALIFIER_RE = re.compile(r"^(?P<base>.+?)\s*\((?P<qualifier>[^()]+)\)$")
+
+# Equipment qualifiers safe to strip and match against the bare canonical
+# lift name. Every existing StrongLiftAlias entry that pairs a raw
+# "X (Barbell)" name with a canonical name maps it to the unqualified form
+# (e.g. "Bench Press (Barbell)" -> "Bench Press"), so that convention is
+# trusted algorithmically here too. No other equipment is treated this way:
+# the canonical catalogue distinguishes some equipment variants under
+# different names (Bench Press vs Chest Press, Overhead Press vs Shoulder
+# Press), so blindly stripping "(Dumbbell)"/"(Machine)"/etc. and matching the
+# bare name risks silently attributing a set to the wrong variant -- an
+# unmapped/verbatim import is the safer failure mode than a wrong one.
+_SAFE_TO_STRIP_QUALIFIERS = frozenset({"barbell"})
+
+_NON_ALNUM_RE = re.compile(r"[^a-z0-9]+")
+
+
+def _normalize_lift_name(name: str) -> str:
+    """Fold a lift name for case/punctuation-insensitive comparison.
+
+    Lowercases and collapses any run of non-alphanumeric characters (spaces,
+    hyphens, apostrophes) to a single space, so "Chin Up", "Chin-up", and
+    "chin  up" all normalize identically. Deliberately does not drop
+    parenthesized content -- normalizing "Bench Press (Dumbbell)" keeps the
+    "dumbbell" token, so it never accidentally collapses onto the bare
+    "Bench Press" canonical name.
+    """
+    return _NON_ALNUM_RE.sub(" ", name.lower()).strip()
+
 
 # Columns this importer actually reads. Strong's real export also carries
 # Duration, Distance, Seconds, Notes, Workout Notes, and RPE, but those
@@ -115,12 +150,18 @@ class StrongImporter:
         blank in favor of Distance/Seconds, or leave the whole row blank on a
         rest day, which this importer doesn't score) or an unparseable Date --
         one bad row is logged and skipped, it never aborts the whole import.
-        Exercise names are resolved against StrongLiftAlias before being
-        returned, so callers never see Strong's raw naming.
+        Exercise names are resolved against StrongLiftAlias and the canonical
+        Liftosaur lift catalogue before being returned, so callers rarely see
+        Strong's raw naming. A name that cannot be resolved is imported
+        verbatim rather than skipped -- an unmapped lift name is inert
+        (doesn't pool or count toward goals) but doesn't lose the user's
+        logged sets outright, and is surfaced via a warning log instead.
         """
         text = decode_csv_text(file_obj)
         reader = csv.DictReader(io.StringIO(text))
         alias_map = self._alias_map()
+        canonical_map = self._canonical_map()
+        warned_exercises: set[str] = set()
 
         parsed: list[ParsedSet] = []
         for row in reader:
@@ -154,7 +195,15 @@ class StrongImporter:
                 continue
 
             weight_kg = (weight_lbs * LB_TO_KG).quantize(Decimal("0.01"))
-            lift = alias_map.get(exercise.lower(), exercise)
+            lift, matched = self._resolve_lift(exercise, alias_map, canonical_map)
+            if not matched and exercise not in warned_exercises:
+                warned_exercises.add(exercise)
+                logger.warning(
+                    "Strong CSV import: exercise %r did not match any known "
+                    "alias or canonical lift; importing sets under this name "
+                    "verbatim",
+                    exercise,
+                )
             parsed.append(
                 ParsedSet(
                     lift=lift,
@@ -165,6 +214,51 @@ class StrongImporter:
             )
 
         return parsed
+
+    @staticmethod
+    def _resolve_lift(
+        exercise: str, alias_map: dict[str, str], canonical_map: dict[str, str]
+    ) -> tuple[str, bool]:
+        """Resolve a raw Strong exercise name to a canonical lift name.
+
+        Tries, in order:
+        1. An explicit ``StrongLiftAlias`` entry (case-insensitive) --
+           always wins when present, since it's a human-confirmed mapping.
+        2. If the name ends in a "(Barbell)" qualifier, strip it and retry
+           both the alias map and the canonical catalogue against the base
+           name -- this is what resolves "Pendlay Row (Barbell)" to the
+           seeded "Pendlay Row" lift without needing a dedicated alias row.
+           Only "(Barbell)" is stripped this way; see
+           ``_SAFE_TO_STRIP_QUALIFIERS`` for why other equipment isn't.
+        3. A case-insensitive, punctuation-tolerant match of the whole raw
+           name against the canonical catalogue (catches "Chin Up" vs
+           "Chin-up").
+
+        Returns ``(lift_name, matched)``: ``matched`` is False only when
+        none of the above found anything, in which case ``lift_name`` is the
+        original ``exercise`` string, unchanged.
+        """
+        hit = alias_map.get(exercise.lower())
+        if hit:
+            return hit, True
+
+        qualifier_match = _TRAILING_QUALIFIER_RE.match(exercise)
+        if qualifier_match:
+            qualifier = qualifier_match.group("qualifier").strip().lower()
+            if qualifier in _SAFE_TO_STRIP_QUALIFIERS:
+                base = qualifier_match.group("base").strip()
+                hit = alias_map.get(base.lower())
+                if hit:
+                    return hit, True
+                hit = canonical_map.get(_normalize_lift_name(base))
+                if hit:
+                    return hit, True
+
+        hit = canonical_map.get(_normalize_lift_name(exercise))
+        if hit:
+            return hit, True
+
+        return exercise, False
 
     @staticmethod
     def _alias_map() -> dict[str, str]:
@@ -178,4 +272,15 @@ class StrongImporter:
             for from_name, to_name in StrongLiftAlias.objects.values_list(
                 "from_name", "to_name"
             )
+        }
+
+    @staticmethod
+    def _canonical_map() -> dict[str, str]:
+        """Return ``{normalized_name: name}`` for every seeded canonical lift.
+
+        One query for the whole file, same reasoning as ``_alias_map``.
+        """
+        return {
+            _normalize_lift_name(name): name
+            for name in Lift.objects.values_list("name", flat=True)
         }
