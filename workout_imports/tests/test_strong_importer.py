@@ -211,17 +211,23 @@ def _fuzzy_warnings(caplog):
     return [r for r in caplog.records if "separator-insensitive fallback" in r.message]
 
 
+def _reordered_warnings(caplog):
+    return [
+        r for r in caplog.records if "reordering its equipment qualifier" in r.message
+    ]
+
+
 def _unmapped_warnings(caplog):
     return [r for r in caplog.records if "did not match any known" in r.message]
 
 
 @pytest.mark.django_db
 class TestStrongImporterFuzzyFallback:
-    """Stage 4: the separator-free catch-all that runs after stages 1-3 miss.
+    """Stage 5: the separator-free catch-all that runs after stages 1-4 miss.
 
     Each of these raw names only resolves once every non-alphanumeric
     character is stripped entirely (not just collapsed to a space), so
-    stages 1-3 all miss and only stage 4 catches them -- and a stage-4 hit
+    stages 1-4 all miss and only stage 5 catches them -- and a stage-5 hit
     must be logged distinctly, since it's a "loose match stood in" signal
     the user wants visible in development.
     """
@@ -265,6 +271,7 @@ class TestStrongImporterFuzzyFallback:
         assert raw_name in fuzzy[0].message
         assert expected in fuzzy[0].message
         assert not _unmapped_warnings(caplog)
+        assert not _reordered_warnings(caplog)
 
     @pytest.mark.parametrize(
         "raw_name,expected",
@@ -287,9 +294,10 @@ class TestStrongImporterFuzzyFallback:
         assert parsed[0].lift == expected
         assert not _fuzzy_warnings(caplog)
         assert not _unmapped_warnings(caplog)
+        assert not _reordered_warnings(caplog)
 
     def test_dumbbell_qualifier_still_ends_up_unmapped_not_fuzzy_matched(self, caplog):
-        # The equipment-collapse guard has to hold through stage 4 too:
+        # The equipment-collapse guard has to hold through stage 5 too:
         # "Bench Press (Dumbbell)" normalizes (separator-free) to
         # "benchpressdumbbell", which must NOT match the "benchpress" key
         # for the canonical "Bench Press" lift.
@@ -299,6 +307,7 @@ class TestStrongImporterFuzzyFallback:
 
         assert parsed[0].lift == "Bench Press (Dumbbell)"
         assert not _fuzzy_warnings(caplog)
+        assert not _reordered_warnings(caplog)
         unmapped = _unmapped_warnings(caplog)
         assert len(unmapped) == 1
         assert "Bench Press (Dumbbell)" in unmapped[0].message
@@ -311,6 +320,112 @@ class TestStrongImporterFuzzyFallback:
         with caplog.at_level("WARNING", logger="workout_imports.importers.strong"):
             StrongImporter().parse(csv_file(rows))
         assert len(_fuzzy_warnings(caplog)) == 1
+
+
+@pytest.mark.django_db
+class TestStrongImporterQualifierReorder:
+    """Stage 4: reorder "Base (Qualifier)" to "Qualifier Base" and retry.
+
+    Strong suffixes equipment; our catalogue prefixes it for some lifts
+    (e.g. "Cable Crunch", "Trap Bar Deadlift", "Goblet Squat"). Unlike
+    stage 2, this has no equipment allowlist -- reordering is
+    information-preserving, so a mismatched equipment token still fails to
+    match anything real rather than silently landing on the wrong lift.
+    """
+
+    @pytest.mark.parametrize(
+        "raw_name,expected",
+        [
+            ("Crunch (Cable)", "Cable Crunch"),
+            ("Crossover (Cable)", "Cable Crossover"),
+            ("Pull Through (Cable)", "Cable Pull Through"),
+            ("Kickback (Cable)", "Cable Kickback"),
+            ("Twist (Cable)", "Cable Twist"),
+            ("Swing (Kettlebell)", "Kettlebell Swing"),
+            ("Deadlift (Trap Bar)", "Trap Bar Deadlift"),
+            ("Row (T Bar)", "T Bar Row"),
+            ("Squat (Goblet)", "Goblet Squat"),
+            ("Squat (Safety Squat Bar)", "Safety Squat Bar Squat"),
+        ],
+    )
+    def test_reordered_qualifier_resolves_to_canonical_lift(self, raw_name, expected):
+        rows = f"2024-01-01 09:15:00,Back day,1h,{raw_name},1,50,10,0,0,,,\n"
+        parsed = StrongImporter().parse(csv_file(rows))
+        assert parsed[0].lift == expected
+
+    @pytest.mark.parametrize(
+        "raw_name,expected",
+        [
+            ("Crunch (Cable)", "Cable Crunch"),
+            ("Crossover (Cable)", "Cable Crossover"),
+            ("Pull Through (Cable)", "Cable Pull Through"),
+            ("Kickback (Cable)", "Cable Kickback"),
+            ("Twist (Cable)", "Cable Twist"),
+            ("Swing (Kettlebell)", "Kettlebell Swing"),
+            ("Deadlift (Trap Bar)", "Trap Bar Deadlift"),
+            ("Row (T Bar)", "T Bar Row"),
+            ("Squat (Goblet)", "Goblet Squat"),
+            ("Squat (Safety Squat Bar)", "Safety Squat Bar Squat"),
+        ],
+    )
+    def test_reordered_qualifier_emits_the_reorder_warning(
+        self, raw_name, expected, caplog
+    ):
+        rows = f"2024-01-01 09:15:00,Back day,1h,{raw_name},1,50,10,0,0,,,\n"
+        with caplog.at_level("WARNING", logger="workout_imports.importers.strong"):
+            StrongImporter().parse(csv_file(rows))
+
+        reordered = _reordered_warnings(caplog)
+        assert len(reordered) == 1
+        assert raw_name in reordered[0].message
+        assert expected in reordered[0].message
+        assert not _fuzzy_warnings(caplog)
+        assert not _unmapped_warnings(caplog)
+
+    @pytest.mark.parametrize("raw_name", ["Bench Press (Dumbbell)", "Curl (Dumbbell)"])
+    def test_dumbbell_qualifier_reorder_still_ends_up_unmapped(self, raw_name, caplog):
+        # The equipment guard has to hold for the reorder stage too:
+        # reordering to "Dumbbell Bench Press"/"Dumbbell Curl" must not
+        # match anything, since no canonical name contains "Dumbbell".
+        rows = f"2024-01-01 09:15:00,Push day,1h,{raw_name},1,50,10,0,0,,,\n"
+        with caplog.at_level("WARNING", logger="workout_imports.importers.strong"):
+            parsed = StrongImporter().parse(csv_file(rows))
+
+        assert parsed[0].lift == raw_name
+        assert not _reordered_warnings(caplog)
+        assert not _fuzzy_warnings(caplog)
+        unmapped = _unmapped_warnings(caplog)
+        assert len(unmapped) == 1
+        assert raw_name in unmapped[0].message
+
+    @pytest.mark.parametrize(
+        "raw_name,expected",
+        [
+            ("Pendlay Row (Barbell)", "Pendlay Row"),
+            ("Squat (Barbell)", "Back Squat"),
+            ("Chin Up", "Chin-up"),
+        ],
+    )
+    def test_names_matched_by_earlier_stages_do_not_emit_the_reorder_warning(
+        self, raw_name, expected, caplog
+    ):
+        StrongLiftAliasFactory(from_name="Squat (Barbell)", to_name="Back Squat")
+        rows = f"2024-01-01 09:15:00,Back day,1h,{raw_name},1,135,5,0,0,,,\n"
+        with caplog.at_level("WARNING", logger="workout_imports.importers.strong"):
+            parsed = StrongImporter().parse(csv_file(rows))
+        assert parsed[0].lift == expected
+        assert not _reordered_warnings(caplog)
+        assert not _fuzzy_warnings(caplog)
+        assert not _unmapped_warnings(caplog)
+
+    def test_reorder_warning_is_deduped_per_distinct_raw_name(self, caplog):
+        rows = (
+            "2024-01-01 09:15:00,Back day,1h,Swing (Kettlebell),1,50,10,0,0,,,\n"
+            "2024-01-01 09:16:00,Back day,1h,Swing (Kettlebell),2,50,8,0,0,,,\n"
+        )
+        with caplog.at_level("WARNING", logger="workout_imports.importers.strong"):
+            StrongImporter().parse(csv_file(rows))
+        assert len(_reordered_warnings(caplog)) == 1
 
 
 @pytest.mark.django_db

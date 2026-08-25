@@ -180,6 +180,7 @@ class StrongImporter:
         canonical_map_strict = self._canonical_map_strict()
         warned_exercises: set[str] = set()
         fuzzy_matched_exercises: set[str] = set()
+        reordered_matched_exercises: set[str] = set()
 
         parsed: list[ParsedSet] = []
         for row in reader:
@@ -220,12 +221,23 @@ class StrongImporter:
                 alias_map_strict,
                 canonical_map_strict,
             )
-            if status == "fuzzy" and exercise not in fuzzy_matched_exercises:
+            if status == "reordered" and exercise not in reordered_matched_exercises:
+                reordered_matched_exercises.add(exercise)
+                logger.warning(
+                    "Strong CSV import: exercise %r only resolved to "
+                    "canonical lift %r by reordering its equipment "
+                    "qualifier to the front (stage 4); consider adding an "
+                    "explicit StrongLiftAlias or double-checking this "
+                    "correspondence",
+                    exercise,
+                    lift,
+                )
+            elif status == "fuzzy" and exercise not in fuzzy_matched_exercises:
                 fuzzy_matched_exercises.add(exercise)
                 logger.warning(
                     "Strong CSV import: exercise %r only resolved to "
                     "canonical lift %r via separator-insensitive fallback "
-                    "matching (stage 4); consider adding an explicit "
+                    "matching (stage 5); consider adding an explicit "
                     "StrongLiftAlias or double-checking this correspondence",
                     exercise,
                     lift,
@@ -271,20 +283,37 @@ class StrongImporter:
         3. A case-insensitive, punctuation-tolerant match of the whole raw
            name against the canonical catalogue (catches "Chin Up" vs
            "Chin-up").
-        4. A separator-free catch-all: lowercase with every non-alphanumeric
+        4. A qualifier-reorder match: for "Base (Qualifier)", build
+           "Qualifier Base" and look it up (separator-free) against the
+           canonical catalogue -- Strong suffixes equipment, our catalogue
+           prefixes it, e.g. "Crunch (Cable)" -> "Cable Crunch". Unlike
+           stage 2, this has no equipment allowlist and applies to any
+           qualifier: reordering is information-preserving (the equipment
+           token stays in the key), so it can only ever match a canonical
+           name that names that exact equipment -- it can't collapse
+           "Bench Press (Dumbbell)" onto the bare "Bench Press" the way a
+           blind strip would, because no canonical name contains
+           "dumbbell". This transforms the *input* and looks it up in the
+           same ``canonical_map_strict`` stage 5 uses -- it deliberately
+           does not precompute a second "reordered key" map over the
+           catalogue, which would create two keys per canonical name that
+           could collide with each other (and, being computed via dict
+           construction, would silently keep whichever name wrote last).
+        5. A separator-free catch-all: lowercase with every non-alphanumeric
            character removed entirely (not just collapsed to a space),
            matched against both the canonical catalogue and the alias-map
            keys under the same folding (catches "Chinup", "TBar Row").
-           Strictly looser than stage 3, so it only ever fires once that one
-           has already missed. Still operates on the whole raw name --
+           Strictly looser than stage 3, so it only ever fires once stages
+           3-4 have already missed. Still operates on the whole raw name --
            equipment qualifiers are never stripped here, so the
            dumbbell/machine collapse guard from stage 2 still holds.
 
         Returns ``(lift_name, status)``, where ``status`` is ``"matched"``
-        for stages 1-3, ``"fuzzy"`` when only stage 4 found it (a hit the
-        caller should surface -- loose matching stood in for a proper alias
-        or canonical entry), or ``"unmapped"`` when nothing did, in which
-        case ``lift_name`` is the original ``exercise`` string, unchanged.
+        for stages 1-3, ``"reordered"`` when only stage 4 found it,
+        ``"fuzzy"`` when only stage 5 found it (both are hits the caller
+        should surface -- loose matching stood in for a proper alias or
+        canonical entry), or ``"unmapped"`` when nothing did, in which case
+        ``lift_name`` is the original ``exercise`` string, unchanged.
         """
         hit = alias_map.get(exercise.lower())
         if hit:
@@ -305,6 +334,14 @@ class StrongImporter:
         hit = canonical_map.get(_normalize_lift_name(exercise))
         if hit:
             return hit, "matched"
+
+        if qualifier_match:
+            base = qualifier_match.group("base").strip()
+            qualifier_raw = qualifier_match.group("qualifier").strip()
+            reordered = f"{qualifier_raw} {base}"
+            hit = canonical_map_strict.get(_normalize_lift_name_strict(reordered))
+            if hit:
+                return hit, "reordered"
 
         strict_key = _normalize_lift_name_strict(exercise)
         hit = canonical_map_strict.get(strict_key)
