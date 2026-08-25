@@ -9,6 +9,10 @@ always 10. For target_reps >= 10 this is numerically identical to the
 original points->reps table; the interesting cases are target_reps < 10,
 where naively emitting 10 columns would produce unreachable point values and
 duplicate rep counts.
+
+manual_default_rep_count opens on the participant's current best (a second
+UAT follow-up), not their most recently logged set -- see
+TestDefaultRepCountForRepTarget.
 """
 
 from datetime import timedelta
@@ -216,9 +220,13 @@ class TestDefaultRepCountForRepTarget:
             t["rep_count"] for t in card["manual_targets"]
         ]
 
-    def test_default_rep_count_ignores_zero_point_events(
+    def test_default_rep_count_falls_back_when_only_zero_point_history_exists(
         self, user, challenge, participant
     ):
+        """A sub-threshold set is stored as a real zero-point PointEarnEvent
+        with is_current_best=False, so it never contributes to
+        card["points_earned"] -- the card falls back to the first stop same
+        as a lift with no history at all."""
         _give_goal(participant, target_weight=Decimal("0"), target_reps=20)
         PointEarnEventFactory(
             user=user,
@@ -235,10 +243,16 @@ class TestDefaultRepCountForRepTarget:
             t["rep_count"] for t in card["manual_targets"]
         ]
 
-    def test_default_rep_count_uses_most_recent_event_not_current_best(
+    def test_default_rep_count_opens_on_current_best_not_most_recent_event(
         self, user, challenge, participant
     ):
+        """The regression this whole rule exists for: a lifter whose most
+        recent set scored worse than their current best (a deload, a
+        warm-up, a failed attempt) must still open the carousel on the best,
+        not on what they just did -- fails under the old
+        most-recent-event-wins behaviour (would open on 8 reps here)."""
         _give_goal(participant, target_weight=Decimal("0"), target_reps=20)
+        # Current best: 8 points (16 reps), logged first.
         PointEarnEventFactory(
             user=user,
             challenge=challenge,
@@ -247,6 +261,8 @@ class TestDefaultRepCountForRepTarget:
             is_current_best=True,
             performed_at=timezone.now().date() - timedelta(days=10),
         )
+        # A later, worse session (4 points, 8 reps) doesn't beat the best, so
+        # it's not is_current_best -- but it IS the most recent.
         PointEarnEventFactory(
             user=user,
             challenge=challenge,
@@ -257,12 +273,16 @@ class TestDefaultRepCountForRepTarget:
         )
         data = build_rep_target_personal_data(user, challenge, participant)
         card = data["summary_cards"][0]
-        assert card["manual_default_rep_count"] == 8  # 4 points -> 8 reps
+        assert card["manual_default_rep_count"] == 16
+        flagged = [
+            t["rep_count"] for t in card["manual_targets"] if t["is_current_best"]
+        ]
+        assert card["manual_default_rep_count"] == flagged[0]
 
     def test_default_rep_count_falls_back_when_event_points_are_unmatched(
         self, user, challenge, participant
     ):
-        """A most-recent event whose points don't match any current stop
+        """A current-best event whose points don't match any current stop
         (e.g. a goal that changed target_reps after the event was scored)
         falls back to the first stop rather than raising or defaulting to a
         rep count no stop actually has."""
@@ -272,7 +292,7 @@ class TestDefaultRepCountForRepTarget:
             challenge=challenge,
             lift=LIFT,
             points_earned=7,  # not a reachable value for target_reps=3
-            is_current_best=False,
+            is_current_best=True,
             performed_at=timezone.now().date(),
         )
         data = build_rep_target_personal_data(user, challenge, participant)

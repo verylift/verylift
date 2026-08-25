@@ -52,9 +52,9 @@ from scoring.models import PointEarnEvent
 from scoring.services import score_pooled_history
 
 # Default rep-count the self-report carousel opens on for a lift with no
-# PointEarnEvent ever logged -- 10RM, the easiest target (TASK-25 design
-# review). A lift with any history opens on the most recently logged rep
-# count instead; see _default_manual_rep_count.
+# current-best PointEarnEvent -- 10RM, the easiest target (TASK-25 design
+# review). A lift with a current best opens on the stop matching it instead;
+# see _default_manual_rep_count.
 MANUAL_DEFAULT_REP_COUNT_NO_HISTORY = 10
 
 logger = logging.getLogger(__name__)
@@ -1314,28 +1314,31 @@ def _manual_targets_for_lift(lift, params, *, threshold_at, current_best):
     return targets
 
 
-def _default_manual_rep_count(most_recent_event):
-    """Starting rep count for a summary card's self-report carousel (TASK-25).
+def _default_manual_rep_count(current_best):
+    """Starting rep count for a summary card's self-report carousel (TASK-25,
+    revised after UAT: the carousel used to open on the most recently logged
+    set, which could be a deload/warm-up/failed attempt with no visible
+    relationship to anything the card shows).
 
-    No scoring history for this lift -> 10RM, the easiest target. Otherwise ->
-    the rep count the most recently logged event satisfied (``11 -
-    points_earned``, same derivation as everywhere else that maps a
-    PointEarnEvent back to a rep count) -- deliberately the *most recent*
-    entry, not the current best: a lifter whose last session was worse than
-    their all-time best should open on what they just did, not get steered
-    toward re-confirming an old best.
+    Opens on the stop matching the participant's current best -- exactly the
+    ``current_best`` event :func:`_manual_targets_for_lift` already derives
+    ``is_current_best`` from, so the carousel's opening stop, its highlighted
+    stop, and the points on the card's front face can never disagree; all
+    three now come from the same ``current_best`` value. This does mean the
+    carousel can open with Confirm disabled (there's nothing to gain by
+    re-confirming a best already on record) -- accepted, since opening
+    anywhere else would show a number the card itself doesn't display.
 
-    "No scoring history" has to include a zero-point event, not just a missing
-    one: :func:`scoring.services._persist_audit_row` records sub-threshold
-    sets as real zero-point audit rows, so a lifter who has logged sets but
-    never earned a point does have a most-recent event. Running the usual
-    derivation on it gives ``11 - 0 == 11``, a rep count no carousel entry has
-    (they run 10RM..1RM), which lands on the client's not-found fallback
-    instead of any deliberate choice.
+    No current-best event (this lift has never scored) falls back to
+    ``MANUAL_DEFAULT_REP_COUNT_NO_HISTORY`` (10RM, the easiest target).
+    ``current_best`` is never a zero-point event -- :func:`scoring.services.
+    _persist_audit_row` writes sub-threshold sets with ``is_current_best=
+    False``, so a lift that has only ever scored 0 points has no
+    ``current_best`` row and takes this same fallback.
     """
-    if most_recent_event is None or most_recent_event.points_earned == 0:
+    if current_best is None:
         return MANUAL_DEFAULT_REP_COUNT_NO_HISTORY
-    return 11 - most_recent_event.points_earned
+    return 11 - current_best.points_earned
 
 
 def _standards_row_for_lift(lift, params, *, threshold_at, current_best, rep_columns):
@@ -1619,23 +1622,25 @@ def _manual_targets_for_rep_target(
     return targets
 
 
-def _default_manual_rep_count_for_rep_target(most_recent_event, manual_targets):
+def _default_manual_rep_count_for_rep_target(current_points, manual_targets):
     """Starting rep count for a REP_TARGET summary card's self-report carousel
-    -- sibling of :func:`_default_manual_rep_count`.
+    -- sibling of :func:`_default_manual_rep_count`, revised the same way
+    after the same UAT finding.
 
-    No scoring history for this lift, or a zero-point history, opens on the
-    first (fewest-reps, lowest-points) stop -- the Rep Target equivalent of
-    Classic's 10RM fallback. Otherwise opens on the stop matching the most
-    recently logged event's own points. Matched against ``manual_targets``
-    itself (rather than re-derived) so the default always lands on a stop
-    that actually exists in the list, which can be shorter than 10 entries
-    for a small ``target_reps``.
+    Opens on the stop matching ``current_points`` -- the same value
+    :func:`_manual_targets_for_rep_target` derives each stop's
+    ``is_current_best`` from -- so the opening stop, the highlighted stop,
+    and the points on the card's front face can never disagree. No scoring
+    history, or history that only ever scored zero points (``current_points``
+    falsy), falls back to the first (fewest-reps, lowest-points) stop -- the
+    Rep Target equivalent of Classic's 10RM fallback.
+
+    Matched against ``manual_targets`` itself (rather than re-derived) so the
+    default always lands on a stop that actually exists in the list, which
+    can be shorter than 10 entries for a small ``target_reps``.
     """
-    tier = None
-    if most_recent_event is not None and most_recent_event.points_earned:
-        tier = most_recent_event.points_earned
-    if tier is not None:
-        match = next((t for t in manual_targets if t["points"] == tier), None)
+    if current_points:
+        match = next((t for t in manual_targets if t["points"] == current_points), None)
         if match is not None:
             return match["rep_count"]
     return manual_targets[0]["rep_count"]
@@ -1695,16 +1700,6 @@ def build_rep_target_personal_data(user, challenge, participant):
             user=user, challenge=challenge, performed_at__gte=window_start
         )
     )
-
-    # Window-independent like current_best_by_lift above, and for the same
-    # reason -- powers the self-report carousel's opening tier, which should
-    # reflect what the lifter most recently did, not reset just because a
-    # bail/rejoin moved the window forward.
-    most_recent_event_by_lift = {}
-    for event in PointEarnEvent.objects.filter(user=user, challenge=challenge).order_by(
-        "-performed_at", "-synced_at"
-    ):
-        most_recent_event_by_lift.setdefault(event.lift, event)
 
     params = _PersonalDataParams(
         user=user,
@@ -1824,7 +1819,7 @@ def build_rep_target_personal_data(user, challenge, participant):
 
     for card in summary_cards:
         card["manual_default_rep_count"] = _default_manual_rep_count_for_rep_target(
-            most_recent_event_by_lift.get(card["lift"]), card["manual_targets"]
+            card.get("points_earned"), card["manual_targets"]
         )
 
     return {
@@ -1903,17 +1898,6 @@ def build_personal_data(user, challenge, participant):
         )
     }
 
-    # Window-independent like current_best_by_lift above, and for the same
-    # reason (a bail/rejoin resetting joined_at shouldn't make the carousel
-    # forget history that still stands on the leaderboard). setdefault (not a
-    # dict comprehension) because this is genuinely one-per-lift out of many
-    # events per lift, not an already-unique is_current_best=True row.
-    most_recent_event_by_lift = {}
-    for event in PointEarnEvent.objects.filter(user=user, challenge=challenge).order_by(
-        "-performed_at", "-synced_at"
-    ):
-        most_recent_event_by_lift.setdefault(event.lift, event)
-
     rep_columns = [
         {"reps": n, "points": points_for_rep_count(n)} for n in range(10, 0, -1)
     ]
@@ -1952,7 +1936,7 @@ def build_personal_data(user, challenge, participant):
 
     for card in summary_cards:
         card["manual_default_rep_count"] = _default_manual_rep_count(
-            most_recent_event_by_lift.get(card["lift"])
+            current_best_by_lift.get(card["lift"])
         )
 
     return {
