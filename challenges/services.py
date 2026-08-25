@@ -30,6 +30,7 @@ from challenges.models import (
     ChallengeParticipant,
     CustomGoal,
     CustomGoalTarget,
+    RepTargetGoalTarget,
 )
 from challenges.rep_target_goals import (
     detach_active_rep_target_goal,
@@ -222,6 +223,137 @@ def submit_manual_lift(
     # just wrote rather than from the pre-write `would_earn` estimate: the two
     # differ when the set falls outside the challenge's history window, where
     # the guard above still passes but nothing is scored.
+    scored_event = (
+        PointEarnEvent.objects.filter(
+            user=user,
+            challenge=challenge,
+            lift=lift,
+            performed_at=performed_at,
+            reps=rep_count,
+        )
+        .order_by("-synced_at")
+        .first()
+    )
+    return history_row, scored_event.points_earned if scored_event else 0
+
+
+def submit_manual_rep_target_set(
+    *,
+    user,
+    challenge,
+    participant: ChallengeParticipant,
+    lift: str,
+    rep_count: int,
+    performed_at,
+) -> tuple[LiftHistory, int] | None:
+    """Self-report a completed set against a REP_TARGET goal's single
+    ``(target_weight, target_reps)`` target for one lift (issue #85 follow-up),
+    for a lifter with no workout tracker connected. Sibling of
+    :func:`submit_manual_lift`.
+
+    The weight is never taken from the caller, same "confirm my own target,
+    never fabricate a number" principle as Classic — every logged set is
+    written at exactly the participant's own ``target_weight`` for this lift.
+    Rep count is the only caller-supplied number, since reps toward the
+    target is Rep Target's only free scoring axis (Classic's free axis is
+    which rep-max rung was hit; here the weight is fixed and only the rep
+    count varies).
+
+    Returns ``None`` when the participant has no rep target goal configured,
+    the goal does not cover this lift, or the set could not raise the
+    participant's score on this lift — the same three-way validation-failure
+    contract :func:`submit_manual_lift` documents. The carousel disables
+    entries that cannot raise the score, so reaching that last branch means a
+    stale card or a hand-made request, not a route the UI can walk into.
+
+    Returns ``(history_row, points_earned)``, mirroring ``submit_manual_lift``.
+    """
+    if participant.rep_target_goal_id is None:
+        logger.warning(
+            "Manual rep target self-report rejected for user %s: no goal "
+            "configured for challenge %s",
+            user.id,
+            challenge.pk,
+        )
+        return None
+
+    target = RepTargetGoalTarget.objects.filter(
+        goal=participant.rep_target_goal, lift=lift
+    ).first()
+    if target is None:
+        logger.warning(
+            "Manual rep target self-report rejected for user %s: no target "
+            "for %s in challenge %s",
+            user.id,
+            lift,
+            challenge.pk,
+        )
+        return None
+
+    would_earn = (
+        best_score_for_rep_target(
+            rep_count, target.target_weight, target.target_reps, target.target_weight
+        )
+        or 0
+    )
+    current_points = (
+        PointEarnEvent.objects.filter(
+            user=user, challenge=challenge, lift=lift, is_current_best=True
+        )
+        .values_list("points_earned", flat=True)
+        .first()
+        or 0
+    )
+    if would_earn <= current_points:
+        logger.warning(
+            "Manual rep target self-report rejected for user %s: %s reps on "
+            "%s would earn %s point(s), not beating the current best of %s "
+            "in challenge %s",
+            user.id,
+            rep_count,
+            lift,
+            would_earn,
+            current_points,
+            challenge.pk,
+        )
+        return None
+
+    lookup = {
+        "user": user,
+        "lift": lift,
+        "performed_at": performed_at,
+        "reps": rep_count,
+        "weight_kg": target.target_weight,
+    }
+    try:
+        history_row, created = LiftHistory.objects.get_or_create(
+            **lookup,
+            defaults={"source": LiftSource.MANUAL},
+        )
+    except IntegrityError:
+        logger.warning(
+            "Manual rep target self-report for user %s raced a duplicate "
+            "insert for %s reps on %s on %s; reusing the existing row",
+            user.id,
+            rep_count,
+            lift,
+            performed_at,
+        )
+        history_row = LiftHistory.objects.get(**lookup)
+        created = False
+
+    logger.info(
+        "Manual rep target self-report: user %s logged %s reps on %s for "
+        "challenge %s (new row=%s)",
+        user.id,
+        rep_count,
+        lift,
+        challenge.pk,
+        created,
+    )
+
+    score_pooled_history(user=user, challenge=challenge)
+
     scored_event = (
         PointEarnEvent.objects.filter(
             user=user,
@@ -1433,6 +1565,81 @@ def _rep_target_point_columns(target_reps, target_weight, current_points):
     ]
 
 
+def _manual_targets_for_rep_target(
+    lift, params, *, target_weight, target_reps, current_points
+):
+    """Build the 1pt..10pt reps carousel a REP_TARGET summary card's
+    self-report carousel pages through -- the sibling of
+    :func:`_manual_targets_for_lift`.
+
+    Classic's free scoring axis is which rep-max rung was hit, so its
+    carousel varies weight across ten fixed rep counts. Rep Target's weight is
+    a single fixed gate (the goal's own ``target_weight``), so the carousel
+    instead varies reps across the ten point tiers, reusing
+    :func:`_rep_target_point_columns`'s own "fewest reps for N points"
+    table -- the same one the Goals tab renders -- so the carousel can never
+    show a rep count that drifts from what the Goals tab or scoring use.
+
+    ``points_delta`` is computed by re-running ``best_score_for_rep_target``
+    on each entry's own reps, not by subtracting ``current_points`` from the
+    column's nominal ``points`` label: a small ``target_reps`` can make
+    several point tiers share the same minimum rep count (documented on
+    ``_rep_target_point_columns``), so confirming a "cheap" tier can actually
+    score more than its own label promises. Running the real scorer here is
+    what keeps the carousel's promise equal to the award, the same reasoning
+    Classic's own docstring gives.
+    """
+    columns = _rep_target_point_columns(target_reps, target_weight, current_points)
+    weight_display = _weight_display(
+        target_weight, lift, params.display_unit, params.challenge, snap=False
+    )
+    current_points = current_points or 0
+    targets = []
+    for col in columns:
+        reps = col["reps"]
+        points_if_logged = (
+            best_score_for_rep_target(reps, target_weight, target_reps, target_weight)
+            or 0
+        )
+        targets.append(
+            {
+                "points": col["points"],
+                "rep_count": reps,
+                "weight": weight_display,
+                "is_current_best": col["is_current_best"],
+                "points_delta": points_if_logged - current_points,
+            }
+        )
+    return targets
+
+
+def _default_manual_rep_count_for_rep_target(
+    most_recent_event, target_reps, target_weight
+):
+    """Starting rep count for a REP_TARGET summary card's self-report carousel
+    -- sibling of :func:`_default_manual_rep_count`, and deliberately named
+    and shaped the same way (a rep count, not a points tier) so the front-end
+    carousel widget can page/default both modes' carousels identically: every
+    entry in :func:`_manual_targets_for_rep_target` carries a ``rep_count``
+    field, exactly like Classic's, so this returns a value that always
+    matches one of them.
+
+    No scoring history for this lift, or a zero-point history, opens on the
+    easiest tier's (1 point) rep count -- the Rep Target equivalent of
+    Classic's 10RM fallback. Otherwise opens on the rep count the tier the
+    most recently logged event scored maps to, via the same
+    ``_rep_target_point_columns`` table the carousel itself is built from, so
+    the default can never point at a rep count the carousel doesn't actually
+    contain.
+    """
+    tier = 1
+    if most_recent_event is not None and most_recent_event.points_earned:
+        tier = most_recent_event.points_earned
+    columns = _rep_target_point_columns(target_reps, target_weight, None)
+    entry = next((col for col in columns if col["points"] == tier), columns[0])
+    return entry["reps"]
+
+
 def build_rep_target_personal_data(user, challenge, participant):
     """The REP_TARGET sibling of :func:`build_personal_data`.
 
@@ -1486,6 +1693,24 @@ def build_rep_target_personal_data(user, challenge, participant):
         PointEarnEvent.objects.filter(
             user=user, challenge=challenge, performed_at__gte=window_start
         )
+    )
+
+    # Window-independent like current_best_by_lift above, and for the same
+    # reason -- powers the self-report carousel's opening tier, which should
+    # reflect what the lifter most recently did, not reset just because a
+    # bail/rejoin moved the window forward.
+    most_recent_event_by_lift = {}
+    for event in PointEarnEvent.objects.filter(user=user, challenge=challenge).order_by(
+        "-performed_at", "-synced_at"
+    ):
+        most_recent_event_by_lift.setdefault(event.lift, event)
+
+    params = _PersonalDataParams(
+        user=user,
+        challenge=challenge,
+        window_start=window_start,
+        display_unit=display_unit,
+        goal_label=goal_label,
     )
 
     # Batched lookups, one query each however many lifts the goal holds: the
@@ -1584,10 +1809,23 @@ def build_rep_target_personal_data(user, challenge, participant):
         card["point_columns"] = _rep_target_point_columns(
             target_reps, target_weight, card.get("points_earned")
         )
+        card["manual_targets"] = _manual_targets_for_rep_target(
+            lift,
+            params,
+            target_weight=target_weight,
+            target_reps=target_reps,
+            current_points=card.get("points_earned"),
+        )
         summary_cards.append(card)
 
     _flag_close_to_goal(summary_cards)
     _flag_endgame_suggestion(summary_cards, challenge)
+
+    for card in summary_cards:
+        target_weight, target_reps = targets_by_lift[card["lift"]]
+        card["manual_default_rep_count"] = _default_manual_rep_count_for_rep_target(
+            most_recent_event_by_lift.get(card["lift"]), target_reps, target_weight
+        )
 
     return {
         "summary_cards": summary_cards,
