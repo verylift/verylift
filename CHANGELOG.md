@@ -5,43 +5,40 @@
 ## 2026.8.13 — 2026-08-24
 
 ### Added
-- Free-tier Liftosaur users can now import their workout history via CSV export from Settings, alongside the existing Hevy CSV import
-- Challenge owners can set an invite link to never expire, instead of it always eventually timing out
-- Deleting your account now lets you optionally reassign ownership of any challenge you still run, defaulting to your longest-tenured co-participant
-- Uploading a workout CSV now shows real upload progress plus a distinct message while the server processes it
-- CI now fails a PR if a GPL/AGPL-licensed Python dependency is introduced via `uv.lock`/`pyproject.toml`
-- scripts/import-liftosaur-to-wger.py seeds a wger instance with a Liftosaur CSV export via the wger REST API, for testing wger integrations
-- Users can connect a self-hosted Wger instance from Settings (instance URL + API token) to sync workout history
-- New `LiftSource.WGER` provenance for pooled lift history rows
-- Onboarding lets a new user name an unsupported tracker app, recorded for backlog triage
-- Onboarding now lets you connect Liftosaur, Wger, or Hevy directly (or tell us about another tracker you use), instead of a single generic "how do you track lifts" step
-- Onboarding and Settings promote signing up for Liftosaur with our affiliate coupon code VERYLIFT, including a plain disclosure that we earn a commission, a copy-to-clipboard button for the code, and a dedicated suggestion step for users not using any tracker yet
 - Challenge creators can choose a "Rep Target" scoring mode alongside Classic, suited to calisthenics like push-ups, dips, and pull-ups
 - Rep Target participants get a Goals tab showing the reps needed at their target weight to earn each point value, and can open a co-participant's goal from the leaderboard
-- Goal charts now show what each rep-max column is worth in points
-- The rep target goal grid has a per-row clear button and a "Clear all", matching the classic goal grid
+- A Rep Target goal counts as complete only at its full rep count
+- The challenge header shows a Rep Target participant's locked goal
+- The "Final stretch" endgame nudge fires in Rep Target mode when a lifter is within a few reps of their next point
 - The challenges list shows each challenge's mode (Classic or Rep Target)
+- Suggested rep targets sit above your best logged set, so a new goal starts at zero points instead of already being complete
+- "Suggest targets" fills only blank fields, keeping and visually distinguishing values you already typed
+- The rep target goal grid has a per-row clear button and a "Clear all", matching the classic goal grid
+- Goal charts now show what each rep-max column is worth in points
+- Users can connect a self-hosted Wger instance from Settings (instance URL + API token) to sync workout history
+- New `LiftSource.WGER` provenance for pooled lift history rows
+- Free-tier Liftosaur users can now import their workout history via CSV export from Settings, alongside the existing Hevy CSV import
+- Uploading a workout CSV now shows real upload progress plus a distinct message while the server processes it
+- Challenge owners can set an invite link to never expire, instead of it always eventually timing out
+- Deleting your account now lets you optionally reassign ownership of any challenge you still run, defaulting to your longest-tenured co-participant
+- Onboarding lets a new user name an unsupported tracker app, recorded for backlog triage
+- Onboarding and Settings promote signing up for Liftosaur with our affiliate coupon code VERYLIFT, including a plain disclosure that we earn a commission, a copy-to-clipboard button for the code, and a dedicated suggestion step for users not using any tracker yet
+- CI now fails a PR if a GPL/AGPL-licensed Python dependency is introduced via `uv.lock`/`pyproject.toml`
+- scripts/import-liftosaur-to-wger.py seeds a wger instance with a Liftosaur CSV export via the wger REST API, for testing wger integrations
 
 ### Changed
-- Redesigned the site's social-preview image for link previews
-- Onboarding's tracking-app step now supports Wger and Hevy alongside Liftosaur, with per-app API/CSV options instead of a single hardcoded Liftosaur choice
+- Onboarding now lets you connect Liftosaur, Wger, or Hevy directly (or tell us about another tracker you use), instead of a single generic "how do you track lifts" step
 - The lift picker is now tabbed, opening on "All Lifts" with "Popular" and "Calisthenics" as curated views with their own "Select all"
-- Suggested rep targets now sit above your best logged set, so a new goal starts at zero points instead of already being complete
-- "Suggest targets" now fills only blank fields, keeping and visually distinguishing values you already typed
+- Redesigned the site's social-preview image for link previews
 
 ### Fixed
-- Leaving a challenge and rejoining via invite link no longer resurrects your old goal chart — you're prompted to set a new one, and reusing the same goal name no longer errors
-- Collapsing the desktop sidebar no longer hides Settings and the rest of the account menu — clicking the avatar expands it and opens the menu
-- A never-expiring invite link to a challenge that's already ended now offers to help you start your own, instead of leading to a broken signup or a raw error page
-- Compute could occasionally round an extrapolated cell to a value lighter than its own pinned anchor -- rounding now stays on the correct side of that anchor
-- Deleted accounts now show consistently as their placeholder name with a "(deleted)" marker everywhere, instead of as "Former Participant" on some pages and a pseudonym on others
-- Weight and repetition units are resolved live per Wger instance instead of assumed by default fixture ID, preventing silent weight mis-conversion or dropped sets on self-hosted instances with renumbered reference tables
-- Workout log repetitions are now parsed correctly when the API returns them as a decimal-formatted string (e.g. `"7.00"`), which previously caused every synced set to be silently dropped
-- A rep target goal is only complete at its full rep count; previously the last few reps were never required
+- Leaving a challenge and rejoining via invite link no longer resurrects your old goal chart. Instead, you're prompted to set a new one, and reusing the same goal name no longer errors
+- Collapsing the desktop sidebar no longer hides Settings and the rest of the account menu. Clicking the avatar expands it and opens the menu
 - A slow Liftosaur sync no longer breaks the challenge page; it shows the history already synced
+- A never-expiring invite link to a challenge that's already ended now offers to help you start your own, instead of leading to a broken signup or a raw error page
+- Deleted accounts now show consistently as their placeholder name with a "(deleted)" marker everywhere, instead of as "Former Participant" on some pages and a pseudonym on others
+- Compute could occasionally round an extrapolated cell to a value lighter than its own pinned anchor -- rounding now stays on the correct side of that anchor
 - Goal names are capped at 100 characters; over-long names no longer crash goal confirmation or leaving a challenge
-- The "Final stretch" endgame nudge now fires in Rep Target mode when a lifter is within a few reps of their next point
-- The challenge header shows a Rep Target participant's locked goal instead of "Not set"
 
 ## 2026.8.12 — 2026-08-18
 
