@@ -13,15 +13,20 @@ from accounts.tests.factories import UserFactory
 from hevy_api.client import HevyAPIError
 from hevy_api.models import HevySyncLog
 from hevy_api.services import (
+    HEVY_KEY_INVALID,
+    HEVY_KEY_UNKNOWN,
+    HEVY_KEY_VALID,
     HISTORY_BACKFILL_DAYS,
     MAX_EVENT_PAGES_PER_BACKGROUND_RUN,
     MAX_EVENT_PAGES_PER_INLINE_RUN,
     _parse_workout,
     _run_backfill_in_thread,
     last_synced_at,
+    latest_sync_failure,
     sync_user_lifts,
     trigger_hevy_lift_history_backfill,
     validate_hevy_key,
+    validate_hevy_key_status,
 )
 from liftosaur.models import LiftHistory, LiftSource
 from workout_imports.tests.factories import HevyLiftAliasFactory
@@ -94,6 +99,49 @@ class TestValidateHevyKey:
         client.get_workouts.side_effect = ValueError("boom")
         with patch("hevy_api.services.HevyClient", return_value=client):
             assert validate_hevy_key("key") is False
+
+
+# ---------------------------------------------------------------------------
+# validate_hevy_key_status
+# ---------------------------------------------------------------------------
+
+
+class TestValidateHevyKeyStatus:
+    def test_valid_key_returns_valid(self):
+        client = MagicMock()
+        with patch("hevy_api.services.HevyClient", return_value=client):
+            assert validate_hevy_key_status("key") == HEVY_KEY_VALID
+
+    @pytest.mark.parametrize("status_code", [401, 403])
+    def test_auth_failure_returns_invalid(self, status_code):
+        client = MagicMock()
+        client.get_workouts.side_effect = HevyAPIError(status_code, "Unauthorized")
+        with patch("hevy_api.services.HevyClient", return_value=client):
+            assert validate_hevy_key_status("key") == HEVY_KEY_INVALID
+
+    @pytest.mark.parametrize("status_code", [429, 500, 503])
+    def test_non_auth_api_error_returns_unknown_not_invalid(self, status_code):
+        """A 5xx/429 says nothing about whether the key itself is good --
+        treating it the same as a confirmed rejection would refuse to save a
+        possibly-valid key just because Hevy was having a bad moment."""
+        client = MagicMock()
+        client.get_workouts.side_effect = HevyAPIError(status_code, "server error")
+        with patch("hevy_api.services.HevyClient", return_value=client):
+            assert validate_hevy_key_status("key") == HEVY_KEY_UNKNOWN
+
+    def test_network_error_returns_unknown(self):
+        import urllib.error
+
+        client = MagicMock()
+        client.get_workouts.side_effect = urllib.error.URLError("no network")
+        with patch("hevy_api.services.HevyClient", return_value=client):
+            assert validate_hevy_key_status("key") == HEVY_KEY_UNKNOWN
+
+    def test_generic_exception_returns_unknown(self):
+        client = MagicMock()
+        client.get_workouts.side_effect = ValueError("boom")
+        with patch("hevy_api.services.HevyClient", return_value=client):
+            assert validate_hevy_key_status("key") == HEVY_KEY_UNKNOWN
 
 
 # ---------------------------------------------------------------------------
@@ -607,3 +655,45 @@ class TestLastSyncedAt:
         HevySyncLog.objects.create(user=user, started_at=older, success=True)
         HevySyncLog.objects.create(user=user, started_at=newer, success=True)
         assert last_synced_at(user) == newer
+
+
+# ---------------------------------------------------------------------------
+# latest_sync_failure
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestLatestSyncFailure:
+    def test_returns_none_when_no_sync_ever_ran(self):
+        user = UserFactory(hevy_api_key="key")
+        assert latest_sync_failure(user) is None
+
+    def test_returns_none_when_most_recent_sync_succeeded(self):
+        user = UserFactory(hevy_api_key="key")
+        older = datetime.now(tz=UTC) - timedelta(days=1)
+        newer = datetime.now(tz=UTC)
+        HevySyncLog.objects.create(user=user, started_at=older, success=False)
+        HevySyncLog.objects.create(user=user, started_at=newer, success=True)
+        assert latest_sync_failure(user) is None
+
+    def test_returns_none_when_most_recent_sync_still_in_progress(self):
+        user = UserFactory(hevy_api_key="key")
+        HevySyncLog.objects.create(
+            user=user, started_at=datetime.now(tz=UTC), success=None
+        )
+        assert latest_sync_failure(user) is None
+
+    def test_returns_log_when_most_recent_sync_failed(self):
+        user = UserFactory(hevy_api_key="key")
+        older = datetime.now(tz=UTC) - timedelta(days=1)
+        newer = datetime.now(tz=UTC)
+        HevySyncLog.objects.create(user=user, started_at=older, success=True)
+        failed = HevySyncLog.objects.create(
+            user=user,
+            started_at=newer,
+            success=False,
+            error_detail="Hevy API error 401: Unauthorized",
+        )
+        result = latest_sync_failure(user)
+        assert result.id == failed.id
+        assert result.error_detail == "Hevy API error 401: Unauthorized"

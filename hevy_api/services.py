@@ -99,25 +99,64 @@ MAX_EVENT_PAGES_PER_BACKGROUND_RUN = 500
 MAX_EVENT_PAGES_PER_INLINE_RUN = 3
 
 
-def validate_hevy_key(api_key: str) -> bool:
-    """Validate a Hevy API key by calling the workouts endpoint.
+# validate_hevy_key_status outcomes. VALID/INVALID are a confirmed answer from
+# Hevy; UNKNOWN means the probe couldn't complete (network hiccup, a Hevy
+# 5xx/429, an unexpected local failure) and says nothing about the key itself.
+# Settings' save path (accounts.views.settings_view) treats UNKNOWN
+# differently from a bool caller like onboarding: rejecting a key outright
+# because Hevy happened to be unreachable for one request would be its own
+# regression, so an UNKNOWN key gets saved with a caveat instead -- if it
+# turns out to actually be bad, the next sync attempt fails and that failure
+# is surfaced via HevySyncLog (see latest_sync_failure).
+HEVY_KEY_VALID = "valid"
+HEVY_KEY_INVALID = "invalid"
+HEVY_KEY_UNKNOWN = "unknown"
+
+# HTTP statuses Hevy uses to mean "this key is not accepted", as opposed to a
+# transient/server-side problem (5xx, 429) that says nothing about the key.
+_HEVY_AUTH_FAILURE_STATUSES = frozenset({401, 403})
+
+
+def validate_hevy_key_status(api_key: str) -> str:
+    """Validate a Hevy API key, distinguishing a confirmed rejection from an
+    inconclusive probe.
 
     A minimal page_size=1 request is enough to confirm the key is accepted;
-    nothing about the returned workout is used.
+    nothing about the returned workout is used. Returns one of
+    HEVY_KEY_VALID / HEVY_KEY_INVALID / HEVY_KEY_UNKNOWN -- see those
+    constants' comment for what each means and why the distinction matters.
     """
     client = HevyClient(api_key)
     try:
         client.get_workouts(page=1, page_size=1)
-        return True
+        return HEVY_KEY_VALID
     except HevyAPIError as exc:
-        logger.warning("Hevy key validation rejected by API: %s", exc)
-        return False
+        if exc.status_code in _HEVY_AUTH_FAILURE_STATUSES:
+            logger.warning("Hevy key validation rejected by API: %s", exc)
+            return HEVY_KEY_INVALID
+        logger.warning(
+            "Hevy key validation got a non-auth API error, treating as "
+            "inconclusive rather than rejecting the key: %s",
+            exc,
+        )
+        return HEVY_KEY_UNKNOWN
     except (urllib.error.URLError, OSError) as exc:
         logger.warning("Hevy key validation failed due to network error: %s", exc)
-        return False
+        return HEVY_KEY_UNKNOWN
     except Exception:
         logger.exception("Hevy key validation failed unexpectedly")
-        return False
+        return HEVY_KEY_UNKNOWN
+
+
+def validate_hevy_key(api_key: str) -> bool:
+    """Validate a Hevy API key by calling the workouts endpoint.
+
+    Strict bool wrapper around validate_hevy_key_status for callers that only
+    want a definite yes/no (onboarding's connect-tracker step, the Settings
+    "Test Connection" AJAX probe) -- both treat anything short of a confirmed
+    HEVY_KEY_VALID as a failure, unlike the Settings save path.
+    """
+    return validate_hevy_key_status(api_key) == HEVY_KEY_VALID
 
 
 @dataclass(frozen=True)
@@ -321,6 +360,24 @@ def last_synced_at(user):
         .values_list("started_at", flat=True)
         .first()
     )
+
+
+def latest_sync_failure(user) -> HevySyncLog | None:
+    """Return the user's most recent Hevy sync log, if that attempt failed.
+
+    None when the most recent attempt succeeded, is still in progress
+    (success=None), or none has ever run. This is the "did the last sync
+    actually work" signal -- distinct from last_synced_at, which only tracks
+    successes and would silently omit a run that failed outright:
+    sync_user_lifts swallows HevyAPIError/network/DB-contention failures
+    internally and returns 0, the same value it returns for "nothing new to
+    pull", so callers that want to tell those two apart for the user need to
+    check the log rather than the return value.
+    """
+    log = HevySyncLog.objects.filter(user=user).order_by("-started_at").first()
+    if log is not None and log.success is False:
+        return log
+    return None
 
 
 def pull_events_into_pool(
