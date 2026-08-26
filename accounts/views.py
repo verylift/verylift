@@ -339,6 +339,22 @@ def _handle_onboarding_liftosaur_key(request, errors) -> None:
         trigger_lift_history_backfill(request.user)
 
 
+def _handle_onboarding_hevy_key(request, errors) -> None:
+    api_key = request.POST.get("hevy_api_key", "").strip()
+    if not api_key:
+        return
+    if not validate_hevy_key(api_key):
+        errors["hevy_api_key"] = gettext("Could not validate this Hevy API key.")
+        return
+    had_key_before = bool(request.user.hevy_api_key)
+    request.user.hevy_api_key = api_key
+    request.user.save(update_fields=["hevy_api_key"])
+    if not had_key_before:
+        # Same one-time backfill contract as onboarding's Liftosaur path and
+        # Settings' Hevy path -- seed history once, off the request cycle.
+        trigger_hevy_lift_history_backfill(request.user)
+
+
 def _handle_onboarding_wger_credentials(request, errors) -> None:
     instance_url = request.POST.get("wger_instance_url", "").strip()
     api_token = request.POST.get("wger_api_token", "").strip()
@@ -388,11 +404,11 @@ def onboarding_connect_tracker_view(request, app):
     """Onboarding step 2 (only reached via a tracking-app choice): connect it.
 
     Generalized over whichever app was picked in step 1, showing only what
-    that app actually supports: Liftosaur offers both an API key and a CSV
-    upload; Wger (self-hostable, API-only, no CSV importer exists for it) is
-    instance URL + API token; Hevy and Strong (no live-sync integration
-    merged for either) are CSV upload only. Every field is independently
-    optional -- a blank
+    that app actually supports: Liftosaur and Hevy both offer an API key
+    (Hevy's requires an active Hevy Pro subscription) plus a CSV upload;
+    Wger (self-hostable, API-only, no CSV importer exists for it) is
+    instance URL + API token; Strong (no live-sync integration merged) is
+    CSV upload only. Every field is independently optional -- a blank
     submission just moves on, and submitting some but not all fields
     processes whichever were filled in without blocking on the others.
     Credentials are validated against the live API before saving, same as
@@ -412,6 +428,9 @@ def onboarding_connect_tracker_view(request, app):
             _handle_onboarding_csv_upload(request, errors)
         elif app == "wger":
             _handle_onboarding_wger_credentials(request, errors)
+        elif app == "hevy":
+            _handle_onboarding_hevy_key(request, errors)
+            _handle_onboarding_csv_upload(request, errors)
         else:
             _handle_onboarding_csv_upload(request, errors)
 

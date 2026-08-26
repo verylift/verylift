@@ -341,8 +341,72 @@ class TestOnboardingConnectTrackerViewLiftosaurCsv:
 
 @pytest.mark.django_db
 class TestOnboardingConnectTrackerViewHevy:
-    """Hevy has no live-sync integration merged yet, so its connect page is
-    CSV-only -- no credential fields at all."""
+    """Hevy's connect page offers both a live-sync API key (Pro-gated) and a
+    CSV upload, same shape as Liftosaur's -- the two are independently
+    optional and processed independently."""
+
+    @patch("accounts.views.trigger_hevy_lift_history_backfill")
+    @patch("accounts.views.validate_hevy_key", return_value=True)
+    def test_valid_key_saves_triggers_backfill_and_redirects(
+        self, mock_validate, mock_backfill, client
+    ):
+        user = UserFactory()
+        client.force_login(user)
+
+        response = client.post(_url("hevy"), {"hevy_api_key": "valid-key"})
+
+        assert response.status_code == 302
+        assert response["Location"] == reverse("accounts:onboarding-units")
+        mock_validate.assert_called_once_with("valid-key")
+        user.refresh_from_db()
+        assert user.hevy_api_key == "valid-key"
+        mock_backfill.assert_called_once_with(user)
+
+    @patch("accounts.views.trigger_hevy_lift_history_backfill")
+    @patch("accounts.views.validate_hevy_key")
+    def test_blank_key_skips_validation_and_backfill_but_still_redirects(
+        self, mock_validate, mock_backfill, client
+    ):
+        user = UserFactory()
+        client.force_login(user)
+
+        response = client.post(_url("hevy"), {"hevy_api_key": ""})
+
+        assert response.status_code == 302
+        assert response["Location"] == reverse("accounts:onboarding-units")
+        mock_validate.assert_not_called()
+        mock_backfill.assert_not_called()
+        user.refresh_from_db()
+        assert user.hevy_api_key is None
+
+    @patch("accounts.views.trigger_hevy_lift_history_backfill")
+    @patch("accounts.views.validate_hevy_key", return_value=False)
+    def test_invalid_key_rerenders_with_error_and_does_not_touch_account(
+        self, mock_validate, mock_backfill, client
+    ):
+        user = UserFactory()
+        client.force_login(user)
+
+        response = client.post(_url("hevy"), {"hevy_api_key": "bad-key"})
+
+        assert response.status_code == 200
+        assert b"Could not validate this Hevy API key." in response.content
+        user.refresh_from_db()
+        assert user.hevy_api_key is None
+        mock_backfill.assert_not_called()
+
+    @patch("accounts.views.trigger_hevy_lift_history_backfill")
+    @patch("accounts.views.validate_hevy_key", return_value=True)
+    def test_resubmitting_an_unchanged_key_does_not_retrigger_backfill(
+        self, mock_validate, mock_backfill, client
+    ):
+        user = UserFactory(hevy_api_key="already-connected-key")
+        client.force_login(user)
+
+        response = client.post(_url("hevy"), {"hevy_api_key": "already-connected-key"})
+
+        assert response.status_code == 302
+        mock_backfill.assert_not_called()
 
     def test_valid_csv_pools_sets_and_redirects(self, client):
         user = UserFactory()
@@ -375,6 +439,24 @@ class TestOnboardingConnectTrackerViewHevy:
 
         assert response.status_code == 200
         assert "Please upload a .csv file." in response.content.decode()
+
+    @patch("accounts.views.trigger_hevy_lift_history_backfill")
+    @patch("accounts.views.validate_hevy_key", return_value=True)
+    def test_key_and_csv_both_processed_independently(
+        self, mock_validate, mock_backfill, client
+    ):
+        user = UserFactory()
+        client.force_login(user)
+
+        response = client.post(
+            _url("hevy"),
+            {"hevy_api_key": "valid-key", "csv_file": _hevy_csv_upload()},
+        )
+
+        assert response.status_code == 302
+        user.refresh_from_db()
+        assert user.hevy_api_key == "valid-key"
+        assert LiftHistory.objects.filter(user=user).exists()
 
 
 @pytest.mark.django_db

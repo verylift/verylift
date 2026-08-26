@@ -88,8 +88,22 @@
       </p>
     </div>
   {% elif app == "hevy" %}
-    <div class="mb-4">
-      <label class="block text-sm font-medium text-content-body mb-1">{% trans "Hevy CSV export" %}</label>
+    <div class="mb-2">
+      <label for="id_hevy_api_key" class="block text-sm font-medium text-content-body mb-1">{% trans "Hevy API key" %}</label>
+      <input
+        type="text"
+        id="id_hevy_api_key"
+        name="hevy_api_key"
+        autocomplete="off"
+        class="w-full border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent"
+      >
+      {% if errors.hevy_api_key %}<p class="mt-1 text-xs text-danger-dark">{{ errors.hevy_api_key }}</p>{% endif %}
+    </div>
+    <p class="mb-4 text-xs text-content-subtle">
+      {% trans "Requires an active Hevy Pro subscription. No Pro? Use the CSV export below instead." %}
+    </p>
+    <div class="mb-4 border-t border-line-subtle pt-4">
+      <p class="text-sm text-content-muted mb-2">{% trans "Or upload a CSV export instead" %}</p>
       <label
         for="id_csv_file"
         id="onboarding-csv-dropzone"
