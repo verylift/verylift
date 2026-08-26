@@ -59,6 +59,19 @@ class User(AbstractBaseUser, PermissionsMixin):
     # (TASK-312).
     hevy_api_key = EncryptedCharField(max_length=600, null=True, blank=True)
 
+    # Every field that lets this row authenticate against, or resume syncing
+    # from, an external tracker. accounts.services.anonymize_account clears
+    # every field named here (and only these), so adding a new tracker
+    # credential field to the model without adding its name here means
+    # anonymize_account silently leaves it live on a deactivated row
+    # (TASK-321). Order matches field declaration order above.
+    TRACKER_CREDENTIAL_FIELDS = (
+        "liftosaur_api_key",
+        "wger_instance_url",
+        "wger_api_token",
+        "hevy_api_key",
+    )
+
     class UnitPreference(models.TextChoices):
         KG = "kg", _("Kilograms (kg)")
         LB = "lb", _("Pounds (lb)")
