@@ -34,12 +34,12 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.db import OperationalError, transaction
+from django.db.models import Max
 from django.utils import timezone
 
 from hevy_api.client import HevyAPIError, HevyClient
 from hevy_api.models import HevySyncLog
 from liftosaur.models import LiftHistory, LiftSource
-from liftosaur.services import history_watermark
 from workout_imports.models import HevyLiftAlias
 
 logger = logging.getLogger(__name__)
@@ -229,6 +229,48 @@ def _write_batch_with_retry(rows: list[LiftHistory], *, user) -> None:
     _write_batch(rows)
 
 
+def history_watermark(user):
+    """Return the latest performed_at among the user's pooled Hevy-sourced sets,
+    or None.
+
+    Scoped to source=HEVY_API (unlike liftosaur.services.history_watermark, which
+    aggregates across the whole shared LiftHistory pool). LiftHistory is a single
+    pool across every source, but TASK-319 showed that pooling the watermark
+    itself is the wrong move for a *live-sync* connector: a user who already has
+    Liftosaur, CSV, or manual history gets ``since=<today>`` the moment they
+    connect Hevy for the first time, because the pool's newest row belongs to
+    another source entirely -- zero backfill, no error shown. Sync order in
+    challenges.services.sync_and_score (Liftosaur before Hevy) makes it worse:
+    Liftosaur's own pull can move the shared watermark before this function ever
+    reads it, so even a freshly-onboarded dual-connected user gets poisoned.
+    Scoping to HEVY_API sidesteps both: this connector's watermark can only move
+    by this connector's own writes, so sync order and other-source history are
+    both irrelevant. It's also strictly more accurate on an ongoing basis -- the
+    shared watermark can park on another source's newer date and skip
+    legitimately-new Hevy workouts that are still older than that date (see
+    wger.services.history_watermark, which made the same scoping call for the
+    same reason).
+
+    One caveat worth naming: Hevy's ``/v1/workouts/events?since=`` filters on
+    *event* time (when the workout was created/updated in Hevy), not
+    performed_at (the workout date stored here). A workout backdated in Hevy to
+    a date already at or behind this watermark, then edited later, is still
+    picked up correctly (its event time is the edit), so this mismatch doesn't
+    reintroduce a backfill gap -- it only means "since" is a performed_at value
+    doing double duty as an event-time filter, same tolerance the unscoped
+    version already accepted.
+    """
+    return LiftHistory.objects.filter(user=user, source=LiftSource.HEVY_API).aggregate(
+        latest=Max("performed_at")
+    )["latest"]
+
+
+def _backfill_since() -> str:
+    return (
+        timezone.now() - timedelta(days=HISTORY_BACKFILL_DAYS)
+    ).date().isoformat() + "T00:00:00Z"
+
+
 def recent_pull_exists(user) -> bool:
     """True if a successful Hevy pull for the user completed within cooldown."""
     cutoff = timezone.now() - timedelta(minutes=settings.HEVY_SYNC_COOLDOWN_MINUTES)
@@ -251,7 +293,8 @@ def pull_events_into_pool(client, user, *, since: str, synced_at) -> int:
     """Walk paginated Hevy workout events, upserting completed sets into LiftHistory.
 
     ``since`` drives both the initial backfill (a date far in the past) and
-    every subsequent delta sync (the shared pool's watermark) -- Hevy's events
+    every subsequent delta sync (this connector's own HEVY_API-scoped
+    watermark, see ``history_watermark``) -- Hevy's events
     endpoint returns full workout payloads for "updated" events regardless, so
     there is no separate backfill endpoint/code path to maintain. "deleted"
     events are not applied (see module docstring).
@@ -309,13 +352,18 @@ def _mark_sync_log_failed(sync_log, detail: str, *, user) -> None:
 def sync_user_lifts(user, force: bool = False) -> int:
     """Pure per-user pull that keeps the shared LiftHistory pool fresh from Hevy.
 
-    No-op (returns 0) when the user has no Hevy API key. Delta-aware: reuses
-    the same shared-pool watermark liftosaur.services.sync_user_lifts does
-    (LiftHistory is a single pool across every source, TASK-25/#11/#8), so a
-    lifter who has ever synced Liftosaur or imported a Hevy CSV still gets a
-    bounded first Hevy-API pull rather than always re-walking
-    HISTORY_BACKFILL_DAYS. Unless ``force`` is True, the run is skipped when a
-    successful Hevy pull completed within HEVY_SYNC_COOLDOWN_MINUTES.
+    No-op (returns 0) when the user has no Hevy API key. Delta-aware: once this
+    connector has ever completed a successful pull for the user, subsequent
+    runs start from ``history_watermark`` (this module's own, HEVY_API-scoped
+    watermark -- see its docstring for why the shared pool's watermark is the
+    wrong signal here). A user with no prior successful ``HevySyncLog`` always
+    gets the full ``HISTORY_BACKFILL_DAYS`` window instead, regardless of what
+    is already pooled from another source: that is the one-time onboarding
+    backfill, and gating it on the sync log (rather than on
+    ``history_watermark`` returning ``None``) keeps it correct even if a first
+    sync completes but pools zero sets. Unless ``force`` is True, the run is
+    skipped when a successful Hevy pull completed within
+    HEVY_SYNC_COOLDOWN_MINUTES.
 
     Returns the number of sets pooled.
     """
@@ -334,13 +382,16 @@ def sync_user_lifts(user, force: bool = False) -> int:
     try:
         client = HevyClient(user.hevy_api_key)
 
-        watermark = history_watermark(user)
-        if watermark is not None:
-            since = f"{watermark.isoformat()}T00:00:00Z"
-        else:
+        has_synced_before = HevySyncLog.objects.filter(user=user, success=True).exists()
+        if has_synced_before:
+            watermark = history_watermark(user)
             since = (
-                timezone.now() - timedelta(days=HISTORY_BACKFILL_DAYS)
-            ).date().isoformat() + "T00:00:00Z"
+                f"{watermark.isoformat()}T00:00:00Z"
+                if watermark is not None
+                else _backfill_since()
+            )
+        else:
+            since = _backfill_since()
 
         synced_at = datetime.now(tz=UTC)
         pooled = pull_events_into_pool(client, user, since=since, synced_at=synced_at)

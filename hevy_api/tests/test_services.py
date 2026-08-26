@@ -229,15 +229,53 @@ class TestSyncUserLifts:
         ).date().isoformat() + "T00:00:00Z"
         assert kwargs["since"] == expected_start
 
-    def test_rerun_uses_shared_pool_watermark(self):
+    def test_first_sync_ignores_shared_pool_history(self):
+        """TASK-319: a user who already has Liftosaur/CSV/manual history still
+        gets the full backfill window on their first-ever Hevy connect, not
+        since=today derived from the other source's recent row."""
         user = UserFactory(hevy_api_key="key")
-        watermark_date = (datetime.now(tz=UTC) - timedelta(days=10)).date()
         LiftHistory.objects.create(
             user=user,
             lift="Back Squat",
-            performed_at=watermark_date,
+            performed_at=datetime.now(tz=UTC).date(),
             weight_kg=Decimal("100"),
             reps=5,
+            source=LiftSource.LIFTOSAUR,
+        )
+        client = _stub_client()
+
+        with patch("hevy_api.services.HevyClient", return_value=client):
+            sync_user_lifts(user)
+
+        _, kwargs = client.get_workout_events.call_args
+        expected_start = (
+            datetime.now(tz=UTC) - timedelta(days=HISTORY_BACKFILL_DAYS)
+        ).date().isoformat() + "T00:00:00Z"
+        assert kwargs["since"] == expected_start
+
+    def test_rerun_uses_hevy_scoped_watermark(self):
+        """A second Hevy sync watermarks off this connector's own pooled rows,
+        not the shared pool's newest row from another source."""
+        user = UserFactory(hevy_api_key="key")
+        HevySyncLog.objects.create(
+            user=user, started_at=datetime.now(tz=UTC), success=True
+        )
+        hevy_watermark_date = (datetime.now(tz=UTC) - timedelta(days=10)).date()
+        LiftHistory.objects.create(
+            user=user,
+            lift="Back Squat",
+            performed_at=hevy_watermark_date,
+            weight_kg=Decimal("100"),
+            reps=5,
+            source=LiftSource.HEVY_API,
+        )
+        LiftHistory.objects.create(
+            user=user,
+            lift="Bench Press",
+            performed_at=datetime.now(tz=UTC).date(),
+            weight_kg=Decimal("80"),
+            reps=5,
+            source=LiftSource.LIFTOSAUR,
         )
         client = _stub_client()
 
@@ -245,7 +283,7 @@ class TestSyncUserLifts:
             sync_user_lifts(user, force=True)
 
         _, kwargs = client.get_workout_events.call_args
-        assert kwargs["since"] == f"{watermark_date.isoformat()}T00:00:00Z"
+        assert kwargs["since"] == f"{hevy_watermark_date.isoformat()}T00:00:00Z"
 
     def test_deleted_event_does_not_remove_pooled_rows(self):
         user = UserFactory(hevy_api_key="key")
@@ -430,6 +468,9 @@ class TestSyncUserLifts:
 
     def test_db_contention_marks_log_failed_and_returns_zero(self):
         user = UserFactory(hevy_api_key="key")
+        HevySyncLog.objects.create(
+            user=user, started_at=datetime.now(tz=UTC), success=True
+        )
         client = _stub_client()
 
         with (
@@ -439,11 +480,10 @@ class TestSyncUserLifts:
                 side_effect=OperationalError("database is locked"),
             ),
         ):
-            pooled = sync_user_lifts(user)
+            pooled = sync_user_lifts(user, force=True)
 
         assert pooled == 0
-        log = HevySyncLog.objects.get(user=user)
-        assert log.success is False
+        log = HevySyncLog.objects.filter(user=user, success=False).get()
         assert "database is locked" in log.error_detail
 
 
