@@ -173,6 +173,23 @@ class User(AbstractBaseUser, PermissionsMixin):
             return name
         return gettext("%(name)s (deleted)") % {"name": name}
 
+    @property
+    def has_connected_tracker(self) -> bool:
+        """Whether this account has live-sync credentials for any tracker.
+
+        Liftosaur and Hevy each need only their own single key; Wger needs
+        both ``wger_instance_url`` and ``wger_api_token`` together (one
+        without the other can't authenticate against anything). Used to
+        gate history-based goal setup on "has a tracker connected at all"
+        rather than a specific one -- see challenges.views' goal-setup key
+        gate.
+        """
+        return bool(
+            self.liftosaur_api_key
+            or self.hevy_api_key
+            or (self.wger_instance_url and self.wger_api_token)
+        )
+
 
 class TrackerRequest(models.Model):
     """A free-text "I use a different tracker" signal from onboarding.

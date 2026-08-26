@@ -1105,17 +1105,23 @@ def goal_setup_view(request, pk):
     step = steps[index]
 
     # The history method needs the lifter's own pooled lift history to
-    # suggest anything. Joining a challenge no longer requires a Liftosaur
-    # key at all, so picking "history" with neither a key nor any pooled
-    # LiftHistory (from a live sync, a Hevy CSV import, or manual self-report
-    # -- any source counts, per LiftHistory.source) would otherwise silently
-    # produce an all-blank chart with no explanation. Gated on data (not the
-    # method-step's own form) so it applies once past "method" regardless of
-    # how it was reached, and never blocks the method-selection step itself.
+    # suggest anything. Joining a challenge no longer requires a tracker
+    # connection at all, so picking "history" with neither a connected
+    # tracker (Liftosaur, Hevy, or Wger -- see User.has_connected_tracker)
+    # nor any pooled LiftHistory (from a live sync, a Hevy CSV import, or
+    # manual self-report -- any source counts, per LiftHistory.source) would
+    # otherwise silently produce an all-blank chart with no explanation.
+    # Gated on data (not the method-step's own form) so it applies once past
+    # "method" regardless of how it was reached, and never blocks the
+    # method-selection step itself. The remaining prompt below is still
+    # Liftosaur-specific by design: it's the only remaining case where the
+    # user genuinely has no tracker connected at all, and Liftosaur is the
+    # one live-sync option this wizard can complete inline without leaving
+    # the page.
     if (
         step != "method"
         and data.get("method") == CustomGoal.SourceMethod.HISTORY
-        and not request.user.liftosaur_api_key
+        and not request.user.has_connected_tracker
         and not LiftHistory.objects.filter(user=request.user).exists()
     ):
         key_error = _ensure_liftosaur_key(request)

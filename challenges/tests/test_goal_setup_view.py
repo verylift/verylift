@@ -844,6 +844,48 @@ class TestHistoryMethodRecognizesNonLiftosaurHistory:
         assert "liftosaur_api_key" in resp.content.decode()
 
 
+class TestHistoryMethodRecognizesOtherConnectedTrackers:
+    """A user connected to Hevy or Wger (but with no first sync landed yet,
+    so no LiftHistory pooled) must not be shown the Liftosaur-specific
+    prompt -- they already have a tracker, just not this one."""
+
+    def test_hevy_key_skips_the_key_prompt(
+        self, authed_client, participant, challenge, user
+    ):
+        user.hevy_api_key = "hevy-key"
+        user.save(update_fields=["hevy_api_key"])
+        url = _url(challenge)
+        authed_client.post(url, {"method": "history"})
+        resp = authed_client.get(url)
+        assert resp.status_code == 200
+        assert "liftosaur_api_key" not in resp.content.decode()
+
+    def test_full_wger_credentials_skip_the_key_prompt(
+        self, authed_client, participant, challenge, user
+    ):
+        user.wger_instance_url = "https://example.com"
+        user.wger_api_token = "wger-token"
+        user.save(update_fields=["wger_instance_url", "wger_api_token"])
+        url = _url(challenge)
+        authed_client.post(url, {"method": "history"})
+        resp = authed_client.get(url)
+        assert resp.status_code == 200
+        assert "liftosaur_api_key" not in resp.content.decode()
+
+    def test_partial_wger_credentials_still_prompt(
+        self, authed_client, participant, challenge, user
+    ):
+        """Only one of the two Wger fields set can't authenticate, so it
+        must not satisfy the gate."""
+        user.wger_instance_url = "https://example.com"
+        user.save(update_fields=["wger_instance_url"])
+        url = _url(challenge)
+        authed_client.post(url, {"method": "history"})
+        resp = authed_client.get(url)
+        assert resp.status_code == 200
+        assert "liftosaur_api_key" in resp.content.decode()
+
+
 class TestStandardsMethodFlow:
     def test_inputs_step_renders_sex_population_tier(
         self, authed_client, participant, challenge, settings
