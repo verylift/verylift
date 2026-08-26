@@ -252,18 +252,38 @@ class TestHevySyncNowEndpoint:
         messages = list(response.context["messages"])
         assert any("Sync triggered" in str(m) for m in messages)
 
-    def test_failed_pull_shown_on_reload_via_settings_page(self, db):
-        """The failure must persist past the one-time flash message -- a
-        user who syncs then navigates away and back should still see it, not
-        just whoever was looking at the page the moment it happened."""
+    def test_failed_pull_persists_past_the_flash_message(self, db):
+        """The failure must outlive the one-time flash message -- a user who
+        syncs, navigates away and comes back should still be told, not just
+        whoever was looking the moment it happened.
+
+        Asserts on the context value the template branches on rather than the
+        rendered copy: reworded banner text is not a regression, a lost
+        signal is.
+        """
         user = UserFactory(hevy_api_key="tok")
-        HevySyncLogFactory(user=user, success=False, error_detail="boom")
+        failed = HevySyncLogFactory(user=user, success=False, error_detail="boom")
         c = Client()
         c.force_login(user)
 
         response = c.get(reverse("accounts:settings"))
 
-        assert b"Last sync failed" in response.content
+        assert response.context["hevy_sync_error"] == failed
+
+    def test_a_later_successful_sync_clears_the_failure_state(self, db):
+        """A recovered sync must stop reporting the old failure. Guards the
+        "most recent log wins" rule in latest_sync_failure -- a filter on
+        success=False alone would nag forever once a user had ever failed.
+        """
+        user = UserFactory(hevy_api_key="tok")
+        HevySyncLogFactory(user=user, success=False, error_detail="boom")
+        HevySyncLogFactory(user=user, success=True)
+        c = Client()
+        c.force_login(user)
+
+        response = c.get(reverse("accounts:settings"))
+
+        assert response.context["hevy_sync_error"] is None
 
     def test_htmx_request_returns_partial_instead_of_redirect(self, db):
         user = UserFactory(hevy_api_key="tok")
