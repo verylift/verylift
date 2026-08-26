@@ -10,9 +10,24 @@ from decimal import ROUND_HALF_UP, Decimal
 KG = "kg"
 LB = "lb"
 
-# Canonical conversion factor: 1 lb = 0.453592 kg. Stored weights are always
-# kg, so this is the single source of truth; KG_TO_LB is its exact inverse.
-LB_TO_KG = Decimal("0.453592")
+# Canonical conversion factor: 1 lb = 0.45359237 kg exactly (the international
+# avoirdupois pound, defined exactly since 1959 -- not an approximation).
+# Stored weights are always kg, so this is the single source of truth;
+# KG_TO_LB is its exact inverse.
+#
+# TASK-325: this used to be truncated to Decimal("0.453592"), which is close
+# enough that most conversions were unaffected, but for loads above roughly
+# 225 lb the missing precision could tip the final 2dp-quantized kg value by
+# 0.01 relative to a conversion done with the true factor. That mattered
+# beyond display rounding: workout_imports.importers.hevy derives weight_kg
+# from a CSV export's weight_lbs using this same constant, while
+# hevy_api.services takes weight_kg directly from Hevy's API for the same
+# physical set -- both feed LiftHistory's (user, lift, performed_at, reps,
+# weight_kg) unique key, so any divergence between the two paths produced a
+# second row for one real set instead of updating the first. Using the exact
+# factor everywhere a conversion happens removes that class of divergence
+# (see workout_imports/tests/test_hevy_importer.py for the round-trip check).
+LB_TO_KG = Decimal("0.45359237")
 KG_TO_LB = Decimal(1) / LB_TO_KG
 
 

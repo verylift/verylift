@@ -38,7 +38,7 @@ class TestStrongImporterParse:
     def test_weight_converted_from_lb_to_kg(self):
         rows = "2024-01-01 09:15:00,Leg day,1h,Squat (Barbell),1,220,5,0,0,,,\n"
         parsed = StrongImporter().parse(csv_file(rows))
-        # 220 lb * 0.453592 = 99.79024 -> quantized to 2dp
+        # 220 lb * 0.45359237 = 99.7903214 -> quantized to 2dp
         assert parsed[0].weight_kg == Decimal("99.79")
 
     def test_repeated_set_order_for_drop_sets_is_not_deduplicated(self):

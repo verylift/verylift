@@ -55,7 +55,7 @@ class TestLiftosaurImporterParse:
     def test_weight_converted_from_lb_to_kg(self):
         rows = row(completed_weight_value="220", completed_weight_unit="lb")
         parsed = LiftosaurImporter().parse(csv_file(rows))
-        # 220 lb * 0.453592 = 99.79024 -> quantized to 2dp
+        # 220 lb * 0.45359237 = 99.7903214 -> quantized to 2dp
         assert parsed[0].weight_kg == Decimal("99.79")
 
     def test_weight_kg_passes_through_unconverted(self):
