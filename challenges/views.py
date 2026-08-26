@@ -2,6 +2,7 @@
 
 import json
 import logging
+import time
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
@@ -105,6 +106,28 @@ from scoring.services import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Wall-clock budget for the participant sync loop in challenge_detail_view,
+# independent of how many participants the challenge has. HEVY_SYNC_COOLDOWN_MINUTES
+# / LIFTOSAUR_SYNC_COOLDOWN_MINUTES only stop a single already-recently-synced
+# user from being re-pulled; they do nothing to bound how many *different*,
+# not-recently-synced participants get pulled inside one render of this view --
+# a challenge whose members mostly opened it for the first time in a while (or
+# just joined and connected a tracker) can have every one of them outside
+# cooldown at once, and the loop below calls sync_and_score for each in
+# sequence. Each per-source pull is itself bounded (see
+# hevy_api.services.MAX_EVENT_PAGES_PER_INLINE_RUN), but that bound is
+# per-call, not per-request, so it does not by itself stop total latency from
+# scaling with participant count.
+#
+# Once cumulative time spent on fresh pulls in this loop reaches this budget,
+# remaining participants are still scored (local-DB-only, cheap) but skip the
+# API pull and use whatever is already pooled -- the same "stale but not
+# broken" fallback already used for a locked challenge (sync=False) and for
+# any pull that errors out. 30s leaves the other half of gunicorn.conf.py's
+# 60s worker timeout for the sync call already in flight when the budget is
+# hit to finish, plus scoring, leaderboard assembly, and template rendering.
+PARTICIPANT_SYNC_BUDGET_SECONDS = 30
 
 
 def _invite_link_ip_rate(group, request):
@@ -1520,7 +1543,7 @@ def _require_challenge_member(request, pk):
 
 @login_required
 def challenge_detail_view(request, pk):
-    """Challenge detail page. Refreshes Liftosaur data on visit.
+    """Challenge detail page. Refreshes tracker data on visit.
 
     On every visit the requesting user is synced first so their own leaderboard
     position reflects the latest workout data, then every other active
@@ -1528,9 +1551,13 @@ def challenge_detail_view(request, pk):
 
     Sync is run synchronously: "Synchronous for MVP; revisit with Celery if p95
     latency exceeds 3s in production." A typical friend group is 5-8 people and
-    each sync is dominated by a couple of Liftosaur API calls, which keeps the
-    request comfortably under the 3s threshold at MVP scale. A task queue would
-    add Redis + worker infrastructure that is not justified at this scale.
+    each sync is dominated by a couple of tracker API calls, which keeps the
+    request comfortably under the 3s threshold at MVP scale in the common case.
+    A task queue would add Redis + worker infrastructure that is not justified
+    at this scale. PARTICIPANT_SYNC_BUDGET_SECONDS is the backstop for the
+    uncommon case -- a challenge where many participants are simultaneously
+    outside their sync cooldown -- so this loop's worst case stays well short
+    of the 60s gunicorn worker timeout regardless of participant count.
 
     Renders the challenge header, the requesting user's goal tier, and the
     leaderboard.
@@ -1573,9 +1600,28 @@ def challenge_detail_view(request, pk):
     # is local-DB only and cheap, and a locked challenge's ledger is already a
     # no-op inside process_scored_set. This greedy scoring keeps the leaderboard
     # current without coupling display to the API cooldown.
+    #
+    # A wall-clock budget (see PARTICIPANT_SYNC_BUDGET_SECONDS) additionally
+    # caps how much of this loop is spent on fresh pulls, independent of
+    # participant count -- once it's used up, remaining participants are still
+    # scored, just from whatever is already pooled rather than a fresh pull.
     participants_to_score = [request.user, *(other.user for other in others)]
+    sync_deadline = time.monotonic() + PARTICIPANT_SYNC_BUDGET_SECONDS
+    budget_exhausted_logged = False
     for participant_user in participants_to_score:
-        sync_and_score(participant_user, challenge, sync=not is_locked)
+        within_budget = time.monotonic() < sync_deadline
+        if not within_budget and not budget_exhausted_logged:
+            logger.warning(
+                "Challenge %s detail sync budget (%ss) exhausted; scoring "
+                "remaining participants from already-pooled data without a "
+                "fresh pull",
+                challenge.pk,
+                PARTICIPANT_SYNC_BUDGET_SECONDS,
+            )
+            budget_exhausted_logged = True
+        sync_and_score(
+            participant_user, challenge, sync=not is_locked and within_budget
+        )
 
     logger.info(
         "Scored %s participant(s) on detail view of challenge %s for user %s",
