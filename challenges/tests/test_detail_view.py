@@ -126,6 +126,62 @@ class TestSyncTrigger:
         assert invited not in touched
 
 
+class TestParticipantSyncBudget:
+    """TASK-320: a challenge with many not-recently-synced participants must
+    not let per-participant sync latency scale unbounded with headcount --
+    once the wall-clock budget is used up, remaining participants are scored
+    without a fresh pull rather than adding another API round-trip."""
+
+    def test_budget_exhaustion_skips_sync_for_later_participants(
+        self, authed_client, participant, challenge, user
+    ):
+        other = UserFactory()
+        ChallengeParticipantFactory(
+            challenge=challenge,
+            user=other,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        )
+        url = reverse("challenges:detail", args=[challenge.pk])
+
+        # One monotonic() call computes the deadline, then one call per
+        # participant checks against it: the first participant is still
+        # inside the 30s budget, the second lands after it's exhausted.
+        with (
+            patch("challenges.views.time.monotonic", side_effect=[0, 5, 35]),
+            patch("challenges.views.sync_and_score") as mock_sync_and_score,
+        ):
+            resp = authed_client.get(url)
+
+        assert resp.status_code == 200
+        calls_by_user = {
+            call.args[0]: call.kwargs["sync"]
+            for call in mock_sync_and_score.call_args_list
+        }
+        assert calls_by_user[user] is True
+        assert calls_by_user[other] is False
+
+    def test_within_budget_all_participants_synced(
+        self, authed_client, participant, challenge, user
+    ):
+        other = UserFactory()
+        ChallengeParticipantFactory(
+            challenge=challenge,
+            user=other,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        )
+        url = reverse("challenges:detail", args=[challenge.pk])
+
+        with patch("challenges.views.sync_and_score") as mock_sync_and_score:
+            authed_client.get(url)
+
+        calls_by_user = {
+            call.args[0]: call.kwargs["sync"]
+            for call in mock_sync_and_score.call_args_list
+        }
+        assert calls_by_user[user] is True
+        assert calls_by_user[other] is True
+
+
 @pytest.mark.django_db
 class TestGreedyScoringOnDetailOpen:
     """Scoring runs on every detail open, decoupled from the API cooldown."""

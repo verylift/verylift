@@ -45,6 +45,32 @@ class TestUserModel:
         assert str(user) == user.username
 
 
+class TestHasConnectedTracker:
+    """Pure attribute check -- no factory/db needed, unsaved instances only."""
+
+    def test_false_with_no_credentials(self):
+        assert User().has_connected_tracker is False
+
+    def test_true_with_liftosaur_key_only(self):
+        assert User(liftosaur_api_key="key").has_connected_tracker is True
+
+    def test_true_with_hevy_key_only(self):
+        assert User(hevy_api_key="key").has_connected_tracker is True
+
+    def test_true_with_both_wger_fields(self):
+        user = User(wger_instance_url="https://example.com", wger_api_token="tok")
+        assert user.has_connected_tracker is True
+
+    def test_false_with_only_wger_instance_url(self):
+        """Wger needs both fields together -- a URL alone can't authenticate."""
+        assert (
+            User(wger_instance_url="https://example.com").has_connected_tracker is False
+        )
+
+    def test_false_with_only_wger_api_token(self):
+        assert User(wger_api_token="tok").has_connected_tracker is False
+
+
 @pytest.mark.django_db
 class TestAvatarFileCleanupOnDelete:
     @pytest.fixture(autouse=True)

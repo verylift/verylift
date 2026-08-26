@@ -18,8 +18,15 @@ class LiftSource(models.TextChoices):
     generic workout_imports.services.import_workout_csv importer registry
     rather than a tracker-specific service function (#11, #10); WGER is a
     live-sync integration (wger.services.sync_wger_lifts), mirroring
-    Liftosaur's own sync pattern rather than a one-shot upload (#9). A new
-    source is a new choice here, never a second boolean field.
+    Liftosaur's own sync pattern rather than a one-shot upload (#9). HEVY_API
+    is every row written by hevy_api.services.sync_user_lifts (TASK-312) — a
+    distinct value from HEVY rather than reusing it, so a live-synced set
+    stays distinguishable from a one-shot CSV upload even though both
+    originate from the same tracker. Nothing in the codebase currently
+    branches on a specific source value (both Hevy paths render identically
+    in goal setup / challenge scoring), so this granularity is
+    provenance-only for now, kept for whenever that changes. A new source is
+    a new choice here, never a second boolean field.
     """
 
     LIFTOSAUR = "liftosaur", _("Liftosaur")
@@ -27,6 +34,7 @@ class LiftSource(models.TextChoices):
     HEVY = "hevy", _("Hevy")
     WGER = "wger", _("Wger")
     STRONG = "strong", _("Strong")
+    HEVY_API = "hevy_api", _("Hevy (live sync)")
 
 
 class Lift(models.Model):

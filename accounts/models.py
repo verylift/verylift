@@ -55,6 +55,22 @@ class User(AbstractBaseUser, PermissionsMixin):
     wger_instance_url = models.URLField(max_length=500, null=True, blank=True)
     # Fernet-encrypted at rest, same rationale as liftosaur_api_key above.
     wger_api_token = EncryptedCharField(max_length=600, null=True, blank=True)
+    # Fernet-encrypted at rest, same rationale as liftosaur_api_key above
+    # (TASK-312).
+    hevy_api_key = EncryptedCharField(max_length=600, null=True, blank=True)
+
+    # Every field that lets this row authenticate against, or resume syncing
+    # from, an external tracker. accounts.services.anonymize_account clears
+    # every field named here (and only these), so adding a new tracker
+    # credential field to the model without adding its name here means
+    # anonymize_account silently leaves it live on a deactivated row
+    # (TASK-321). Order matches field declaration order above.
+    TRACKER_CREDENTIAL_FIELDS = (
+        "liftosaur_api_key",
+        "wger_instance_url",
+        "wger_api_token",
+        "hevy_api_key",
+    )
 
     class UnitPreference(models.TextChoices):
         KG = "kg", _("Kilograms (kg)")
@@ -156,6 +172,23 @@ class User(AbstractBaseUser, PermissionsMixin):
         if self.is_active:
             return name
         return gettext("%(name)s (deleted)") % {"name": name}
+
+    @property
+    def has_connected_tracker(self) -> bool:
+        """Whether this account has live-sync credentials for any tracker.
+
+        Liftosaur and Hevy each need only their own single key; Wger needs
+        both ``wger_instance_url`` and ``wger_api_token`` together (one
+        without the other can't authenticate against anything). Used to
+        gate history-based goal setup on "has a tracker connected at all"
+        rather than a specific one -- see challenges.views' goal-setup key
+        gate.
+        """
+        return bool(
+            self.liftosaur_api_key
+            or self.hevy_api_key
+            or (self.wger_instance_url and self.wger_api_token)
+        )
 
 
 class TrackerRequest(models.Model):

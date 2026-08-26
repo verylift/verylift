@@ -20,6 +20,7 @@ from challenges.tests.factories import (
     ChallengeParticipantFactory,
     make_custom_challenge,
 )
+from core.fields import EncryptedCharField
 from notifications.models import Notification
 from scoring.tests.factories import PointEarnEventFactory
 
@@ -113,9 +114,28 @@ class TestAnonymizeAccount:
         assert user.email != "real.person@example.com"
         assert user.email.endswith("@deleted.invalid")
         assert user.oidc_sub is None
-        assert user.liftosaur_api_key is None
         assert user.is_active is False
         assert user.deactivated_at is not None
+
+    def test_clears_every_tracker_credential_field(self, user, db):
+        # Sets every field named in User.TRACKER_CREDENTIAL_FIELDS to a live
+        # value, then asserts anonymize_account cleared all of them (and
+        # persisted the clear -- refresh_from_db means a field missing from
+        # anonymize_account's update_fields list would still show the live
+        # value here even though the in-memory attribute was set to None).
+        # Deriving the fields-to-check from the same constant the
+        # implementation clears means this test doesn't need editing when a
+        # tracker is added; TestTrackerCredentialFieldsCoversEncryptedFields
+        # below is what catches a *forgotten* addition to the constant.
+        for field_name in User.TRACKER_CREDENTIAL_FIELDS:
+            setattr(user, field_name, "a-real-credential-value")
+        user.save(update_fields=list(User.TRACKER_CREDENTIAL_FIELDS))
+
+        anonymize_account(user)
+        user.refresh_from_db()
+
+        for field_name in User.TRACKER_CREDENTIAL_FIELDS:
+            assert getattr(user, field_name) is None, field_name
 
     def test_deletes_avatar_file_from_storage(self, settings, tmp_path, user, db):
         settings.MEDIA_ROOT = tmp_path
@@ -150,6 +170,25 @@ class TestAnonymizeAccount:
         assert participant.user_id == user.id
         assert event.user_id == user.id
         assert event.points_earned == 5
+
+
+class TestTrackerCredentialFieldsCoversEncryptedFields:
+    def test_every_encrypted_field_is_a_tracker_credential_field(self):
+        # Every tracker API key/token on User is stored as an
+        # EncryptedCharField (core.fields.EncryptedCharField) -- that's the
+        # marker that distinguishes "secret worth clearing on anonymize" from
+        # an ordinary field. If a future tracker integration adds a new
+        # EncryptedCharField (its API key) but forgets to add it to
+        # User.TRACKER_CREDENTIAL_FIELDS, this fails -- which is exactly the
+        # anonymize_account gap TASK-321 fixed for hevy_api_key and
+        # wger_api_token, without this test hardcoding those two names.
+        encrypted_field_names = {
+            field.name
+            for field in User._meta.get_fields()
+            if isinstance(field, EncryptedCharField)
+        }
+        assert encrypted_field_names
+        assert encrypted_field_names <= set(User.TRACKER_CREDENTIAL_FIELDS)
 
 
 class TestDeleteAccountConfirmationForm:

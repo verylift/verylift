@@ -1,0 +1,153 @@
+{% load i18n %}
+<!-- Hevy API key section -->
+<section class="bg-surface-card border border-line-subtle rounded p-6 mb-6" id="hevy-section">
+  <h2 class="text-lg font-semibold text-content-strong mb-2">{% trans "Hevy API Key" %}</h2>
+  <p class="text-sm text-content-muted mb-4">
+    {% trans "Connect your Hevy account to import your exercise data. Requires an active Hevy Pro subscription." %}
+  </p>
+
+  {% if user.hevy_api_key %}
+  <!-- Key saved: show card with masked key, Test Connection, Remove Key -->
+  <div class="flex items-center justify-between bg-surface-sunken border border-line-subtle rounded px-4 py-3 mb-4">
+    <div>
+      <p class="text-xs text-content-muted mb-1">{% trans "Saved API key" %}</p>
+      <p class="font-mono text-sm text-content-strong" id="hevy-masked-key-display">{{ masked_hevy_key }}</p>
+    </div>
+    <span class="text-xs font-medium text-success px-2 py-1 bg-success-light rounded">{% trans "Connected" %}</span>
+  </div>
+  <div class="flex gap-3 items-center flex-wrap">
+    <button
+      type="button"
+      id="btn-test-saved-hevy-key"
+      data-testing-label="{% trans 'Testing…' %}"
+      data-default-label="{% trans 'Test Connection' %}"
+      class="bg-surface-sunken text-content-strong text-sm font-medium px-4 py-2 rounded hover:bg-surface-hover">
+      {% trans "Test Connection" %}
+    </button>
+    <form
+      method="post"
+      action="{% url 'accounts:hevy_sync_now' %}"
+      class="inline"
+      hx-post="{% url 'accounts:hevy_sync_now' %}"
+      hx-target="#hevy-sync-status"
+      hx-swap="outerHTML"
+      data-loading-message="{% trans 'Syncing with Hevy…' %}">
+      {% csrf_token %}
+      <button
+        type="submit"
+        class="bg-surface-sunken text-content-strong text-sm font-medium px-4 py-2 rounded hover:bg-surface-hover">
+        {% trans "Sync now" %}
+      </button>
+    </form>
+    <form
+      method="post"
+      action="{% url 'accounts:settings' %}"
+      class="inline"
+      hx-post="{% url 'accounts:settings' %}"
+      hx-target="closest section"
+      hx-swap="outerHTML"
+      hx-confirm="{% trans 'Remove your Hevy API key? This cannot be undone.' %}"
+      data-loading-message="{% trans 'Removing API key…' %}">
+      {% csrf_token %}
+      <input type="hidden" name="form_name" value="remove_hevy_key">
+      <button
+        type="submit"
+        class="bg-danger text-white text-sm font-medium px-4 py-2 rounded hover:bg-danger-dark">
+        {% trans "Remove Key" %}
+      </button>
+    </form>
+  </div>
+  {% include "accounts/_hevy_sync_status.html" %}
+  <div id="hevy-saved-key-test-msg" class="mt-2 text-sm hidden"></div>
+  <script>
+  (function () {
+    function getCookie(name) {
+      var value = '; ' + document.cookie;
+      var parts = value.split('; ' + name + '=');
+      if (parts.length === 2) return parts.pop().split(';').shift();
+      return '';
+    }
+
+    // --- Key card: Test Connection for already-saved key ---
+    var btnTestSaved = document.getElementById('btn-test-saved-hevy-key');
+    var savedMsgEl = document.getElementById('hevy-saved-key-test-msg');
+    if (!btnTestSaved || !savedMsgEl) return;
+
+    btnTestSaved.addEventListener('click', function () {
+      btnTestSaved.disabled = true;
+      btnTestSaved.textContent = btnTestSaved.dataset.testingLabel;
+      savedMsgEl.classList.add('hidden');
+
+      fetch('{% url "accounts:validate_hevy_key" %}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-CSRFToken': getCookie('csrftoken'),
+        },
+        // api_key omitted — the view falls back to the user's saved key
+        body: '',
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          savedMsgEl.textContent = data.message;
+          savedMsgEl.className = 'mt-2 text-sm ' + (data.valid ? 'text-success' : 'text-danger');
+        })
+        .catch(function () {
+          savedMsgEl.textContent = '{% trans "Connection error. Please try again." %}';
+          savedMsgEl.className = 'mt-2 text-sm text-danger';
+        })
+        .finally(function () {
+          btnTestSaved.disabled = false;
+          btnTestSaved.textContent = btnTestSaved.dataset.defaultLabel;
+        });
+    });
+  })();
+  </script>
+  {% else %}
+  <!-- No key: show entry form only — no Test button until after save -->
+  <div class="mb-4">
+    <label for="hevy_api_key" class="block text-sm font-medium text-content-body mb-1">
+      {% trans "API Key" %}
+    </label>
+    <input
+      type="text"
+      id="hevy_api_key"
+      name="hevy_api_key"
+      placeholder="{% trans 'Enter your Hevy API key' %}"
+      class="w-full bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent"
+    >
+    {% if hevy_key_error %}<p class="mt-1 text-xs text-danger-dark">{{ hevy_key_error }}</p>{% endif %}
+    <div id="hevy-key-validation-msg" class="mt-1 text-sm hidden"></div>
+  </div>
+  <form
+    method="post"
+    action="{% url 'accounts:settings' %}"
+    id="save-hevy-form"
+    hx-post="{% url 'accounts:settings' %}"
+    hx-target="closest section"
+    hx-swap="outerHTML"
+    data-loading-message="{% trans 'Saving API key…' %}">
+    {% csrf_token %}
+    <input type="hidden" name="form_name" value="hevy_key">
+    <input type="hidden" name="hevy_api_key" id="hevy_key_hidden">
+    <button
+      type="submit"
+      id="btn-save-hevy-key"
+      class="bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
+      {% trans "Save Key" %}
+    </button>
+  </form>
+  <script>
+  (function () {
+    // --- Entry form: mirror the visible key input into the form's hidden field.
+    var keyInput = document.getElementById('hevy_api_key');
+    var hiddenKey = document.getElementById('hevy_key_hidden');
+    if (!keyInput || !hiddenKey) return;
+    keyInput.addEventListener('input', function () {
+      hiddenKey.value = keyInput.value.trim();
+    });
+  })();
+  </script>
+  {% endif %}
+  {% if oob_messages %}{% include "components/_messages_oob.html" %}{% endif %}
+</section>

@@ -42,8 +42,23 @@ class TestHevyImporterParse:
     def test_weight_converted_from_lb_to_kg(self):
         rows = 'Leg day,"01 Jan 2024, 09:15",,,Squat (Barbell),,,1,normal,220,5,,,\n'
         parsed = HevyImporter().parse(csv_file(rows))
-        # 220 lb * 0.453592 = 99.79024 -> quantized to 2dp
+        # 220 lb * 0.45359237 = 99.7903214 -> quantized to 2dp
         assert parsed[0].weight_kg == Decimal("99.79")
+
+    def test_heavy_load_conversion_matches_the_exact_pound_definition(self):
+        """TASK-325: this constant used to be truncated to Decimal("0.453592"),
+        which agreed with the internationally exact 0.45359237 kg/lb for most
+        weights but diverged by 0.01 kg at some heavier loads -- 380 lb was
+        one of them (172.36 kg under the old constant vs 172.37 kg with the
+        exact one). That 0.01 kg gap is exactly LiftHistory's rounding
+        granularity, so it was enough to create a second row for a set
+        already pooled via the Hevy API sync path (hevy_api.services), which
+        takes weight_kg straight from Hevy with no lb conversion at all. This
+        pins the corrected, literal output rather than re-deriving it from
+        the constant, so a regression back to the truncated value fails it."""
+        rows = 'Leg day,"01 Jan 2024, 09:15",,,Squat (Barbell),,,1,normal,380,5,,,\n'
+        parsed = HevyImporter().parse(csv_file(rows))
+        assert parsed[0].weight_kg == Decimal("172.37")
 
     def test_non_numeric_weight_row_is_skipped_not_fatal(self):
         rows = (
