@@ -7,11 +7,12 @@ OpenAPI spec), so there is no exercise-line grammar to parse -- only field
 lookups and the same warmup-set exclusion the existing Hevy CSV importer
 (workout_imports.importers.hevy) already applies.
 
-Exercise names are canonicalized via workout_imports.models.HevyLiftAlias, not
-liftosaur.models.LiftAlias -- Hevy's own exercise titles (e.g. "Bench Press
-(Barbell)") don't match Liftosaur's alias table, and HevyLiftAlias already
-exists precisely to bridge Hevy's naming to the canonical standard-lift names.
-This is the same alias table the CSV importer uses, since both are the same
+Exercise names are canonicalized via the shared core.lift_resolution chain
+against core.models.LiftAlias (source="hevy"), not liftosaur.models.LiftAlias
+-- Hevy's own exercise titles (e.g. "Bench Press (Barbell)") don't match
+Liftosaur's alias table, and the Hevy-sourced aliases already exist precisely
+to bridge Hevy's naming to the canonical standard-lift names. This is the
+same alias data the CSV importer resolves against, since both are the same
 underlying Hevy exercise catalogue.
 
 Known limitation, documented rather than silently worked around: Hevy's
@@ -55,10 +56,11 @@ from django.db import OperationalError, transaction
 from django.db.models import Max
 from django.utils import timezone
 
+from core.lift_resolution import LiftNameResolver, build_lift_alias_maps
+from core.models import LiftAliasSource
 from hevy_api.client import HevyAPIError, HevyClient
 from hevy_api.models import HevySyncLog
-from liftosaur.models import LiftHistory, LiftSource
-from workout_imports.models import HevyLiftAlias
+from liftosaur.models import Lift, LiftHistory, LiftSource
 
 logger = logging.getLogger(__name__)
 
@@ -194,18 +196,20 @@ class ParsedSet:
     weight_kg: Decimal
 
 
-def _alias_map() -> dict[str, str]:
-    """Return ``{from_name.lower(): to_name}`` for every seeded Hevy alias.
+def _build_resolver() -> LiftNameResolver:
+    """Build the shared tracker-agnostic resolver for Hevy's alias data.
 
-    Mirrors workout_imports.importers.hevy.HevyImporter._alias_map: one query
-    for the whole sync instead of one HevyLiftAlias SELECT per set.
+    Mirrors workout_imports.importers.hevy.HevyImporter's use of the same
+    core.lift_resolution chain: one query for the whole sync instead of one
+    LiftAlias SELECT per set.
     """
-    return {
-        from_name.lower(): to_name
-        for from_name, to_name in HevyLiftAlias.objects.values_list(
-            "from_name", "to_name"
-        )
-    }
+    return LiftNameResolver(
+        build_lift_alias_maps(
+            LiftAliasSource.HEVY, Lift.objects.values_list("name", flat=True)
+        ),
+        source_label="Hevy live sync",
+        logger=logger,
+    )
 
 
 def _parse_start_date(raw: str) -> date | None:
@@ -219,7 +223,7 @@ def _parse_start_date(raw: str) -> date | None:
         return None
 
 
-def _parse_workout(workout: dict, alias_map: dict[str, str]) -> list[ParsedSet]:
+def _parse_workout(workout: dict, resolver: LiftNameResolver) -> list[ParsedSet]:
     """Expand one Hevy workout payload into its completed working sets.
 
     Skips warmup sets and sets with no reps recorded (cardio-style sets that
@@ -236,7 +240,7 @@ def _parse_workout(workout: dict, alias_map: dict[str, str]) -> list[ParsedSet]:
         title = (exercise.get("title") or "").strip()
         if not title:
             continue
-        lift = alias_map.get(title.lower(), title)
+        lift = resolver.resolve(title)
         for raw_set in exercise.get("sets") or []:
             if (raw_set.get("type") or "").strip().lower() in _EXCLUDED_SET_TYPES:
                 continue
@@ -428,7 +432,7 @@ def pull_events_into_pool(
     watermark as safe to resume from -- see this module's docstring for why.
     """
     pooled = 0
-    alias_map = _alias_map()
+    resolver = _build_resolver()
     page = 1
     page_count = 1
 
@@ -441,7 +445,7 @@ def pull_events_into_pool(
             if event.get("type") != "updated":
                 continue
             workout = event.get("workout") or {}
-            page_sets.extend(_parse_workout(workout, alias_map))
+            page_sets.extend(_parse_workout(workout, resolver))
 
         pooled += len(page_sets)
         _write_batch_with_retry(

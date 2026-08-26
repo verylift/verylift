@@ -5,7 +5,7 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("liftosaur", "0005_alter_lifthistory_source"),
+        ("liftosaur", "0006_alter_lifthistory_source"),
         # Must run after the unified core.LiftAlias table has this app's
         # rows copied into it, or the delete loses data.
         ("core", "0004_copy_legacy_lift_aliases"),

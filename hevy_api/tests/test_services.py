@@ -19,6 +19,7 @@ from hevy_api.services import (
     HISTORY_BACKFILL_DAYS,
     MAX_EVENT_PAGES_PER_BACKGROUND_RUN,
     MAX_EVENT_PAGES_PER_INLINE_RUN,
+    _build_resolver,
     _parse_workout,
     _run_backfill_in_thread,
     last_synced_at,
@@ -156,7 +157,7 @@ class TestParseWorkout:
         workout = _workout(
             exercises=[_exercise("Back Squat", [_set(weight_kg=100, reps=5)])]
         )
-        parsed = _parse_workout(workout, {})
+        parsed = _parse_workout(workout, _build_resolver())
         assert len(parsed) == 1
         assert parsed[0].lift == "Back Squat"
         assert parsed[0].reps == 5
@@ -172,7 +173,7 @@ class TestParseWorkout:
                 )
             ]
         )
-        parsed = _parse_workout(workout, {})
+        parsed = _parse_workout(workout, _build_resolver())
         assert len(parsed) == 1
         assert parsed[0].weight_kg == Decimal("100.00")
 
@@ -185,31 +186,32 @@ class TestParseWorkout:
                 )
             ]
         )
-        assert _parse_workout(workout, {}) == []
+        assert _parse_workout(workout, _build_resolver()) == []
 
     def test_exercise_title_resolved_through_alias_map(self):
+        HevyLiftAliasFactory(from_name="Squat (Barbell)", to_name="Back Squat")
         workout = _workout(exercises=[_exercise("Squat (Barbell)", [_set()])])
-        parsed = _parse_workout(workout, {"squat (barbell)": "Back Squat"})
+        parsed = _parse_workout(workout, _build_resolver())
         assert parsed[0].lift == "Back Squat"
 
     def test_unaliased_title_passes_through_unchanged(self):
         workout = _workout(exercises=[_exercise("Some New Exercise", [_set()])])
-        parsed = _parse_workout(workout, {})
+        parsed = _parse_workout(workout, _build_resolver())
         assert parsed[0].lift == "Some New Exercise"
 
     def test_unparseable_start_time_yields_no_sets(self):
         workout = _workout(
             start_time="not-a-date", exercises=[_exercise("Squat", [_set()])]
         )
-        assert _parse_workout(workout, {}) == []
+        assert _parse_workout(workout, _build_resolver()) == []
 
     def test_missing_start_time_yields_no_sets(self):
         workout = _workout(start_time="", exercises=[_exercise("Squat", [_set()])])
-        assert _parse_workout(workout, {}) == []
+        assert _parse_workout(workout, _build_resolver()) == []
 
     def test_exercise_with_no_title_skipped(self):
         workout = _workout(exercises=[_exercise("", [_set()])])
-        assert _parse_workout(workout, {}) == []
+        assert _parse_workout(workout, _build_resolver()) == []
 
     def test_non_numeric_weight_skipped(self):
         workout = _workout(
@@ -220,7 +222,7 @@ class TestParseWorkout:
                 )
             ]
         )
-        assert _parse_workout(workout, {}) == []
+        assert _parse_workout(workout, _build_resolver()) == []
 
     def test_multiple_sets_of_same_type_all_pooled(self):
         workout = _workout(
@@ -231,7 +233,7 @@ class TestParseWorkout:
                 )
             ]
         )
-        parsed = _parse_workout(workout, {})
+        parsed = _parse_workout(workout, _build_resolver())
         assert [p.reps for p in parsed] == [5, 3, 1]
 
 
@@ -899,6 +901,6 @@ class TestCsvApiWeightParity:
         api_workout = _workout(
             exercises=[_exercise("Squat (Barbell)", [_set(weight_kg=api_weight_kg)])]
         )
-        api_parsed = _parse_workout(api_workout, {})
+        api_parsed = _parse_workout(api_workout, _build_resolver())
 
         assert csv_parsed[0].weight_kg == api_parsed[0].weight_kg

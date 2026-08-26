@@ -34,7 +34,7 @@ _BEFORE = [
 ]
 _AFTER = [
     ("core", "0004_copy_legacy_lift_aliases"),
-    ("liftosaur", "0006_delete_liftalias"),
+    ("liftosaur", "0007_delete_liftalias"),
     ("workout_imports", "0003_delete_hevyliftalias_delete_strongliftalias"),
     ("wger", "0002_delete_wgerliftalias"),
 ]
