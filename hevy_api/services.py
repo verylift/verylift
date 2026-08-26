@@ -26,6 +26,7 @@ inconsistency.
 
 import json
 import logging
+import threading
 import time
 import urllib.error
 from dataclasses import dataclass
@@ -54,15 +55,48 @@ HISTORY_BACKFILL_DAYS = 365
 # workout_imports.importers.hevy._EXCLUDED_SET_TYPES.
 _EXCLUDED_SET_TYPES = frozenset({"warmup"})
 
-# Safety valve for the events walk: Hevy caps pageSize at 10, so a lifter with
-# years of history could in principle page for a very long time on their first
-# sync. Bounding it means one sync run can't hang indefinitely; a truncated
-# first backfill is completed by the next scheduled/forced sync since it
-# re-requests from the same (unmoved) watermark.
-MAX_EVENT_PAGES_PER_RUN = 500
-
 POOL_WRITE_BATCH_SIZE = 500
 POOL_WRITE_RETRY_DELAYS = (0.1, 0.3, 0.9)
+
+# Safety valve for the events walk: Hevy caps pageSize at 10, so a lifter with
+# years of history could in principle page for a very long time on their first
+# sync. Bounding it means one sync run can't hang indefinitely. A truncated
+# run is *not* stuck at a fixed watermark: pages are committed as they are
+# written (see pull_events_into_pool), so the watermark moves forward with
+# every completed page and the next sync resumes past what was already
+# pooled, rather than re-requesting the same window (whether resuming from a
+# moved watermark is *safe* -- i.e. can't skip an event -- depends on
+# /v1/workouts/events ordering guarantees, tracked separately as TASK-325).
+#
+# Two different callers need two different bounds, because only one of them
+# runs inside a request/response cycle bounded by gunicorn.conf.py's
+# `timeout = 60`:
+#
+# - The one-time onboarding backfill (trigger_hevy_lift_history_backfill)
+#   runs off-thread (see below), so it isn't racing the worker timeout at
+#   all. It keeps the original generous cap -- just a ceiling against
+#   literally-unbounded pagination, e.g. a pathological account or an API
+#   bug that never advances page_count.
+# - Every other caller (challenges.services.sync_and_score,
+#   accounts.views.hevy_sync_now_view) runs synchronously inside a request,
+#   and must leave that request nowhere near the 60s worker timeout even in
+#   the worst case.
+#
+# Worst case per page is HEVY_API_TIMEOUT (10s: the HTTP round-trip can hang
+# right up to the client's own timeout without erroring) plus the full
+# POOL_WRITE_RETRY_DELAYS sleep budget (0.1 + 0.3 + 0.9 = 1.3s, if the write
+# loses the DB lock race on every attempt) = 11.3s/page. Capping the
+# in-request walk at 3 pages bounds that portion of the request to
+# 3 * 11.3 = 33.9s -- under 60% of the 60s worker timeout, leaving the
+# remainder for the Liftosaur pull sync_and_score also runs, DB writes,
+# scoring, and template rendering. In practice a routine delta sync (the
+# only kind that runs synchronously once the one-time backfill is off the
+# request path) needs at most a page or two; this cap only bites for a
+# lifter who has been away long enough to accumulate a large delta, and a
+# truncated run there still makes real forward progress each time it's
+# triggered again.
+MAX_EVENT_PAGES_PER_BACKGROUND_RUN = 500
+MAX_EVENT_PAGES_PER_INLINE_RUN = 3
 
 
 def validate_hevy_key(api_key: str) -> bool:
@@ -289,7 +323,9 @@ def last_synced_at(user):
     )
 
 
-def pull_events_into_pool(client, user, *, since: str, synced_at) -> int:
+def pull_events_into_pool(
+    client, user, *, since: str, synced_at, max_pages: int
+) -> int:
     """Walk paginated Hevy workout events, upserting completed sets into LiftHistory.
 
     ``since`` drives both the initial backfill (a date far in the past) and
@@ -299,6 +335,10 @@ def pull_events_into_pool(client, user, *, since: str, synced_at) -> int:
     there is no separate backfill endpoint/code path to maintain. "deleted"
     events are not applied (see module docstring).
 
+    ``max_pages`` bounds how far this single call will walk -- see
+    MAX_EVENT_PAGES_PER_BACKGROUND_RUN / MAX_EVENT_PAGES_PER_INLINE_RUN for
+    which one callers should pass and why they differ.
+
     Returns the number of completed sets persisted to the shared pool.
     """
     pooled = 0
@@ -306,7 +346,7 @@ def pull_events_into_pool(client, user, *, since: str, synced_at) -> int:
     page = 1
     page_count = 1
 
-    while page <= page_count and page <= MAX_EVENT_PAGES_PER_RUN:
+    while page <= page_count and page <= max_pages:
         data = client.get_workout_events(since=since, page=page)
         page_count = data.get("page_count", 1)
 
@@ -323,13 +363,15 @@ def pull_events_into_pool(client, user, *, since: str, synced_at) -> int:
         )
         page += 1
 
-    if page_count > MAX_EVENT_PAGES_PER_RUN:
+    if page_count > max_pages:
         logger.warning(
             "Hevy event pagination truncated for user %s: %s pages available, "
-            "stopped after %s. The next sync resumes from the same watermark.",
+            "stopped after %s. The watermark has moved past what was pooled "
+            "here, so the next sync resumes further along rather than "
+            "re-walking this same window.",
             user.id,
             page_count,
-            MAX_EVENT_PAGES_PER_RUN,
+            max_pages,
         )
 
     return pooled
@@ -349,7 +391,9 @@ def _mark_sync_log_failed(sync_log, detail: str, *, user) -> None:
         )
 
 
-def sync_user_lifts(user, force: bool = False) -> int:
+def sync_user_lifts(
+    user, force: bool = False, max_pages: int = MAX_EVENT_PAGES_PER_INLINE_RUN
+) -> int:
     """Pure per-user pull that keeps the shared LiftHistory pool fresh from Hevy.
 
     No-op (returns 0) when the user has no Hevy API key. Delta-aware: once this
@@ -364,6 +408,10 @@ def sync_user_lifts(user, force: bool = False) -> int:
     sync completes but pools zero sets. Unless ``force`` is True, the run is
     skipped when a successful Hevy pull completed within
     HEVY_SYNC_COOLDOWN_MINUTES.
+
+    ``max_pages`` defaults to the request-cycle-safe cap. Callers that run off
+    the request/response cycle (the onboarding backfill thread) pass
+    MAX_EVENT_PAGES_PER_BACKGROUND_RUN instead -- see that constant's comment.
 
     Returns the number of sets pooled.
     """
@@ -394,7 +442,9 @@ def sync_user_lifts(user, force: bool = False) -> int:
             since = _backfill_since()
 
         synced_at = datetime.now(tz=UTC)
-        pooled = pull_events_into_pool(client, user, since=since, synced_at=synced_at)
+        pooled = pull_events_into_pool(
+            client, user, since=since, synced_at=synced_at, max_pages=max_pages
+        )
     except HevyAPIError as exc:
         _mark_sync_log_failed(sync_log, str(exc), user=user)
         logger.exception("Hevy lift sync failed for user %s", user.id)
@@ -421,3 +471,28 @@ def sync_user_lifts(user, force: bool = False) -> int:
     sync_log.save(update_fields=["success", "completed_at", "result_summary"])
     logger.info("Hevy lift sync complete for user %s: %s sets pooled", user.id, pooled)
     return pooled
+
+
+def trigger_hevy_lift_history_backfill(user) -> None:
+    """Run sync_user_lifts in a daemon thread so it never blocks the caller.
+
+    Mirrors liftosaur.services.trigger_lift_history_backfill: the one-time
+    onboarding backfill (up to HISTORY_BACKFILL_DAYS of history, potentially
+    many pages at Hevy's 10-per-page cap) is by far the most expensive Hevy
+    pull a user ever triggers, so it must not run inside the request that
+    saves their API key. Used when a user connects Hevy from Settings.
+    """
+    thread = threading.Thread(target=_run_backfill_in_thread, args=(user,), daemon=True)
+    thread.start()
+
+
+def _run_backfill_in_thread(user) -> None:
+    """Thread entry point: sync lifts, then release this thread's DB connection."""
+    from django.db import connection
+
+    try:
+        sync_user_lifts(user, max_pages=MAX_EVENT_PAGES_PER_BACKGROUND_RUN)
+    except Exception:
+        logger.exception("Hevy backfill thread failed for user %s", user.id)
+    finally:
+        connection.close()

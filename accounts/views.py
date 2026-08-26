@@ -64,7 +64,7 @@ from core.http import is_htmx
 from core.models import SiteSettings
 from hevy_api.services import last_synced_at as hevy_last_synced_at
 from hevy_api.services import sync_user_lifts as sync_hevy_lifts
-from hevy_api.services import validate_hevy_key
+from hevy_api.services import trigger_hevy_lift_history_backfill, validate_hevy_key
 from liftosaur.services import (
     last_synced_at,
     sync_user_lifts,
@@ -780,6 +780,7 @@ def settings_view(request):
             form = HevyKeyForm(request.POST)
             form.is_valid()
             if form.save(user):
+                trigger_hevy_lift_history_backfill(user)
                 messages.success(request, gettext("Hevy API key saved."))
 
         elif posted_form_name == "remove_hevy_key":

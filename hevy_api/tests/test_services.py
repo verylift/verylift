@@ -1,6 +1,7 @@
 """Tests for hevy_api.services (TASK-312)."""
 
 import json
+import logging
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
@@ -13,10 +14,13 @@ from hevy_api.client import HevyAPIError
 from hevy_api.models import HevySyncLog
 from hevy_api.services import (
     HISTORY_BACKFILL_DAYS,
-    MAX_EVENT_PAGES_PER_RUN,
+    MAX_EVENT_PAGES_PER_BACKGROUND_RUN,
+    MAX_EVENT_PAGES_PER_INLINE_RUN,
     _parse_workout,
+    _run_backfill_in_thread,
     last_synced_at,
     sync_user_lifts,
+    trigger_hevy_lift_history_backfill,
     validate_hevy_key,
 )
 from liftosaur.models import LiftHistory, LiftSource
@@ -424,12 +428,13 @@ class TestSyncUserLifts:
 
     def test_pagination_beyond_safety_cap_logs_warning_and_stops(self, caplog):
         user = UserFactory(hevy_api_key="key")
-        # page_count always reports one more page than MAX_EVENT_PAGES_PER_RUN,
-        # so the walk hits the safety cap rather than terminating naturally.
-        huge_page_count = MAX_EVENT_PAGES_PER_RUN + 1
+        # page_count always reports one more page than the inline safety cap
+        # sync_user_lifts uses by default, so the walk hits the cap rather
+        # than terminating naturally.
+        huge_page_count = MAX_EVENT_PAGES_PER_INLINE_RUN + 1
         pages = [
             _events_page([], page=p, page_count=huge_page_count)
-            for p in range(1, MAX_EVENT_PAGES_PER_RUN + 1)
+            for p in range(1, MAX_EVENT_PAGES_PER_INLINE_RUN + 1)
         ]
         client = _stub_client(pages)
 
@@ -439,8 +444,28 @@ class TestSyncUserLifts:
         ):
             sync_user_lifts(user)
 
-        assert client.get_workout_events.call_count == MAX_EVENT_PAGES_PER_RUN
+        assert client.get_workout_events.call_count == MAX_EVENT_PAGES_PER_INLINE_RUN
         assert any("truncated" in message for message in caplog.messages)
+
+    def test_max_pages_override_bounds_the_walk(self):
+        """A caller passing a smaller max_pages than the default gets stopped
+        there -- this is what lets the inline sync path use a tighter cap than
+        the background backfill thread without duplicating the walk logic."""
+        user = UserFactory(hevy_api_key="key")
+        pages = [_events_page([], page=p, page_count=5) for p in range(1, 3)]
+        client = _stub_client(pages)
+
+        with patch("hevy_api.services.HevyClient", return_value=client):
+            sync_user_lifts(user, max_pages=1)
+
+        assert client.get_workout_events.call_count == 1
+
+    def test_background_run_permits_more_pages_than_inline_default(self):
+        """The background backfill cap must be strictly larger than the
+        inline default -- otherwise there is no point maintaining two
+        constants, and a real multi-year backfill would get truncated at the
+        same small cap as a routine in-request delta sync."""
+        assert MAX_EVENT_PAGES_PER_BACKGROUND_RUN > MAX_EVENT_PAGES_PER_INLINE_RUN
 
     def test_write_contention_retried_then_succeeds(self):
         user = UserFactory(hevy_api_key="key")
@@ -485,6 +510,76 @@ class TestSyncUserLifts:
         assert pooled == 0
         log = HevySyncLog.objects.filter(user=user, success=False).get()
         assert "database is locked" in log.error_detail
+
+
+# ---------------------------------------------------------------------------
+# Background backfill trigger (TASK-320)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestTriggerHevyLiftHistoryBackfill:
+    """Mirrors liftosaur.tests.test_services' equivalent coverage for
+    trigger_lift_history_backfill / _run_backfill_in_thread."""
+
+    def test_trigger_runs_backfill_off_thread(self):
+        user = UserFactory(hevy_api_key="key")
+        with (
+            patch("hevy_api.services.sync_user_lifts") as mock_sync,
+            patch("hevy_api.services.threading.Thread") as mock_thread,
+        ):
+            trigger_hevy_lift_history_backfill(user)
+
+        mock_thread.assert_called_once()
+        kwargs = mock_thread.call_args.kwargs
+        assert kwargs["args"] == (user,)
+        assert kwargs["daemon"] is True
+        mock_thread.return_value.start.assert_called_once()
+        mock_sync.assert_not_called()
+
+    def test_thread_entry_point_runs_backfill_and_closes_connection(self):
+        user = UserFactory(hevy_api_key="key")
+        client = _stub_client()
+        with (
+            patch("hevy_api.services.HevyClient", return_value=client),
+            patch("django.db.connection.close") as mock_close,
+        ):
+            _run_backfill_in_thread(user)
+
+        client.get_workout_events.assert_called()
+        mock_close.assert_called_once()
+
+    def test_thread_entry_point_logs_unexpected_exception(self, caplog):
+        user = UserFactory(hevy_api_key="key")
+        with (
+            patch("hevy_api.services.sync_user_lifts") as mock_sync,
+            patch("django.db.connection.close") as mock_close,
+        ):
+            mock_sync.side_effect = RuntimeError("boom")
+            with caplog.at_level(logging.ERROR, logger="hevy_api.services"):
+                _run_backfill_in_thread(user)
+
+        assert len(caplog.records) == 1
+        record = caplog.records[0]
+        assert record.exc_info is not None
+        assert str(user.id) in record.message
+        mock_close.assert_called_once()
+
+    def test_thread_entry_point_uses_background_page_cap(self):
+        """The thread entry point must call sync_user_lifts with the
+        background cap explicitly -- calling it with no override would
+        silently fall back to the small inline default and truncate a real
+        backfill after a handful of pages."""
+        user = UserFactory(hevy_api_key="key")
+        with (
+            patch("hevy_api.services.sync_user_lifts") as mock_sync,
+            patch("django.db.connection.close"),
+        ):
+            _run_backfill_in_thread(user)
+
+        mock_sync.assert_called_once_with(
+            user, max_pages=MAX_EVENT_PAGES_PER_BACKGROUND_RUN
+        )
 
 
 # ---------------------------------------------------------------------------
