@@ -313,6 +313,32 @@ class TestSyncUserLifts:
         assert log.success is False
         assert "boom" in log.error_detail
 
+    def test_url_error_marks_log_failed_and_returns_zero(self):
+        import urllib.error
+
+        user = UserFactory(hevy_api_key="key")
+        client = _stub_client()
+        client.get_workout_events.side_effect = urllib.error.URLError("no network")
+
+        with patch("hevy_api.services.HevyClient", return_value=client):
+            pooled = sync_user_lifts(user)
+
+        assert pooled == 0
+        log = HevySyncLog.objects.get(user=user)
+        assert log.success is False
+
+    def test_timeout_error_marks_log_failed_and_returns_zero(self):
+        user = UserFactory(hevy_api_key="key")
+        client = _stub_client()
+        client.get_workout_events.side_effect = TimeoutError("timed out")
+
+        with patch("hevy_api.services.HevyClient", return_value=client):
+            pooled = sync_user_lifts(user)
+
+        assert pooled == 0
+        log = HevySyncLog.objects.get(user=user)
+        assert log.success is False
+
     def test_resync_same_set_updates_not_duplicates(self):
         user = UserFactory(hevy_api_key="key")
         workout = _workout(exercises=[_exercise("Back Squat", [_set()])])
