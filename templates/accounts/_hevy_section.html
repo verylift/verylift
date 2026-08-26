@@ -116,6 +116,7 @@
       placeholder="{% trans 'Enter your Hevy API key' %}"
       class="w-full bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent"
     >
+    {% if hevy_key_error %}<p class="mt-1 text-xs text-danger-dark">{{ hevy_key_error }}</p>{% endif %}
     <div id="hevy-key-validation-msg" class="mt-1 text-sm hidden"></div>
   </div>
   <form

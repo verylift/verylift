@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-26 01:13+0000\n"
+"POT-Creation-Date: 2026-08-26 01:26+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -93,68 +93,76 @@ msgstr "Solicitudes de Tracker"
 msgid "Too many attempts. Try again in a minute."
 msgstr "Demasiados intentos. Inténtalo de nuevo en un minuto."
 
-#: accounts/views.py:239
+#: accounts/views.py:246
 msgid "You must accept the Terms of Service and Privacy Policy."
 msgstr "Debes aceptar los Términos de Servicio y la Política de Privacidad."
 
-#: accounts/views.py:330 challenges/views.py:175
+#: accounts/views.py:337 challenges/views.py:175
 msgid "Could not validate this Liftosaur API key."
 msgstr "No se pudo validar esta clave de API de Liftosaur."
 
-#: accounts/views.py:347
+#: accounts/views.py:354 accounts/views.py:818
 msgid "Could not validate this Hevy API key."
 msgstr "No se pudo validar esta clave de API de Hevy."
 
-#: accounts/views.py:365
+#: accounts/views.py:372
 msgid "Could not validate this Wger instance URL or API token."
 msgstr "No se pudo validar la URL de la instancia o el token de API de Wger."
 
-#: accounts/views.py:398 accounts/views.py:834
+#: accounts/views.py:405 accounts/views.py:863
 msgid "Couldn't import right now. Please try again in a moment."
 msgstr "No se pudo importar ahora mismo. Inténtalo de nuevo en un momento."
 
-#: accounts/views.py:696
+#: accounts/views.py:703
 msgid "Your password has been updated. Sign in with your new password."
 msgstr ""
 "Tu contraseña se ha actualizado. Inicia sesión con tu contraseña nueva."
 
-#: accounts/views.py:748
+#: accounts/views.py:756
 msgid "Profile photo updated."
 msgstr "Foto de perfil actualizada."
 
-#: accounts/views.py:757
+#: accounts/views.py:765
 msgid "Display name updated."
 msgstr "Nombre para mostrar actualizado."
 
-#: accounts/views.py:767
+#: accounts/views.py:775
 msgid "Email address saved."
 msgstr "Correo electrónico guardado."
 
-#: accounts/views.py:778
+#: accounts/views.py:786
 msgid "Liftosaur API key saved."
 msgstr "Clave de API de Liftosaur guardada."
 
-#: accounts/views.py:783
+#: accounts/views.py:791
 msgid "Liftosaur API key removed."
 msgstr "Clave de API de Liftosaur eliminada."
 
-#: accounts/views.py:790
+#: accounts/views.py:798
 msgid "Wger connected."
 msgstr "Wger conectado."
 
-#: accounts/views.py:796
+#: accounts/views.py:804
 msgid "Wger disconnected."
 msgstr "Wger desconectado."
 
-#: accounts/views.py:803
+#: accounts/views.py:823
 msgid "Hevy API key saved."
 msgstr "Clave de API de Hevy guardada."
 
-#: accounts/views.py:808
+#: accounts/views.py:828
+msgid ""
+"Hevy API key saved, but we couldn't confirm it works right now. We'll let "
+"you know here if syncing fails."
+msgstr ""
+"Clave de API de Hevy guardada, pero no pudimos confirmar que funcione en "
+"este momento. Te avisaremos aquí si la sincronización falla."
+
+#: accounts/views.py:837
 msgid "Hevy API key removed."
 msgstr "Clave de API de Hevy eliminada."
 
-#: accounts/views.py:841
+#: accounts/views.py:870
 #, python-format
 msgid ""
 "Imported %(count)s set(s) from %(source)s. %(scored)s challenge(s) rescored."
@@ -162,60 +170,61 @@ msgstr ""
 "Se importaron %(count)s serie(s) de %(source)s. Se recalcularon %(scored)s "
 "reto(s)."
 
-#: accounts/views.py:860
+#: accounts/views.py:889
 msgid "Unit preference saved."
 msgstr "Preferencia de unidad guardada."
 
-#: accounts/views.py:866
+#: accounts/views.py:895
 msgid "Timezone saved."
 msgstr "Zona horaria guardada."
 
-#: accounts/views.py:872
+#: accounts/views.py:901
 msgid "Language saved."
 msgstr "Idioma guardado."
 
-#: accounts/views.py:965
+#: accounts/views.py:995
 msgid "Your account has been deleted."
 msgstr "Tu cuenta ha sido eliminada."
 
-#: accounts/views.py:1026
+#: accounts/views.py:1056
 msgid "Connect a Liftosaur API key first."
 msgstr "Conecta primero una clave de API de Liftosaur."
 
-#: accounts/views.py:1050 accounts/views.py:1097 accounts/views.py:1147
+#: accounts/views.py:1080 accounts/views.py:1127 accounts/views.py:1177
+#: accounts/views.py:1197
 msgid "Couldn't sync right now. Please try again in a moment."
 msgstr "No se pudo sincronizar ahora mismo. Inténtalo de nuevo en un momento."
 
-#: accounts/views.py:1056 accounts/views.py:1103 accounts/views.py:1153
+#: accounts/views.py:1086 accounts/views.py:1133 accounts/views.py:1202
 #, python-format
 msgid "Sync triggered for %(count)s challenge(s)."
 msgstr "Sincronización iniciada para %(count)s reto(s)."
 
-#: accounts/views.py:1077
+#: accounts/views.py:1107
 msgid "Connect your Wger account first."
 msgstr "Conecta primero tu cuenta de Wger."
 
-#: accounts/views.py:1127
+#: accounts/views.py:1157
 msgid "Connect a Hevy API key first."
 msgstr "Conecta primero una clave de API de Hevy."
 
-#: accounts/views.py:1189 accounts/views.py:1260
+#: accounts/views.py:1242 accounts/views.py:1313
 msgid "No API key provided."
 msgstr "No se proporcionó ninguna clave de API."
 
-#: accounts/views.py:1197 accounts/views.py:1268
+#: accounts/views.py:1250 accounts/views.py:1321
 msgid "Invalid API key or connection error."
 msgstr "Clave de API no válida o error de conexión."
 
-#: accounts/views.py:1201 accounts/views.py:1239 accounts/views.py:1272
+#: accounts/views.py:1254 accounts/views.py:1292 accounts/views.py:1325
 msgid "Connection successful."
 msgstr "Conexión exitosa."
 
-#: accounts/views.py:1227
+#: accounts/views.py:1280
 msgid "No Wger credentials provided."
 msgstr "No se proporcionaron credenciales de Wger."
 
-#: accounts/views.py:1235
+#: accounts/views.py:1288
 msgid "Invalid credentials or connection error."
 msgstr "Credenciales no válidas o error de conexión."
 
@@ -1200,17 +1209,21 @@ msgstr "Clave de API"
 msgid "Enter your Hevy API key"
 msgstr "Introduce tu clave de API de Hevy"
 
-#: templates/accounts/_hevy_section.html:128
+#: templates/accounts/_hevy_section.html:129
 #: templates/accounts/_liftosaur_section.html:131
 msgid "Saving API key…"
 msgstr "Guardando clave de API…"
 
-#: templates/accounts/_hevy_section.html:136
+#: templates/accounts/_hevy_section.html:137
 #: templates/accounts/_liftosaur_section.html:139
 msgid "Save Key"
 msgstr "Guardar Clave"
 
 #: templates/accounts/_hevy_sync_status.html:4
+msgid "Last sync failed. We'll try again next time."
+msgstr "La última sincronización falló. Lo intentaremos de nuevo la próxima vez."
+
+#: templates/accounts/_hevy_sync_status.html:6
 #: templates/accounts/_liftosaur_sync_status.html:4
 #: templates/accounts/_wger_sync_status.html:4
 #: templates/challenges/detail.html:64

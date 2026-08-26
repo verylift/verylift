@@ -62,9 +62,16 @@ from challenges.services import (
 )
 from core.http import is_htmx
 from core.models import SiteSettings
+from hevy_api.services import (
+    HEVY_KEY_INVALID,
+    HEVY_KEY_VALID,
+    trigger_hevy_lift_history_backfill,
+    validate_hevy_key,
+    validate_hevy_key_status,
+)
 from hevy_api.services import last_synced_at as hevy_last_synced_at
+from hevy_api.services import latest_sync_failure as hevy_latest_sync_failure
 from hevy_api.services import sync_user_lifts as sync_hevy_lifts
-from hevy_api.services import trigger_hevy_lift_history_backfill, validate_hevy_key
 from liftosaur.services import (
     last_synced_at,
     sync_user_lifts,
@@ -733,6 +740,7 @@ def settings_view(request):
     avatar_error = None
     email_error = None
     workout_import_error = None
+    hevy_key_error = None
     # None means "show the stored address"; a rejected submission replaces it
     # with what was typed so the error has something to point at.
     email_value = None
@@ -798,9 +806,30 @@ def settings_view(request):
         elif posted_form_name == "hevy_key":
             form = HevyKeyForm(request.POST)
             form.is_valid()
-            if form.save(user):
-                trigger_hevy_lift_history_backfill(user)
-                messages.success(request, gettext("Hevy API key saved."))
+            api_key = form.cleaned_data["hevy_api_key"]
+            if api_key:
+                # Validate before saving, mirroring
+                # _handle_onboarding_hevy_key. Unlike that strict bool check,
+                # an inconclusive probe (Hevy briefly unreachable) still gets
+                # saved rather than rejected -- see validate_hevy_key_status's
+                # docstring. A key confirmed bad is never saved.
+                validation = validate_hevy_key_status(api_key)
+                if validation == HEVY_KEY_INVALID:
+                    hevy_key_error = gettext("Could not validate this Hevy API key.")
+                else:
+                    if form.save(user):
+                        trigger_hevy_lift_history_backfill(user)
+                    if validation == HEVY_KEY_VALID:
+                        messages.success(request, gettext("Hevy API key saved."))
+                    else:
+                        messages.success(
+                            request,
+                            gettext(
+                                "Hevy API key saved, but we couldn't confirm "
+                                "it works right now. We'll let you know here "
+                                "if syncing fails."
+                            ),
+                        )
 
         elif posted_form_name == "remove_hevy_key":
             user.hevy_api_key = None
@@ -889,6 +918,7 @@ def settings_view(request):
             and avatar_error is None
             and email_error is None
             and workout_import_error is None
+            and hevy_key_error is None
         ):
             return redirect("accounts:settings")
 
@@ -901,12 +931,12 @@ def settings_view(request):
         "languages": settings.LANGUAGES,
         "user_timezone": user.timezone,
         "timezone_groups": grouped_timezones(),
-        "has_liftosaur_key": bool(user.liftosaur_api_key),
         "masked_hevy_key": mask_api_key(user.hevy_api_key),
-        "has_hevy_key": bool(user.hevy_api_key),
+        "hevy_key_error": hevy_key_error,
         "avatar_error": avatar_error,
         "last_synced_at": last_synced_at(user),
         "hevy_last_synced_at": hevy_last_synced_at(user),
+        "hevy_sync_error": hevy_latest_sync_failure(user),
         "workout_import_error": workout_import_error,
         "last_workout_imported_at": workout_import_last_imported_at(user),
         "has_wger_credentials": bool(user.wger_instance_url and user.wger_api_token),
@@ -1148,10 +1178,29 @@ def hevy_sync_now_view(request):
         )
         return _hevy_sync_now_response(request, user)
 
-    messages.success(
-        request,
-        gettext("Sync triggered for %(count)s challenge(s).") % {"count": count},
-    )
+    # force=True always logs an attempt (bypasses the cooldown short-circuit
+    # that would otherwise skip logging entirely), so the log this call just
+    # wrote is what latest_sync_failure reads back here. sync_hevy_lifts
+    # swallows HevyAPIError/network/DB-contention failures and returns 0 --
+    # the same value it returns for "nothing new" -- so the log, not the
+    # return value, is what tells "Sync triggered" from an actual failure
+    # apart.
+    sync_failure = hevy_latest_sync_failure(user)
+    if sync_failure is not None:
+        logger.warning(
+            "Hevy sync for user %s reported failure: %s",
+            user.id,
+            sync_failure.error_detail,
+        )
+        messages.error(
+            request,
+            gettext("Couldn't sync right now. Please try again in a moment."),
+        )
+    else:
+        messages.success(
+            request,
+            gettext("Sync triggered for %(count)s challenge(s).") % {"count": count},
+        )
     return _hevy_sync_now_response(request, user)
 
 
@@ -1160,7 +1209,11 @@ def _hevy_sync_now_response(request, user):
         return render(
             request,
             "accounts/_hevy_sync_status.html",
-            {"hevy_last_synced_at": hevy_last_synced_at(user), "oob_messages": True},
+            {
+                "hevy_last_synced_at": hevy_last_synced_at(user),
+                "hevy_sync_error": hevy_latest_sync_failure(user),
+                "oob_messages": True,
+            },
         )
     return redirect("accounts:settings")
 
