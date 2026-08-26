@@ -22,6 +22,23 @@ deleted in Hevy after being synced is not retracted from the pool. This
 mirrors an already-accepted class of eventual-consistency gap in the
 Liftosaur integration (edit-after-pull) rather than introducing a new kind of
 inconsistency.
+
+TASK-325 -- /v1/workouts/events ordering, and why the resume logic here does
+not depend on it: Hevy's own OpenAPI spec (served at
+https://api.hevyapp.com/docs/, title "Hevy API Docs", server
+api.hevyapp.com; cross-checked via the mirrored spec at
+https://github.com/chrisdoc/hevy-mcp/blob/main/openapi-spec.json since the
+Swagger UI page renders client-side and has no stable raw-JSON URL) states
+the endpoint returns events newest-first: "Events are ordered from newest to
+oldest." This matters because a naive resume that advances the delta
+watermark to the newest pooled row after a truncated walk would jump straight
+past everything older that the walk never reached -- permanently, since
+nothing later re-requests that window. See pull_events_into_pool and
+sync_user_lifts: instead of trusting ordering, a truncated walk is recorded
+as such (HevySyncLog.walk_complete=False) and the *next* sync resumes from
+the exact `since` this run used (HevySyncLog.since_used), not from a
+watermark computed off partial results, so no event can be skipped regardless
+of what order the API happens to return them in.
 """
 
 import json
@@ -60,13 +77,21 @@ POOL_WRITE_RETRY_DELAYS = (0.1, 0.3, 0.9)
 
 # Safety valve for the events walk: Hevy caps pageSize at 10, so a lifter with
 # years of history could in principle page for a very long time on their first
-# sync. Bounding it means one sync run can't hang indefinitely. A truncated
-# run is *not* stuck at a fixed watermark: pages are committed as they are
-# written (see pull_events_into_pool), so the watermark moves forward with
-# every completed page and the next sync resumes past what was already
-# pooled, rather than re-requesting the same window (whether resuming from a
-# moved watermark is *safe* -- i.e. can't skip an event -- depends on
-# /v1/workouts/events ordering guarantees, tracked separately as TASK-325).
+# sync. Bounding it means one sync run can't hang indefinitely.
+#
+# A truncated run does NOT move the delta watermark to what it managed to
+# pool (TASK-325): /v1/workouts/events is confirmed newest-first (see the
+# module docstring), so the newest-pooled-row watermark a truncated walk
+# would produce is close to "now" while everything older than the walk's
+# reach is still unpooled -- moving the watermark there would skip that older
+# history permanently, since nothing ever re-requests it. Instead
+# pull_events_into_pool reports whether it walked every page, and
+# sync_user_lifts records that on HevySyncLog (walk_complete/since_used): a
+# truncated run's own `since` is reused verbatim next time, so the walk keeps
+# making the same request until it completes rather than advancing past
+# unpooled history. Pages are still committed as they're written within one
+# call (idempotent upserts), so a truncated run keeps whatever it already
+# wrote -- only the *watermark used by the next call* is gated on completion.
 #
 # Two different callers need two different bounds, because only one of them
 # runs inside a request/response cycle bounded by gunicorn.conf.py's
@@ -382,7 +407,7 @@ def latest_sync_failure(user) -> HevySyncLog | None:
 
 def pull_events_into_pool(
     client, user, *, since: str, synced_at, max_pages: int
-) -> int:
+) -> tuple[int, bool]:
     """Walk paginated Hevy workout events, upserting completed sets into LiftHistory.
 
     ``since`` drives both the initial backfill (a date far in the past) and
@@ -396,7 +421,11 @@ def pull_events_into_pool(
     MAX_EVENT_PAGES_PER_BACKGROUND_RUN / MAX_EVENT_PAGES_PER_INLINE_RUN for
     which one callers should pass and why they differ.
 
-    Returns the number of completed sets persisted to the shared pool.
+    Returns ``(sets_pooled, walk_complete)``: the number of completed sets
+    persisted to the shared pool, and whether every available page was
+    walked (False if the walk stopped at ``max_pages`` with pages still
+    remaining). Callers must not treat a truncated walk's newest-pooled-row
+    watermark as safe to resume from -- see this module's docstring for why.
     """
     pooled = 0
     alias_map = _alias_map()
@@ -420,18 +449,21 @@ def pull_events_into_pool(
         )
         page += 1
 
-    if page_count > max_pages:
+    walk_complete = page_count <= max_pages
+    if not walk_complete:
         logger.warning(
             "Hevy event pagination truncated for user %s: %s pages available, "
-            "stopped after %s. The watermark has moved past what was pooled "
-            "here, so the next sync resumes further along rather than "
-            "re-walking this same window.",
+            "stopped after %s. The next sync will resume from this same "
+            "`since` (%s) rather than a watermark derived from this partial "
+            "walk, since /v1/workouts/events is newest-first and a moved "
+            "watermark could skip older unpooled events.",
             user.id,
             page_count,
             max_pages,
+            since,
         )
 
-    return pooled
+    return pooled, walk_complete
 
 
 def _mark_sync_log_failed(sync_log, detail: str, *, user) -> None:
@@ -469,6 +501,13 @@ def sync_user_lifts(
     ``max_pages`` defaults to the request-cycle-safe cap. Callers that run off
     the request/response cycle (the onboarding backfill thread) pass
     MAX_EVENT_PAGES_PER_BACKGROUND_RUN instead -- see that constant's comment.
+    When an inline-capped walk (``max_pages < MAX_EVENT_PAGES_PER_BACKGROUND_RUN``)
+    truncates, this triggers a background catch-up pass at the higher cap
+    (see trigger_hevy_event_catchup) so a large delta backlog still drains
+    even though every inline call keeps resuming from the same `since` --
+    without it, a backlog bigger than one inline walk can hold would never
+    shrink, since each inline call would just re-fetch the same unfinished
+    window forever (TASK-325).
 
     Returns the number of sets pooled.
     """
@@ -487,19 +526,31 @@ def sync_user_lifts(
     try:
         client = HevyClient(user.hevy_api_key)
 
-        has_synced_before = HevySyncLog.objects.filter(user=user, success=True).exists()
-        if has_synced_before:
+        # TASK-325: resume from the exact `since` a truncated prior walk used,
+        # not from a watermark derived from its (necessarily partial, and --
+        # per /v1/workouts/events being newest-first -- newest-skewed) pooled
+        # rows. Only a *completed* prior walk's watermark is safe to resume
+        # from. See the module docstring and MAX_EVENT_PAGES_PER_INLINE_RUN's
+        # comment for why.
+        last_successful_log = (
+            HevySyncLog.objects.filter(user=user, success=True)
+            .order_by("-started_at")
+            .first()
+        )
+        if last_successful_log is None:
+            since = _backfill_since()
+        elif not last_successful_log.walk_complete:
+            since = last_successful_log.since_used
+        else:
             watermark = history_watermark(user)
             since = (
                 f"{watermark.isoformat()}T00:00:00Z"
                 if watermark is not None
                 else _backfill_since()
             )
-        else:
-            since = _backfill_since()
 
         synced_at = datetime.now(tz=UTC)
-        pooled = pull_events_into_pool(
+        pooled, walk_complete = pull_events_into_pool(
             client, user, since=since, synced_at=synced_at, max_pages=max_pages
         )
     except HevyAPIError as exc:
@@ -525,8 +576,27 @@ def sync_user_lifts(
     sync_log.success = True
     sync_log.completed_at = datetime.now(tz=UTC)
     sync_log.result_summary = json.dumps({"sets_pooled": pooled})
-    sync_log.save(update_fields=["success", "completed_at", "result_summary"])
+    sync_log.walk_complete = walk_complete
+    sync_log.since_used = since
+    sync_log.save(
+        update_fields=[
+            "success",
+            "completed_at",
+            "result_summary",
+            "walk_complete",
+            "since_used",
+        ]
+    )
     logger.info("Hevy lift sync complete for user %s: %s sets pooled", user.id, pooled)
+
+    if not walk_complete and max_pages < MAX_EVENT_PAGES_PER_BACKGROUND_RUN:
+        logger.info(
+            "Hevy events walk truncated inline for user %s; triggering a "
+            "background catch-up pass at the higher page cap",
+            user.id,
+        )
+        trigger_hevy_event_catchup(user)
+
     return pooled
 
 
@@ -543,12 +613,30 @@ def trigger_hevy_lift_history_backfill(user) -> None:
     thread.start()
 
 
-def _run_backfill_in_thread(user) -> None:
+def trigger_hevy_event_catchup(user) -> None:
+    """Continue a truncated inline events walk in the background (TASK-325).
+
+    Unlike trigger_hevy_lift_history_backfill, this bypasses the sync
+    cooldown (``force=True``): the inline call that just truncated already
+    recorded a successful-but-incomplete HevySyncLog, so recent_pull_exists
+    would otherwise skip this catch-up entirely until the cooldown window
+    passes -- defeating the point of triggering it immediately.
+    """
+    thread = threading.Thread(
+        target=_run_backfill_in_thread,
+        args=(user,),
+        kwargs={"force": True},
+        daemon=True,
+    )
+    thread.start()
+
+
+def _run_backfill_in_thread(user, *, force: bool = False) -> None:
     """Thread entry point: sync lifts, then release this thread's DB connection."""
     from django.db import connection
 
     try:
-        sync_user_lifts(user, max_pages=MAX_EVENT_PAGES_PER_BACKGROUND_RUN)
+        sync_user_lifts(user, force=force, max_pages=MAX_EVENT_PAGES_PER_BACKGROUND_RUN)
     except Exception:
         logger.exception("Hevy backfill thread failed for user %s", user.id)
     finally:

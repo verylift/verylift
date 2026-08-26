@@ -98,6 +98,20 @@ class HevyClient:
         recommended way for a client to keep a local cache in sync without
         refetching the full workout list.
 
+        Events are returned newest-first, not oldest-first (TASK-325).
+        Confirmed directly against Hevy's own published OpenAPI spec served
+        at https://api.hevyapp.com/docs/ (title "Hevy API Docs", server
+        api.hevyapp.com) — the ``GET /v1/workouts/events`` operation summary
+        reads verbatim: "Retrieve a paged list of workout events (updates or
+        deletes) since a given date. Events are ordered from newest to
+        oldest." (cross-checked against the same spec as mirrored in
+        https://github.com/chrisdoc/hevy-mcp/blob/main/openapi-spec.json,
+        since Hevy's Swagger UI renders client-side and doesn't serve the
+        raw JSON at a stable URL). hevy_api.services.pull_events_into_pool
+        does not rely on this ordering for correctness — see that module's
+        docstring — but it explains why a truncated page walk pools the
+        newest slice of what changed, not the oldest.
+
         Returns the raw ``{"page", "page_count", "events"}`` payload. Each
         event is either ``{"type": "updated", "workout": {...}}`` or
         ``{"type": "deleted", "id": ..., "deleted_at": ...}``.

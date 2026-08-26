@@ -25,6 +25,17 @@ class HevySyncLog(models.Model):
     result_summary = models.TextField(blank=True)
     error_detail = models.TextField(blank=True)
 
+    # TASK-325: /v1/workouts/events returns newest-first (confirmed against
+    # Hevy's own published OpenAPI spec, see hevy_api.services module
+    # docstring), so a truncated events walk pools only the newest slice of
+    # what changed -- moving the delta watermark to the newest pooled row
+    # would permanently skip everything older that the walk never reached.
+    # These two fields let the next sync tell a completed walk from a
+    # truncated one and, for a truncated one, resume from the exact `since`
+    # this run used instead of a watermark derived from partial results.
+    walk_complete = models.BooleanField(default=True)
+    since_used = models.CharField(max_length=32, blank=True)
+
     class Meta:
         db_table = "hevy_api_synclog"
         ordering = ["-started_at"]

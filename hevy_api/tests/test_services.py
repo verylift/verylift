@@ -24,6 +24,7 @@ from hevy_api.services import (
     last_synced_at,
     latest_sync_failure,
     sync_user_lifts,
+    trigger_hevy_event_catchup,
     trigger_hevy_lift_history_backfill,
     validate_hevy_key,
     validate_hevy_key_status,
@@ -488,12 +489,144 @@ class TestSyncUserLifts:
 
         with (
             patch("hevy_api.services.HevyClient", return_value=client),
+            patch("hevy_api.services.trigger_hevy_event_catchup"),
             caplog.at_level("WARNING"),
         ):
             sync_user_lifts(user)
 
         assert client.get_workout_events.call_count == MAX_EVENT_PAGES_PER_INLINE_RUN
         assert any("truncated" in message for message in caplog.messages)
+
+    def test_truncated_walk_records_incomplete_and_since_used(self):
+        """TASK-325: a truncated walk must not be indistinguishable from a
+        completed one, or the next sync has no way to know it should resume
+        from the same `since` instead of a partial watermark."""
+        user = UserFactory(hevy_api_key="key")
+        huge_page_count = MAX_EVENT_PAGES_PER_INLINE_RUN + 1
+        pages = [
+            _events_page([], page=p, page_count=huge_page_count)
+            for p in range(1, MAX_EVENT_PAGES_PER_INLINE_RUN + 1)
+        ]
+        client = _stub_client(pages)
+
+        with (
+            patch("hevy_api.services.HevyClient", return_value=client),
+            patch("hevy_api.services.trigger_hevy_event_catchup"),
+        ):
+            sync_user_lifts(user)
+
+        log = HevySyncLog.objects.get(user=user)
+        assert log.success is True
+        assert log.walk_complete is False
+        expected_start = (
+            datetime.now(tz=UTC) - timedelta(days=HISTORY_BACKFILL_DAYS)
+        ).date().isoformat() + "T00:00:00Z"
+        assert log.since_used == expected_start
+
+    def test_completed_walk_records_complete(self):
+        user = UserFactory(hevy_api_key="key")
+        client = _stub_client([_events_page([], page=1, page_count=1)])
+
+        with patch("hevy_api.services.HevyClient", return_value=client):
+            sync_user_lifts(user)
+
+        log = HevySyncLog.objects.get(user=user)
+        assert log.walk_complete is True
+
+    def test_resync_after_truncation_resumes_from_same_since_not_watermark(self):
+        """Pins the TASK-325 fix: if the API ever did return newest-first
+        events (confirmed against Hevy's own spec, see the module docstring),
+        advancing to a watermark derived from a truncated walk's pooled rows
+        would skip everything older that the walk never reached. The next
+        sync must re-request the exact same `since` instead."""
+        user = UserFactory(hevy_api_key="key")
+        # First sync: pools one recent workout, but truncates before reaching
+        # every page -- as if far older events are still waiting beyond the
+        # inline cap.
+        recent_workout = _workout(
+            start_time="2024-06-01T12:00:00Z",
+            exercises=[_exercise("Back Squat", [_set()])],
+        )
+        huge_page_count = MAX_EVENT_PAGES_PER_INLINE_RUN + 1
+        first_pages = [
+            _events_page(
+                [_updated_event(recent_workout)], page=1, page_count=huge_page_count
+            )
+        ] + [
+            _events_page([], page=p, page_count=huge_page_count)
+            for p in range(2, MAX_EVENT_PAGES_PER_INLINE_RUN + 1)
+        ]
+        client = _stub_client(first_pages)
+        with (
+            patch("hevy_api.services.HevyClient", return_value=client),
+            patch("hevy_api.services.trigger_hevy_event_catchup"),
+        ):
+            sync_user_lifts(user)
+
+        expected_start = (
+            datetime.now(tz=UTC) - timedelta(days=HISTORY_BACKFILL_DAYS)
+        ).date().isoformat() + "T00:00:00Z"
+
+        # Second sync (e.g. after cooldown, or force=True): must request the
+        # same original `since`, NOT a watermark derived from the pooled
+        # 2024-06-01 row -- that would jump forward and never reach whatever
+        # is older than 2024-06-01 but still newer than the true original
+        # since.
+        second_client = _stub_client()
+        with patch("hevy_api.services.HevyClient", return_value=second_client):
+            sync_user_lifts(user, force=True)
+
+        _, kwargs = second_client.get_workout_events.call_args
+        assert kwargs["since"] == expected_start
+
+    def test_truncated_inline_walk_triggers_background_catchup(self):
+        user = UserFactory(hevy_api_key="key")
+        huge_page_count = MAX_EVENT_PAGES_PER_INLINE_RUN + 1
+        pages = [
+            _events_page([], page=p, page_count=huge_page_count)
+            for p in range(1, MAX_EVENT_PAGES_PER_INLINE_RUN + 1)
+        ]
+        client = _stub_client(pages)
+
+        with (
+            patch("hevy_api.services.HevyClient", return_value=client),
+            patch("hevy_api.services.trigger_hevy_event_catchup") as mock_catchup,
+        ):
+            sync_user_lifts(user)
+
+        mock_catchup.assert_called_once_with(user)
+
+    def test_completed_inline_walk_does_not_trigger_catchup(self):
+        user = UserFactory(hevy_api_key="key")
+        client = _stub_client([_events_page([], page=1, page_count=1)])
+
+        with (
+            patch("hevy_api.services.HevyClient", return_value=client),
+            patch("hevy_api.services.trigger_hevy_event_catchup") as mock_catchup,
+        ):
+            sync_user_lifts(user)
+
+        mock_catchup.assert_not_called()
+
+    def test_truncated_background_walk_does_not_retrigger_catchup(self):
+        """A run already at the background cap that still truncates must not
+        spawn another background thread -- otherwise a pathological backlog
+        beyond even the background cap would spawn catch-up threads forever.
+        MAX_EVENT_PAGES_PER_BACKGROUND_RUN is patched down to 2 so the test
+        doesn't need hundreds of stub pages to force truncation at the real
+        cap."""
+        user = UserFactory(hevy_api_key="key")
+        pages = [_events_page([], page=p, page_count=3) for p in (1, 2)]
+        client = _stub_client(pages)
+
+        with (
+            patch("hevy_api.services.HevyClient", return_value=client),
+            patch("hevy_api.services.MAX_EVENT_PAGES_PER_BACKGROUND_RUN", 2),
+            patch("hevy_api.services.trigger_hevy_event_catchup") as mock_catchup,
+        ):
+            sync_user_lifts(user, max_pages=2)
+
+        mock_catchup.assert_not_called()
 
     def test_max_pages_override_bounds_the_walk(self):
         """A caller passing a smaller max_pages than the default gets stopped
@@ -626,8 +759,28 @@ class TestTriggerHevyLiftHistoryBackfill:
             _run_backfill_in_thread(user)
 
         mock_sync.assert_called_once_with(
-            user, max_pages=MAX_EVENT_PAGES_PER_BACKGROUND_RUN
+            user, force=False, max_pages=MAX_EVENT_PAGES_PER_BACKGROUND_RUN
         )
+
+    def test_catchup_thread_forces_past_cooldown(self):
+        """trigger_hevy_event_catchup must bypass the sync cooldown --
+        the inline call that just truncated already wrote a successful
+        HevySyncLog, so without force=True the catch-up would be skipped by
+        recent_pull_exists until the cooldown window passes."""
+        user = UserFactory(hevy_api_key="key")
+        with (
+            patch("hevy_api.services.sync_user_lifts") as mock_sync,
+            patch("hevy_api.services.threading.Thread") as mock_thread,
+        ):
+            trigger_hevy_event_catchup(user)
+
+        mock_thread.assert_called_once()
+        kwargs = mock_thread.call_args.kwargs
+        assert kwargs["args"] == (user,)
+        assert kwargs["kwargs"] == {"force": True}
+        assert kwargs["daemon"] is True
+        mock_thread.return_value.start.assert_called_once()
+        mock_sync.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -697,3 +850,55 @@ class TestLatestSyncFailure:
         result = latest_sync_failure(user)
         assert result.id == failed.id
         assert result.error_detail == "Hevy API error 401: Unauthorized"
+
+
+# ---------------------------------------------------------------------------
+# CSV/API weight parity (TASK-325)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestCsvApiWeightParity:
+    """The CSV importer (workout_imports.importers.hevy) and this module's
+    API sync both feed LiftHistory's (user, lift, performed_at, reps,
+    weight_kg) unique key. A user who imports a Hevy CSV export and later
+    connects live sync must have the same physical set resolve to the same
+    weight_kg through both paths, or it double-counts as two rows. The CSV
+    path converts weight_lbs -> weight_kg via accounts.units.LB_TO_KG; the
+    API path takes weight_kg straight from Hevy with no conversion. This
+    pins that the two agree for realistic loads, including ones where the
+    conversion constant used to diverge from the exact pound definition
+    (see accounts/units.py's TASK-325 comment)."""
+
+    @pytest.mark.parametrize("weight_lbs", [45, 135, 185, 225, 315, 380, 405, 495, 585])
+    def test_csv_and_api_paths_agree_on_weight_kg(self, weight_lbs):
+        import io
+
+        from workout_imports.importers.hevy import HevyImporter
+
+        csv_header = (
+            "title,start_time,end_time,description,exercise_title,"
+            "superset_id,exercise_notes,set_index,set_type,weight_lbs,reps,"
+            "distance_km,duration_seconds,rpe"
+        )
+        csv_row = (
+            f'Leg day,"01 Jan 2024, 09:15",,,Squat (Barbell),,,1,normal,'
+            f"{weight_lbs},5,,,\n"
+        )
+        csv_parsed = HevyImporter().parse(
+            io.BytesIO((csv_header + "\n" + csv_row).encode("utf-8"))
+        )
+
+        # Hevy's API reports weight_kg directly for the same physical set --
+        # simulated here via the exact pound definition, since that's the
+        # only conversion an independently-implemented client and Hevy's own
+        # backend can be expected to agree on.
+        api_weight_kg = (Decimal(weight_lbs) * Decimal("0.45359237")).quantize(
+            Decimal("0.01")
+        )
+        api_workout = _workout(
+            exercises=[_exercise("Squat (Barbell)", [_set(weight_kg=api_weight_kg)])]
+        )
+        api_parsed = _parse_workout(api_workout, {})
+
+        assert csv_parsed[0].weight_kg == api_parsed[0].weight_kg
