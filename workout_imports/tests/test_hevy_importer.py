@@ -108,3 +108,51 @@ class TestHevyImporterParse:
         )
         parsed = HevyImporter().parse(csv_file(rows))
         assert parsed[0].lift == "Some Unmapped Exercise"
+
+
+@pytest.mark.django_db
+class TestHevyImporterFallbackResolutionStages:
+    """Hevy now shares the same six-stage resolution chain Strong CSV import
+    uses (core.lift_resolution), not just a bare alias-map lookup -- these
+    fallback stages (equipment-qualifier stripping, reorder, fuzzy match)
+    used to only apply to Strong imports.
+    """
+
+    def test_barbell_qualifier_is_stripped_without_an_explicit_alias(self):
+        # "Pendlay Row" is a seeded canonical lift; nothing here seeds a
+        # HevyLiftAlias for "Pendlay Row (Barbell)".
+        rows = (
+            'Back day,"01 Jan 2024, 09:15",,,Pendlay Row (Barbell),,,'
+            "1,normal,135,5,,,\n"
+        )
+        parsed = HevyImporter().parse(csv_file(rows))
+        assert parsed[0].lift == "Pendlay Row"
+
+    def test_dumbbell_qualifier_does_not_collapse_onto_barbell_canonical_name(self):
+        rows = (
+            'Push day,"01 Jan 2024, 09:15",,,Bench Press (Dumbbell),,,'
+            "1,normal,50,10,,,\n"
+        )
+        parsed = HevyImporter().parse(csv_file(rows))
+        assert parsed[0].lift == "Bench Press (Dumbbell)"
+
+    def test_reordered_qualifier_resolves_to_canonical_lift(self):
+        rows = 'Back day,"01 Jan 2024, 09:15",,,Crunch (Cable),,,1,normal,50,10,,,\n'
+        parsed = HevyImporter().parse(csv_file(rows))
+        assert parsed[0].lift == "Cable Crunch"
+
+    def test_separator_free_name_resolves_via_fuzzy_stage(self):
+        rows = 'Back day,"01 Jan 2024, 09:15",,,Chinup,,,1,normal,0,5,,,\n'
+        parsed = HevyImporter().parse(csv_file(rows))
+        assert parsed[0].lift == "Chin-up"
+
+    def test_fallback_stage_hits_emit_a_warning_naming_hevy(self, caplog):
+        rows = 'Back day,"01 Jan 2024, 09:15",,,Chinup,,,1,normal,0,5,,,\n'
+        with caplog.at_level("WARNING", logger="workout_imports.importers.hevy"):
+            HevyImporter().parse(csv_file(rows))
+
+        fuzzy_warnings = [
+            r for r in caplog.records if "separator-insensitive fallback" in r.message
+        ]
+        assert len(fuzzy_warnings) == 1
+        assert "Hevy CSV import" in fuzzy_warnings[0].message

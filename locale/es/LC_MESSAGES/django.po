@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-26 01:26+0000\n"
+"POT-Creation-Date: 2026-08-26 16:59+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -816,13 +816,13 @@ msgstr "Solo se pueden eliminar los retos en borrador."
 msgid "Draft challenge deleted."
 msgstr "Reto en borrador eliminado."
 
-#: core/models.py:16
+#: core/models.py:18
 msgid "Community Discord invite link, shown on the landing page."
 msgstr ""
 "Enlace de invitación a la comunidad de Discord, mostrado en la página de "
 "inicio."
 
-#: core/models.py:22
+#: core/models.py:24
 msgid ""
 "Join link for the current year's Very Open. Blank hides the onboarding "
 "invite step entirely -- clear this once the invite window closes rather than "
@@ -833,7 +833,7 @@ msgstr ""
 "bórralo una vez que se cierre la ventana de invitación en lugar de dejar un "
 "enlace inactivo."
 
-#: core/models.py:32
+#: core/models.py:34
 msgid ""
 "Displayed name for the current year's Very Open, e.g. \"The Very Open '26\". "
 "Only shown when the invite URL above is also set."
@@ -842,15 +842,40 @@ msgstr ""
 "Solo se muestra cuando también se ha configurado el enlace de invitación "
 "anterior."
 
-#: core/models.py:38 core/models.py:39
+#: core/models.py:40 core/models.py:41
 msgid "Site Settings"
 msgstr "Configuración del sitio"
 
-#: core/models.py:63
+#: core/models.py:73 liftosaur/models.py:32
+#: templates/registration/onboarding_tracking_method.html:28
+msgid "Liftosaur"
+msgstr "Liftosaur"
+
+#: core/models.py:74 liftosaur/models.py:34
+#: templates/registration/onboarding_tracking_method.html:30
+msgid "Hevy"
+msgstr "Hevy"
+
+#: core/models.py:75 liftosaur/models.py:36
+#: templates/registration/onboarding_tracking_method.html:31
+msgid "Strong"
+msgstr "Strong"
+
+#: core/models.py:76 liftosaur/models.py:35
+#: templates/accounts/_wger_section.html:4
+#: templates/registration/onboarding_tracking_method.html:29
+msgid "Wger"
+msgstr "Wger"
+
+#: core/models.py:77
+msgid "FitnessVolt"
+msgstr "FitnessVolt"
+
+#: core/models.py:133
 msgid "Newsletter Subscriber"
 msgstr "Suscriptor del boletín"
 
-#: core/models.py:64
+#: core/models.py:134
 msgid "Newsletter Subscribers"
 msgstr "Suscriptores del boletín"
 
@@ -878,29 +903,9 @@ msgstr "Mantener tus datos actualizados"
 msgid "Units & added-weight lifts"
 msgstr "Unidades y ejercicios con peso añadido"
 
-#: liftosaur/models.py:32
-#: templates/registration/onboarding_tracking_method.html:28
-msgid "Liftosaur"
-msgstr "Liftosaur"
-
 #: liftosaur/models.py:33
 msgid "Manual"
 msgstr "Manual"
-
-#: liftosaur/models.py:34
-#: templates/registration/onboarding_tracking_method.html:30
-msgid "Hevy"
-msgstr "Hevy"
-
-#: liftosaur/models.py:35 templates/accounts/_wger_section.html:4
-#: templates/registration/onboarding_tracking_method.html:29
-msgid "Wger"
-msgstr "Wger"
-
-#: liftosaur/models.py:36
-#: templates/registration/onboarding_tracking_method.html:31
-msgid "Strong"
-msgstr "Strong"
 
 #: liftosaur/models.py:37
 msgid "Hevy (live sync)"
@@ -1221,7 +1226,8 @@ msgstr "Guardar Clave"
 
 #: templates/accounts/_hevy_sync_status.html:4
 msgid "Last sync failed. We'll try again next time."
-msgstr "La última sincronización falló. Lo intentaremos de nuevo la próxima vez."
+msgstr ""
+"La última sincronización falló. Lo intentaremos de nuevo la próxima vez."
 
 #: templates/accounts/_hevy_sync_status.html:6
 #: templates/accounts/_liftosaur_sync_status.html:4

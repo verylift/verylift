@@ -3,7 +3,7 @@ import csv
 from django.contrib import admin
 from django.http import HttpResponse
 
-from .models import NewsletterSubscriber, SiteSettings
+from .models import LiftAlias, NewsletterSubscriber, SiteSettings
 
 # Formula-injection guard for CSV export: a spreadsheet app treats a cell
 # starting with any of these as a formula, not text. Django's EmailField
@@ -37,6 +37,14 @@ class NewsletterSubscriberAdmin(admin.ModelAdmin):
                 [_csv_safe(subscriber.email), subscriber.created_at.isoformat()]
             )
         return response
+
+
+@admin.register(LiftAlias)
+class LiftAliasAdmin(admin.ModelAdmin):
+    list_display = ["source", "from_name", "to_name"]
+    list_filter = ["source"]
+    search_fields = ["from_name", "to_name"]
+    ordering = ["source", "from_name"]
 
 
 @admin.register(SiteSettings)

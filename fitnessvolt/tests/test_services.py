@@ -10,13 +10,17 @@ Intermediate/Elite land exactly on p50/p95, Novice/Advanced interpolate
 between columns, Beginner extrapolates below p10 on the p10->p25 slope.
 """
 
+import json
+import logging
 from datetime import timedelta
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 from django.utils import timezone
 
 from challenges.tests.factories import CustomGoalFactory
+from core.lift_resolution import resolve_lift_name
 from fitnessvolt import services
 from fitnessvolt.client import FitnessVoltAPIError
 from fitnessvolt.models import FitnessVoltStandardCache
@@ -35,6 +39,10 @@ SNAPSHOT = "2026-06-09"
 HEAVIER_PERCENTILES = {
     column: value + 40 for column, value in DEFAULT_PERCENTILES.items()
 }
+
+FIXTURE_PATH = (
+    Path(__file__).resolve().parents[1] / "fixtures" / "fitnessvolt_lifts.json"
+)
 
 
 class FakeClient:
@@ -126,6 +134,44 @@ class TestLiftNameMapping:
 
     def test_slugs_for_lift_name_returns_empty_for_unknown_name(self):
         assert services.slugs_for_lift_name("Zercher Yoke Carry") == []
+
+    def test_all_seeded_fixture_slugs_resolve_to_their_fixture_mapping(self):
+        # Every slug the fixture ships (the reference data a deployed
+        # instance seeds) must round-trip through the live resolution chain
+        # to the exact canonical name the fixture pairs it with -- whichever
+        # stage of the chain gets it there.
+        with open(FIXTURE_PATH) as f:
+            aliases = json.load(f)["aliases"]
+        assert len(aliases) == 16
+        for row in aliases:
+            assert services.canonical_lift_name(row["from_slug"]) == row["to_name"]
+
+    def test_squat_resolves_via_the_explicit_alias_stage_not_by_accident(self):
+        # "squat" (unlike the other 15 fixture slugs) doesn't punctuation- or
+        # separator-fold onto any canonical lift name -- it only resolves at
+        # all because the fixture seeds it as an explicit core.LiftAlias row.
+        # Assert the *stage*, not just the outcome, so this can't pass by
+        # coincidentally landing on a later fallback stage instead.
+        lift, status = resolve_lift_name("squat", services._build_maps())
+        assert (lift, status) == ("Back Squat", "matched")
+
+    def test_slug_drift_not_in_fixture_still_resolves_via_fallback_chain(self, caplog):
+        # "benchpress" (concatenated, no separator) is not one of the 16
+        # fixture slugs -- FitnessVolt has never published it. It only
+        # resolves because the chain's separator-free fallback stage (5)
+        # folds it onto "Bench Press". Without the chain (the old bare
+        # FitnessVoltLiftAlias exact-match lookup), this would return None
+        # and log nothing.
+        with caplog.at_level(logging.WARNING, logger="fitnessvolt.services"):
+            result = services.canonical_lift_name("benchpress")
+
+        assert result == "Bench Press"
+        fallback_warnings = [
+            r
+            for r in caplog.records
+            if "fitnessvolt" in r.message and "separator-insensitive" in r.message
+        ]
+        assert len(fallback_warnings) == 1
 
 
 class TestCurrentSnapshotVersion:

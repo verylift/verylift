@@ -6,15 +6,12 @@ from collections import Counter
 import pytest
 from django.core.management import call_command
 
+from core.lift_resolution import normalize_lift_name, normalize_lift_name_strict
+from core.models import LiftAlias, LiftAliasSource
 from liftosaur.management.commands.seed_liftosaur_lifts import (
     FIXTURE_PATH as LIFTOSAUR_FIXTURE_PATH,
 )
-from workout_imports.importers.strong import (
-    _normalize_lift_name,
-    _normalize_lift_name_strict,
-)
 from workout_imports.management.commands.seed_strong_lift_aliases import FIXTURE_PATH
-from workout_imports.models import StrongLiftAlias
 
 
 def _fixture_aliases():
@@ -57,7 +54,7 @@ def test_no_two_seeded_lift_names_collide_under_punctuation_normalization():
     # as the seeded catalogue never contains two distinct lifts that fold to
     # the same key -- otherwise this importer (and the guard below) would
     # silently pool two different exercises' history together.
-    collisions = _colliding_groups(_seeded_lift_names(), _normalize_lift_name)
+    collisions = _colliding_groups(_seeded_lift_names(), normalize_lift_name)
     assert not collisions, collisions
 
 
@@ -68,7 +65,7 @@ def test_no_two_seeded_lift_names_collide_under_separator_free_normalization():
     # alongside the existing "Pull-up", or "Situp" alongside "Sit Up", would
     # make two distinct lifts collide and silently pool their history. This
     # must fail CI before that ships, not surface later as a scoring bug.
-    collisions = _colliding_groups(_seeded_lift_names(), _normalize_lift_name_strict)
+    collisions = _colliding_groups(_seeded_lift_names(), normalize_lift_name_strict)
     assert not collisions, collisions
 
 
@@ -77,24 +74,32 @@ class TestSeedStrongLiftAliasesCommand:
     def test_seeds_all_fixture_aliases(self):
         call_command("seed_strong_lift_aliases")
         assert (
-            dict(StrongLiftAlias.objects.values_list("from_name", "to_name"))
+            dict(
+                LiftAlias.objects.filter(source=LiftAliasSource.STRONG).values_list(
+                    "from_name", "to_name"
+                )
+            )
             == EXPECTED_ALIASES
         )
 
     def test_command_is_idempotent(self):
         call_command("seed_strong_lift_aliases")
         call_command("seed_strong_lift_aliases")
-        assert StrongLiftAlias.objects.count() == len(EXPECTED_ALIASES)
+        assert LiftAlias.objects.filter(source=LiftAliasSource.STRONG).count() == len(
+            EXPECTED_ALIASES
+        )
 
     def test_reseeding_reconciles_an_edited_row(self):
         call_command("seed_strong_lift_aliases")
-        StrongLiftAlias.objects.filter(from_name="Squat (Barbell)").update(
-            to_name="Front Squat"
-        )
+        LiftAlias.objects.filter(
+            source=LiftAliasSource.STRONG, from_name="Squat (Barbell)"
+        ).update(to_name="Front Squat")
 
         call_command("seed_strong_lift_aliases")
 
         assert (
-            StrongLiftAlias.objects.get(from_name="Squat (Barbell)").to_name
+            LiftAlias.objects.get(
+                source=LiftAliasSource.STRONG, from_name="Squat (Barbell)"
+            ).to_name
             == "Back Squat"
         )

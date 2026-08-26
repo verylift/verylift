@@ -34,9 +34,15 @@ from wger_api_client.models.repetition_unit import RepetitionUnit
 from wger_api_client.types import Unset
 
 from accounts.units import LB_TO_KG
-from liftosaur.models import LiftHistory, LiftSource
+from core.lift_resolution import (
+    LiftNameResolver,
+    build_lift_alias_maps,
+    resolve_lift_name,
+)
+from core.models import LiftAliasSource
+from liftosaur.models import Lift, LiftHistory, LiftSource
 from wger.client import WgerAPIError, WgerClient
-from wger.models import WgerLiftAlias, WgerSyncLog
+from wger.models import WgerSyncLog
 
 logger = logging.getLogger(__name__)
 
@@ -59,26 +65,21 @@ def _is_unset(value) -> bool:
 def canonical_wger_lift_name(name: str) -> str:
     """Return the canonical standard lift name for a raw Wger exercise name.
 
-    Mirrors liftosaur.services.canonical_lift_name. Case-insensitive lookup
-    against the seeded WgerLiftAlias table; unknown names pass through
-    unchanged.
+    Mirrors liftosaur.services.canonical_lift_name: runs the full
+    tracker-agnostic resolution chain (core.lift_resolution). An explicit
+    alias (case-insensitive) always wins when one exists; unknown names fall
+    through the equipment-qualifier and fuzzy-matching stages, or pass
+    through unchanged if nothing matches.
     """
-    alias = (
-        WgerLiftAlias.objects.filter(from_name__iexact=name)
-        .values_list("to_name", flat=True)
-        .first()
+    lift, _status = resolve_lift_name(name, _build_maps())
+    return lift
+
+
+def _build_maps():
+    """Build this pull's alias + canonical-catalogue lookup maps in two queries."""
+    return build_lift_alias_maps(
+        LiftAliasSource.WGER, Lift.objects.values_list("name", flat=True)
     )
-    return alias if alias is not None else name
-
-
-def _alias_map() -> dict[str, str]:
-    """Return ``{from_name.lower(): to_name}`` for every alias in one query."""
-    return {
-        from_name.lower(): to_name
-        for from_name, to_name in WgerLiftAlias.objects.values_list(
-            "from_name", "to_name"
-        )
-    }
 
 
 def validate_wger_credentials(base_url: str, api_token: str) -> bool:
@@ -140,7 +141,7 @@ def _history_rows_for_page(
     *,
     client,
     synced_at,
-    alias_map,
+    resolver: LiftNameResolver,
     name_cache,
     weight_units: dict[int, str],
     repetition_units: dict[int, RepetitionUnit],
@@ -190,7 +191,7 @@ def _history_rows_for_page(
         if not raw_name:
             continue
 
-        lift = alias_map.get(raw_name.lower(), raw_name)
+        lift = resolver.resolve(raw_name)
         performed_at = entry_date.date()
         weight_kg = weight_kg.quantize(Decimal("0.01"))
         rows[(lift, performed_at, reps, weight_kg)] = LiftHistory(
@@ -278,7 +279,7 @@ def pull_workout_logs_into_pool(client, user, *, start_date, synced_at) -> int:
     pooled = 0
     offset = 0
     limit = 100
-    alias_map = _alias_map()
+    resolver = LiftNameResolver(_build_maps(), source_label="Wger sync", logger=logger)
     name_cache: dict = {}
     weight_units = client.get_weight_units()
     repetition_units = client.get_repetition_units()
@@ -291,7 +292,7 @@ def pull_workout_logs_into_pool(client, user, *, start_date, synced_at) -> int:
             entries,
             client=client,
             synced_at=synced_at,
-            alias_map=alias_map,
+            resolver=resolver,
             name_cache=name_cache,
             weight_units=weight_units,
             repetition_units=repetition_units,

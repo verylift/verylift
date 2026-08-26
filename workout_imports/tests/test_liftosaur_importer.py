@@ -109,3 +109,45 @@ class TestLiftosaurImporterParse:
         rows = row(exercise="Some Unmapped Exercise")
         parsed = LiftosaurImporter().parse(csv_file(rows))
         assert parsed[0].lift == "Some Unmapped Exercise"
+
+
+@pytest.mark.django_db
+class TestLiftosaurImporterFallbackResolutionStages:
+    """Liftosaur CSV import now shares the same six-stage resolution chain
+    Strong CSV import uses (core.lift_resolution), not just a bare
+    alias-map lookup -- these fallback stages used to only apply to Strong.
+    """
+
+    def test_barbell_qualifier_is_stripped_without_an_explicit_alias(self):
+        rows = row(exercise="Pendlay Row (Barbell)")
+        parsed = LiftosaurImporter().parse(csv_file(rows))
+        assert parsed[0].lift == "Pendlay Row"
+
+    def test_dumbbell_qualifier_does_not_collapse_onto_barbell_canonical_name(self):
+        rows = row(exercise="Bench Press (Dumbbell)")
+        parsed = LiftosaurImporter().parse(csv_file(rows))
+        assert parsed[0].lift == "Bench Press (Dumbbell)"
+
+    def test_reordered_qualifier_resolves_to_canonical_lift(self):
+        rows = row(exercise="Crunch (Cable)")
+        parsed = LiftosaurImporter().parse(csv_file(rows))
+        assert parsed[0].lift == "Cable Crunch"
+
+    def test_separator_free_name_resolves_via_fuzzy_stage(self):
+        # "TBar Row" is deliberately not one of the fixture's seeded aliases
+        # (unlike e.g. "Chinup"/"Pullup", which already have explicit
+        # aliases and would hit stage 1 instead of this fallback stage).
+        rows = row(exercise="TBar Row")
+        parsed = LiftosaurImporter().parse(csv_file(rows))
+        assert parsed[0].lift == "T Bar Row"
+
+    def test_fallback_stage_hits_emit_a_warning_naming_liftosaur(self, caplog):
+        rows = row(exercise="TBar Row")
+        with caplog.at_level("WARNING", logger="workout_imports.importers.liftosaur"):
+            LiftosaurImporter().parse(csv_file(rows))
+
+        fuzzy_warnings = [
+            r for r in caplog.records if "separator-insensitive fallback" in r.message
+        ]
+        assert len(fuzzy_warnings) == 1
+        assert "Liftosaur CSV import" in fuzzy_warnings[0].message

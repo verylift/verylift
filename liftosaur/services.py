@@ -15,11 +15,16 @@ from django.db import OperationalError, transaction
 from django.db.models import Max
 from django.utils import timezone
 
+from core.lift_resolution import (
+    LiftNameResolver,
+    build_lift_alias_maps,
+    resolve_lift_name,
+)
+from core.models import LiftAliasSource
 from liftosaur.client import LiftosaurAPIError, LiftosaurClient
 from liftosaur.models import (
     LB_TO_KG,
     Lift,
-    LiftAlias,
     LiftHistory,
     LiftosaurSyncLog,
     LiftSource,
@@ -45,37 +50,31 @@ POOL_WRITE_RETRY_DELAYS = (0.1, 0.3, 0.9)
 def canonical_lift_name(name: str) -> str:
     """Return the canonical standard lift name for a raw Liftosaur exercise name.
 
-    Maps known Liftosaur aliases (e.g. "Squat" -> "Back Squat") to their
-    canonical standard name via the seeded LiftAlias table; unknown names pass
-    through unchanged.
+    Runs the full tracker-agnostic resolution chain (core.lift_resolution) --
+    an explicit alias (e.g. "Squat" -> "Back Squat", case-insensitive) always
+    wins when one exists; unknown names fall through the equipment-qualifier
+    and fuzzy-matching stages, or pass through unchanged if nothing matches.
 
-    The lookup is case-insensitive: Liftosaur emits exercise names with casing
-    that can differ from what the fixture author assumed (it emits "Behind The
-    Neck Press" while the seeded alias reads "Behind the Neck Press"). An exact
-    match would silently miss, pooling the set under its raw name so scoring's
-    canonical-name filter never counts it.
+    The alias lookup is case-insensitive: Liftosaur emits exercise names with
+    casing that can differ from what the fixture author assumed (it emits
+    "Behind The Neck Press" while the seeded alias reads "Behind the Neck
+    Press"). An exact match would silently miss, pooling the set under its raw
+    name so scoring's canonical-name filter never counts it.
     """
-    alias = (
-        LiftAlias.objects.filter(from_name__iexact=name)
-        .values_list("to_name", flat=True)
-        .first()
+    lift, _status = resolve_lift_name(name, _build_maps())
+    return lift
+
+
+def _build_maps():
+    """Build this pull's alias + canonical-catalogue lookup maps in two queries.
+
+    Reused by both ``canonical_lift_name`` (one-off lookups, mostly test/tooling
+    callers) and the sync pull loop, which needs the same maps built once per
+    pull rather than once per parsed set.
+    """
+    return build_lift_alias_maps(
+        LiftAliasSource.LIFTOSAUR, Lift.objects.values_list("name", flat=True)
     )
-    return alias if alias is not None else name
-
-
-def _alias_map() -> dict[str, str]:
-    """Return ``{from_name.lower(): to_name}`` for every alias in one query.
-
-    ``canonical_lift_name`` costs one LiftAlias SELECT per call, which inside
-    the pull loop meant one query per parsed set — the read-side twin of the
-    per-set write this module used to perform. Keying on the lowercased name
-    reproduces that function's ``from_name__iexact`` semantics for the seeded
-    data, so a caller can resolve a whole page of sets against a single fetch.
-    """
-    return {
-        from_name.lower(): to_name
-        for from_name, to_name in LiftAlias.objects.values_list("from_name", "to_name")
-    }
 
 
 def liftosaur_builtin_lift_names() -> frozenset[str]:
@@ -266,7 +265,7 @@ def _parse_history_record(text: str) -> list[ParsedSet]:
 
 
 def _history_rows_for_page(
-    user, parsed_sets, *, synced_at, alias_map
+    user, parsed_sets, *, synced_at, resolver: LiftNameResolver
 ) -> list[LiftHistory]:
     """Build the unsaved LiftHistory rows for one page of parsed sets.
 
@@ -298,7 +297,7 @@ def _history_rows_for_page(
     """
     rows: dict[tuple, LiftHistory] = {}
     for parsed_set in parsed_sets:
-        lift = alias_map.get(parsed_set.exercise.lower(), parsed_set.exercise)
+        lift = resolver.resolve(parsed_set.exercise)
         performed_at = parsed_set.performed_at.date()
         weight_kg = parsed_set.weight_kg.quantize(Decimal("0.01"))
         rows[(lift, performed_at, parsed_set.reps, weight_kg)] = LiftHistory(
@@ -444,7 +443,9 @@ def pull_history_into_pool(
     """
     pooled = 0
     cursor: str | None = None
-    alias_map = _alias_map()
+    resolver = LiftNameResolver(
+        _build_maps(), source_label="Liftosaur sync", logger=logger
+    )
     while True:
         records, has_more, next_cursor = client.get_history(
             start_date=start_date, end_date=end_date, cursor=cursor, limit=200
@@ -457,7 +458,7 @@ def pull_history_into_pool(
         pooled += len(page_sets)
         _write_history_batch_with_retry(
             _history_rows_for_page(
-                user, page_sets, synced_at=synced_at, alias_map=alias_map
+                user, page_sets, synced_at=synced_at, resolver=resolver
             ),
             user=user,
         )

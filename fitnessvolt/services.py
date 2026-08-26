@@ -28,8 +28,10 @@ from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
 
+from core.lift_resolution import LiftNameMaps, build_lift_alias_maps, resolve_lift_name
+from core.models import LiftAlias, LiftAliasSource
 from fitnessvolt.client import FitnessVoltAPIError, FitnessVoltClient
-from fitnessvolt.models import FitnessVoltLiftAlias, FitnessVoltStandardCache
+from fitnessvolt.models import FitnessVoltStandardCache
 
 logger = logging.getLogger(__name__)
 
@@ -73,21 +75,58 @@ _TWO_PLACES = Decimal("0.01")
 _CLIENT_ERRORS = (FitnessVoltAPIError, urllib.error.URLError, OSError)
 
 
+def _build_maps() -> LiftNameMaps:
+    """Build this call's alias + canonical-catalogue lookup maps in two queries.
+
+    Mirrors liftosaur.services._build_maps / wger.services._build_maps.
+    FitnessVolt is a live external API whose published slugs can drift (a
+    rename, a punctuation change) independently of when we last reviewed its
+    capability doc, so it shares the same six-stage tracker-agnostic chain as
+    every other source rather than the single-stage exact lookup this used to
+    be — see core.lift_resolution for the chain itself.
+    """
+    from liftosaur.models import Lift
+
+    return build_lift_alias_maps(
+        LiftAliasSource.FITNESSVOLT, Lift.objects.values_list("name", flat=True)
+    )
+
+
 def canonical_lift_name(slug: str) -> str | None:
-    """Map a FitnessVolt lift slug to our canonical lift name via FitnessVoltLiftAlias.
+    """Map a FitnessVolt lift slug to our canonical lift name via the shared
+    tracker-agnostic resolution chain (core.lift_resolution).
 
     Returns None for slugs with no known mapping (new/renamed FitnessVolt
     lifts we haven't reviewed yet) rather than passing the slug through
     unchanged — unlike liftosaur's canonical_lift_name(), an
     unrecognized FitnessVolt slug must not silently become a fake "lift name"
     since it would never match anything and its shape (kebab-case slug) would
-    look wrong if it leaked into the UI.
+    look wrong if it leaked into the UI. A fuzzy/reordered match (drift the
+    chain resolved through rather than an exact alias/canonical hit) still
+    returns the resolved name, but logs a warning naming "fitnessvolt" as the
+    source so the drift is visible instead of silent.
     """
-    return (
-        FitnessVoltLiftAlias.objects.filter(from_slug=slug)
-        .values_list("to_name", flat=True)
-        .first()
-    )
+    lift, status = resolve_lift_name(slug, _build_maps())
+    if status == "unmapped":
+        return None
+    if status == "reordered":
+        logger.warning(
+            "fitnessvolt: slug %r only resolved to canonical lift %r by "
+            "reordering its equipment qualifier to the front (stage 4); "
+            "consider adding an explicit alias or double-checking this "
+            "correspondence",
+            slug,
+            lift,
+        )
+    elif status == "fuzzy":
+        logger.warning(
+            "fitnessvolt: slug %r only resolved to canonical lift %r via "
+            "separator-insensitive fallback matching (stage 5); consider "
+            "adding an explicit alias or double-checking this correspondence",
+            slug,
+            lift,
+        )
+    return lift
 
 
 def slugs_for_lift_name(name: str) -> list[str]:
@@ -100,11 +139,15 @@ def slugs_for_lift_name(name: str) -> list[str]:
     "Back Squat"); the caller tries each candidate against the pinned
     snapshot's rows. An empty list means no alias maps to the name — the
     same "no standard for this cell" outcome as an uncovered lift.
+
+    Deliberately stays an explicit-alias-only reverse lookup (not run through
+    the fuzzy chain): the chain resolves a raw slug forward to a canonical
+    name, and has no well-defined reverse direction to invert.
     """
     return list(
-        FitnessVoltLiftAlias.objects.filter(to_name=name).values_list(
-            "from_slug", flat=True
-        )
+        LiftAlias.objects.filter(
+            source=LiftAliasSource.FITNESSVOLT, to_name=name
+        ).values_list("from_name", flat=True)
     )
 
 
@@ -350,7 +393,7 @@ def get_standards_bulk(
     ``multiplier`` None so the tier vocabulary still renders. Sorted by
     (lift, tier percentile), i.e. ascending threshold within a lift.
     """
-    alias_map = dict(FitnessVoltLiftAlias.objects.values_list("from_slug", "to_name"))
+    maps = _build_maps()
     rows = FitnessVoltStandardCache.objects.filter(
         population=population,
         source_snapshot_version=snapshot_version,
@@ -359,7 +402,9 @@ def get_standards_bulk(
 
     cells = []
     for lift_slug, group in itertools.groupby(rows, key=lambda r: r.lift_slug):
-        lift = alias_map.get(lift_slug)
+        lift, status = resolve_lift_name(lift_slug, maps)
+        if status == "unmapped":
+            lift = None
         if lift is None:
             logger.warning(
                 "Skipping cached FitnessVolt rows with unmapped slug %r", lift_slug
@@ -400,8 +445,13 @@ def covered_lift_names(population: str, snapshot_version: str) -> set[str]:
             source_snapshot_version=snapshot_version,
         ).values_list("lift_slug", flat=True)
     )
-    alias_map = dict(FitnessVoltLiftAlias.objects.values_list("from_slug", "to_name"))
-    return {alias_map[slug] for slug in slugs if slug in alias_map}
+    maps = _build_maps()
+    names = set()
+    for slug in slugs:
+        lift, status = resolve_lift_name(slug, maps)
+        if status != "unmapped":
+            names.add(lift)
+    return names
 
 
 def refresh_cache() -> dict[str, str]:
@@ -516,7 +566,7 @@ def _pull_population_snapshot(
         if canonical_lift_name(slug) is None:
             logger.warning(
                 "Skipping FitnessVolt lift slug %r for population %s: "
-                "no FitnessVoltLiftAlias mapping",
+                "no alias or canonical lift match",
                 slug,
                 population,
             )

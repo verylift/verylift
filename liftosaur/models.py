@@ -81,34 +81,6 @@ class Lift(models.Model):
         )
 
 
-class LiftAlias(models.Model):
-    """Maps a raw Liftosaur exercise name to the canonical standard lift name.
-
-    Replaces the hardcoded LIFT_NAME_ALIASES dict. Without an alias, sets
-    logged under a Liftosaur name (e.g. "Squat") never match a
-    StrengthStandardMultiplier and are silently dropped during sync.
-    """
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    from_name = models.CharField(
-        max_length=100,
-        unique=True,
-        help_text="Exercise name as Liftosaur emits it in history payloads.",
-    )
-    to_name = models.CharField(
-        max_length=100,
-        help_text="Canonical lift name used by the strength standards.",
-    )
-
-    class Meta:
-        db_table = "liftosaur_liftalias"
-        ordering = ["from_name"]
-        verbose_name_plural = "lift aliases"
-
-    def __str__(self):
-        return f"{self.from_name} -> {self.to_name}"
-
-
 class LiftHistory(models.Model):
     """Raw per-lifter completed-set history, independent of any challenge.
 

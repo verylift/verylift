@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import FitnessVoltLiftAlias, FitnessVoltStandardCache
+from .models import FitnessVoltStandardCache
 
 
 @admin.register(FitnessVoltStandardCache)
@@ -17,10 +17,3 @@ class FitnessVoltStandardCacheAdmin(admin.ModelAdmin):
     list_filter = ["population", "sex", "source_snapshot_version"]
     ordering = ["population", "lift_slug", "sex", "weight_class_kg"]
     search_fields = ["lift_slug", "weight_class_label"]
-
-
-@admin.register(FitnessVoltLiftAlias)
-class FitnessVoltLiftAliasAdmin(admin.ModelAdmin):
-    list_display = ["from_slug", "to_name"]
-    ordering = ["from_slug"]
-    search_fields = ["from_slug", "to_name"]

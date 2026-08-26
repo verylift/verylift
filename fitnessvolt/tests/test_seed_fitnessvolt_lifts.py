@@ -3,7 +3,7 @@
 import pytest
 from django.core.management import call_command
 
-from fitnessvolt.models import FitnessVoltLiftAlias
+from core.models import LiftAlias, LiftAliasSource
 
 pytestmark = pytest.mark.django_db
 
@@ -14,28 +14,37 @@ class TestSeedFitnessVoltLifts:
         # rows a deployed instance has must exist. Both slug conventions the
         # real capability doc uses are covered: verified's hyphenated slugs
         # and gym's underscored slugs.
-        assert FitnessVoltLiftAlias.objects.filter(
-            from_slug="squat", to_name="Back Squat"
+        assert LiftAlias.objects.filter(
+            source=LiftAliasSource.FITNESSVOLT, from_name="squat", to_name="Back Squat"
         ).exists()
-        assert FitnessVoltLiftAlias.objects.filter(
-            from_slug="back_squat", to_name="Back Squat"
+        assert LiftAlias.objects.filter(
+            source=LiftAliasSource.FITNESSVOLT,
+            from_name="back_squat",
+            to_name="Back Squat",
         ).exists()
-        assert FitnessVoltLiftAlias.objects.filter(
-            from_slug="bench-press", to_name="Bench Press"
+        assert LiftAlias.objects.filter(
+            source=LiftAliasSource.FITNESSVOLT,
+            from_name="bench-press",
+            to_name="Bench Press",
         ).exists()
-        assert FitnessVoltLiftAlias.objects.filter(
-            from_slug="pullup", to_name="Pull-up"
+        assert LiftAlias.objects.filter(
+            source=LiftAliasSource.FITNESSVOLT, from_name="pullup", to_name="Pull-up"
         ).exists()
 
     def test_rerun_is_idempotent(self):
-        before = FitnessVoltLiftAlias.objects.count()
+        before = LiftAlias.objects.filter(source=LiftAliasSource.FITNESSVOLT).count()
         call_command("seed_fitnessvolt_lifts")
-        assert FitnessVoltLiftAlias.objects.count() == before
+        assert (
+            LiftAlias.objects.filter(source=LiftAliasSource.FITNESSVOLT).count()
+            == before
+        )
 
     def test_rerun_restores_edited_mapping(self):
-        FitnessVoltLiftAlias.objects.filter(from_slug="squat").update(
-            to_name="Wrong Name"
-        )
+        LiftAlias.objects.filter(
+            source=LiftAliasSource.FITNESSVOLT, from_name="squat"
+        ).update(to_name="Wrong Name")
         call_command("seed_fitnessvolt_lifts")
-        alias = FitnessVoltLiftAlias.objects.get(from_slug="squat")
+        alias = LiftAlias.objects.get(
+            source=LiftAliasSource.FITNESSVOLT, from_name="squat"
+        )
         assert alias.to_name == "Back Squat"
