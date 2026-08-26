@@ -7,11 +7,14 @@ from django.db import OperationalError
 from django.test import Client
 from django.urls import reverse
 
+from accounts.forms import HevyKeyForm
 from accounts.tests.factories import UserFactory
 from challenges.models import Challenge, ChallengeParticipant
 from challenges.tests.factories import ChallengeFactory, ChallengeParticipantFactory
 from hevy_api.services import HEVY_KEY_INVALID, HEVY_KEY_UNKNOWN, HEVY_KEY_VALID
 from hevy_api.tests.factories import HevySyncLogFactory
+
+HX = {"HTTP_HX_REQUEST": "true"}
 
 
 @pytest.fixture
@@ -136,6 +139,29 @@ class TestHevyKeySaveValidation:
         mock_trigger.assert_called_once_with(user)
 
 
+class TestRemoveHevyKeySettings:
+    def test_removing_key_clears_it_from_db(self, authed_client, user):
+        user.hevy_api_key = "existing-key"
+        user.save(update_fields=["hevy_api_key"])
+        url = reverse("accounts:settings")
+
+        authed_client.post(url, {"form_name": "remove_hevy_key"})
+
+        user.refresh_from_db()
+        assert user.hevy_api_key is None
+
+
+class TestHevyKeyFormSave:
+    def test_save_with_empty_key_returns_false_and_does_not_persist(self, user):
+        form = HevyKeyForm({"hevy_api_key": ""})
+        assert form.is_valid()
+
+        result = form.save(user)
+
+        assert result is False
+        assert user.hevy_api_key is None
+
+
 class TestHevySyncNowEndpoint:
     def test_requires_login(self, client, db):
         url = reverse("accounts:hevy_sync_now")
@@ -238,3 +264,66 @@ class TestHevySyncNowEndpoint:
         response = c.get(reverse("accounts:settings"))
 
         assert b"Last sync failed" in response.content
+
+    def test_htmx_request_returns_partial_instead_of_redirect(self, db):
+        user = UserFactory(hevy_api_key="tok")
+        c = Client()
+        c.force_login(user)
+
+        with (
+            patch("accounts.views.sync_hevy_lifts"),
+            patch("accounts.views.score_pooled_history"),
+        ):
+            response = c.post(reverse("accounts:hevy_sync_now"), **HX)
+
+        assert response.status_code == 200
+        assert 'id="hevy-sync-status"' in response.content.decode()
+
+    def test_htmx_request_without_key_returns_partial_not_redirect(
+        self, authed_client, user
+    ):
+        response = authed_client.post(reverse("accounts:hevy_sync_now"), **HX)
+
+        assert response.status_code == 200
+        assert 'id="hevy-sync-status"' in response.content.decode()
+
+
+class TestValidateHevyKeyView:
+    def test_post_with_valid_key_returns_json_valid(self, authed_client, user, db):
+        url = reverse("accounts:validate_hevy_key")
+        with patch("accounts.views.validate_hevy_key", return_value=True):
+            response = authed_client.post(url, {"api_key": "good-key"})
+        assert response.status_code == 200
+        assert response.json()["valid"] is True
+
+    def test_post_with_invalid_key_returns_json_invalid(self, authed_client, user, db):
+        url = reverse("accounts:validate_hevy_key")
+        with patch("accounts.views.validate_hevy_key", return_value=False):
+            response = authed_client.post(url, {"api_key": "bad-key"})
+        assert response.json()["valid"] is False
+
+    def test_unauthenticated_post_redirects(self, client, db):
+        url = reverse("accounts:validate_hevy_key")
+        response = client.post(url, {"api_key": "key"})
+        assert response.status_code == 302
+
+    def test_get_not_allowed(self, authed_client, user, db):
+        url = reverse("accounts:validate_hevy_key")
+        response = authed_client.get(url)
+        assert response.status_code == 405
+
+    def test_empty_api_key_falls_back_to_saved_key(self, authed_client, user, db):
+        user.hevy_api_key = "saved-key-abc"
+        user.save()
+        url = reverse("accounts:validate_hevy_key")
+        with patch(
+            "accounts.views.validate_hevy_key", return_value=True
+        ) as mock_validate:
+            response = authed_client.post(url, {"api_key": ""})
+        assert response.json()["valid"] is True
+        mock_validate.assert_called_once_with("saved-key-abc")
+
+    def test_empty_api_key_no_saved_key_returns_invalid(self, authed_client, user, db):
+        url = reverse("accounts:validate_hevy_key")
+        response = authed_client.post(url, {"api_key": ""})
+        assert response.json()["valid"] is False
