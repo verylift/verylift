@@ -6,26 +6,23 @@
 
 ### Added
 - Rep Target challenge participants without a connected workout tracker can now self-report a completed set from the Summary tab, the same way Classic-mode participants already can.
-- Workout history can now be imported from Strong via CSV export, from account settings or during onboarding.
-- Strong exercise names are matched to lift names automatically, including equipment-qualified and differently-punctuated spellings, so imported sets count toward challenge goals.
+- Workout history can now be imported from Strong via CSV export, from account settings or during onboarding, with exercise names matched to lift names automatically — including equipment-qualified and differently-punctuated spellings — so imported sets count toward challenge goals.
 - Hevy Pro subscribers can connect a Hevy API key in Settings or during onboarding for automatic lift-history sync, alongside the existing Liftosaur/Wger integrations and Hevy CSV import
 - A new supported-apps page listing every workout tracker very lift works with, showing whether each supports live sync, CSV upload, or both.
 - The Liftosaur card shows the VERYLIFT discount code with a one-click copy button.
-- The Recent Activity table on a challenge page now shows a Gain column: how many points each lift actually added to that lifter's total, rather than just the tier the set cleared
 
 ### Changed
-- The self-report carousel (both challenge modes) now opens on the participant's current best rather than their most recently logged set, so it always matches what the card highlights and displays.
+- The self-report carousel now opens on the participant's current best rather than their most recently logged set, so it always matches what the card highlights and displays.
 - Exercise names from every connected tracker are now matched to lift names by one shared resolver, so Hevy, Liftosaur, Wger, and FitnessVolt gain the variant matching that previously only Strong had, and unmatched names are logged instead of silently ignored.
+- The Recent Activity table on a challenge page now shows each lift's full progression through a challenge instead of only the single best effort still standing, with a new Gain column giving how many points each lift actually added to that lifter's total rather than just the tier the set cleared
 - Refreshed the landing page hero, feature-card copy, and the "stay in touch" section, with the wordmark centered on the landing page.
 - Headings, buttons, form labels, and navigation across the site now use the lowercase brand voice introduced on the landing page
 - Spanish translations updated to match, including corrections to six strings gettext had fuzzy-matched to unrelated entries
-- Recent Activity now shows each lift's full progression through a challenge instead of only the single best effort still standing, so every row is a moment that lifter's score went up
 
 ### Fixed
 - Pound-to-kilogram conversion now uses the exact international factor, correcting imported weights above ~225 lb by 0.01 kg across the Hevy, Strong and Liftosaur CSV importers and Wger sync; previously the same physical set could be pooled twice. Existing rows are repaired by the new `restamp_lb_converted_lift_history` management command (run with `--dry-run` first)
-- Deleting an account now clears every stored tracker credential -- the Hevy key and Wger token were previously left on the row
-- Tailwind CSS is rebuilt automatically before each commit, so newly used utility classes can no longer be missing from the compiled stylesheet.
-- Workouts synced from Hevy and Wger are now recorded on the day you trained, in your own timezone, instead of the day the source server's clock had rolled over to
+- Deleting an account now clears every stored tracker credential -- the Wger token was previously left on the row
+- Workouts synced from Wger are now recorded on the day you trained, in your own timezone, instead of the day the server's clock had rolled over to
 - The Points Over Time chart on a challenge page now shows a stable history: past values no longer shift when a lifter re-earns points on a lift they had already scored
 
 ## 2026.8.13 — 2026-08-24
