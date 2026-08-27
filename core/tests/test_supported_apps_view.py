@@ -91,6 +91,20 @@ class TestSupportedAppsView:
         assert "get started" in content
         assert "affiliate relationship with Liftosaur" in content
 
+    def test_coupon_sentence_sits_before_mode_tags_and_cta(self, client, db):
+        """Card order should be: description, coupon sentence, mode tags,
+        CTA, disclosure -- the coupon sentence explains what the code is
+        for before the reader hits the tags/button, not after."""
+        response = client.get(reverse("core:supported-apps"))
+        content = response.content.decode()
+
+        coupon_index = content.index("data-copy-code>")
+        mode_tag_index = content.index("live sync")
+        cta_index = content.index("get started")
+        disclosure_index = content.index("affiliate relationship with Liftosaur")
+
+        assert coupon_index < mode_tag_index < cta_index < disclosure_index
+
     def test_app_without_coupon_code_gets_no_copy_chip(self, client, db):
         SupportedAppFactory(is_affiliate=False, name="No Coupon Co")
         response = client.get(reverse("core:supported-apps"))

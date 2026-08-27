@@ -40,6 +40,21 @@
         <div class="bg-surface-card border border-line-subtle rounded p-6">
           <h2 class="text-2xl font-bold text-content-strong">{{ app.name }}</h2>
           <p class="mt-2 text-sm text-content-body">{{ app.description }}</p>
+          {% if app.coupon_code %}
+            {% comment %}
+            Hardcodes "Liftosaur" rather than {{ app.name }} -- this sentence
+            is specific to Liftosaur's own premium-subscription terminology
+            (see https://www.liftosaur.com/doc/api: "Requires a premium
+            subscription") and its API being what live sync depends on. It
+            would need real rewording, not just a variable swap, for any
+            other app that ever gets a coupon_code.
+            {% endcomment %}
+            <p class="mt-3 text-sm text-content-body">
+              {% trans "Use code" %}
+              {% include "components/_copy_code.html" with code=app.coupon_code %}
+              {% trans "when you subscribe to Liftosaur's premium subscription, which is required for the API that live sync depends on." %}
+            </p>
+          {% endif %}
           <div class="mt-3 flex flex-wrap gap-2">
             {% for mode in app.modes.all %}
               <span class="inline-block text-xs font-medium px-3 py-1 rounded-full border border-line text-content-body">
@@ -54,12 +69,6 @@
             class="mt-4 inline-block bg-accent text-accent-on text-sm font-medium px-6 py-3 rounded hover:bg-accent-hover">
             {% trans "get started" %}
           </a>
-          {% if app.coupon_code %}
-            <p class="mt-3 text-sm text-content-body flex items-center gap-1.5">
-              {% trans "use code" %}
-              {% include "components/_copy_code.html" with code=app.coupon_code %}
-            </p>
-          {% endif %}
           {% if app.is_affiliate %}
             <p class="mt-3 text-xs text-content-subtle">
               {% brand as brand_name %}

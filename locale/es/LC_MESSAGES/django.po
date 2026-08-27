@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-27 02:12+0000\n"
+"POT-Creation-Date: 2026-08-27 02:25+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -3020,6 +3020,7 @@ msgid "New to Liftosaur? Its API requires a premium subscription."
 msgstr "¿Nuevo en Liftosaur? Su API requiere una suscripción premium."
 
 #: templates/components/_liftosaur_coupon_cta.html:15
+#: templates/supported_apps.html:54
 msgid "Use code"
 msgstr "Usa el código"
 
@@ -3184,7 +3185,7 @@ msgstr ""
 "reto y perseguir su propia mejor marca. ¿Listo? ¡A por ello, campeón!\n"
 "        "
 
-#: templates/landing.html:39 templates/supported_apps.html:55
+#: templates/landing.html:39 templates/supported_apps.html:71
 msgid "get started"
 msgstr "empezar"
 
@@ -3888,11 +3889,15 @@ msgstr ""
 msgid "recommended"
 msgstr "recomendado"
 
-#: templates/supported_apps.html:59
-msgid "use code"
-msgstr "usa el código"
+#: templates/supported_apps.html:56
+msgid ""
+"when you subscribe to Liftosaur's premium subscription, which is required "
+"for the API that live sync depends on."
+msgstr ""
+"cuando te suscribas a la suscripción premium de Liftosaur, necesaria para "
+"la API de la que depende la sincronización en vivo."
 
-#: templates/supported_apps.html:66
+#: templates/supported_apps.html:76
 #, python-format
 msgid ""
 "%(brand_name)s has an affiliate relationship with %(app_name)s and may earn "
@@ -3901,11 +3906,11 @@ msgstr ""
 "%(brand_name)s tiene una relación de afiliado con %(app_name)s y podría "
 "recibir una comisión por las suscripciones que califiquen."
 
-#: templates/supported_apps.html:74
+#: templates/supported_apps.html:84
 msgid "you can also use these"
 msgstr "también puedes usar estas"
 
-#: templates/supported_apps.html:92
+#: templates/supported_apps.html:102
 msgid "learn more"
 msgstr "más información"
 
