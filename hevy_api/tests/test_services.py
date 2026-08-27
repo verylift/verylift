@@ -5,6 +5,7 @@ import logging
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
+from zoneinfo import ZoneInfo
 
 import pytest
 from django.db import OperationalError
@@ -157,7 +158,7 @@ class TestParseWorkout:
         workout = _workout(
             exercises=[_exercise("Back Squat", [_set(weight_kg=100, reps=5)])]
         )
-        parsed = _parse_workout(workout, _build_resolver())
+        parsed = _parse_workout(workout, _build_resolver(), ZoneInfo("UTC"))
         assert len(parsed) == 1
         assert parsed[0].lift == "Back Squat"
         assert parsed[0].reps == 5
@@ -173,7 +174,7 @@ class TestParseWorkout:
                 )
             ]
         )
-        parsed = _parse_workout(workout, _build_resolver())
+        parsed = _parse_workout(workout, _build_resolver(), ZoneInfo("UTC"))
         assert len(parsed) == 1
         assert parsed[0].weight_kg == Decimal("100.00")
 
@@ -186,32 +187,51 @@ class TestParseWorkout:
                 )
             ]
         )
-        assert _parse_workout(workout, _build_resolver()) == []
+        assert _parse_workout(workout, _build_resolver(), ZoneInfo("UTC")) == []
 
     def test_exercise_title_resolved_through_alias_map(self):
         HevyLiftAliasFactory(from_name="Squat (Barbell)", to_name="Back Squat")
         workout = _workout(exercises=[_exercise("Squat (Barbell)", [_set()])])
-        parsed = _parse_workout(workout, _build_resolver())
+        parsed = _parse_workout(workout, _build_resolver(), ZoneInfo("UTC"))
         assert parsed[0].lift == "Back Squat"
 
     def test_unaliased_title_passes_through_unchanged(self):
         workout = _workout(exercises=[_exercise("Some New Exercise", [_set()])])
-        parsed = _parse_workout(workout, _build_resolver())
+        parsed = _parse_workout(workout, _build_resolver(), ZoneInfo("UTC"))
         assert parsed[0].lift == "Some New Exercise"
+
+    @pytest.mark.parametrize(
+        "start_time,tz_name,expected",
+        [
+            # 19:00 on the 1st in Toronto (UTC-4) is 23:00 UTC the same day.
+            ("2024-06-01T23:00:00Z", "America/Toronto", "2024-06-01"),
+            # 22:00 on the 1st in Toronto has already rolled over in UTC.
+            ("2024-06-02T02:00:00Z", "America/Toronto", "2024-06-01"),
+            # 08:00 on the 2nd in Tokyo (UTC+9) is still the 1st in UTC.
+            ("2024-06-01T23:00:00Z", "Asia/Tokyo", "2024-06-02"),
+        ],
+    )
+    def test_performed_at_is_the_lifters_local_day(self, start_time, tz_name, expected):
+        """Hevy reports start_time in UTC; the stored day is the lifter's own."""
+        workout = _workout(
+            start_time=start_time, exercises=[_exercise("Back Squat", [_set()])]
+        )
+        parsed = _parse_workout(workout, _build_resolver(), ZoneInfo(tz_name))
+        assert parsed[0].performed_at.isoformat() == expected
 
     def test_unparseable_start_time_yields_no_sets(self):
         workout = _workout(
             start_time="not-a-date", exercises=[_exercise("Squat", [_set()])]
         )
-        assert _parse_workout(workout, _build_resolver()) == []
+        assert _parse_workout(workout, _build_resolver(), ZoneInfo("UTC")) == []
 
     def test_missing_start_time_yields_no_sets(self):
         workout = _workout(start_time="", exercises=[_exercise("Squat", [_set()])])
-        assert _parse_workout(workout, _build_resolver()) == []
+        assert _parse_workout(workout, _build_resolver(), ZoneInfo("UTC")) == []
 
     def test_exercise_with_no_title_skipped(self):
         workout = _workout(exercises=[_exercise("", [_set()])])
-        assert _parse_workout(workout, _build_resolver()) == []
+        assert _parse_workout(workout, _build_resolver(), ZoneInfo("UTC")) == []
 
     def test_non_numeric_weight_skipped(self):
         workout = _workout(
@@ -222,7 +242,7 @@ class TestParseWorkout:
                 )
             ]
         )
-        assert _parse_workout(workout, _build_resolver()) == []
+        assert _parse_workout(workout, _build_resolver(), ZoneInfo("UTC")) == []
 
     def test_multiple_sets_of_same_type_all_pooled(self):
         workout = _workout(
@@ -233,7 +253,7 @@ class TestParseWorkout:
                 )
             ]
         )
-        parsed = _parse_workout(workout, _build_resolver())
+        parsed = _parse_workout(workout, _build_resolver(), ZoneInfo("UTC"))
         assert [p.reps for p in parsed] == [5, 3, 1]
 
 
@@ -270,6 +290,23 @@ class TestSyncUserLifts:
         log = HevySyncLog.objects.get(user=user)
         assert log.success is True
         assert json.loads(log.result_summary) == {"sets_pooled": 1}
+
+    def test_pooled_row_uses_the_lifters_own_timezone(self):
+        """End-to-end companion to TestParseWorkout: the sync reads the
+        lifter's persisted zone, so a late-evening Toronto session lands on
+        the day they trained rather than the UTC day it rolled over into."""
+        user = UserFactory(hevy_api_key="key", timezone="America/Toronto")
+        workout = _workout(
+            start_time="2024-06-02T02:00:00Z",
+            exercises=[_exercise("Back Squat", [_set()])],
+        )
+        client = _stub_client([_events_page([_updated_event(workout)])])
+
+        with patch("hevy_api.services.HevyClient", return_value=client):
+            sync_user_lifts(user)
+
+        row = LiftHistory.objects.get(user=user, lift="Back Squat")
+        assert row.performed_at.isoformat() == "2024-06-01"
 
     def test_first_sync_uses_backfill_window(self):
         user = UserFactory(hevy_api_key="key")
@@ -901,6 +938,6 @@ class TestCsvApiWeightParity:
         api_workout = _workout(
             exercises=[_exercise("Squat (Barbell)", [_set(weight_kg=api_weight_kg)])]
         )
-        api_parsed = _parse_workout(api_workout, _build_resolver())
+        api_parsed = _parse_workout(api_workout, _build_resolver(), ZoneInfo("UTC"))
 
         assert csv_parsed[0].weight_kg == api_parsed[0].weight_kg

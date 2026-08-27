@@ -33,6 +33,7 @@ from django.utils import timezone
 from wger_api_client.models.repetition_unit import RepetitionUnit
 from wger_api_client.types import Unset
 
+from accounts.timezones import local_day, user_zoneinfo
 from accounts.units import LB_TO_KG
 from core.lift_resolution import (
     LiftNameResolver,
@@ -158,7 +159,16 @@ def _history_rows_for_page(
     represent those units meaningfully. Which unit id counts as "Repetitions"
     is resolved live via ``repetition_units`` (unit_type == "REPETITIONS"),
     not assumed by id.
+
+    ``WorkoutLog.date`` is a *timestamp*, not a date (wger_api_client parses it
+    with ``datetime.fromisoformat``), and DRF renders it in the Wger
+    instance's own ``TIME_ZONE`` -- commonly left at UTC on a self-hosted box.
+    Taking its date in the lifter's zone rather than as-served is what keeps a
+    late-evening session on the day they trained; a naive timestamp (an
+    instance with ``USE_TZ`` off) is already their wall clock and is left
+    alone. See accounts.timezones.local_day.
     """
+    tz = user_zoneinfo(user)
     rows: dict[tuple, LiftHistory] = {}
     for entry in entries:
         repetitions_unit_id = entry.repetitions_unit
@@ -192,7 +202,7 @@ def _history_rows_for_page(
             continue
 
         lift = resolver.resolve(raw_name)
-        performed_at = entry_date.date()
+        performed_at = local_day(entry_date, tz)
         weight_kg = weight_kg.quantize(Decimal("0.01"))
         rows[(lift, performed_at, reps, weight_kg)] = LiftHistory(
             user=user,

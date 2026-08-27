@@ -9,8 +9,9 @@ accounts.views.timezone_detect_view) needs to stay a single one-shot redirect.
 """
 
 import logging
+from datetime import date, datetime
 from urllib.parse import parse_qsl, unquote, urlencode, urlsplit, urlunsplit
-from zoneinfo import available_timezones
+from zoneinfo import ZoneInfo, available_timezones
 
 logger = logging.getLogger(__name__)
 
@@ -113,3 +114,43 @@ def with_detect_param(url: str) -> str:
     query = dict(parse_qsl(parts.query))
     query[DETECT_PARAM] = "1"
     return urlunsplit(parts._replace(query=urlencode(query)))
+
+
+def user_zoneinfo(user) -> ZoneInfo:
+    """The IANA zone to interpret a user's civil dates in, with no request.
+
+    Priority: their pinned ``accounts.User.timezone`` (an explicit Settings
+    choice), then their opportunistically-persisted ``detected_timezone``
+    (UserTimezoneMiddleware's best last-known browser zone for an
+    "automatic" account), then UTC. This is ``resolve_timezone``'s ladder
+    with the live ``pp_timezone`` cookie step replaced by its persisted
+    stand-in, for background code -- cron jobs, sync threads -- that has a
+    user but no request in sight.
+    """
+    for tz_name in (user.timezone, user.detected_timezone):
+        if tz_name and is_valid_timezone(tz_name):
+            return ZoneInfo(tz_name)
+    return ZoneInfo("UTC")
+
+
+def local_day(moment: datetime, tz: ZoneInfo) -> date:
+    """The calendar day ``moment`` falls on in ``tz``.
+
+    The single conversion point for turning a *timestamp* from an external
+    workout source into the plain ``LiftHistory.performed_at`` DateField, which
+    every downstream reader (leaderboard windows, the challenge detail page's
+    Recent Activity dates) treats as the civil day the lifter trained. A source
+    that reports UTC instants -- Hevy's ``start_time``, and any Wger instance
+    left on ``TIME_ZONE = "UTC"`` -- would otherwise file a late-evening
+    session in a western zone (or an early-morning one in an eastern zone)
+    under the wrong day.
+
+    A naive ``moment`` is taken at face value rather than converted: sources
+    that hand back naive timestamps (a Wger instance with ``USE_TZ`` off, the
+    Hevy and Strong CSV exports) are already reporting the lifter's own wall
+    clock, and running those through ``astimezone`` would reinterpret them as
+    server-local and shift a day the other way.
+    """
+    if moment.tzinfo is None:
+        return moment.date()
+    return moment.astimezone(tz).date()

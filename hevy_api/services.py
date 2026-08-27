@@ -50,12 +50,14 @@ import urllib.error
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.db import OperationalError, transaction
 from django.db.models import Max
 from django.utils import timezone
 
+from accounts.timezones import local_day, user_zoneinfo
 from core.lift_resolution import LiftNameResolver, build_lift_alias_maps
 from core.models import LiftAliasSource
 from hevy_api.client import HevyAPIError, HevyClient
@@ -212,18 +214,30 @@ def _build_resolver() -> LiftNameResolver:
     )
 
 
-def _parse_start_date(raw: str) -> date | None:
-    """Parse a Hevy ``start_time`` ISO timestamp into a date."""
+def _parse_start_date(raw: str, tz: ZoneInfo) -> date | None:
+    """Parse a Hevy ``start_time`` ISO timestamp into the lifter's local date.
+
+    Hevy reports ``start_time`` as a UTC instant ("2026-08-25T02:00:00Z"), so
+    the conversion into ``tz`` is what keeps a late-evening session filed under
+    the day the lifter actually trained -- see accounts.timezones.local_day.
+
+    Contrast the Hevy CSV importer (workout_imports.importers.hevy), which
+    needs no conversion: that export's start_time cells are already naive
+    local wall-clock. Liftosaur's export carries a UTC offset per timestamp,
+    so its parse keeps the local date too.
+    """
     if not raw:
         return None
     try:
-        return datetime.fromisoformat(raw.replace("Z", "+00:00")).date()
+        return local_day(datetime.fromisoformat(raw.replace("Z", "+00:00")), tz)
     except ValueError:
         logger.warning("Skipping Hevy workout: unparseable start_time %r", raw)
         return None
 
 
-def _parse_workout(workout: dict, resolver: LiftNameResolver) -> list[ParsedSet]:
+def _parse_workout(
+    workout: dict, resolver: LiftNameResolver, tz: ZoneInfo
+) -> list[ParsedSet]:
     """Expand one Hevy workout payload into its completed working sets.
 
     Skips warmup sets and sets with no reps recorded (cardio-style sets that
@@ -231,7 +245,7 @@ def _parse_workout(workout: dict, resolver: LiftNameResolver) -> list[ParsedSet]
     a set this sync scores. One malformed exercise/set is skipped, never
     aborts the whole workout.
     """
-    performed_at = _parse_start_date(workout.get("start_time", ""))
+    performed_at = _parse_start_date(workout.get("start_time", ""), tz)
     if performed_at is None:
         return []
 
@@ -433,6 +447,7 @@ def pull_events_into_pool(
     """
     pooled = 0
     resolver = _build_resolver()
+    tz = user_zoneinfo(user)
     page = 1
     page_count = 1
 
@@ -445,7 +460,7 @@ def pull_events_into_pool(
             if event.get("type") != "updated":
                 continue
             workout = event.get("workout") or {}
-            page_sets.extend(_parse_workout(workout, resolver))
+            page_sets.extend(_parse_workout(workout, resolver, tz))
 
         pooled += len(page_sets)
         _write_batch_with_retry(
