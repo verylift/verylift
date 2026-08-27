@@ -1,6 +1,6 @@
 import factory
 
-from policies.models import Policy, PolicyConsent, PolicyVersion
+from policies.models import Policy, PolicyConsent, PolicyNotification, PolicyVersion
 
 
 class PolicyFactory(factory.django.DjangoModelFactory):
@@ -32,3 +32,12 @@ class PolicyConsentFactory(factory.django.DjangoModelFactory):
     user = factory.SubFactory("accounts.tests.factories.UserFactory")
     policy_version = factory.SubFactory(PolicyVersionFactory)
     method = PolicyConsent.Method.SIGNUP
+
+
+class PolicyNotificationFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = PolicyNotification
+
+    user = factory.SubFactory("accounts.tests.factories.UserFactory")
+    policy_version = factory.SubFactory(PolicyVersionFactory)
+    method = PolicyNotification.Method.EMAIL
