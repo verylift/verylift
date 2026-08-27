@@ -22,13 +22,13 @@
     {% endif %}
 
     {% if step == "name" %}
-    <h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "Name your challenge" %}</h1>
+    <h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "name your challenge" %}</h1>
     <p class="text-sm text-content-muted mb-6">{% trans "Pick something your group will recognize." %}</p>
     <form method="post" class="bg-surface-card border border-line-subtle rounded p-6">
       {% csrf_token %}
       <div class="mb-6">
         <label for="id_name" class="block text-sm font-medium text-content-body mb-1">
-          {% trans "Challenge Name" %}
+          {% trans "challenge name" %}
         </label>
         {{ form.name }}
         {% if form.name.errors %}
@@ -37,14 +37,14 @@
       </div>
       <div class="flex items-center gap-4">
         <button type="submit" class="bg-accent text-accent-on text-sm font-medium px-6 py-2 rounded hover:bg-accent-hover">
-          {% trans "Continue" %}
+          {% trans "continue" %}
         </button>
-        <a href="{% url 'challenges:create' %}?cancel=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "Cancel" %}</a>
+        <a href="{% url 'challenges:create' %}?cancel=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "cancel" %}</a>
       </div>
     </form>
 
     {% elif step == "dates" %}
-    <h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "When does it run?" %}</h1>
+    <h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "when does it run?" %}</h1>
     <p class="text-sm text-content-muted mb-6">
       {% trans "Scoring can apply retroactively from the start date — a participant's existing Liftosaur history on or after that date counts once they join." %}
     </p>
@@ -52,7 +52,7 @@
       {% csrf_token %}
       <div class="mb-4">
         <label for="id_start_date" class="block text-sm font-medium text-content-body mb-1">
-          {% trans "Start Date" %}
+          {% trans "start date" %}
         </label>
         {{ form.start_date }}
         {% if form.start_date.errors %}
@@ -61,7 +61,7 @@
       </div>
       <div class="mb-6">
         <label for="id_end_date" class="block text-sm font-medium text-content-body mb-1">
-          {% trans "End Date" %}
+          {% trans "end date" %}
         </label>
         {{ form.end_date }}
         {% if form.end_date.errors %}
@@ -69,16 +69,16 @@
         {% endif %}
       </div>
       <div class="flex items-center gap-4">
-        <a href="{% url 'challenges:create' %}?back=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "Back" %}</a>
+        <a href="{% url 'challenges:create' %}?back=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "back" %}</a>
         <button type="submit" class="bg-accent text-accent-on text-sm font-medium px-6 py-2 rounded hover:bg-accent-hover">
-          {% trans "Continue" %}
+          {% trans "continue" %}
         </button>
-        <a href="{% url 'challenges:create' %}?cancel=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "Cancel" %}</a>
+        <a href="{% url 'challenges:create' %}?cancel=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "cancel" %}</a>
       </div>
     </form>
 
     {% elif step == "mode" %}
-    <h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "Choose a scoring mode" %}</h1>
+    <h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "choose a scoring mode" %}</h1>
     <p class="text-sm text-content-muted mb-6">
       {% trans "This applies to the whole challenge and can't be changed once you continue." %}
     </p>
@@ -107,16 +107,16 @@
       <p class="mt-1 mb-4 text-xs text-danger">{{ form.mode.errors|join:", " }}</p>
       {% endif %}
       <div class="flex items-center gap-4">
-        <a href="{% url 'challenges:create' %}?back=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "Back" %}</a>
+        <a href="{% url 'challenges:create' %}?back=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "back" %}</a>
         <button type="submit" class="bg-accent text-accent-on text-sm font-medium px-6 py-2 rounded hover:bg-accent-hover">
-          {% trans "Continue" %}
+          {% trans "continue" %}
         </button>
-        <a href="{% url 'challenges:create' %}?cancel=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "Cancel" %}</a>
+        <a href="{% url 'challenges:create' %}?cancel=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "cancel" %}</a>
       </div>
     </form>
 
     {% elif step == "lifts" %}
-    <h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "Choose your lifts" %}</h1>
+    <h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "choose your lifts" %}</h1>
     <p class="text-sm text-content-muted mb-6">
       {# blocktrans, not trans: xgettext truncates a trans msgid at the first #}
       {# escaped quote, so the extracted msgid never matches the runtime      #}
@@ -130,7 +130,7 @@
         <input
           type="search"
           data-lift-search
-          placeholder="{% trans 'Search lifts…' %}"
+          placeholder="{% trans 'search lifts…' %}"
           class="w-full bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent">
       </div>
 
@@ -140,10 +140,10 @@
         </p>
         <div class="flex items-center gap-4 whitespace-nowrap">
           <button type="button" data-select-all-tab class="text-xs font-medium text-accent hover:text-accent-hover">
-            {% trans "Select all" %}
+            {% trans "select all" %}
           </button>
           <button type="button" data-clear-lifts class="text-xs font-medium text-content-muted hover:text-content-strong">
-            {% trans "Clear all" %}
+            {% trans "clear all" %}
           </button>
         </div>
       </div>
@@ -182,11 +182,11 @@
       {% endif %}
 
       <div class="flex items-center gap-4">
-        <a href="{% url 'challenges:create' %}?back=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "Back" %}</a>
+        <a href="{% url 'challenges:create' %}?back=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "back" %}</a>
         <button type="submit" class="bg-accent text-accent-on text-sm font-medium px-6 py-2 rounded hover:bg-accent-hover">
-          {% trans "Create Challenge" %}
+          {% trans "create challenge" %}
         </button>
-        <a href="{% url 'challenges:create' %}?cancel=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "Cancel" %}</a>
+        <a href="{% url 'challenges:create' %}?cancel=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "cancel" %}</a>
       </div>
     </form>
     {% endif %}

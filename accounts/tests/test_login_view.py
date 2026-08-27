@@ -41,7 +41,8 @@ class TestLocalLoginView:
         settings.OIDC_PROVIDER_NAME = "Keycloak"
         response = Client().get(reverse("accounts:login"))
         assert response.context["oidc_provider_name"] == "Keycloak"
-        assert b"Sign in with Keycloak" in response.content
+        assert b"Keycloak" in response.content
+        assert reverse("oidc_authentication_init").encode() in response.content
 
     def test_valid_credentials_redirects(self, db):
         user = UserFactory(username="localdev")

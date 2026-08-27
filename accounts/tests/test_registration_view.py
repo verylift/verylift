@@ -38,7 +38,7 @@ class TestRegistrationGet:
     def test_get_renders_form(self, client):
         response = client.get(reverse("accounts:register"))
         assert response.status_code == 200
-        assert b"Create your account" in response.content
+        assert b'id="id_username"' in response.content
 
     def test_login_page_links_to_register(self, client):
         response = client.get(reverse("accounts:login"))
@@ -200,15 +200,15 @@ class TestRegistrationClosed:
         response = client.get(reverse("accounts:register"))
 
         assert response.status_code == 200
-        assert b"Registration is currently closed" in response.content
-        assert b"Create your account" not in response.content
+        assert response.context["registration_closed"] is True
+        assert b'id="id_username"' not in response.content
 
     def test_post_does_not_create_account(self, client, settings):
         settings.REGISTRATION_OPEN = False
         response = client.post(reverse("accounts:register"), _post_data())
 
         assert response.status_code == 200
-        assert b"Registration is currently closed" in response.content
+        assert response.context["registration_closed"] is True
         assert not User.objects.filter(username="newlifter").exists()
 
     def test_authenticated_user_still_redirected_away_when_closed(
@@ -268,8 +268,8 @@ class TestRegistrationClosedByOIDCOnlyLogin:
         response = client.get(reverse("accounts:register"))
 
         assert response.status_code == 200
-        assert b"Registration is currently closed" in response.content
-        assert b"Create your account" not in response.content
+        assert response.context["registration_closed"] is True
+        assert b'id="id_username"' not in response.content
 
     def test_usable_invite_token_does_not_bypass_oidc_only_login(
         self, client, settings
@@ -292,8 +292,8 @@ class TestRegistrationClosedByOIDCOnlyLogin:
         response = client.get(reverse("accounts:register"))
 
         assert response.status_code == 200
-        assert b"Registration is currently closed" in response.content
-        assert b"Create your account" not in response.content
+        assert response.context["registration_closed"] is True
+        assert b'id="id_username"' not in response.content
 
     def test_post_does_not_create_account_even_when_registration_open(
         self, client, settings

@@ -10,7 +10,7 @@
   <!-- Connected: show card with instance URL, masked token, Test Connection, Remove -->
   <div class="flex items-center justify-between bg-surface-sunken border border-line-subtle rounded px-4 py-3 mb-4">
     <div>
-      <p class="text-xs text-content-muted mb-1">{% trans "Instance URL" %}</p>
+      <p class="text-xs text-content-muted mb-1">{% trans "instance URL" %}</p>
       <p class="font-mono text-sm text-content-strong">{{ wger_instance_url }}</p>
       <p class="text-xs text-content-muted mb-1 mt-2">{% trans "Saved API token" %}</p>
       <p class="font-mono text-sm text-content-strong" id="masked-wger-token-display">{{ masked_wger_token }}</p>
@@ -21,10 +21,10 @@
     <button
       type="button"
       id="btn-test-saved-wger"
-      data-testing-label="{% trans 'Testing…' %}"
-      data-default-label="{% trans 'Test Connection' %}"
+      data-testing-label="{% trans 'testing…' %}"
+      data-default-label="{% trans 'test connection' %}"
       class="bg-surface-sunken text-content-strong text-sm font-medium px-4 py-2 rounded hover:bg-surface-hover">
-      {% trans "Test Connection" %}
+      {% trans "test connection" %}
     </button>
     <form
       method="post"
@@ -38,7 +38,7 @@
       <button
         type="submit"
         class="bg-surface-sunken text-content-strong text-sm font-medium px-4 py-2 rounded hover:bg-surface-hover">
-        {% trans "Sync now" %}
+        {% trans "sync now" %}
       </button>
     </form>
     <form
@@ -55,7 +55,7 @@
       <button
         type="submit"
         class="bg-danger text-white text-sm font-medium px-4 py-2 rounded hover:bg-danger-dark">
-        {% trans "Disconnect" %}
+        {% trans "disconnect" %}
       </button>
     </form>
   </div>
@@ -108,7 +108,7 @@
   <!-- Not connected: entry form for instance URL + API token -->
   <div class="mb-4">
     <label for="wger_instance_url" class="block text-sm font-medium text-content-body mb-1">
-      {% trans "Instance URL" %}
+      {% trans "instance URL" %}
     </label>
     <input
       type="text"
@@ -118,7 +118,7 @@
       class="w-full bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent mb-3"
     >
     <label for="wger_api_token" class="block text-sm font-medium text-content-body mb-1">
-      {% trans "API Token" %}
+      {% trans "API token" %}
     </label>
     <input
       type="text"
@@ -145,7 +145,7 @@
       type="submit"
       id="btn-save-wger"
       class="bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
-      {% trans "Connect" %}
+      {% trans "connect" %}
     </button>
   </form>
   <script>

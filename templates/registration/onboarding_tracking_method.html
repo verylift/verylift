@@ -13,13 +13,13 @@
   </div>
 </div>
 
-<h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "Do you use a tracking app?" %}</h1>
+<h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "do you use a tracking app?" %}</h1>
 <p class="text-sm text-content-muted mb-6">{% trans "You can change this anytime from Settings." %}</p>
 
 <form method="post" class="bg-surface-card border border-line-subtle rounded p-6">
   {% csrf_token %}
   <div class="mb-4">
-    <label for="id_tracking_app" class="block text-sm font-medium text-content-body mb-1">{% trans "Tracking app" %}</label>
+    <label for="id_tracking_app" class="block text-sm font-medium text-content-body mb-1">{% trans "tracking app" %}</label>
     <select
       id="id_tracking_app"
       name="tracking_app"
@@ -41,14 +41,14 @@
     <button
       type="submit"
       class="flex-1 bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
-      {% trans "Continue" %}
+      {% trans "continue" %}
     </button>
     <button
       type="submit"
       name="skip"
       value="1"
       class="flex-1 bg-surface-sunken text-content-body text-sm font-medium px-4 py-2 rounded hover:bg-surface-hover">
-      {% trans "No, I don't use one" %}
+      {% trans "no, I don't use one" %}
     </button>
   </div>
 </form>

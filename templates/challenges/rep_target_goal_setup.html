@@ -7,7 +7,7 @@
 
 {% block wizard_body %}
     <h1 class="text-2xl font-bold text-content-strong mb-2">
-      {% trans "Set your rep target goal" %}
+      {% trans "set your rep target goal" %}
     </h1>
     <p class="text-sm text-content-muted mb-2 max-w-2xl">
       {% blocktrans with name=challenge.name unit=display_unit %}
@@ -43,7 +43,7 @@
 
       <div class="mb-6">
         <label for="id_goal_name" class="block text-sm font-medium text-content-body mb-1">
-          {% trans "Goal name" %}
+          {% trans "goal name" %}
         </label>
         <input id="id_goal_name" type="text" name="name" value="{{ goal_name }}" maxlength="100"
                placeholder="{% trans 'e.g. Calisthenics goals' %}"
@@ -100,17 +100,17 @@
       <div class="flex items-center gap-4">
         <button type="submit" name="action" value="suggest"
                 class="text-sm font-medium px-4 py-2 rounded border border-line-subtle text-content-body hover:bg-surface-sunken">
-          {% trans "Suggest targets" %}
+          {% trans "suggest targets" %}
         </button>
         <button type="button" data-clear-all
                 class="text-sm font-medium px-4 py-2 rounded border border-line-subtle text-content-muted hover:text-danger hover:bg-surface-sunken">
-          {% trans "Clear all" %}
+          {% trans "clear all" %}
         </button>
         <button type="submit" name="action" value="save"
                 class="bg-accent text-accent-on text-sm font-medium px-6 py-2 rounded hover:bg-accent-hover">
-          {% trans "Confirm Goal" %}
+          {% trans "confirm goal" %}
         </button>
-        <a href="{% url 'challenges:goal-setup' challenge.pk %}?cancel=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "Cancel" %}</a>
+        <a href="{% url 'challenges:goal-setup' challenge.pk %}?cancel=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "cancel" %}</a>
       </div>
     </form>
 

@@ -92,7 +92,10 @@ class TestRemoveParticipantView:
         response = creator_client.get(url)
 
         assert response.status_code == 200
-        assert b"Remove Participant" in response.content
+        assert any(
+            t.name == "challenges/confirm_action.html" for t in response.templates
+        )
+        assert url.encode() in response.content
         assert b"Alice" in response.content
         participant.refresh_from_db()
         assert participant.is_bailed is False

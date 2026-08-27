@@ -53,7 +53,6 @@ class TestGuideViews:
         response = authed_client.get(reverse("challenges:dashboard"))
         assert response.status_code == 200
         content = response.content.decode()
-        assert "User Guide" in content
         assert reverse("guide:index") in content
 
     def test_cross_doc_links_rewritten_to_guide_urls(self, authed_client):

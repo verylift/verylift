@@ -4,7 +4,7 @@
 {% block title %}{% trans "Page Not Found" %} — very lift{% endblock %}
 
 {% block content %}
-{% trans "Page not found" as error_title %}
+{% trans "page not found" as error_title %}
 {% trans "The page you're looking for doesn't exist or may have been moved." as error_message %}
 {% include "components/_error_card.html" with error_code="404" error_title=error_title error_message=error_message %}
 {% endblock %}

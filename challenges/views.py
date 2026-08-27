@@ -1989,7 +1989,7 @@ def bail_view(request, pk):
     return _render_confirm_action(
         request,
         challenge,
-        title=gettext("Leave Challenge"),
+        title=gettext("leave challenge"),
         verb=gettext("leave"),
         detail=gettext(
             "Leaving freezes your scoring — no further points will be earned "
@@ -1997,7 +1997,7 @@ def bail_view(request, pk):
             "action cannot be undone."
         ),
         action_url=reverse("challenges:bail", args=[challenge.pk]),
-        submit_label=gettext("Leave Challenge"),
+        submit_label=gettext("leave challenge"),
         cancel_url=reverse("challenges:dashboard"),
     )
 
@@ -2093,7 +2093,7 @@ def _render_confirm_action(
             "confirm_action_url": action_url,
             "confirm_submit_label": submit_label,
             "confirm_cancel_url": cancel_url,
-            "confirm_cancel_label": cancel_label or gettext("Cancel"),
+            "confirm_cancel_label": cancel_label or gettext("cancel"),
         },
     )
 
@@ -2247,7 +2247,7 @@ def remove_participant_view(request, pk, participant_pk):
     return _render_confirm_action(
         request,
         challenge,
-        title=gettext("Remove Participant"),
+        title=gettext("remove participant"),
         verb=gettext("remove %(name)s from") % {"name": name},
         detail=gettext(
             "Removing freezes their scoring — no further points will be earned "
@@ -2256,7 +2256,7 @@ def remove_participant_view(request, pk, participant_pk):
             "action cannot be undone."
         ),
         action_url=reverse("challenges:remove", args=[challenge.pk, participant.pk]),
-        submit_label=gettext("Remove Participant"),
+        submit_label=gettext("remove participant"),
         cancel_url=reverse("challenges:settings", args=[challenge.pk]),
     )
 
@@ -2284,7 +2284,7 @@ def close_challenge_view(request, pk):
     return _render_confirm_action(
         request,
         challenge,
-        title=gettext("Close Challenge"),
+        title=gettext("close challenge"),
         verb=gettext("close"),
         prompt_suffix=gettext(" early"),
         detail=gettext(
@@ -2293,7 +2293,7 @@ def close_challenge_view(request, pk):
             "ended. This action cannot be undone."
         ),
         action_url=reverse("challenges:close", args=[challenge.pk]),
-        submit_label=gettext("Close Challenge"),
+        submit_label=gettext("close challenge"),
         cancel_url=reverse("challenges:detail", args=[challenge.pk]),
     )
 
@@ -2679,7 +2679,7 @@ def transfer_ownership_view(request, pk, user_id):
     return _render_confirm_action(
         request,
         challenge,
-        title=gettext("Transfer Ownership"),
+        title=gettext("transfer ownership"),
         verb=gettext("transfer ownership of"),
         prompt_suffix=gettext(" to %(name)s") % {"name": name},
         detail=gettext(
@@ -2690,7 +2690,7 @@ def transfer_ownership_view(request, pk, user_id):
         )
         % {"name": name},
         action_url=reverse("challenges:transfer", args=[challenge.pk, target.user_id]),
-        submit_label=gettext("Transfer Ownership"),
+        submit_label=gettext("transfer ownership"),
         cancel_url=done_url,
     )
 
@@ -2724,7 +2724,7 @@ def cancel_challenge_view(request, pk):
     return _render_confirm_action(
         request,
         challenge,
-        title=gettext("Cancel Challenge"),
+        title=gettext("cancel challenge"),
         verb=gettext("cancel"),
         detail=gettext(
             "Cancelling voids the challenge entirely — no final sync runs, "
@@ -2733,9 +2733,9 @@ def cancel_challenge_view(request, pk):
             "action cannot be undone."
         ),
         action_url=reverse("challenges:cancel", args=[challenge.pk]),
-        submit_label=gettext("Cancel Challenge"),
+        submit_label=gettext("cancel challenge"),
         cancel_url=reverse("challenges:detail", args=[challenge.pk]),
-        cancel_label=gettext("Go Back"),
+        cancel_label=gettext("go back"),
     )
 
 

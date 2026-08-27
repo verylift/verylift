@@ -1,7 +1,7 @@
 {% load i18n %}
 <!-- Nickname section -->
 <section class="bg-surface-card border border-line-subtle rounded p-6 mb-6">
-  <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "Display Name" %}</h2>
+  <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "display name" %}</h2>
   <form
     method="post"
     action="{% url 'accounts:settings' %}"
@@ -13,7 +13,7 @@
     <input type="hidden" name="form_name" value="nickname">
     <div class="mb-4">
       <label for="display_name" class="block text-sm font-medium text-content-body mb-1">
-        {% trans "Nickname" %}
+        {% trans "nickname" %}
       </label>
       <input
         type="text"
@@ -27,7 +27,7 @@
     <button
       type="submit"
       class="bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
-      {% trans "Save Name" %}
+      {% trans "save name" %}
     </button>
   </form>
 

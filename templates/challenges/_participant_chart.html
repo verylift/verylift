@@ -21,7 +21,7 @@ showPersonalTab() getElementById lookups (D7).
       <p class="text-sm font-semibold text-accent font-mono">{% blocktrans with points=chart.total_points %}{{ points }} pts{% endblocktrans %}</p>
       {% if not standalone %}
       <button type="button" onclick="document.getElementById('co-participant-chart').innerHTML=''"
-              class="text-sm text-content-muted hover:text-content-strong">{% trans "Close" %}</button>
+              class="text-sm text-content-muted hover:text-content-strong">{% trans "close" %}</button>
       {% endif %}
     </div>
   </div>
@@ -96,7 +96,7 @@ showPersonalTab() getElementById lookups (D7).
     <p class="text-sm text-content-muted italic">{% trans "This participant hasn't set their goal yet." %}</p>
     {% if not standalone %}
     <button type="button" onclick="document.getElementById('co-participant-chart').innerHTML=''"
-            class="text-sm text-content-muted hover:text-content-strong">{% trans "Close" %}</button>
+            class="text-sm text-content-muted hover:text-content-strong">{% trans "close" %}</button>
     {% endif %}
   </div>
 </section>

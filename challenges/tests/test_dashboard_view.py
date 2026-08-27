@@ -150,23 +150,20 @@ class TestEmptyState:
         assert response.context["completed_cards"] == []
         assert response.context["career"]["has_history"] is False
         body = response.content.decode()
-        # The "Start a challenge" CTA only appears in the empty-state message
+        # The create-challenge CTA only appears in the empty-state message
         # when the user has zero active challenges -- there is no persistent
         # CTA beside the Challenges title.
-        assert body.count("Start a challenge") == 1
-        assert reverse("challenges:create") in body
-        assert "Challenges" in body
+        assert body.count(reverse("challenges:create")) == 1
         assert "No active challenges right now." in body
-        assert "Completed challenges" not in body
+        assert "<details" not in body
 
     def test_history_but_no_active_shows_cta_in_challenges_card(self, client, user):
         challenge = ChallengeFactory(status=Challenge.Status.COMPLETED)
         _accepted(user, challenge)
         response = client.get(reverse("challenges:dashboard"))
         body = response.content.decode()
-        assert "Challenges" in body
         assert "No active challenges right now." in body
-        assert body.count("Start a challenge") == 1
+        assert body.count(reverse("challenges:create")) == 1
 
 
 class TestCardStats:
@@ -240,7 +237,6 @@ class TestSetGoalCta:
             invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
         )
         content = client.get(reverse("challenges:dashboard")).content.decode()
-        assert "Set Goal" in content
         assert reverse("challenges:goal-setup", args=[challenge.pk]) in content
 
     def test_active_card_with_goal_hides_set_goal(self, client, user):
@@ -254,7 +250,7 @@ class TestSetGoalCta:
         participant.custom_goal = goal
         participant.save(update_fields=["custom_goal"])
         content = client.get(reverse("challenges:dashboard")).content.decode()
-        assert "Set Goal" not in content
+        assert reverse("challenges:goal-setup", args=[challenge.pk]) not in content
 
     def test_legacy_invited_row_does_not_show_set_goal(self, client, user):
         challenge = ChallengeFactory(status=Challenge.Status.ACTIVE)
@@ -264,7 +260,7 @@ class TestSetGoalCta:
             invite_status=ChallengeParticipant.InviteStatus.INVITED,
         )
         content = client.get(reverse("challenges:dashboard")).content.decode()
-        assert "Set Goal" not in content
+        assert reverse("challenges:goal-setup", args=[challenge.pk]) not in content
 
     def test_completed_card_without_goal_hides_set_goal(self, client, user):
         """A finished challenge never surfaces the CTA, even for an accepted
@@ -279,7 +275,7 @@ class TestSetGoalCta:
         response = client.get(reverse("challenges:dashboard"))
         content = response.content.decode()
         assert response.context["completed_cards"][0]["needs_goal"] is False
-        assert "Set Goal" not in content
+        assert reverse("challenges:goal-setup", args=[challenge.pk]) not in content
 
 
 class TestKeylessDashboard:
@@ -414,7 +410,6 @@ class TestCompletedDemoted:
         _accepted(user, challenge)
         body = client.get(reverse("challenges:dashboard")).content.decode()
         assert "<details" in body
-        assert "Completed challenges" in body
         assert reverse("challenges:detail", args=[challenge.pk]) in body
 
     def test_no_disclosure_without_completed(self, client, user):
@@ -448,7 +443,6 @@ class TestCoParticipantsCard:
         response = client.get(reverse("challenges:dashboard"))
         assert list(response.context["co_participants"]) == []
         body = response.content.decode()
-        assert "People you've played with" in body
         assert "Once you join a challenge" in body
 
     def test_card_renders_in_top_row_exactly_once(self, client, user):
@@ -457,7 +451,7 @@ class TestCoParticipantsCard:
         _accepted(user, challenge)
         _accepted(other, challenge)
         body = client.get(reverse("challenges:dashboard")).content.decode()
-        heading = "People you've played with"
+        heading = "people you've played with"
         # Exactly once: the old standalone section must not linger alongside
         # the new grid cell.
         assert body.count(heading) == 1

@@ -411,7 +411,7 @@ class InviteLinkOptionsForm(forms.Form):
     )
     never_expires = forms.BooleanField(
         required=False,
-        label=_("Never expires"),
+        label=_("never expires"),
         widget=forms.CheckboxInput(attrs={"class": "h-4 w-4 rounded border-line"}),
     )
     max_uses = forms.IntegerField(
@@ -420,7 +420,7 @@ class InviteLinkOptionsForm(forms.Form):
         widget=forms.NumberInput(
             attrs={
                 "class": _INPUT_CSS,
-                "placeholder": _("Unlimited"),
+                "placeholder": _("unlimited"),
                 "min": "1",
             }
         ),
@@ -487,7 +487,7 @@ class CustomGoalForm(forms.Form):
     """
 
     name = forms.CharField(
-        label=_("Goal name"),
+        label=_("goal name"),
         max_length=100,
         required=False,
         widget=forms.TextInput(
@@ -495,7 +495,7 @@ class CustomGoalForm(forms.Form):
         ),
     )
     targets_json = forms.CharField(
-        label=_("Targets JSON"),
+        label=_("targets JSON"),
         required=False,
         widget=forms.Textarea(attrs={"class": _INPUT_CSS, "rows": 6}),
     )

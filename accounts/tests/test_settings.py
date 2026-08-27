@@ -82,7 +82,6 @@ class TestSettingsViewGet:
         response = c.get(reverse("accounts:settings"))
         content = response.content.decode()
         assert f'href="{reverse("admin:index")}"' in content
-        assert "Admin" in content
 
     def test_admin_link_hidden_for_non_staff(self, authed_client, user, db):
         response = authed_client.get(reverse("accounts:settings"))
@@ -220,7 +219,7 @@ class TestLiftosaurKeyForms:
         user.save()
         url = reverse("accounts:settings")
         response = authed_client.get(url)
-        assert b"Remove Key" in response.content
+        assert b'value="remove_liftosaur_key"' in response.content
 
     def test_entry_form_not_shown_when_key_saved(self, authed_client, user, db):
         """Input field for entering a key is hidden when a key is already saved."""

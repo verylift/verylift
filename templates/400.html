@@ -4,7 +4,7 @@
 {% block title %}{% trans "Bad Request" %} — very lift{% endblock %}
 
 {% block content %}
-{% trans "Bad request" as error_title %}
+{% trans "bad request" as error_title %}
 {% trans "Something about that request didn't look right. Please go back and try again." as error_message %}
 {% include "components/_error_card.html" with error_code="400" error_title=error_title error_message=error_message %}
 {% endblock %}

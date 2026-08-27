@@ -7,8 +7,8 @@
     <header class="mb-8">
       <a href="{% url 'challenges:detail' challenge.pk %}"
         class="text-sm font-medium text-accent hover:text-accent mb-2 inline-block"
-        data-loading-message="{% trans 'Loading challenge…' %}">← {% trans "Back to challenge" %}</a>
-      <h1 class="text-2xl font-bold text-content-strong">{% trans "Challenge Settings" %}</h1>
+        data-loading-message="{% trans 'Loading challenge…' %}">← {% trans "back to challenge" %}</a>
+      <h1 class="text-2xl font-bold text-content-strong">{% trans "challenge settings" %}</h1>
     </header>
 
     {% if not is_locked %}
@@ -23,7 +23,7 @@
 
     {% if not is_locked %}
     <section class="bg-surface-card border border-line-subtle rounded p-6 mb-6">
-      <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "Management Actions" %}</h2>
+      <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "management actions" %}</h2>
       <div class="flex flex-col items-start gap-3">
         {% comment %}
         Close Early is creator-only: close_challenge_view doesn't grant a staff
@@ -35,13 +35,13 @@
         <a
           href="{% url 'challenges:close' challenge.pk %}"
           class="border border-line-subtle text-content-body text-sm font-medium px-4 py-2 rounded hover:bg-surface-sunken">
-          {% trans "Close Early" %}
+          {% trans "close early" %}
         </a>
         {% endif %}
         <a
           href="{% url 'challenges:cancel' challenge.pk %}"
           class="border border-line-subtle text-content-body text-sm font-medium px-4 py-2 rounded hover:bg-surface-sunken">
-          {% trans "Cancel Challenge" %}
+          {% trans "cancel challenge" %}
         </a>
       </div>
     </section>

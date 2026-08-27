@@ -1,7 +1,7 @@
 {% load i18n %}
 <!-- Unit preference section -->
 <section class="bg-surface-card border border-line-subtle rounded p-6 mb-6">
-  <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "Units" %}</h2>
+  <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "units" %}</h2>
   <form
     method="post"
     action="{% url 'accounts:settings' %}"
@@ -13,7 +13,7 @@
     <input type="hidden" name="form_name" value="unit_preference">
 
     <div class="mb-4">
-      <label class="block text-sm font-medium text-content-body mb-2">{% trans "Preferred unit" %}</label>
+      <label class="block text-sm font-medium text-content-body mb-2">{% trans "preferred unit" %}</label>
       <div class="flex gap-4">
         <label class="flex items-center gap-2 text-sm">
           <input type="radio" name="unit_preference" value="kg" {% if unit_preference != 'lb' %}checked{% endif %}> {% trans "Kilograms (kg)" %}
@@ -28,7 +28,7 @@
     <button
       type="submit"
       class="bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
-      {% trans "Save Unit" %}
+      {% trans "save unit" %}
     </button>
   </form>
   {% if oob_messages %}{% include "components/_messages_oob.html" %}{% endif %}

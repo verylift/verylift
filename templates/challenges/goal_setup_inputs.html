@@ -5,7 +5,7 @@
 
 {% block wizard_body %}
     <h1 class="text-2xl font-bold text-content-strong mb-1">
-      {% if method == "standards" %}{% trans "A few details for your standards" %}{% else %}{% trans "A couple of quick details" %}{% endif %}
+      {% if method == "standards" %}{% trans "a few details for your standards" %}{% else %}{% trans "a couple of quick details" %}{% endif %}
     </h1>
     <p class="text-sm text-content-muted mb-6">
       {% trans "This is used to compute the numbers below and is kept with this chart as a record of how its targets were calculated — it is not tracked over time or used anywhere else." %}
@@ -26,7 +26,7 @@
       {% if form.needs_bodyweight %}
       <div class="mb-4">
         <label for="id_bodyweight" class="block text-sm font-medium text-content-body mb-1">
-          {% trans "Bodyweight" %}
+          {% trans "bodyweight" %}
         </label>
         <div class="flex items-center gap-2">
           <input type="number" id="id_bodyweight" name="bodyweight" step="0.01" min="0"
@@ -52,7 +52,7 @@
       {% if form.is_history %}
       <div class="mb-4">
         <label for="id_uplift_percent" class="block text-sm font-medium text-content-body mb-1">
-          {% trans "Stretch above your recent best" %}
+          {% trans "stretch above your recent best" %}
         </label>
         <div class="flex items-center gap-2">
           <input type="number" id="id_uplift_percent" name="uplift_percent" step="0.1"
@@ -72,7 +72,7 @@
       {% if form.needs_rounding %}
       <div class="mb-4">
         <label for="id_rounding_increment" class="block text-sm font-medium text-content-body mb-1">
-          {% trans "Round targets to nearest" %}
+          {% trans "round targets to nearest" %}
         </label>
         <select id="id_rounding_increment" name="rounding_increment"
                 class="w-full bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent">
@@ -91,7 +91,7 @@
 
       {% if form.is_standards %}
       <div class="mb-4">
-        <label class="block text-sm font-medium text-content-body mb-2">{% trans "Sex" %}</label>
+        <label class="block text-sm font-medium text-content-body mb-2">{% trans "sex" %}</label>
         <div class="flex gap-4">
           {% for value, label in form.sex_choices %}
           <label class="flex items-center gap-2 text-sm">
@@ -105,7 +105,7 @@
       </div>
 
       <div class="mb-4">
-        <label for="id_population" class="block text-sm font-medium text-content-body mb-1">{% trans "Population" %}</label>
+        <label for="id_population" class="block text-sm font-medium text-content-body mb-1">{% trans "population" %}</label>
         <select id="id_population" name="population"
                 class="w-full bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent">
           <option value="">{% trans "Select…" %}</option>
@@ -119,7 +119,7 @@
       </div>
 
       <div class="mb-4">
-        <label for="id_tier" class="block text-sm font-medium text-content-body mb-1">{% trans "Tier" %}</label>
+        <label for="id_tier" class="block text-sm font-medium text-content-body mb-1">{% trans "tier" %}</label>
         <select id="id_tier" name="tier"
                 class="w-full bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent">
           <option value="">{% trans "Select…" %}</option>
@@ -138,13 +138,13 @@
       {% endif %}
 
       <div class="flex items-center gap-4">
-        <a href="{% url 'challenges:goal-setup' challenge.pk %}?back=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "Back" %}</a>
+        <a href="{% url 'challenges:goal-setup' challenge.pk %}?back=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "back" %}</a>
         <button type="submit" class="bg-accent text-accent-on text-sm font-medium px-6 py-2 rounded hover:bg-accent-hover">
-          {% trans "Continue" %}
+          {% trans "continue" %}
         </button>
         <a href="{% url 'challenges:goal-setup' challenge.pk %}?cancel=1"
            onclick="return confirm('{% trans "Cancel and discard everything entered so far?" %}')"
-           class="text-sm text-content-muted hover:text-content-strong">{% trans "Cancel" %}</a>
+           class="text-sm text-content-muted hover:text-content-strong">{% trans "cancel" %}</a>
       </div>
     </form>
 {% endblock %}

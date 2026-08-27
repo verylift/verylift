@@ -13,13 +13,13 @@
   </div>
 </div>
 
-<h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "Which app do you use?" %}</h1>
+<h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "which app do you use?" %}</h1>
 <p class="text-sm text-content-muted mb-6">{% trans "We don't support it yet, but this helps us prioritize what to build next." %}</p>
 
 <form method="post" class="bg-surface-card border border-line-subtle rounded p-6">
   {% csrf_token %}
   <div class="mb-6">
-    <label for="id_app_name" class="block text-sm font-medium text-content-body mb-1">{% trans "App name" %}</label>
+    <label for="id_app_name" class="block text-sm font-medium text-content-body mb-1">{% trans "app name" %}</label>
     <input
       type="text"
       id="id_app_name"
@@ -33,7 +33,7 @@
   <button
     type="submit"
     class="w-full bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
-    {% trans "Continue" %}
+    {% trans "continue" %}
   </button>
 </form>
 {% endblock %}

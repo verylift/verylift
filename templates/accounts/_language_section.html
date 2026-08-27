@@ -1,13 +1,13 @@
 {% load i18n %}
 <!-- Language section -->
 <section class="bg-surface-card border border-line-subtle rounded p-6 mb-6">
-  <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "Language" %}</h2>
+  <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "language" %}</h2>
   <form method="post" action="{% url 'accounts:settings' %}">
     {% csrf_token %}
     <input type="hidden" name="form_name" value="language">
 
     <div class="mb-4">
-      <label for="language-select" class="block text-sm font-medium text-content-body mb-2">{% trans "Preferred language" %}</label>
+      <label for="language-select" class="block text-sm font-medium text-content-body mb-2">{% trans "preferred language" %}</label>
       <select id="language-select" name="language" class="w-full border border-line-subtle rounded px-3 py-2 text-sm bg-surface-page text-content-body">
         <option value="" {% if not language %}selected{% endif %}>{% trans "Automatic (browser language)" %}</option>
         {% for code, name in languages %}
@@ -20,7 +20,7 @@
     <button
       type="submit"
       class="bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
-      {% trans "Save Language" %}
+      {% trans "save language" %}
     </button>
   </form>
 </section>

@@ -296,7 +296,9 @@ class TestTerminalChallenge:
         )
         assert response.status_code == 200
         assert ended_challenge.name.encode() in response.content
-        assert b"Start your own challenge" in response.content
+        assert any(
+            t.name == "challenges/invite_link_ended.html" for t in response.templates
+        )
 
     def test_anonymous_visitor_does_not_get_invite_token_stashed(
         self, ended_challenge, never_expiring_link
@@ -314,7 +316,9 @@ class TestTerminalChallenge:
             reverse("challenges:invite-link", args=[never_expiring_link.token])
         )
         assert response.status_code == 200
-        assert b"Start your own challenge" in response.content
+        assert any(
+            t.name == "challenges/invite_link_ended.html" for t in response.templates
+        )
 
     def test_shows_participant_count(self, ended_challenge, never_expiring_link):
         ChallengeParticipantFactory(
@@ -340,7 +344,9 @@ class TestTerminalChallenge:
         response = Client().get(
             reverse("challenges:invite-link", args=[bounded_link.token])
         )
-        assert b"Start your own challenge" in response.content
+        assert any(
+            t.name == "challenges/invite_link_ended.html" for t in response.templates
+        )
 
 
 @pytest.mark.django_db

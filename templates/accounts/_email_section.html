@@ -1,7 +1,7 @@
 {% load i18n %}
 <!-- Email section -->
 <section class="bg-surface-card border border-line-subtle rounded p-6 mb-6">
-  <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "Email" %}</h2>
+  <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "email" %}</h2>
   <form
     method="post"
     action="{% url 'accounts:settings' %}"
@@ -13,7 +13,7 @@
     <input type="hidden" name="form_name" value="email">
     <div class="mb-4">
       <label for="email" class="block text-sm font-medium text-content-body mb-1">
-        {% trans "Email address" %}
+        {% trans "email address" %}
       </label>
       <input
         type="email"
@@ -29,7 +29,7 @@
     <button
       type="submit"
       class="bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
-      {% trans "Save Email" %}
+      {% trans "save email" %}
     </button>
   </form>
   {% if oob_messages %}{% include "components/_messages_oob.html" %}{% endif %}

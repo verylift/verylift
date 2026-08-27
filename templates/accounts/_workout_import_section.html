@@ -7,7 +7,7 @@
   <details class="group" {% if workout_import_error %}open{% endif %}>
     <summary class="flex items-center justify-between cursor-pointer select-none p-6 list-none">
       <span>
-        <h2 class="text-lg font-semibold text-content-strong">{% trans "Import workout CSV" %}</h2>
+        <h2 class="text-lg font-semibold text-content-strong">{% trans "import workout CSV" %}</h2>
         <p class="text-sm text-content-muted mt-1">
           {% trans "Bring in sets from an exported CSV — optional." %}
         </p>
@@ -35,7 +35,7 @@
           id="workout-csv-dropzone"
           class="flex flex-col items-center justify-center text-center border-2 border-dashed border-line rounded px-4 py-6 cursor-pointer hover:border-accent hover:bg-surface-sunken transition-colors">
           <span id="workout-csv-dropzone-label" class="text-sm text-content-body">
-            {% trans "Drop a CSV file here, or click to choose one" %}
+            {% trans "drop a CSV file here, or click to choose one" %}
           </span>
           <input type="file" id="workout_csv_file" name="csv_file" accept=".csv" class="sr-only">
         </label>
@@ -48,7 +48,7 @@
         <button
           type="submit"
           class="mt-4 bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
-          {% trans "Import CSV" %}
+          {% trans "import CSV" %}
         </button>
       </form>
       {% if last_workout_imported_at %}

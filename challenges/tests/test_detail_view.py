@@ -575,7 +575,7 @@ class TestLastSyncedStamp:
 
 
 class TestLeaveChallengeLink:
-    """Leave Challenge link renders for eligible participants (TASK-151)."""
+    """Leave-challenge link renders for eligible participants (TASK-151)."""
 
     def test_eligible_participant_sees_leave_link(
         self, authed_client, participant, challenge, mock_sync
@@ -584,7 +584,6 @@ class TestLeaveChallengeLink:
         url = reverse("challenges:detail", args=[challenge.pk])
         resp = authed_client.get(url)
         assert resp.status_code == 200
-        assert b"Leave Challenge" in resp.content
         bail_url = reverse("challenges:bail", args=[challenge.pk])
         assert bail_url.encode() in resp.content
 
@@ -608,7 +607,8 @@ class TestLeaveChallengeLink:
         url = reverse("challenges:detail", args=[challenge.pk])
         resp = authed_client.get(url)
         assert resp.status_code == 200
-        assert b"Leave Challenge" not in resp.content
+        bail_url = reverse("challenges:bail", args=[challenge.pk])
+        assert bail_url.encode() not in resp.content
 
     def test_cancelled_challenge_still_shows_leave_link(
         self, authed_client, participant, challenge, mock_sync
@@ -619,7 +619,8 @@ class TestLeaveChallengeLink:
         url = reverse("challenges:detail", args=[challenge.pk])
         resp = authed_client.get(url)
         assert resp.status_code == 200
-        assert b"Leave Challenge" in resp.content
+        bail_url = reverse("challenges:bail", args=[challenge.pk])
+        assert bail_url.encode() in resp.content
 
 
 class TestOthersQuerySelectRelated:

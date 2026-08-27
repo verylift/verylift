@@ -26,7 +26,10 @@ class TestCancelChallengeView:
         url = reverse("challenges:cancel", args=[challenge.pk])
         response = creator_client.get(url)
         assert response.status_code == 200
-        assert b"Cancel Challenge" in response.content
+        assert any(
+            t.name == "challenges/confirm_action.html" for t in response.templates
+        )
+        assert url.encode() in response.content
         assert challenge.name.encode() in response.content
         challenge.refresh_from_db()
         assert challenge.status == Challenge.Status.ACTIVE
