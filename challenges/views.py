@@ -785,9 +785,14 @@ def invite_link_qr_view(request, token):
 
     url = request.build_absolute_uri(reverse("challenges:invite-link", args=[token]))
     png = build_invite_link_qr_png(url)
-    response = HttpResponse(png, content_type="image/png")
-    response["Content-Disposition"] = 'attachment; filename="verylift-invite-qr.png"'
-    return response
+    # Served inline, with no Content-Disposition: this one URL is both the
+    # <img src> preview and the "save QR code" target, and claiming
+    # "attachment" while also being rendered inline is a contradiction waiting
+    # to confuse someone. Browsers happen to ignore the header for <img>
+    # subresource loads, so it worked, but the download is already handled
+    # where it belongs -- the template's same-origin <a download="..."> names
+    # the file the visitor gets.
+    return HttpResponse(png, content_type="image/png")
 
 
 @login_required
