@@ -445,10 +445,40 @@ def score_pooled_history(*, user, challenge) -> ScoringSummary:
 def build_points_over_time(challenge, *, top_n: int | None = None) -> dict:
     """Build Chart.js line-chart data of cumulative points per participant.
 
-    For each accepted, non-bailed participant, the cumulative points at any date
-    is the sum of points from their is_current_best=True PointEarnEvent rows with
-    performed_at on or before that date — the running high-watermark total (each
-    current-best row is the single surviving best for its lift).
+    For each accepted, non-bailed participant, the value at any date is the
+    running high-watermark total *as of that date*: for each lift, the best
+    points they had earned in it from any set performed on or before that date,
+    summed across lifts.
+
+    This is deliberately computed from *every* scoring event, superseded ones
+    included, rather than from the is_current_best=True rows alone. Filtering to
+    current-best would make the chart a projection of today's leaderboard onto
+    the calendar rather than a history: when a lifter re-earns a lift, the
+    beaten row flips to is_current_best=False (see _persist_best) and would
+    vanish from the past, retroactively dropping the date it was set to zero and
+    re-attributing its points to the newer date. Traces would rewrite themselves
+    as the challenge progressed. Reading the high-watermark per lift per date
+    off the full event set instead means a point on the line never changes once
+    drawn, and each trace is monotonically non-decreasing.
+
+    A superseded row still contributes only the *difference* it was worth at the
+    time, never a second helping: taking the per-lift maximum (not a sum) is
+    what keeps a 2-point squat followed by a 6-point squat reading 2 then 6
+    rather than 2 then 8. That also keeps each trace's final value equal to the
+    lifter's leaderboard total, since the current-best row for a lift is by
+    construction its highest-scoring event.
+
+    A set entered after the fact -- backdating a session in the source app to
+    capture a lift someone forgot to record -- correctly raises the curve at the
+    date it was *performed*, not the date it was synced. That is a change to an
+    already-drawn trace, but it is the honest one: the lifter really did hold
+    those points then, and performed_at is what every other scoring path
+    (window filtering, Recent Activity) already keys on.
+
+    Zero-point rows (sub-threshold sets, persisted as an audit trail by
+    _persist_no_points) are excluded outright. They can never raise a per-lift
+    maximum, so they cannot move a trace; including them would only add label
+    dates to the shared x-axis where every line is flat.
 
     The returned dict has a shared sorted list of unique date labels (ISO strings)
     and one dataset per participant whose ``data`` is the cumulative total at each
@@ -481,18 +511,16 @@ def build_points_over_time(challenge, *, top_n: int | None = None) -> dict:
     )
 
     events = list(
-        PointEarnEvent.objects.filter(
-            challenge=challenge,
-            is_current_best=True,
-        )
-        .values("user", "performed_at", "points_earned")
+        PointEarnEvent.objects.filter(challenge=challenge)
+        .exclude(points_earned=0)
+        .values("user", "lift", "performed_at", "points_earned")
         .order_by("performed_at")
     )
 
     points_by_user: dict[int, list[tuple]] = {}
     for e in events:
         points_by_user.setdefault(e["user"], []).append(
-            (e["performed_at"], e["points_earned"])
+            (e["performed_at"], e["lift"], e["points_earned"])
         )
 
     # Seed the shared date axis with a leading zero-baseline date at each
@@ -528,10 +556,18 @@ def build_points_over_time(challenge, *, top_n: int | None = None) -> dict:
         user_events = points_by_user.get(user.pk, [])
         data = []
         cumulative = 0
+        # Highest points this lifter had earned in each lift so far. Events
+        # arrive in performed_at order, so replaying them while walking the
+        # label axis yields each date's total without re-scanning history.
+        best_by_lift: dict[str, int] = {}
         idx = 0
         for label_date in label_dates:
             while idx < len(user_events) and user_events[idx][0] <= label_date:
-                cumulative += user_events[idx][1]
+                _, lift, points = user_events[idx]
+                previous_best = best_by_lift.get(lift, 0)
+                if points > previous_best:
+                    cumulative += points - previous_best
+                    best_by_lift[lift] = points
                 idx += 1
             data.append(cumulative)
         datasets.append({"label": label, "data": data})

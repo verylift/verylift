@@ -10,7 +10,8 @@ from challenges.tests.factories import (
     ChallengeFactory,
     ChallengeParticipantFactory,
 )
-from scoring.services import build_points_over_time
+from scoring.models import PointEarnEvent
+from scoring.services import build_points_over_time, rank_participants
 from scoring.tests.factories import PointEarnEventFactory
 
 
@@ -58,8 +59,10 @@ class TestBuildPointsOverTime:
         # 0 baseline, then cumulative high-watermark: 5, then 5+3
         assert ds["data"] == [0, 5, 8]
 
-    def test_high_watermark_not_raw_sum(self, challenge):
-        """Only is_current_best=True events count; superseded rows are excluded."""
+    def test_superseded_event_keeps_the_points_it_held_at_the_time(self, challenge):
+        """A re-earned lift must not rewrite its own past. Bob held 2 points
+        from Feb 1 until the Feb 10 PR replaced them with 6; the chart shows
+        that, rather than back-dating today's 6 and zeroing out Feb 1."""
         bob = UserFactory(display_name="Bob")
         _accept(challenge, bob)
         # superseded earlier attempt on the same lift
@@ -82,10 +85,144 @@ class TestBuildPointsOverTime:
 
         data = build_points_over_time(challenge)
 
-        # only the current-best date appears (plus its zero baseline);
-        # total is 6, not 2+6
-        assert data["labels"] == ["2024-02-09", "2024-02-10"]
-        assert data["datasets"][0]["data"] == [0, 6]
+        assert data["labels"] == ["2024-01-31", "2024-02-01", "2024-02-10"]
+        # the second squat replaces the first's contribution rather than
+        # stacking on it -- 6, not 2+6
+        assert data["datasets"][0]["data"] == [0, 2, 6]
+
+    def test_re_earning_a_lift_does_not_change_earlier_points(self, challenge):
+        """The property the whole design exists for: adding a new PR extends
+        the trace without altering any value already drawn."""
+        carol = UserFactory(display_name="Carol")
+        _accept(challenge, carol)
+        PointEarnEventFactory(
+            user=carol,
+            challenge=challenge,
+            lift="Squat",
+            performed_at=date(2024, 3, 1),
+            points_earned=4,
+            is_current_best=True,
+        )
+
+        before = build_points_over_time(challenge)
+        history_before = dict(
+            zip(before["labels"], before["datasets"][0]["data"], strict=True)
+        )
+
+        # a later, better squat supersedes the first
+        first = PointEarnEvent.objects.get(user=carol, performed_at=date(2024, 3, 1))
+        first.is_current_best = False
+        first.save(update_fields=["is_current_best"])
+        PointEarnEventFactory(
+            user=carol,
+            challenge=challenge,
+            lift="Squat",
+            performed_at=date(2024, 3, 20),
+            points_earned=7,
+            is_current_best=True,
+        )
+
+        after = build_points_over_time(challenge)
+        history_after = dict(
+            zip(after["labels"], after["datasets"][0]["data"], strict=True)
+        )
+
+        for label, value in history_before.items():
+            assert history_after[label] == value, f"{label} changed"
+        assert history_after["2024-03-20"] == 7
+
+    def test_backdated_set_raises_the_curve_at_the_date_performed(self, challenge):
+        """Recording a forgotten set after the fact credits the day it was
+        actually lifted, not the day it synced -- performed_at is what every
+        other scoring path keys on."""
+        dave = UserFactory(display_name="Dave")
+        _accept(challenge, dave)
+        PointEarnEventFactory(
+            user=dave,
+            challenge=challenge,
+            lift="Bench",
+            performed_at=date(2024, 4, 20),
+            points_earned=5,
+            is_current_best=True,
+        )
+        # remembered later: a squat performed well before the bench above
+        PointEarnEventFactory(
+            user=dave,
+            challenge=challenge,
+            lift="Squat",
+            performed_at=date(2024, 4, 5),
+            points_earned=3,
+            is_current_best=True,
+        )
+
+        data = build_points_over_time(challenge)
+
+        assert data["labels"] == ["2024-04-04", "2024-04-05", "2024-04-20"]
+        assert data["datasets"][0]["data"] == [0, 3, 8]
+
+    def test_zero_point_rows_add_no_labels_and_no_points(self, challenge):
+        """Sub-threshold audit rows can never raise a per-lift maximum, so
+        they must not litter the shared x-axis with flat dates."""
+        erin = UserFactory(display_name="Erin")
+        _accept(challenge, erin)
+        PointEarnEventFactory(
+            user=erin,
+            challenge=challenge,
+            lift="Squat",
+            performed_at=date(2024, 5, 1),
+            points_earned=0,
+            is_current_best=False,
+        )
+        PointEarnEventFactory(
+            user=erin,
+            challenge=challenge,
+            lift="Squat",
+            performed_at=date(2024, 5, 10),
+            points_earned=4,
+            is_current_best=True,
+        )
+
+        data = build_points_over_time(challenge)
+
+        assert data["labels"] == ["2024-05-09", "2024-05-10"]
+        assert data["datasets"][0]["data"] == [0, 4]
+
+    def test_final_value_matches_the_leaderboard_total(self, challenge):
+        """The trace's last point and the leaderboard must agree, or the page
+        contradicts itself. Both reduce to the per-lift best."""
+        frank = UserFactory(display_name="Frank")
+        _accept(challenge, frank)
+        PointEarnEventFactory(
+            user=frank,
+            challenge=challenge,
+            lift="Squat",
+            performed_at=date(2024, 6, 1),
+            points_earned=2,
+            is_current_best=False,
+        )
+        PointEarnEventFactory(
+            user=frank,
+            challenge=challenge,
+            lift="Squat",
+            performed_at=date(2024, 6, 5),
+            points_earned=6,
+            is_current_best=True,
+        )
+        PointEarnEventFactory(
+            user=frank,
+            challenge=challenge,
+            lift="Bench",
+            performed_at=date(2024, 6, 8),
+            points_earned=3,
+            is_current_best=True,
+        )
+
+        data = build_points_over_time(challenge)
+        leaderboard = {
+            r["user"].pk: r["total_points"] for r in rank_participants(challenge)
+        }
+
+        assert data["datasets"][0]["data"][-1] == leaderboard[frank.pk]
 
     def test_multiple_participants_share_label_axis(self, challenge):
         alice = UserFactory(display_name="Alice")
