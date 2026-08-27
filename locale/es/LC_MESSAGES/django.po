@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-27 00:24+0000\n"
+"POT-Creation-Date: 2026-08-27 01:34+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -878,6 +878,14 @@ msgstr "Suscriptor del boletín"
 #: core/models.py:134
 msgid "Newsletter Subscribers"
 msgstr "Suscriptores del boletín"
+
+#: core/models.py:186
+msgid "live sync"
+msgstr "sincronización en vivo"
+
+#: core/models.py:187
+msgid "csv upload"
+msgstr "subida de csv"
 
 #: core/views.py:52
 msgid "You're subscribed. Thanks for joining!"
@@ -2652,13 +2660,13 @@ msgstr "Únete a %(name)s en very lift"
 
 #: templates/challenges/invite_accept.html:17
 #: templates/challenges/invite_accept.html:155
-#: templates/challenges/invite_link_preview.html:59 templates/landing.html:156
+#: templates/challenges/invite_link_preview.html:59 templates/landing.html:155
 msgid "GitHub"
 msgstr "GitHub"
 
 #: templates/challenges/invite_accept.html:22
 #: templates/challenges/invite_accept.html:160
-#: templates/challenges/invite_link_preview.html:64 templates/landing.html:161
+#: templates/challenges/invite_link_preview.html:64 templates/landing.html:160
 msgid "Discord"
 msgstr "Discord"
 
@@ -2845,21 +2853,21 @@ msgstr "Crear mi cuenta"
 msgid "nah"
 msgstr "paso"
 
-#: templates/challenges/invite_link_preview.html:54 templates/landing.html:151
+#: templates/challenges/invite_link_preview.html:54 templates/landing.html:150
 #: templates/registration/login.html:81
 #: templates/registration/password_reset.html:49
 #: templates/registration/register.html:120
 msgid "Terms"
 msgstr "Términos"
 
-#: templates/challenges/invite_link_preview.html:56 templates/landing.html:153
+#: templates/challenges/invite_link_preview.html:56 templates/landing.html:152
 #: templates/registration/login.html:83
 #: templates/registration/password_reset.html:51
 #: templates/registration/register.html:122
 msgid "Privacy"
 msgstr "Privacidad"
 
-#: templates/challenges/invite_link_preview.html:72 templates/landing.html:169
+#: templates/challenges/invite_link_preview.html:72 templates/landing.html:168
 msgid ""
 "\n"
 "        Made with ❤️ by 🏳️‍🌈 in <a href=\"https://www.nationalgeographic.com/"
@@ -3176,7 +3184,7 @@ msgstr ""
 "reto y perseguir su propia mejor marca. ¿Listo? ¡A por ello, campeón!\n"
 "        "
 
-#: templates/landing.html:39
+#: templates/landing.html:39 templates/supported_apps.html:46
 msgid "get started"
 msgstr "empezar"
 
@@ -3211,25 +3219,28 @@ msgstr ""
 msgid "very easy"
 msgstr "muy fácil"
 
-#: templates/landing.html:68
+#: templates/landing.html:67
+#, python-format
 msgid ""
 "\n"
-"            Sync with one of our supported apps and we'll score your lifts\n"
+"            Sync with <a href=\"%(supported_apps_url)s\" class=\"text-accent "
+"hover:underline\">one of our supported apps</a> and we'll score your lifts\n"
 "            for you. No compatible app? Enter your lifts manually and we'll\n"
 "            do the rest!\n"
 "            "
 msgstr ""
 "\n"
-"            Sincroniza con una de nuestras apps compatibles y calcularemos "
-"tus puntos por ti. ¿No tienes una app compatible? Ingresa tus levantamientos "
-"a mano y nosotros hacemos el resto.\n"
+"            Sincroniza con <a href=\"%(supported_apps_url)s\" class=\"text-accent "
+"hover:underline\">una de nuestras apps compatibles</a> y calcularemos tus "
+"puntos por ti. ¿No tienes una app compatible? Ingresa tus levantamientos a "
+"mano y nosotros hacemos el resto.\n"
 "            "
 
-#: templates/landing.html:76
+#: templates/landing.html:75
 msgid "very fair"
 msgstr "muy justo"
 
-#: templates/landing.html:78
+#: templates/landing.html:77
 msgid ""
 "\n"
 "            Everyone sets their goals and gets scored on how close they get\n"
@@ -3245,11 +3256,11 @@ msgstr ""
 "propia meta.\n"
 "            "
 
-#: templates/landing.html:87
+#: templates/landing.html:86
 msgid "very competitive"
 msgstr "muy competitivo"
 
-#: templates/landing.html:89
+#: templates/landing.html:88
 msgid ""
 "\n"
 "            See your progress in real time with a points chart and personal\n"
@@ -3265,37 +3276,37 @@ msgstr ""
 "competitivo. Y ante eso, solo decimos: ¡suéltalo!\n"
 "            "
 
-#: templates/landing.html:101
+#: templates/landing.html:100
 msgid "stay in touch"
 msgstr "mantente en contacto"
 
-#: templates/landing.html:104
+#: templates/landing.html:103
 msgid "get the newsletter"
 msgstr "recibe el boletín"
 
-#: templates/landing.html:106
+#: templates/landing.html:105
 msgid "Opt-in updates as we build. No spam, unsubscribe anytime."
 msgstr ""
 "Novedades opcionales mientras construimos. Sin spam, cancela cuando quieras."
 
-#: templates/landing.html:115
+#: templates/landing.html:114
 msgid "you@example.com"
 msgstr "tu@ejemplo.com"
 
-#: templates/landing.html:120
+#: templates/landing.html:119
 msgid "subscribe"
 msgstr "suscribirse"
 
-#: templates/landing.html:125
+#: templates/landing.html:124
 #, python-format
 msgid "By subscribing you agree to receive emails from %(brand_name)s."
 msgstr "Al suscribirte, aceptas recibir correos de %(brand_name)s."
 
-#: templates/landing.html:129
+#: templates/landing.html:128
 msgid "join our Discord"
 msgstr "únete a nuestro Discord"
 
-#: templates/landing.html:131
+#: templates/landing.html:130
 msgid ""
 "Find and share challenges, chat with other lifters, share feedback, and help "
 "shape the app."
@@ -3303,7 +3314,7 @@ msgstr ""
 "Encuentra y comparte desafíos, chatea con otros levantadores, comparte "
 "comentarios y ayuda a dar forma a la app."
 
-#: templates/landing.html:141
+#: templates/landing.html:140
 msgid "join Discord"
 msgstr "unirse a Discord"
 
@@ -3846,6 +3857,52 @@ msgstr "y"
 #: templates/registration/register.html:110
 msgid "Create account"
 msgstr "Crear cuenta"
+
+#: templates/supported_apps.html:4 templates/supported_apps.html:6
+msgid "Supported apps"
+msgstr "Apps compatibles"
+
+#: templates/supported_apps.html:7
+msgid "Every workout tracker very lift can sync your lifts from."
+msgstr "Todas las apps de seguimiento con las que very lift puede sincronizar tus levantamientos."
+
+#: templates/supported_apps.html:15
+msgid "back to"
+msgstr "volver a"
+
+#: templates/supported_apps.html:17
+msgid "supported apps"
+msgstr "apps compatibles"
+
+#: templates/supported_apps.html:20
+#, python-format
+msgid ""
+"Connecting %(brand_name)s with one of the apps below makes everything very "
+"easy."
+msgstr ""
+"Conectar %(brand_name)s con una de las apps de abajo lo hace todo muy "
+"fácil."
+
+#: templates/supported_apps.html:28
+msgid "recommended"
+msgstr "recomendado"
+
+#: templates/supported_apps.html:51
+#, python-format
+msgid ""
+"%(brand_name)s has an affiliate relationship with %(app_name)s and may earn "
+"a commission from qualifying subscriptions."
+msgstr ""
+"%(brand_name)s tiene una relación de afiliado con %(app_name)s y podría "
+"recibir una comisión por las suscripciones que califiquen."
+
+#: templates/supported_apps.html:59
+msgid "you can also use these"
+msgstr "también puedes usar estas"
+
+#: templates/supported_apps.html:77
+msgid "learn more"
+msgstr "más información"
 
 #: workout_imports/forms.py:37
 msgid "Please upload a .csv file."
