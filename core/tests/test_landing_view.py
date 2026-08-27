@@ -33,6 +33,7 @@ class TestLandingPage:
         assert reverse("privacy") in content
         assert reverse("core:newsletter-subscribe") in content
         assert reverse("set_language") in content
+        assert reverse("core:supported-apps") in content
 
     def test_authenticated_user_redirected_to_dashboard(self, client):
         response = client.get(reverse("core:landing"))

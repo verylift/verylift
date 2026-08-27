@@ -13,7 +13,7 @@ from django_ratelimit.decorators import ratelimit
 
 from accounts.ratelimit import client_ip
 from core.forms import NewsletterSubscribeForm
-from core.models import NewsletterSubscriber, SiteSettings
+from core.models import NewsletterSubscriber, SiteSettings, SupportedApp
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +55,21 @@ def newsletter_subscribe_view(request):
     for error in form.errors.get("email", []):
         messages.error(request, error)
     return redirect(f"{reverse('core:landing')}#newsletter")
+
+
+def supported_apps_view(request):
+    """Lists every workout-tracking app "very easy" links to (TASK-254).
+
+    Featured (affiliate) apps render first, each app's live-sync/CSV-upload
+    tags come straight from SupportedAppMode rows rather than any
+    per-template list, so the tags and the seed data can never drift apart.
+    """
+    apps = SupportedApp.objects.prefetch_related("modes")
+    context = {
+        "featured_apps": apps.featured(),
+        "other_apps": apps.other(),
+    }
+    return render(request, "supported_apps.html", context)
 
 
 def protected_media_view(request, path, document_root=None):

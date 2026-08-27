@@ -63,10 +63,9 @@
         <div class="bg-surface-card border border-line-subtle rounded p-6">
           <h3 class="text-lg font-semibold text-content-strong">{% trans "very easy" %}</h3>
           <p class="mt-2 text-sm text-content-body">
-            <!-- TODO(supported-apps page): once core:supported-apps ships,
-                 wrap "one of our supported apps" below in a link to it. -->
+            {% url 'core:supported-apps' as supported_apps_url %}
             {% blocktrans %}
-            Sync with one of our supported apps and we'll score your lifts
+            Sync with <a href="{{ supported_apps_url }}" class="text-accent hover:underline">one of our supported apps</a> and we'll score your lifts
             for you. No compatible app? Enter your lifts manually and we'll
             do the rest!
             {% endblocktrans %}

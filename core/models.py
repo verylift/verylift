@@ -135,3 +135,70 @@ class NewsletterSubscriber(models.Model):
 
     def __str__(self):
         return self.email
+
+
+class SupportedAppQuerySet(models.QuerySet):
+    def featured(self):
+        return self.filter(is_affiliate=True)
+
+    def other(self):
+        return self.filter(is_affiliate=False)
+
+
+class SupportedApp(models.Model):
+    """A third-party app listed on the "supported apps" page (TASK-254).
+
+    ``is_affiliate`` drives both the page's featured/other split and whether
+    the affiliate disclosure renders -- keep it in sync with reality: only
+    set it once a real commercial relationship (a coupon, a tracked link)
+    exists, per the Liftosaur precedent in _liftosaur_coupon_cta.html.
+    """
+
+    name = models.CharField(max_length=100)
+    url = models.URLField()
+    is_affiliate = models.BooleanField(
+        default=False,
+        help_text="Whether a commercial relationship (e.g. an affiliate "
+        "coupon) exists, requiring the disclosure to render.",
+    )
+    sort_order = models.PositiveIntegerField(default=0)
+    description = models.CharField(max_length=255, blank=True)
+
+    objects = SupportedAppQuerySet.as_manager()
+
+    class Meta:
+        ordering = ["sort_order", "name"]
+        verbose_name = "supported app"
+
+    def __str__(self):
+        return self.name
+
+
+class SupportedAppMode(models.Model):
+    """One capability tag (live sync, CSV upload, ...) for a SupportedApp.
+
+    A separate row per mode, not an ArrayField, so the modes shown on the
+    page and the modes seeded/edited in admin are the same rows -- one
+    source of truth, per TASK-254's requirement that the tags be real data.
+    """
+
+    class Mode(models.TextChoices):
+        LIVE_SYNC = "live_sync", _("live sync")
+        CSV_UPLOAD = "csv_upload", _("csv upload")
+
+    supported_app = models.ForeignKey(
+        SupportedApp, on_delete=models.CASCADE, related_name="modes"
+    )
+    mode = models.CharField(max_length=20, choices=Mode.choices)
+
+    class Meta:
+        ordering = ["mode"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["supported_app", "mode"],
+                name="core_supportedappmode_unique_app_mode",
+            )
+        ]
+
+    def __str__(self):
+        return self.get_mode_display()
