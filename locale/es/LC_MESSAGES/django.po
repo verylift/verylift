@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-27 01:34+0000\n"
+"POT-Creation-Date: 2026-08-27 02:12+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -879,11 +879,11 @@ msgstr "Suscriptor del boletín"
 msgid "Newsletter Subscribers"
 msgstr "Suscriptores del boletín"
 
-#: core/models.py:186
+#: core/models.py:194
 msgid "live sync"
 msgstr "sincronización en vivo"
 
-#: core/models.py:187
+#: core/models.py:195
 msgid "csv upload"
 msgstr "subida de csv"
 
@@ -1321,7 +1321,7 @@ msgstr "Copiar"
 #: templates/accounts/_support_id_section.html:33
 #: templates/challenges/_invite_link_section.html:169
 #: templates/challenges/custom_goal_setup.html:77
-#: templates/components/_liftosaur_coupon_cta.html:21
+#: templates/components/_copy_code.html:20
 #: templates/registration/onboarding_no_tracker.html:27
 msgid "Copied!"
 msgstr "¡Copiado!"
@@ -3006,6 +3006,15 @@ msgstr ""
 "Cuando te unas a un reto, aquí aparecerán las personas con las que has "
 "competido."
 
+#: templates/components/_copy_code.html:19
+#: templates/components/_copy_code.html:21
+#: templates/components/_copy_code.html:22
+#: templates/registration/onboarding_no_tracker.html:26
+#: templates/registration/onboarding_no_tracker.html:28
+#: templates/registration/onboarding_no_tracker.html:29
+msgid "Copy coupon code"
+msgstr "Copiar código de descuento"
+
 #: templates/components/_liftosaur_coupon_cta.html:12
 msgid "New to Liftosaur? Its API requires a premium subscription."
 msgstr "¿Nuevo en Liftosaur? Su API requiere una suscripción premium."
@@ -3014,26 +3023,17 @@ msgstr "¿Nuevo en Liftosaur? Su API requiere una suscripción premium."
 msgid "Use code"
 msgstr "Usa el código"
 
-#: templates/components/_liftosaur_coupon_cta.html:20
-#: templates/components/_liftosaur_coupon_cta.html:22
-#: templates/components/_liftosaur_coupon_cta.html:23
-#: templates/registration/onboarding_no_tracker.html:26
-#: templates/registration/onboarding_no_tracker.html:28
-#: templates/registration/onboarding_no_tracker.html:29
-msgid "Copy coupon code"
-msgstr "Copiar código de descuento"
-
-#: templates/components/_liftosaur_coupon_cta.html:28
+#: templates/components/_liftosaur_coupon_cta.html:17
 #: templates/registration/onboarding_no_tracker.html:34
 msgid "when you subscribe."
 msgstr "al suscribirte."
 
-#: templates/components/_liftosaur_coupon_cta.html:35
+#: templates/components/_liftosaur_coupon_cta.html:24
 #: templates/registration/onboarding_no_tracker.html:43
 msgid "Get Liftosaur"
 msgstr "Consigue Liftosaur"
 
-#: templates/components/_liftosaur_coupon_cta.html:38
+#: templates/components/_liftosaur_coupon_cta.html:27
 #: templates/registration/onboarding_no_tracker.html:46
 msgid "We earn a commission if you subscribe with this code."
 msgstr "Ganamos una comisión si te suscribes con este código."
@@ -3184,7 +3184,7 @@ msgstr ""
 "reto y perseguir su propia mejor marca. ¿Listo? ¡A por ello, campeón!\n"
 "        "
 
-#: templates/landing.html:39 templates/supported_apps.html:46
+#: templates/landing.html:39 templates/supported_apps.html:55
 msgid "get started"
 msgstr "empezar"
 
@@ -3230,10 +3230,10 @@ msgid ""
 "            "
 msgstr ""
 "\n"
-"            Sincroniza con <a href=\"%(supported_apps_url)s\" class=\"text-accent "
-"hover:underline\">una de nuestras apps compatibles</a> y calcularemos tus "
-"puntos por ti. ¿No tienes una app compatible? Ingresa tus levantamientos a "
-"mano y nosotros hacemos el resto.\n"
+"            Sincroniza con <a href=\"%(supported_apps_url)s\" class=\"text-"
+"accent hover:underline\">una de nuestras apps compatibles</a> y calcularemos "
+"tus puntos por ti. ¿No tienes una app compatible? Ingresa tus levantamientos "
+"a mano y nosotros hacemos el resto.\n"
 "            "
 
 #: templates/landing.html:75
@@ -3864,30 +3864,35 @@ msgstr "Apps compatibles"
 
 #: templates/supported_apps.html:7
 msgid "Every workout tracker very lift can sync your lifts from."
-msgstr "Todas las apps de seguimiento con las que very lift puede sincronizar tus levantamientos."
+msgstr ""
+"Todas las apps de seguimiento con las que very lift puede sincronizar tus "
+"levantamientos."
 
-#: templates/supported_apps.html:15
+#: templates/supported_apps.html:12
 msgid "back to"
 msgstr "volver a"
 
-#: templates/supported_apps.html:17
+#: templates/supported_apps.html:26
 msgid "supported apps"
 msgstr "apps compatibles"
 
-#: templates/supported_apps.html:20
+#: templates/supported_apps.html:29
 #, python-format
 msgid ""
 "Connecting %(brand_name)s with one of the apps below makes everything very "
 "easy."
 msgstr ""
-"Conectar %(brand_name)s con una de las apps de abajo lo hace todo muy "
-"fácil."
+"Conectar %(brand_name)s con una de las apps de abajo lo hace todo muy fácil."
 
-#: templates/supported_apps.html:28
+#: templates/supported_apps.html:37
 msgid "recommended"
 msgstr "recomendado"
 
-#: templates/supported_apps.html:51
+#: templates/supported_apps.html:59
+msgid "use code"
+msgstr "usa el código"
+
+#: templates/supported_apps.html:66
 #, python-format
 msgid ""
 "%(brand_name)s has an affiliate relationship with %(app_name)s and may earn "
@@ -3896,11 +3901,11 @@ msgstr ""
 "%(brand_name)s tiene una relación de afiliado con %(app_name)s y podría "
 "recibir una comisión por las suscripciones que califiquen."
 
-#: templates/supported_apps.html:59
+#: templates/supported_apps.html:74
 msgid "you can also use these"
 msgstr "también puedes usar estas"
 
-#: templates/supported_apps.html:77
+#: templates/supported_apps.html:92
 msgid "learn more"
 msgstr "más información"
 
