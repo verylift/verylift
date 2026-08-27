@@ -65,8 +65,6 @@ class TestRegistrationSuccess:
         assert response["Location"] == reverse("accounts:onboarding-tracking-method")
         user = User.objects.get(username="newlifter")
         assert user.check_password("s3cret-pass")
-        # Accepting the terms during registration stamps the acknowledgement time.
-        assert user.tos_accepted_at is not None
         # User is logged in automatically.
         assert client.session["_auth_user_id"] == str(user.id)
 

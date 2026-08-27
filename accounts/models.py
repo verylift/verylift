@@ -135,11 +135,6 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     deactivated_at = models.DateTimeField(null=True, blank=True)
 
-    # When the user acknowledged the Terms of Service and Privacy Policy during
-    # self-serve registration. Null for accounts that predate the checkbox and for
-    # SSO/OIDC users, who never see the registration form and are not gated.
-    tos_accepted_at = models.DateTimeField(null=True, blank=True)
-
     date_joined = models.DateTimeField(auto_now_add=True)
 
     objects = UserManager()
