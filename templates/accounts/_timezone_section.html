@@ -1,7 +1,7 @@
 {% load i18n %}
 <!-- Timezone section -->
 <section class="bg-surface-card border border-line-subtle rounded p-6 mb-6">
-  <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "Timezone" %}</h2>
+  <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "timezone" %}</h2>
   <form
     method="post"
     action="{% url 'accounts:settings' %}"
@@ -13,7 +13,7 @@
     <input type="hidden" name="form_name" value="timezone">
 
     <div class="mb-4">
-      <label for="timezone-select" class="block text-sm font-medium text-content-body mb-2">{% trans "Preferred timezone" %}</label>
+      <label for="timezone-select" class="block text-sm font-medium text-content-body mb-2">{% trans "preferred timezone" %}</label>
       <select id="timezone-select" name="timezone" class="w-full border border-line-subtle rounded px-3 py-2 text-sm bg-surface-page text-content-body">
         <option value="" {% if not user_timezone %}selected{% endif %}>{% trans "Automatic (browser timezone)" %}</option>
         {% for region, names in timezone_groups %}
@@ -33,7 +33,7 @@
     <button
       type="submit"
       class="bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
-      {% trans "Save Timezone" %}
+      {% trans "save timezone" %}
     </button>
   </form>
   <script>

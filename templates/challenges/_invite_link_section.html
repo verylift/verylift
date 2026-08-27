@@ -1,6 +1,6 @@
 {% load i18n humanize icons %}
 <section class="bg-surface-card border border-line-subtle rounded p-6">
-  <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "Invite Link" %}</h2>
+  <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "invite link" %}</h2>
 
   {% if current_invite_link %}
   <div class="flex flex-wrap gap-2 mb-4">
@@ -31,7 +31,7 @@
       type="button"
       data-copy-invite-link
       class="bg-accent text-accent-on text-sm font-medium px-3 py-2 rounded hover:bg-accent-hover whitespace-nowrap">
-      {% trans "Copy" %}
+      {% trans "copy" %}
     </button>
   </div>
   {% if challenge.creator_id == request.user.id %}
@@ -47,24 +47,24 @@
       <div class="flex flex-wrap items-start gap-4">
         <div>
           <label for="{{ invite_link_form.expires_at.id_for_label }}" class="block text-xs text-content-muted mb-1">
-            {% trans "Expiry" %}
+            {% trans "expiry" %}
             <span class="font-normal text-content-subtle">({% now "T" %}, UTC{% now "O" %})</span>
           </label>
           {{ invite_link_form.expires_at }}
           <p class="text-xs text-content-muted mt-1" data-expiry-relative>
             {% if current_invite_link.expires_at %}
-              {% blocktrans with when=current_invite_link.expires_at|timeuntil %}Expires in {{ when }}{% endblocktrans %}
+              {% blocktrans with when=current_invite_link.expires_at|timeuntil %}expires in {{ when }}{% endblocktrans %}
             {% else %}
-              {% trans "Never expires" %}
+              {% trans "never expires" %}
             {% endif %}
           </p>
           <label for="{{ invite_link_form.never_expires.id_for_label }}" class="flex items-center gap-2 text-xs text-content-muted mt-2">
             {{ invite_link_form.never_expires }}
-            {% trans "Never expires" %}
+            {% trans "never expires" %}
           </label>
         </div>
         <div>
-          <label for="{{ invite_link_form.max_uses.id_for_label }}" class="block text-xs text-content-muted mb-1">{% trans "Max uses" %}</label>
+          <label for="{{ invite_link_form.max_uses.id_for_label }}" class="block text-xs text-content-muted mb-1">{% trans "max uses" %}</label>
           <div class="flex items-center gap-1">
             {{ invite_link_form.max_uses }}
             <button
@@ -85,7 +85,7 @@
         <button
           type="submit"
           class="bg-accent text-accent-on text-sm font-medium px-3 py-2 rounded hover:bg-accent-hover">
-          {% trans "Save" %}
+          {% trans "save" %}
         </button>
         <button
           type="button"
@@ -93,7 +93,7 @@
           hx-target="closest section"
           hx-swap="outerHTML"
           class="text-content-muted text-sm font-medium px-3 py-2 rounded hover:bg-surface-sunken">
-          {% trans "Cancel" %}
+          {% trans "cancel" %}
         </button>
       </div>
     </form>
@@ -101,9 +101,9 @@
     <div class="flex items-center gap-2 text-sm text-content-body">
       <span>
         {% if current_invite_link.expires_at %}
-          {% blocktrans with when=current_invite_link.expires_at|timeuntil %}Expires in {{ when }}{% endblocktrans %}
+          {% blocktrans with when=current_invite_link.expires_at|timeuntil %}expires in {{ when }}{% endblocktrans %}
         {% else %}
-          {% trans "Never expires" %}
+          {% trans "never expires" %}
         {% endif %}
       </span>
       <span class="text-content-subtle">&middot;</span>
@@ -111,7 +111,7 @@
         {% if current_invite_link.max_uses %}
           {% blocktrans with used=current_invite_link.use_count total=current_invite_link.max_uses %}{{ used }} of {{ total }} uses{% endblocktrans %}
         {% else %}
-          {% trans "Unlimited uses" %}
+          {% trans "unlimited uses" %}
         {% endif %}
       </span>
       {% if not invite_link_locked %}
@@ -137,7 +137,7 @@
     hx-target="closest section"
     hx-swap="outerHTML"
     class="bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
-    {% trans "Generate invite link" %}
+    {% trans "generate invite link" %}
   </button>
   {% endif %}
   {% endif %}
@@ -166,7 +166,7 @@
         if (!input) return;
         var restore = button.textContent;
         var done = function () {
-          button.textContent = "{% trans 'Copied!' %}";
+          button.textContent = "{% trans 'copied!' %}";
           setTimeout(function () { button.textContent = restore; }, 1500);
         };
         if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -248,9 +248,9 @@
         if (isNaN(target.getTime())) return;
         var diffSeconds = (target.getTime() - Date.now()) / 1000;
         if (diffSeconds <= 0) {
-          output.textContent = "{% trans 'Expired' %} " + djangoStyleDuration(-diffSeconds) + " {% trans 'ago' %}";
+          output.textContent = "{% trans 'expired' %} " + djangoStyleDuration(-diffSeconds) + " {% trans 'ago' %}";
         } else {
-          output.textContent = "{% trans 'Expires in' %} " + djangoStyleDuration(diffSeconds);
+          output.textContent = "{% trans 'expires in' %} " + djangoStyleDuration(diffSeconds);
         }
       });
     })();

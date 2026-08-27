@@ -7,7 +7,7 @@
     <header class="mb-8">
       <a href="{% url 'challenges:detail' challenge.pk %}"
         class="text-sm font-medium text-accent hover:text-accent mb-2 inline-block"
-        data-loading-message="{% trans 'Loading challenge…' %}">← {% trans "Back to challenge" %}</a>
+        data-loading-message="{% trans 'Loading challenge…' %}">← {% trans "back to challenge" %}</a>
     </header>
     {% include "challenges/_participant_chart.html" with standalone=True %}
 {% endblock %}

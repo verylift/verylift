@@ -24,7 +24,7 @@
     <a href="{% url 'challenges:dashboard' %}"
       class="flex items-center gap-3 px-4 py-3 text-sm font-medium
         {% if url_name == 'dashboard' %}bg-accent-subtle text-accent{% else %}text-content-body hover:bg-surface-hover{% endif %}">
-      <span class="flex-1">{% trans "Dashboard" %}</span>
+      <span class="flex-1">{% trans "dashboard" %}</span>
       {% if unread_notification_count %}
       <span class="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-accent text-accent-on text-xs font-semibold font-mono">
         {{ unread_notification_count }}
@@ -34,7 +34,7 @@
     <a href="{% url 'challenges:find' %}"
       class="flex items-center gap-3 px-4 py-3 text-sm font-medium
         {% if url_name == 'find' %}bg-accent-subtle text-accent{% else %}text-content-body hover:bg-surface-hover{% endif %}">
-      {% trans "Challenges" %}
+      {% trans "challenges" %}
     </a>
 
     <div class="border-t border-line-subtle"></div>
@@ -42,21 +42,21 @@
     <a href="{% url 'accounts:settings' %}"
       class="flex items-center gap-3 px-4 py-3 text-sm font-medium
         {% if url_name == 'settings' %}bg-accent-subtle text-accent{% else %}text-content-body hover:bg-surface-hover{% endif %}">
-      {% trans "Settings" %}
+      {% trans "settings" %}
     </a>
     <a href="{% url 'guide:index' %}"
       class="flex items-center gap-3 px-4 py-3 text-sm font-medium
         {% if request.resolver_match.namespace == 'guide' %}bg-accent-subtle text-accent{% else %}text-content-body hover:bg-surface-hover{% endif %}">
-      {% trans "User Guide" %}
+      {% trans "user guide" %}
     </a>
     <a href="{% url 'policies:list' %}"
       class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-content-body hover:bg-surface-hover">
-      {% trans "Terms & Privacy" %}
+      {% trans "terms & privacy" %}
     </a>
     {% if request.user.is_staff %}
     <a href="{% url 'admin:index' %}"
       class="flex items-center gap-3 px-4 py-3 text-xs font-medium uppercase tracking-wide text-content-muted hover:bg-surface-hover hover:text-content-body">
-      {% trans "Admin" %}
+      {% trans "admin" %}
     </a>
     {% endif %}
 
@@ -67,7 +67,7 @@
       {% csrf_token %}
       <button type="submit"
         class="w-full flex items-center gap-3 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] text-sm font-medium text-content-body hover:bg-surface-hover">
-        {% trans "Logout" %}
+        {% trans "logout" %}
       </button>
     </form>
     {% else %}
@@ -75,7 +75,7 @@
       {% csrf_token %}
       <button type="submit"
         class="w-full flex items-center gap-3 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] text-sm font-medium text-content-body hover:bg-surface-hover">
-        {% trans "Logout" %}
+        {% trans "logout" %}
       </button>
     </form>
     {% endif %}
@@ -108,7 +108,7 @@
       class="flex items-center gap-3 px-3 py-2 rounded text-sm font-medium
         {% if url_name == 'dashboard' %}bg-accent-subtle text-accent{% else %}text-content-body hover:bg-surface-hover{% endif %}">
       {% icon "layout-dashboard" css_class="h-5 w-5 flex-shrink-0" %}
-      <span class="flex-1">{% trans "Dashboard" %}</span>
+      <span class="flex-1">{% trans "dashboard" %}</span>
       {% if unread_notification_count %}
       <span class="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-accent text-accent-on text-xs font-semibold font-mono">
         {{ unread_notification_count }}
@@ -120,7 +120,7 @@
       class="flex items-center gap-3 px-3 py-2 rounded text-sm font-medium
         {% if url_name == 'find' %}bg-accent-subtle text-accent{% else %}text-content-body hover:bg-surface-hover{% endif %}">
       {% icon "trophy" css_class="h-5 w-5 flex-shrink-0" %}
-      {% trans "Challenges" %}
+      {% trans "challenges" %}
     </a>
 
     <div class="flex-1"></div>
@@ -132,21 +132,21 @@
         <a href="{% url 'accounts:settings' %}"
           class="flex items-center gap-3 px-3 py-3 md:py-2 text-sm font-medium
             {% if url_name == 'settings' %}bg-accent-subtle text-accent{% else %}text-content-body hover:bg-surface-hover{% endif %}">
-          {% trans "Settings" %}
+          {% trans "settings" %}
         </a>
         <a href="{% url 'guide:index' %}"
           class="flex items-center gap-3 px-3 py-3 md:py-2 text-sm font-medium
             {% if request.resolver_match.namespace == 'guide' %}bg-accent-subtle text-accent{% else %}text-content-body hover:bg-surface-hover{% endif %}">
-          {% trans "User Guide" %}
+          {% trans "user guide" %}
         </a>
         <a href="{% url 'policies:list' %}"
           class="flex items-center gap-3 px-3 py-3 md:py-2 text-sm font-medium text-content-body hover:bg-surface-hover">
-          {% trans "Terms & Privacy" %}
+          {% trans "terms & privacy" %}
         </a>
         {% if request.user.is_staff %}
         <a href="{% url 'admin:index' %}"
           class="flex items-center gap-3 px-3 py-3 md:py-2 text-xs font-medium uppercase tracking-wide text-content-muted hover:bg-surface-hover hover:text-content-body">
-          {% trans "Admin" %}
+          {% trans "admin" %}
         </a>
         {% endif %}
       </div>
@@ -168,7 +168,7 @@
         {% if request.user.oidc_sub %}
         <form method="post" action="{% url 'oidc_logout' %}">
           {% csrf_token %}
-          <button type="submit" title="{% trans 'Logout' %}"
+          <button type="submit" title="{% trans 'logout' %}"
             class="flex-shrink-0 flex items-center justify-center w-11 h-11 md:w-auto md:h-auto md:p-2 rounded text-content-muted hover:bg-surface-hover hover:text-content-body">
             {% icon "log-out" css_class="h-5 w-5" %}
           </button>
@@ -176,7 +176,7 @@
         {% else %}
         <form method="post" action="{% url 'logout' %}">
           {% csrf_token %}
-          <button type="submit" title="{% trans 'Logout' %}"
+          <button type="submit" title="{% trans 'logout' %}"
             class="flex-shrink-0 flex items-center justify-center w-11 h-11 md:w-auto md:h-auto md:p-2 rounded text-content-muted hover:bg-surface-hover hover:text-content-body">
             {% icon "log-out" css_class="h-5 w-5" %}
           </button>
@@ -213,12 +213,12 @@
       </button>
     </div>
 
-    <a href="{% url 'challenges:dashboard' %}" title="{% trans 'Dashboard' %}" aria-label="{% trans 'Dashboard' %}"
+    <a href="{% url 'challenges:dashboard' %}" title="{% trans 'dashboard' %}" aria-label="{% trans 'dashboard' %}"
       class="flex items-center justify-center w-11 h-9 rounded
         {% if url_name == 'dashboard' %}bg-accent-subtle text-accent{% else %}text-content-body hover:bg-surface-hover{% endif %}">
       {% icon "layout-dashboard" css_class="h-5 w-5" %}
     </a>
-    <a href="{% url 'challenges:find' %}" title="{% trans 'Challenges' %}" aria-label="{% trans 'Challenges' %}"
+    <a href="{% url 'challenges:find' %}" title="{% trans 'challenges' %}" aria-label="{% trans 'challenges' %}"
       class="flex items-center justify-center w-11 h-9 rounded
         {% if url_name == 'find' %}bg-accent-subtle text-accent{% else %}text-content-body hover:bg-surface-hover{% endif %}">
       {% icon "trophy" css_class="h-5 w-5" %}
@@ -238,7 +238,7 @@
         {% if request.user.oidc_sub %}
         <form method="post" action="{% url 'oidc_logout' %}">
           {% csrf_token %}
-          <button type="submit" title="{% trans 'Logout' %}" aria-label="{% trans 'Logout' %}"
+          <button type="submit" title="{% trans 'logout' %}" aria-label="{% trans 'logout' %}"
             class="flex items-center justify-center w-8 h-8 rounded text-content-muted hover:bg-surface-hover hover:text-content-body">
             {% icon "log-out" css_class="h-5 w-5" %}
           </button>
@@ -246,7 +246,7 @@
         {% else %}
         <form method="post" action="{% url 'logout' %}">
           {% csrf_token %}
-          <button type="submit" title="{% trans 'Logout' %}" aria-label="{% trans 'Logout' %}"
+          <button type="submit" title="{% trans 'logout' %}" aria-label="{% trans 'logout' %}"
             class="flex items-center justify-center w-8 h-8 rounded text-content-muted hover:bg-surface-hover hover:text-content-body">
             {% icon "log-out" css_class="h-5 w-5" %}
           </button>

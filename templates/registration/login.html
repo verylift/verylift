@@ -11,7 +11,7 @@
     </div>
 
     <section class="bg-surface-card border border-line-subtle rounded p-6">
-      <h1 class="text-lg font-semibold text-content-strong mb-4">{% trans "Sign in" %}</h1>
+      <h1 class="text-lg font-semibold text-content-strong mb-4">{% trans "sign in" %}</h1>
 
       {% if form.errors %}
       <div class="mb-4 px-4 py-3 rounded bg-danger-light text-danger-dark text-sm">
@@ -24,7 +24,7 @@
         <input type="hidden" name="next" value="{{ next }}">
 
         <div class="mb-4">
-          <label for="id_username" class="block text-sm font-medium text-content-body mb-1">{% trans "Username" %}</label>
+          <label for="id_username" class="block text-sm font-medium text-content-body mb-1">{% trans "username" %}</label>
           <input
             type="text"
             id="id_username"
@@ -36,7 +36,7 @@
         </div>
 
         <div class="mb-2">
-          <label for="id_password" class="block text-sm font-medium text-content-body mb-1">{% trans "Password" %}</label>
+          <label for="id_password" class="block text-sm font-medium text-content-body mb-1">{% trans "password" %}</label>
           <input
             type="password"
             id="id_password"
@@ -55,7 +55,7 @@
         <button
           type="submit"
           class="w-full bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
-          {% trans "Sign in" %}
+          {% trans "sign in" %}
         </button>
       </form>
 
@@ -68,7 +68,7 @@
       <a
         href="{% url 'oidc_authentication_init' %}"
         class="mt-4 flex w-full items-center justify-center gap-2 border border-line rounded px-4 py-2 text-sm font-medium text-content-body hover:bg-surface-hover">
-        {% blocktrans %}Sign in with {{ oidc_provider_name }}{% endblocktrans %}
+        {% blocktrans %}sign in with {{ oidc_provider_name }}{% endblocktrans %}
       </a>
       {% endif %}
 

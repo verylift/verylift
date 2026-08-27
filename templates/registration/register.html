@@ -12,7 +12,7 @@
 
     {% if registration_closed %}
     <section class="bg-surface-card border border-line-subtle rounded p-6 text-center">
-      <h1 class="text-lg font-semibold text-content-strong mb-2">{% trans "Registration is currently closed" %}</h1>
+      <h1 class="text-lg font-semibold text-content-strong mb-2">{% trans "registration is currently closed" %}</h1>
       <p class="text-sm text-content-subtle">{% trans "New account creation isn't available right now. If you believe you should have access, contact the site administrator." %}</p>
 
       <p class="mt-6 text-center text-sm text-content-subtle">
@@ -22,7 +22,7 @@
     </section>
     {% else %}
     <section class="bg-surface-card border border-line-subtle rounded p-6">
-      <h1 class="text-lg font-semibold text-content-strong mb-4">{% trans "Create your account" %}</h1>
+      <h1 class="text-lg font-semibold text-content-strong mb-4">{% trans "create your account" %}</h1>
 
       {% if invite_challenge %}
       <p class="mb-4 -mt-2 text-sm text-content-body bg-surface-sunken border border-line-subtle rounded px-3 py-2">
@@ -34,7 +34,7 @@
         {% csrf_token %}
 
         <div class="mb-4">
-          <label for="id_username" class="block text-sm font-medium text-content-body mb-1">{% trans "Username" %}</label>
+          <label for="id_username" class="block text-sm font-medium text-content-body mb-1">{% trans "username" %}</label>
           <input
             type="text"
             id="id_username"
@@ -48,7 +48,7 @@
         </div>
 
         <div class="mb-4">
-          <label for="id_email" class="block text-sm font-medium text-content-body mb-1">{% trans "Email address" %} <span class="font-normal text-content-subtle">({% trans "optional" %})</span></label>
+          <label for="id_email" class="block text-sm font-medium text-content-body mb-1">{% trans "email address" %} <span class="font-normal text-content-subtle">({% trans "optional" %})</span></label>
           <input
             type="email"
             id="id_email"
@@ -62,7 +62,7 @@
         </div>
 
         <div class="mb-4">
-          <label for="id_password" class="block text-sm font-medium text-content-body mb-1">{% trans "Password" %}</label>
+          <label for="id_password" class="block text-sm font-medium text-content-body mb-1">{% trans "password" %}</label>
           <input
             type="password"
             id="id_password"
@@ -74,7 +74,7 @@
         </div>
 
         <div class="mb-4">
-          <label for="id_password_confirm" class="block text-sm font-medium text-content-body mb-1">{% trans "Confirm password" %}</label>
+          <label for="id_password_confirm" class="block text-sm font-medium text-content-body mb-1">{% trans "confirm password" %}</label>
           <input
             type="password"
             id="id_password_confirm"
@@ -107,7 +107,7 @@
         <button
           type="submit"
           class="w-full bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
-          {% trans "Create account" %}
+          {% trans "create account" %}
         </button>
       </form>
 

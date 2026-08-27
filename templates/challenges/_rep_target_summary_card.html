@@ -49,7 +49,7 @@ and this fragment's post-submit render share one default-selection rule).
         </button>
       </div>
       <p class="text-xs text-content-muted mb-3">
-        {% blocktrans with weight=card.target_weight reps=card.target_reps %}Target: <span class="font-mono">{{ weight }}</span>{% endblocktrans %}{% if card.target_weight != "BW" %} {{ display_unit }}{% endif %} × <span class="font-mono">{{ card.target_reps }}</span> {% blocktrans count counter=card.target_reps %}rep{% plural %}reps{% endblocktrans %}
+        {% blocktrans with weight=card.target_weight reps=card.target_reps %}target: <span class="font-mono">{{ weight }}</span>{% endblocktrans %}{% if card.target_weight != "BW" %} {{ display_unit }}{% endif %} × <span class="font-mono">{{ card.target_reps }}</span> {% blocktrans count counter=card.target_reps %}rep{% plural %}reps{% endblocktrans %}
       </p>
 
       {% if card.state == "scored" %}
@@ -87,7 +87,7 @@ and this fragment's post-submit render share one default-selection rule).
       <div class="flex items-start justify-between gap-2 mb-3">
         <h3 class="text-sm font-semibold text-content-strong">{{ card.lift }}</h3>
         <button type="button" class="manual-flip-close flex-shrink-0 w-6 h-6 inline-flex items-center justify-center rounded-full border border-line-subtle text-content-muted hover:text-content-strong"
-                aria-label="{% trans 'Cancel' %}">
+                aria-label="{% trans 'cancel' %}">
           {% icon "x" css_class="h-3.5 w-3.5" %}
         </button>
       </div>
@@ -123,7 +123,7 @@ and this fragment's post-submit render share one default-selection rule).
           {% endfor %}
         </div>
 
-        <label class="block text-xs text-content-muted mb-1" for="manual-date-{{ slug }}">{% trans "Date" %}</label>
+        <label class="block text-xs text-content-muted mb-1" for="manual-date-{{ slug }}">{% trans "date" %}</label>
         <input id="manual-date-{{ slug }}" type="date" name="performed_at" value="{% now 'Y-m-d' %}" max="{% now 'Y-m-d' %}"
                class="w-full mb-3 text-sm border border-line-subtle rounded px-2 py-1.5 bg-surface-card text-content-body">
 

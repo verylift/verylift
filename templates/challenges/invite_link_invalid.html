@@ -12,11 +12,11 @@
 
     <section class="bg-surface-card border border-line-subtle rounded p-6 text-center">
       {% if reason == "expired" %}
-      <h1 class="text-lg font-semibold text-content-strong mb-2">{% trans "This invite link has expired" %}</h1>
+      <h1 class="text-lg font-semibold text-content-strong mb-2">{% trans "this invite link has expired" %}</h1>
       {% elif reason == "exhausted" %}
-      <h1 class="text-lg font-semibold text-content-strong mb-2">{% trans "This invite link has reached its maximum number of uses" %}</h1>
+      <h1 class="text-lg font-semibold text-content-strong mb-2">{% trans "this invite link has reached its maximum number of uses" %}</h1>
       {% else %}
-      <h1 class="text-lg font-semibold text-content-strong mb-2">{% trans "This invite link is no longer valid" %}</h1>
+      <h1 class="text-lg font-semibold text-content-strong mb-2">{% trans "this invite link is no longer valid" %}</h1>
       {% endif %}
       <p class="text-sm text-content-subtle">
         {% blocktrans with name=challenge.name %}Ask the owner of “{{ name }}” for a fresh invite link.{% endblocktrans %}
@@ -24,7 +24,7 @@
 
       {% if request.user.is_authenticated %}
       <p class="mt-6 text-center text-sm text-content-subtle">
-        <a href="{% url 'challenges:dashboard' %}" class="text-accent hover:underline">{% trans "Back to your dashboard" %}</a>
+        <a href="{% url 'challenges:dashboard' %}" class="text-accent hover:underline">{% trans "back to your dashboard" %}</a>
       </p>
       {% else %}
       <p class="mt-6 text-center text-sm text-content-subtle">
