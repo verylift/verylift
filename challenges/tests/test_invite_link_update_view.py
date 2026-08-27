@@ -15,7 +15,17 @@ from challenges.tests.factories import ChallengeFactory, ChallengeInviteLinkFact
 
 @pytest.fixture
 def challenge(db):
-    return ChallengeFactory(status=Challenge.Status.ACTIVE)
+    # end_date is pinned rather than left to ChallengeFactory's
+    # Faker("future_date"), which lands uniformly 1-29 days out.
+    # clean_expires_at rejects an expiry past the challenge end, so tests here
+    # that post "now + 2 days" failed on roughly 4% of runs -- whenever the
+    # roll came up tomorrow -- and failed confusingly: the form is invalid but
+    # the view still redirects, so the 302 assertion passes and the next line
+    # reads a field nothing ever wrote.
+    return ChallengeFactory(
+        status=Challenge.Status.ACTIVE,
+        end_date=(timezone.now() + timedelta(days=30)).date(),
+    )
 
 
 @pytest.fixture

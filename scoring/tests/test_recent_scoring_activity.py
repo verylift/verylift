@@ -12,7 +12,7 @@ from challenges.tests.factories import (
     ChallengeFactory,
     ChallengeParticipantFactory,
 )
-from scoring.services import build_recent_scoring_activity
+from scoring.services import build_points_over_time, build_recent_scoring_activity
 from scoring.tests.factories import PointEarnEventFactory
 
 
@@ -63,18 +63,22 @@ class TestBuildRecentScoringActivity:
         assert row["unit"] == "kg"
         assert row["reps"] == 5
         assert row["points_earned"] == 6
+        # nothing scored in Squat before this, so it is worth its full value
+        assert row["points_delta"] == 6
         assert row["date"] == date(2024, 3, 1)
 
     def test_most_recent_first_ordering(self, challenge, viewer):
         alice = UserFactory(display_name="Alice")
         _accept(challenge, alice)
-        for day in (date(2024, 1, 1), date(2024, 2, 1), date(2024, 3, 1)):
+        for points, day in enumerate(
+            (date(2024, 1, 1), date(2024, 2, 1), date(2024, 3, 1)), start=1
+        ):
             PointEarnEventFactory(
                 user=alice,
                 challenge=challenge,
                 lift="Squat",
                 performed_at=day,
-                points_earned=1,
+                points_earned=points,
             )
 
         activity = build_recent_scoring_activity(challenge, viewer)
@@ -117,19 +121,13 @@ class TestBuildRecentScoringActivity:
     def test_bounded_by_limit(self, challenge, viewer):
         alice = UserFactory(display_name="Alice")
         _accept(challenge, alice)
-        for day in (
-            date(2024, 1, 1),
-            date(2024, 1, 2),
-            date(2024, 1, 3),
-            date(2024, 1, 4),
-            date(2024, 1, 5),
-        ):
+        for day_num in range(1, 6):
             PointEarnEventFactory(
                 user=alice,
                 challenge=challenge,
                 lift="Squat",
-                performed_at=day,
-                points_earned=1,
+                performed_at=date(2024, 1, day_num),
+                points_earned=day_num,
             )
 
         activity = build_recent_scoring_activity(challenge, viewer, limit=3)
@@ -145,7 +143,7 @@ class TestBuildRecentScoringActivity:
                 challenge=challenge,
                 lift="Squat",
                 performed_at=date(2024, 1, day_num),
-                points_earned=1,
+                points_earned=day_num,
             )
 
         activity = build_recent_scoring_activity(challenge, viewer)
@@ -291,12 +289,13 @@ class TestBuildRecentScoringActivity:
 
         assert activity[0]["name"] == "PseudonymName (deleted)"
 
-    def test_superseded_event_excluded_from_feed(self, challenge, viewer):
+    def test_repeat_at_an_already_reached_tier_excluded_from_feed(
+        self, challenge, viewer
+    ):
         # TASK-240: a lift already at its max scoreable tier can be performed
         # again without setting a new best -- both events score the same
-        # non-zero points, but only the earlier is_current_best=True one
-        # should read as activity. The later, superseded event must not show
-        # up looking like a fresh achievement.
+        # non-zero points, but the later one moved nothing, so its delta is
+        # zero and it must not show up looking like a fresh achievement.
         alice = UserFactory(display_name="Alice")
         _accept(challenge, alice)
         PointEarnEventFactory(
@@ -320,3 +319,274 @@ class TestBuildRecentScoringActivity:
 
         assert len(activity) == 1
         assert activity[0]["date"] == date(2024, 1, 1)
+
+
+class TestPointsDelta:
+    """points_delta is the event's net effect on that lifter's total -- its
+    points minus the best they already held in that lift from an earlier day."""
+
+    def test_first_score_in_a_lift_is_worth_its_full_value(self, challenge, viewer):
+        alice = UserFactory(display_name="Alice")
+        _accept(challenge, alice)
+        PointEarnEventFactory(
+            user=alice,
+            challenge=challenge,
+            lift="Squat",
+            performed_at=date(2024, 3, 1),
+            points_earned=6,
+            is_current_best=True,
+        )
+
+        assert build_recent_scoring_activity(challenge, viewer)[0]["points_delta"] == 6
+
+    def test_beating_a_previous_pr_is_worth_only_the_improvement(
+        self, challenge, viewer
+    ):
+        """The reason the column exists: raw points_earned reads as six points
+        of progress when the leaderboard only moved by two."""
+        alice = UserFactory(display_name="Alice")
+        _accept(challenge, alice)
+        PointEarnEventFactory(
+            user=alice,
+            challenge=challenge,
+            lift="Squat",
+            performed_at=date(2024, 3, 1),
+            points_earned=4,
+            is_current_best=False,
+        )
+        PointEarnEventFactory(
+            user=alice,
+            challenge=challenge,
+            lift="Squat",
+            performed_at=date(2024, 3, 20),
+            points_earned=6,
+            is_current_best=True,
+        )
+
+        row = build_recent_scoring_activity(challenge, viewer)[0]
+        assert row["points_earned"] == 6
+        assert row["points_delta"] == 2
+
+    def test_a_different_lift_does_not_offset_the_delta(self, challenge, viewer):
+        """Prior points only count against the same lift -- a big bench must
+        not make a first-ever squat look like it gained nothing."""
+        alice = UserFactory(display_name="Alice")
+        _accept(challenge, alice)
+        PointEarnEventFactory(
+            user=alice,
+            challenge=challenge,
+            lift="Bench",
+            performed_at=date(2024, 3, 1),
+            points_earned=9,
+            is_current_best=True,
+        )
+        PointEarnEventFactory(
+            user=alice,
+            challenge=challenge,
+            lift="Squat",
+            performed_at=date(2024, 3, 20),
+            points_earned=5,
+            is_current_best=True,
+        )
+
+        by_lift = {
+            row["lift"]: row["points_delta"]
+            for row in build_recent_scoring_activity(challenge, viewer)
+        }
+        assert by_lift == {"Bench": 9, "Squat": 5}
+
+    def test_another_lifters_history_does_not_offset_the_delta(self, challenge, viewer):
+        alice = UserFactory(display_name="Alice")
+        bob = UserFactory(display_name="Bob")
+        _accept(challenge, alice)
+        _accept(challenge, bob)
+        PointEarnEventFactory(
+            user=alice,
+            challenge=challenge,
+            lift="Squat",
+            performed_at=date(2024, 3, 1),
+            points_earned=8,
+            is_current_best=True,
+        )
+        PointEarnEventFactory(
+            user=bob,
+            challenge=challenge,
+            lift="Squat",
+            performed_at=date(2024, 3, 20),
+            points_earned=5,
+            is_current_best=True,
+        )
+
+        by_name = {
+            row["name"]: row["points_delta"]
+            for row in build_recent_scoring_activity(challenge, viewer)
+        }
+        assert by_name == {"Alice": 8, "Bob": 5}
+
+    def test_earlier_sets_the_same_day_are_one_step_not_two(self, challenge, viewer):
+        """A session is collapsed to its best set, so the delta must measure
+        the whole session -- from what the lifter held before that day to what
+        they held after -- not just the last working set's edge over the one
+        before it."""
+        alice = UserFactory(display_name="Alice")
+        _accept(challenge, alice)
+        for points, best in ((3, False), (7, True)):
+            PointEarnEventFactory(
+                user=alice,
+                challenge=challenge,
+                lift="Squat",
+                performed_at=date(2024, 3, 10),
+                points_earned=points,
+                is_current_best=best,
+            )
+
+        rows = build_recent_scoring_activity(challenge, viewer)
+        assert len(rows) == 1
+        assert rows[0]["points_delta"] == 7
+
+    def test_delta_matches_the_charts_rise_on_that_date(self, challenge, viewer):
+        """The column and the Points Over Time chart describe the same event,
+        so they must not tell two stories about it."""
+        alice = UserFactory(display_name="Alice")
+        _accept(challenge, alice)
+        PointEarnEventFactory(
+            user=alice,
+            challenge=challenge,
+            lift="Squat",
+            performed_at=date(2024, 3, 1),
+            points_earned=4,
+            is_current_best=False,
+        )
+        PointEarnEventFactory(
+            user=alice,
+            challenge=challenge,
+            lift="Squat",
+            performed_at=date(2024, 3, 20),
+            points_earned=6,
+            is_current_best=True,
+        )
+
+        row = build_recent_scoring_activity(challenge, viewer)[0]
+        chart = build_points_over_time(challenge)
+        totals = dict(zip(chart["labels"], chart["datasets"][0]["data"], strict=True))
+
+        assert totals["2024-03-20"] - totals["2024-03-01"] == row["points_delta"]
+
+
+class TestSupersededSessionsInFeed:
+    """Membership is "did this raise the lifter's total", not "is this the PR
+    still standing today" -- so a lift's whole progression appears, not just
+    its surviving best."""
+
+    def test_whole_progression_of_one_lift_appears(self, challenge, viewer):
+        alice = UserFactory(display_name="Alice")
+        _accept(challenge, alice)
+        for day, points, best in (
+            (date(2024, 1, 5), 2, False),
+            (date(2024, 1, 19), 4, False),
+            (date(2024, 2, 2), 9, True),
+        ):
+            PointEarnEventFactory(
+                user=alice,
+                challenge=challenge,
+                lift="Back Squat",
+                performed_at=day,
+                points_earned=points,
+                is_current_best=best,
+            )
+
+        activity = build_recent_scoring_activity(challenge, viewer)
+
+        assert [
+            (r["date"], r["points_earned"], r["points_delta"]) for r in activity
+        ] == [
+            (date(2024, 2, 2), 9, 5),
+            (date(2024, 1, 19), 4, 2),
+            (date(2024, 1, 5), 2, 2),
+        ]
+
+    def test_session_that_fell_short_of_a_standing_pr_is_omitted(
+        self, challenge, viewer
+    ):
+        """A lighter day scores points but moves nothing. Its delta would be
+        negative, which never happened to the lifter's total -- a score does
+        not fall -- so the session is filtered rather than shown as a loss."""
+        alice = UserFactory(display_name="Alice")
+        _accept(challenge, alice)
+        PointEarnEventFactory(
+            user=alice,
+            challenge=challenge,
+            lift="Deadlift",
+            performed_at=date(2024, 3, 1),
+            points_earned=8,
+            is_current_best=True,
+        )
+        PointEarnEventFactory(
+            user=alice,
+            challenge=challenge,
+            lift="Deadlift",
+            performed_at=date(2024, 3, 15),
+            points_earned=5,
+            is_current_best=False,
+        )
+
+        activity = build_recent_scoring_activity(challenge, viewer)
+
+        assert [r["date"] for r in activity] == [date(2024, 3, 1)]
+
+    def test_limit_counts_qualifying_rows_not_sessions_examined(
+        self, challenge, viewer
+    ):
+        """Non-qualifying sessions must not consume a slot -- otherwise a
+        lifter with several flat days gets a feed padded with nothing."""
+        alice = UserFactory(display_name="Alice")
+        _accept(challenge, alice)
+        PointEarnEventFactory(
+            user=alice,
+            challenge=challenge,
+            lift="Bench Press",
+            performed_at=date(2024, 4, 1),
+            points_earned=6,
+            is_current_best=True,
+        )
+        # three later sessions that all fall short of the standing 6
+        for day in (date(2024, 4, 8), date(2024, 4, 15), date(2024, 4, 22)):
+            PointEarnEventFactory(
+                user=alice,
+                challenge=challenge,
+                lift="Bench Press",
+                performed_at=day,
+                points_earned=4,
+                is_current_best=False,
+            )
+
+        activity = build_recent_scoring_activity(challenge, viewer, limit=2)
+
+        assert [r["date"] for r in activity] == [date(2024, 4, 1)]
+
+    def test_every_row_is_a_rise_in_the_chart(self, challenge, viewer):
+        """The feed and the chart are two views of one ledger: each row is a
+        date the line went up, and Gain is how far."""
+        alice = UserFactory(display_name="Alice")
+        _accept(challenge, alice)
+        for day, points, best in (
+            (date(2024, 5, 1), 3, False),
+            (date(2024, 5, 10), 7, True),
+        ):
+            PointEarnEventFactory(
+                user=alice,
+                challenge=challenge,
+                lift="Front Squat",
+                performed_at=day,
+                points_earned=points,
+                is_current_best=best,
+            )
+
+        chart = build_points_over_time(challenge)
+        totals = dict(zip(chart["labels"], chart["datasets"][0]["data"], strict=True))
+        labels = chart["labels"]
+
+        for row in build_recent_scoring_activity(challenge, viewer):
+            label = row["date"].isoformat()
+            previous = labels[labels.index(label) - 1]
+            assert totals[label] - totals[previous] == row["points_delta"]

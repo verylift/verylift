@@ -173,6 +173,8 @@
                   <th class="py-1.5 pr-4 font-medium">{% trans "Lifter" %}</th>
                   <th class="py-1.5 pr-4 font-medium">{% trans "Lift" %}</th>
                   <th class="py-1.5 pr-4 font-medium text-right">{% trans "Points" %}</th>
+                  <th class="py-1.5 pr-4 font-medium text-right"
+                      title="{% trans 'How much this lift raised their running total' %}">{% trans "Gain" %}</th>
                   <th class="py-1.5 pr-4 font-medium text-right">{% trans "Date" %}</th>
                 </tr>
               </thead>
@@ -182,6 +184,7 @@
                   <td class="py-1.5 pr-4">{{ row.name }}</td>
                   <td class="py-1.5 pr-4">{{ row.lift }}</td>
                   <td class="py-1.5 pr-4 text-right font-mono">{{ row.points_earned }}</td>
+                  <td class="py-1.5 pr-4 text-right font-mono text-accent">+{{ row.points_delta }}</td>
                   <td class="py-1.5 pr-4 text-right whitespace-nowrap">{{ row.date|date:"M j" }}</td>
                 </tr>
                 {% endfor %}
