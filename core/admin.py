@@ -3,13 +3,7 @@ import csv
 from django.contrib import admin
 from django.http import HttpResponse
 
-from .models import (
-    LiftAlias,
-    NewsletterSubscriber,
-    SiteSettings,
-    SupportedApp,
-    SupportedAppMode,
-)
+from .models import LiftAlias, NewsletterSubscriber, SiteSettings
 
 # Formula-injection guard for CSV export: a spreadsheet app treats a cell
 # starting with any of these as a formula, not text. Django's EmailField
@@ -66,16 +60,3 @@ class SiteSettingsAdmin(admin.ModelAdmin):
     def changelist_view(self, request, extra_context=None):
         obj = SiteSettings.load()
         return self.change_view(request, str(obj.pk), extra_context=extra_context)
-
-
-class SupportedAppModeInline(admin.TabularInline):
-    model = SupportedAppMode
-    extra = 1
-
-
-@admin.register(SupportedApp)
-class SupportedAppAdmin(admin.ModelAdmin):
-    list_display = ["name", "is_affiliate", "coupon_code", "sort_order", "url"]
-    list_filter = ["is_affiliate"]
-    ordering = ["sort_order", "name"]
-    inlines = [SupportedAppModeInline]

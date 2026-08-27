@@ -20,6 +20,17 @@
 </header>
 {% endblock %}
 
+{% comment %}
+Hardcoded, not model-backed (TASK-254 follow-up): a tracker can only be
+listed here once its client/importer has already shipped, so a DB row
+can never lead the deploy it describes -- and a DB-sourced description
+would sit outside the gettext catalog entirely, silently rendering
+English on an otherwise-translated Spanish page. Every tracker's own
+name (Liftosaur, Hevy, Wger, Strong) is left untranslated, matching how
+"Discord"/"GitHub" render elsewhere in this codebase -- brand names
+aren't translated, only the surrounding prose is.
+{% endcomment %}
+
 {% block page_body %}
   <main class="flex-1">
     <section class="max-w-3xl mx-auto px-4 py-12 text-center">
@@ -31,77 +42,102 @@
     </section>
 
     <section class="max-w-4xl mx-auto px-4 pb-8">
-      {% for app in featured_apps %}
-        <div class="mb-2">
-          <span class="inline-block text-sm font-medium px-3 py-1 rounded-full bg-accent-subtle text-accent">
-            {% trans "recommended" %}
+      <div class="mb-2">
+        <span class="inline-block text-sm font-medium px-3 py-1 rounded-full bg-accent-subtle text-accent">
+          {% trans "recommended" %}
+        </span>
+      </div>
+      <div class="bg-surface-card border border-line-subtle rounded p-6">
+        <h2 class="text-2xl font-bold text-content-strong">Liftosaur</h2>
+        <p class="mt-2 text-sm text-content-body">
+          {% blocktrans %}Automatically syncs every lift you log, or upload a CSV export if you'd rather not connect the API. We, ourselves, love using Liftosaur.{% endblocktrans %}
+        </p>
+        <p class="mt-3 text-sm text-content-body">
+          {% trans "Use code" %}
+          {% include "components/_copy_code.html" with code="VERYLIFT" %}
+          {% trans "when you subscribe to Liftosaur's premium subscription, which is required for the API that live sync depends on." %}
+        </p>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <span class="inline-block text-xs font-medium px-3 py-1 rounded-full border border-line text-content-body">
+            {% trans "live sync" %}
+          </span>
+          <span class="inline-block text-xs font-medium px-3 py-1 rounded-full border border-line text-content-body">
+            {% trans "csv upload" %}
           </span>
         </div>
-        <div class="bg-surface-card border border-line-subtle rounded p-6">
-          <h2 class="text-2xl font-bold text-content-strong">{{ app.name }}</h2>
-          <p class="mt-2 text-sm text-content-body">{{ app.description }}</p>
-          {% if app.coupon_code %}
-            {% comment %}
-            Hardcodes "Liftosaur" rather than {{ app.name }} -- this sentence
-            is specific to Liftosaur's own premium-subscription terminology
-            (see https://www.liftosaur.com/doc/api: "Requires a premium
-            subscription") and its API being what live sync depends on. It
-            would need real rewording, not just a variable swap, for any
-            other app that ever gets a coupon_code.
-            {% endcomment %}
-            <p class="mt-3 text-sm text-content-body">
-              {% trans "Use code" %}
-              {% include "components/_copy_code.html" with code=app.coupon_code %}
-              {% trans "when you subscribe to Liftosaur's premium subscription, which is required for the API that live sync depends on." %}
-            </p>
-          {% endif %}
-          <div class="mt-3 flex flex-wrap gap-2">
-            {% for mode in app.modes.all %}
-              <span class="inline-block text-xs font-medium px-3 py-1 rounded-full border border-line text-content-body">
-                {{ mode.get_mode_display }}
-              </span>
-            {% endfor %}
-          </div>
-          <a
-            href="{{ app.url }}"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="mt-4 inline-block bg-accent text-accent-on text-sm font-medium px-6 py-3 rounded hover:bg-accent-hover">
-            {% trans "get started" %}
-          </a>
-          {% if app.is_affiliate %}
-            <p class="mt-3 text-xs text-content-subtle">
-              {% brand as brand_name %}
-              {% blocktrans with app_name=app.name %}{{ brand_name }} has an affiliate relationship with {{ app_name }} and may earn a commission from qualifying subscriptions.{% endblocktrans %}
-            </p>
-          {% endif %}
-        </div>
-      {% endfor %}
+        <a
+          href="https://www.liftosaur.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="mt-4 inline-block bg-accent text-accent-on text-sm font-medium px-6 py-3 rounded hover:bg-accent-hover">
+          {% trans "get started" %}
+        </a>
+        <p class="mt-3 text-xs text-content-subtle">
+          {% blocktrans %}{{ brand_name }} has an affiliate relationship with Liftosaur and may earn a commission from qualifying subscriptions.{% endblocktrans %}
+        </p>
+      </div>
     </section>
 
     <section class="max-w-4xl mx-auto px-4 pt-10 pb-12">
       <h2 class="text-2xl font-bold text-content-strong text-center mb-6">{% trans "you can also use these" %}</h2>
       <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {% for app in other_apps %}
-          <div class="bg-surface-card border border-line-subtle rounded p-6 flex flex-col">
-            <h3 class="text-lg font-semibold text-content-strong">{{ app.name }}</h3>
-            <p class="mt-2 text-sm text-content-body flex-1">{{ app.description }}</p>
-            <div class="mt-3 flex flex-wrap gap-2">
-              {% for mode in app.modes.all %}
-                <span class="inline-block text-xs font-medium px-3 py-1 rounded-full border border-line text-content-body">
-                  {{ mode.get_mode_display }}
-                </span>
-              {% endfor %}
-            </div>
-            <a
-              href="{{ app.url }}"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="mt-4 inline-block border border-line text-content-body text-sm font-medium px-4 py-2 rounded hover:bg-surface-hover text-center">
-              {% trans "learn more" %}
-            </a>
+        <div class="bg-surface-card border border-line-subtle rounded p-6 flex flex-col">
+          <h3 class="text-lg font-semibold text-content-strong">Hevy</h3>
+          <p class="mt-2 text-sm text-content-body flex-1">
+            {% blocktrans %}Connect your Hevy account for automatic sync, or upload a CSV export instead.{% endblocktrans %}
+          </p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <span class="inline-block text-xs font-medium px-3 py-1 rounded-full border border-line text-content-body">
+              {% trans "live sync" %}
+            </span>
+            <span class="inline-block text-xs font-medium px-3 py-1 rounded-full border border-line text-content-body">
+              {% trans "csv upload" %}
+            </span>
           </div>
-        {% endfor %}
+          <a
+            href="https://www.hevyapp.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="mt-4 inline-block border border-line text-content-body text-sm font-medium px-4 py-2 rounded hover:bg-surface-hover text-center">
+            {% trans "learn more" %}
+          </a>
+        </div>
+        <div class="bg-surface-card border border-line-subtle rounded p-6 flex flex-col">
+          <h3 class="text-lg font-semibold text-content-strong">Wger</h3>
+          <p class="mt-2 text-sm text-content-body flex-1">
+            {% blocktrans %}Self-hosted and open source. Connect your own Wger instance with an API token.{% endblocktrans %}
+          </p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <span class="inline-block text-xs font-medium px-3 py-1 rounded-full border border-line text-content-body">
+              {% trans "live sync" %}
+            </span>
+          </div>
+          <a
+            href="https://wger.de"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="mt-4 inline-block border border-line text-content-body text-sm font-medium px-4 py-2 rounded hover:bg-surface-hover text-center">
+            {% trans "learn more" %}
+          </a>
+        </div>
+        <div class="bg-surface-card border border-line-subtle rounded p-6 flex flex-col">
+          <h3 class="text-lg font-semibold text-content-strong">Strong</h3>
+          <p class="mt-2 text-sm text-content-body flex-1">
+            {% blocktrans %}Export your history from Strong and upload the file — we'll do the rest.{% endblocktrans %}
+          </p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <span class="inline-block text-xs font-medium px-3 py-1 rounded-full border border-line text-content-body">
+              {% trans "csv upload" %}
+            </span>
+          </div>
+          <a
+            href="https://www.strongapp.io"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="mt-4 inline-block border border-line text-content-body text-sm font-medium px-4 py-2 rounded hover:bg-surface-hover text-center">
+            {% trans "learn more" %}
+          </a>
+        </div>
       </div>
     </section>
   </main>

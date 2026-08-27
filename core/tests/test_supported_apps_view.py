@@ -1,11 +1,13 @@
-"""Tests for the "supported apps" page (TASK-254)."""
+"""Tests for the "supported apps" page (TASK-254).
+
+Hardcoded content (no model), so there's little left to test beyond "the
+page renders" and "the reused, behavior-bearing pieces still work" -- the
+copy itself isn't asserted on, per the project's copy-echo ban.
+"""
 
 import pytest
 from django.test import Client
 from django.urls import reverse
-
-from core.models import SupportedApp, SupportedAppMode
-from core.tests.factories import SupportedAppFactory, SupportedAppModeFactory
 
 
 @pytest.fixture
@@ -13,103 +15,29 @@ def client():
     return Client()
 
 
-class TestSupportedAppQuerySet:
-    def test_featured_returns_only_affiliate_apps(self, db):
-        affiliate = SupportedAppFactory(is_affiliate=True)
-        non_affiliate = SupportedAppFactory(is_affiliate=False)
-        featured = SupportedApp.objects.featured()
-        assert affiliate in featured
-        assert non_affiliate not in featured
-
-    def test_other_returns_only_non_affiliate_apps(self, db):
-        affiliate = SupportedAppFactory(is_affiliate=True)
-        non_affiliate = SupportedAppFactory(is_affiliate=False)
-        other = SupportedApp.objects.other()
-        assert non_affiliate in other
-        assert affiliate not in other
-
-
 class TestSupportedAppsView:
     def test_page_renders(self, client, db):
         response = client.get(reverse("core:supported-apps"))
         assert response.status_code == 200
 
-    def test_featured_and_other_apps_split_in_context(self, client, db):
-        featured = SupportedAppFactory(is_affiliate=True, name="Featured Co")
-        other = SupportedAppFactory(is_affiliate=False, name="Other Co")
-
-        response = client.get(reverse("core:supported-apps"))
-
-        assert featured in response.context["featured_apps"]
-        assert featured not in response.context["other_apps"]
-        assert other in response.context["other_apps"]
-        assert other not in response.context["featured_apps"]
-
-    def test_mode_tags_render_from_real_data_not_hardcoded(self, client, db):
-        app = SupportedAppFactory(is_affiliate=False, name="Two Mode Co")
-        SupportedAppModeFactory(supported_app=app, mode=SupportedAppMode.Mode.LIVE_SYNC)
-        SupportedAppModeFactory(
-            supported_app=app, mode=SupportedAppMode.Mode.CSV_UPLOAD
-        )
-
-        response = client.get(reverse("core:supported-apps"))
-        content = response.content.decode()
-
-        assert "live sync" in content
-        assert "csv upload" in content
-
-    def test_app_with_no_modes_renders_without_error(self, client, db):
-        SupportedAppFactory(is_affiliate=False, name="No Mode Co")
-        response = client.get(reverse("core:supported-apps"))
-        assert response.status_code == 200
-
-    def test_affiliate_disclosure_shown_only_for_affiliate_apps(self, client, db):
-        affiliate = SupportedAppFactory(is_affiliate=True, name="Affiliate Co")
-        non_affiliate = SupportedAppFactory(is_affiliate=False, name="Plain Co")
-
-        response = client.get(reverse("core:supported-apps"))
-        content = response.content.decode()
-
-        assert f"affiliate relationship with {affiliate.name}" in content
-        assert f"affiliate relationship with {non_affiliate.name}" not in content
-
-    def test_app_links_use_their_own_url(self, client, db):
-        app = SupportedAppFactory(is_affiliate=False, url="https://example.com/tracker")
-        response = client.get(reverse("core:supported-apps"))
-        assert app.url in response.content.decode()
-
-    def test_coupon_code_renders_alongside_its_own_cta_and_disclosure(self, client, db):
-        """The seeded Liftosaur row has a coupon_code, so its card should
-        show the bare code + copy button (via components/_copy_code.html)
-        in addition to -- not instead of -- its own "get started" CTA and
-        its own affiliate disclosure."""
+    def test_liftosaur_coupon_chip_renders_exactly_once(self, client, db):
+        """Liftosaur is the only tracker with a coupon code, so the
+        copy-to-clipboard chip (shared with onboarding/settings) should
+        appear exactly once on the page."""
         response = client.get(reverse("core:supported-apps"))
         content = response.content.decode()
 
         assert "VERYLIFT" in content
         assert content.count("data-copy-code>") == 1
-        assert "get started" in content
-        assert "affiliate relationship with Liftosaur" in content
 
-    def test_coupon_sentence_sits_before_mode_tags_and_cta(self, client, db):
-        """Card order should be: description, coupon sentence, mode tags,
-        CTA, disclosure -- the coupon sentence explains what the code is
-        for before the reader hits the tags/button, not after."""
+    def test_each_tracker_links_to_its_own_site(self, client, db):
         response = client.get(reverse("core:supported-apps"))
         content = response.content.decode()
 
-        coupon_index = content.index("data-copy-code>")
-        mode_tag_index = content.index("live sync")
-        cta_index = content.index("get started")
-        disclosure_index = content.index("affiliate relationship with Liftosaur")
-
-        assert coupon_index < mode_tag_index < cta_index < disclosure_index
-
-    def test_app_without_coupon_code_gets_no_copy_chip(self, client, db):
-        SupportedAppFactory(is_affiliate=False, name="No Coupon Co")
-        response = client.get(reverse("core:supported-apps"))
-        content = response.content.decode()
-
-        # Only the seeded Liftosaur row has a coupon_code -- a second app
-        # with none set must not add a second copy chip.
-        assert content.count("data-copy-code>") == 1
+        for url in (
+            "https://www.liftosaur.com",
+            "https://www.hevyapp.com",
+            "https://wger.de",
+            "https://www.strongapp.io",
+        ):
+            assert url in content

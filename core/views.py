@@ -13,7 +13,7 @@ from django_ratelimit.decorators import ratelimit
 
 from accounts.ratelimit import client_ip
 from core.forms import NewsletterSubscribeForm
-from core.models import NewsletterSubscriber, SiteSettings, SupportedApp
+from core.models import NewsletterSubscriber, SiteSettings
 
 logger = logging.getLogger(__name__)
 
@@ -60,16 +60,14 @@ def newsletter_subscribe_view(request):
 def supported_apps_view(request):
     """Lists every workout-tracking app "very easy" links to (TASK-254).
 
-    Featured (affiliate) apps render first, each app's live-sync/CSV-upload
-    tags come straight from SupportedAppMode rows rather than any
-    per-template list, so the tags and the seed data can never drift apart.
+    Hardcoded content, not model-backed: a tracker can only appear here
+    once its client/importer already shipped, so the row can never lead
+    the deploy it describes -- and a DB-sourced description would sit
+    outside the gettext catalog, so the Spanish page would silently
+    render English while everything else translated (verified: the seed
+    descriptions never appeared in locale/es/LC_MESSAGES/django.po).
     """
-    apps = SupportedApp.objects.prefetch_related("modes")
-    context = {
-        "featured_apps": apps.featured(),
-        "other_apps": apps.other(),
-    }
-    return render(request, "supported_apps.html", context)
+    return render(request, "supported_apps.html")
 
 
 def protected_media_view(request, path, document_root=None):
