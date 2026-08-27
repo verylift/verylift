@@ -6,6 +6,7 @@ from accounts.tests.factories import UserFactory
 from policies.tests.factories import (
     PolicyConsentFactory,
     PolicyFactory,
+    PolicyNotificationFactory,
     PolicyVersionFactory,
 )
 
@@ -127,5 +128,32 @@ class TestPolicyConsentAdmin:
         PolicyConsentFactory()
 
         response = staff_client.get(reverse("admin:policies_policyconsent_changelist"))
+
+        assert response.status_code == 200
+
+
+@pytest.mark.django_db
+class TestPolicyNotificationAdmin:
+    def test_change_view_renders_read_only_with_no_save_button(self, staff_client):
+        notification = PolicyNotificationFactory()
+
+        response = staff_client.get(
+            reverse("admin:policies_policynotification_change", args=[notification.pk])
+        )
+
+        assert response.status_code == 200
+        assert b'name="_save"' not in response.content
+
+    def test_cannot_add_a_notification_row_via_the_admin(self, staff_client):
+        response = staff_client.get(reverse("admin:policies_policynotification_add"))
+
+        assert response.status_code == 403
+
+    def test_staff_can_still_list_notification_rows(self, staff_client):
+        PolicyNotificationFactory()
+
+        response = staff_client.get(
+            reverse("admin:policies_policynotification_changelist")
+        )
 
         assert response.status_code == 200

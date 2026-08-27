@@ -6,7 +6,7 @@ from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils.html import format_html
 
-from policies.models import Policy, PolicyConsent, PolicyVersion
+from policies.models import Policy, PolicyConsent, PolicyNotification, PolicyVersion
 
 logger = logging.getLogger(__name__)
 
@@ -133,6 +133,24 @@ class PolicyConsentAdmin(admin.ModelAdmin):
         "user_agent",
         "method",
     )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(PolicyNotification)
+class PolicyNotificationAdmin(admin.ModelAdmin):
+    # Same read-only log convention as PolicyConsentAdmin above: rows are
+    # written only by notify_users_for_version, and this is the log an
+    # operator checks when a user says they never got a policy-update email.
+    list_display = ("user", "policy_version", "notified_at", "method")
+    list_filter = ("policy_version__policy", "method")
+    search_fields = ("user__email", "policy_version__policy__name")
+    date_hierarchy = "notified_at"
+    readonly_fields = ("id", "user", "policy_version", "notified_at", "method")
 
     def has_add_permission(self, request):
         return False

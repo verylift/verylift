@@ -7,6 +7,8 @@ from .models import (
     ChallengeParticipant,
     CustomGoal,
     CustomGoalTarget,
+    RepTargetGoal,
+    RepTargetGoalTarget,
 )
 
 
@@ -67,3 +69,37 @@ class CustomGoalAdmin(admin.ModelAdmin):
     list_filter = ["source_method"]
     search_fields = ["name", "participant__user__username"]
     inlines = [CustomGoalTargetInline]
+
+
+@admin.register(CustomGoalTarget)
+class CustomGoalTargetAdmin(admin.ModelAdmin):
+    # Kept as an inline on CustomGoal too (above) for editing a goal's whole
+    # ladder in place; this standalone list exists so an operator can search
+    # across every participant's targets for a lift (e.g. tracking down an
+    # outlier feeding a scoring dispute) without opening each goal in turn.
+    list_display = ["goal", "lift", "rep_count", "target_weight"]
+    list_select_related = ["goal", "goal__participant"]
+    search_fields = ["lift", "goal__name", "goal__participant__user__username"]
+    ordering = ["lift", "rep_count"]
+
+
+class RepTargetGoalTargetInline(admin.TabularInline):
+    model = RepTargetGoalTarget
+    extra = 0
+
+
+@admin.register(RepTargetGoal)
+class RepTargetGoalAdmin(admin.ModelAdmin):
+    list_display = ["name", "participant", "source_method", "created_at"]
+    list_filter = ["source_method"]
+    search_fields = ["name", "participant__user__username"]
+    inlines = [RepTargetGoalTargetInline]
+
+
+@admin.register(RepTargetGoalTarget)
+class RepTargetGoalTargetAdmin(admin.ModelAdmin):
+    # Same standalone-plus-inline rationale as CustomGoalTarget above.
+    list_display = ["goal", "lift", "target_weight", "target_reps"]
+    list_select_related = ["goal", "goal__participant"]
+    search_fields = ["lift", "goal__name", "goal__participant__user__username"]
+    ordering = ["lift"]
