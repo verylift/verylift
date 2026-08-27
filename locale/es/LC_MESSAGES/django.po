@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-26 23:48+0000\n"
+"POT-Creation-Date: 2026-08-27 00:24+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -2652,13 +2652,13 @@ msgstr "Únete a %(name)s en very lift"
 
 #: templates/challenges/invite_accept.html:17
 #: templates/challenges/invite_accept.html:155
-#: templates/challenges/invite_link_preview.html:59 templates/landing.html:159
+#: templates/challenges/invite_link_preview.html:59 templates/landing.html:156
 msgid "GitHub"
 msgstr "GitHub"
 
 #: templates/challenges/invite_accept.html:22
 #: templates/challenges/invite_accept.html:160
-#: templates/challenges/invite_link_preview.html:64 templates/landing.html:164
+#: templates/challenges/invite_link_preview.html:64 templates/landing.html:161
 msgid "Discord"
 msgstr "Discord"
 
@@ -2845,21 +2845,21 @@ msgstr "Crear mi cuenta"
 msgid "nah"
 msgstr "paso"
 
-#: templates/challenges/invite_link_preview.html:54 templates/landing.html:154
+#: templates/challenges/invite_link_preview.html:54 templates/landing.html:151
 #: templates/registration/login.html:81
 #: templates/registration/password_reset.html:49
 #: templates/registration/register.html:120
 msgid "Terms"
 msgstr "Términos"
 
-#: templates/challenges/invite_link_preview.html:56 templates/landing.html:156
+#: templates/challenges/invite_link_preview.html:56 templates/landing.html:153
 #: templates/registration/login.html:83
 #: templates/registration/password_reset.html:51
 #: templates/registration/register.html:122
 msgid "Privacy"
 msgstr "Privacidad"
 
-#: templates/challenges/invite_link_preview.html:72 templates/landing.html:172
+#: templates/challenges/invite_link_preview.html:72 templates/landing.html:169
 msgid ""
 "\n"
 "        Made with ❤️ by 🏳️‍🌈 in <a href=\"https://www.nationalgeographic.com/"
@@ -3240,9 +3240,9 @@ msgid ""
 msgstr ""
 "\n"
 "            Cada persona fija sus propias metas y se puntúa según lo cerca "
-"que esté de alcanzarlas. Así que, ya sea que busques una sentadilla de 100 "
-"o 300 libras, puedes competir junto a tu amigo mientras cada uno persigue "
-"su propia meta.\n"
+"que esté de alcanzarlas. Así que, ya sea que busques una sentadilla de 100 o "
+"300 libras, puedes competir junto a tu amigo mientras cada uno persigue su "
+"propia meta.\n"
 "            "
 
 #: templates/landing.html:87
@@ -3266,54 +3266,44 @@ msgstr ""
 "            "
 
 #: templates/landing.html:101
-msgid "join the beta"
-msgstr "únete a la beta"
+msgid "stay in touch"
+msgstr "mantente en contacto"
 
-#: templates/landing.html:103
-msgid ""
-"Subscribe to our newsletter for updates, or hop into our Discord, the beta "
-"home base."
-msgstr ""
-"Suscríbete a nuestro boletín para recibir novedades, o entra a nuestro "
-"Discord, la base de operaciones de la beta."
-
-#: templates/landing.html:107
+#: templates/landing.html:104
 msgid "get the newsletter"
 msgstr "recibe el boletín"
 
-#: templates/landing.html:109
+#: templates/landing.html:106
 msgid "Opt-in updates as we build. No spam, unsubscribe anytime."
 msgstr ""
 "Novedades opcionales mientras construimos. Sin spam, cancela cuando quieras."
 
-#: templates/landing.html:118
+#: templates/landing.html:115
 msgid "you@example.com"
 msgstr "tu@ejemplo.com"
 
-#: templates/landing.html:123
+#: templates/landing.html:120
 msgid "subscribe"
 msgstr "suscribirse"
 
-#: templates/landing.html:128
+#: templates/landing.html:125
 #, python-format
-msgid ""
-"By subscribing you agree to receive occasional emails from %(brand_name)s."
-msgstr ""
-"Al suscribirte, aceptas recibir correos ocasionales de %(brand_name)s."
+msgid "By subscribing you agree to receive emails from %(brand_name)s."
+msgstr "Al suscribirte, aceptas recibir correos de %(brand_name)s."
 
-#: templates/landing.html:132
+#: templates/landing.html:129
 msgid "join our Discord"
 msgstr "únete a nuestro Discord"
 
-#: templates/landing.html:134
+#: templates/landing.html:131
 msgid ""
-"The beta home base — chat with other lifters, share feedback, and help shape "
-"the app."
+"Find and share challenges, chat with other lifters, share feedback, and help "
+"shape the app."
 msgstr ""
-"La base de operaciones de la beta: chatea con otros levantadores, comparte "
+"Encuentra y comparte desafíos, chatea con otros levantadores, comparte "
 "comentarios y ayuda a dar forma a la app."
 
-#: templates/landing.html:144
+#: templates/landing.html:141
 msgid "join Discord"
 msgstr "unirse a Discord"
 
