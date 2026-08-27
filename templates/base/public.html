@@ -2,10 +2,12 @@
 
 {% block content %}
 <div class="min-h-full flex flex-col{% block body_extra_classes %}{% endblock %}"{% block body_extra_attrs %}{% endblock %}>
+  {% block header %}
   <header class="py-6 px-4 flex items-center justify-between {% block header_max_width %}max-w-4xl{% endblock %} mx-auto w-full">
     <span class="text-accent font-bold text-2xl">very lift</span>
     {% block header_right %}{% endblock %}
   </header>
+  {% endblock %}
   {% block page_body %}{% endblock %}
 </div>
 {% endblock %}

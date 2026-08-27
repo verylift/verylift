@@ -1,107 +1,95 @@
 {% extends "base/public.html" %}
-{% load i18n %}
+{% load i18n brand %}
 
 {% block title %}very lift — {% trans "Challenge your friends" %}{% endblock %}
 
 {% block og_title %}very lift — {% trans "Challenge your friends" %}{% endblock %}
 {% block og_description %}{% trans "Friendly lifting challenges where everyone chases their own goals." %}{% endblock %}
 
-{% block header_right %}{% include "components/_language_switcher.html" %}{% endblock %}
+{% block header %}
+<header class="relative py-8 px-4 w-full">
+  <div class="flex justify-center">
+    <span class="text-2xl font-bold text-accent">very lift</span>
+  </div>
+  <div class="absolute top-6 right-4">
+    {% include "components/_language_switcher.html" %}
+  </div>
+</header>
+{% endblock %}
 
 {% block page_body %}
   <main class="flex-1">
     <section class="max-w-3xl mx-auto px-4 py-12 text-center">
       <h1 class="text-4xl sm:text-5xl font-extrabold text-content-strong tracking-tight">
-        {% trans "Challenge your friends." %}
+        {% trans "challenge yourself." %}<br>
+        {% trans "bring your friends." %}
       </h1>
       <p class="mt-6 text-lg text-content-body max-w-2xl mx-auto">
-        {% trans "Friendly lifting challenges where everyone chases their own goals." %}
+        {% blocktrans %}
+        Set your own strength goals and compete with friends of any level.
+        Whether you're very strong or very beginner, everyone can enter the
+        same challenge and chase their own personal best. Sound good? Go get
+        'em, champ!
+        {% endblocktrans %}
       </p>
       <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
         <a
           href="{% url 'accounts:register' %}"
           class="w-full sm:w-auto bg-accent text-accent-on text-sm font-medium px-6 py-3 rounded hover:bg-accent-hover">
-          {% trans "Get Started" %}
+          {% trans "get started" %}
         </a>
         <a
           href="{% url 'accounts:login' %}"
           class="w-full sm:w-auto border border-line text-content-body text-sm font-medium px-6 py-3 rounded hover:bg-surface-hover">
-          {% trans "Log in" %}
+          {% trans "log in" %}
         </a>
       </div>
     </section>
 
     <section class="max-w-4xl mx-auto px-4 pb-12">
-      <h2 class="text-2xl font-bold text-content-strong text-center mb-6">{% trans "Why very lift" %}</h2>
-      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div class="bg-surface-card border border-line-subtle rounded p-6">
-          <h3 class="text-lg font-semibold text-content-strong">{% trans "Motivation without the group-class price tag" %}</h3>
-          <p class="mt-2 text-sm text-content-body">
-            {% blocktrans %}
-            Get the social accountability of a training group without paying
-            for one.
-            {% endblocktrans %}
-          </p>
-        </div>
-        <div class="bg-surface-card border border-line-subtle rounded p-6">
-          <h3 class="text-lg font-semibold text-content-strong">{% trans "See your progress instantly" %}</h3>
-          <p class="mt-2 text-sm text-content-body">
-            {% blocktrans %}
-            Every lift updates your points and standing in real time: visual,
-            gamified, and satisfying to watch climb.
-            {% endblocktrans %}
-          </p>
-        </div>
-        <div class="bg-surface-card border border-line-subtle rounded p-6">
-          <h3 class="text-lg font-semibold text-content-strong">{% trans "Break fuckarounditis" %}</h3>
-          <p class="mt-2 text-sm text-content-body">
-            {% blocktrans %}
-            <a href="https://leangains.com/fuckarounditis/" class="text-accent hover:underline" target="_blank" rel="noopener noreferrer">Fuckarounditis</a>
-            can be overcome by having realistic goals and working consistently
-            toward them. very lift makes that easy.
-            {% endblocktrans %}
-          </p>
-        </div>
-      </div>
-    </section>
-
-    <section class="max-w-4xl mx-auto px-4 pb-12">
-      <h2 class="text-2xl font-bold text-content-strong text-center mb-6">{% trans "How it works" %}</h2>
+      <h2 class="text-2xl font-bold text-content-strong text-center mb-6">{% trans "how it works" %}</h2>
       <div class="grid sm:grid-cols-2 gap-4">
         <div class="bg-surface-card border border-line-subtle rounded p-6">
-          <h3 class="text-lg font-semibold text-content-strong">{% trans "Challenges" %}</h3>
+          <h3 class="text-lg font-semibold text-content-strong">{% trans "very challenging" %}</h3>
           <p class="mt-2 text-sm text-content-body">
             {% blocktrans %}
-            Create a challenge, choose when it starts and ends, and pick the
-            lifts everyone competes on. Each person then sets their own goals
-            to chase. Invite friends or go solo.
+            Beginner? Intermediate? Advanced? Elite? Challenge yourself to
+            hit your level's requirements — or set a custom goal and get
+            after it. Go solo or bring your friends. May the very-est
+            athlete win!
             {% endblocktrans %}
           </p>
         </div>
         <div class="bg-surface-card border border-line-subtle rounded p-6">
-          <h3 class="text-lg font-semibold text-content-strong">{% trans "Automatic scoring" %}</h3>
+          <h3 class="text-lg font-semibold text-content-strong">{% trans "very easy" %}</h3>
           <p class="mt-2 text-sm text-content-body">
+            {% url 'core:supported-apps' as supported_apps_url %}
             {% blocktrans %}
-            Syncs lift data from workout trackers like <a href="https://www.liftosaur.com" class="text-accent hover:underline" target="_blank" rel="noopener noreferrer">Liftosaur</a> and awards points when you hit the
-            rep-max targets on your own goal chart.
+            Sync with <a href="{{ supported_apps_url }}" class="text-accent hover:underline">one of our supported apps</a> and we'll score your lifts
+            for you. No compatible app? Enter your lifts manually and we'll
+            do the rest!
             {% endblocktrans %}
           </p>
         </div>
         <div class="bg-surface-card border border-line-subtle rounded p-6">
-          <h3 class="text-lg font-semibold text-content-strong">{% trans "Fair by design" %}</h3>
+          <h3 class="text-lg font-semibold text-content-strong">{% trans "very fair" %}</h3>
           <p class="mt-2 text-sm text-content-body">
             {% blocktrans %}
-            Each participant sets their own targets when they join, so points
-            always measure progress against your own chart, not someone else's.
+            Everyone sets their goals and gets scored on how close they get
+            to hitting it. So whether you're after a 100 lb or 300 lb back
+            squat, you can compete right alongside your friend chasing
+            their own goal.
             {% endblocktrans %}
           </p>
         </div>
         <div class="bg-surface-card border border-line-subtle rounded p-6">
-          <h3 class="text-lg font-semibold text-content-strong">{% trans "Live leaderboard" %}</h3>
+          <h3 class="text-lg font-semibold text-content-strong">{% trans "very competitive" %}</h3>
           <p class="mt-2 text-sm text-content-body">
             {% blocktrans %}
-            A points chart, personal performance cards, and gap-to-next-point hints
-            keep everyone tracking their standing per lift.
+            See your progress in real time with a points chart and personal
+            performance cards, and see exactly how close you are to the
+            next point. Not gonna lie, this feature might bring out the
+            competitive monster in you. And to that we say: let her loose!
             {% endblocktrans %}
           </p>
         </div>
@@ -109,10 +97,10 @@
     </section>
 
     <section id="newsletter" class="max-w-4xl mx-auto px-4 pb-12">
-      <h2 class="text-2xl font-bold text-content-strong text-center">{% trans "Stay in touch" %}</h2>
+      <h2 class="text-2xl font-bold text-content-strong text-center">{% trans "stay in touch" %}</h2>
       <div class="mt-6 grid sm:grid-cols-2 gap-4">
         <div class="bg-surface-card border border-line-subtle rounded p-6">
-          <h3 class="text-lg font-semibold text-content-strong">{% trans "Get the newsletter" %}</h3>
+          <h3 class="text-lg font-semibold text-content-strong">{% trans "get the newsletter" %}</h3>
           <p class="mt-2 text-sm text-content-body">
             {% trans "Opt-in updates as we build. No spam, unsubscribe anytime." %}
           </p>
@@ -128,15 +116,16 @@
             <button
               type="submit"
               class="bg-accent text-accent-on text-sm font-medium px-6 py-2 rounded hover:bg-accent-hover">
-              {% trans "Subscribe" %}
+              {% trans "subscribe" %}
             </button>
           </form>
           <p class="mt-3 text-xs text-content-subtle">
-            {% trans "By subscribing, you agree to receive emails from us." %}
+            {% brand as brand_name %}
+            {% blocktrans %}By subscribing you agree to receive emails from {{ brand_name }}.{% endblocktrans %}
           </p>
         </div>
         <div class="bg-surface-card border border-line-subtle rounded p-6">
-          <h3 class="text-lg font-semibold text-content-strong">{% trans "Join our Discord" %}</h3>
+          <h3 class="text-lg font-semibold text-content-strong">{% trans "join our Discord" %}</h3>
           <p class="mt-2 text-sm text-content-body">
             {% trans "Find and share challenges, chat with other lifters, share feedback, and help shape the app." %}
           </p>
@@ -148,7 +137,7 @@
               <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M13.55,1.91C12.51,1.44,11.41,1.1,10.29,0.9c-0.02,0-0.04,0.01-0.05,0.03C10.09,1.18,9.94,1.5,9.83,1.76C8.6,1.58,7.38,1.58,6.17,1.76C6.06,1.5,5.9,1.18,5.76,0.93C5.75,0.91,5.73,0.9,5.71,0.9C4.58,1.1,3.49,1.44,2.45,1.91C2.44,1.92,2.43,1.92,2.43,1.93C0.36,5.03-0.21,8.05,0.07,11.04c0,0.01,0.01,0.03,0.02,0.04c1.37,1,2.69,1.61,4,2.02c0.02,0.01,0.04,0,0.05-0.02c0.31-0.42,0.58-0.86,0.82-1.33c0.01-0.03,0-0.06-0.03-0.07c-0.43-0.17-0.85-0.37-1.25-0.6c-0.03-0.02-0.03-0.06,0-0.08c0.08-0.06,0.17-0.13,0.25-0.19c0.01-0.01,0.03-0.02,0.05-0.01c2.62,1.2,5.45,1.2,8.04,0c0.02-0.01,0.03,0,0.05,0.01c0.08,0.07,0.16,0.13,0.25,0.19c0.03,0.02,0.03,0.06,0,0.08c-0.4,0.23-0.82,0.43-1.25,0.6c-0.03,0.01-0.04,0.04-0.03,0.07c0.24,0.47,0.52,0.9,0.82,1.33c0.02,0.02,0.04,0.02,0.06,0.02c1.32-0.41,2.64-1.02,4.01-2.02c0.01-0.01,0.02-0.02,0.02-0.04c0.34-3.45-0.56-6.44-2.34-9.11C13.57,1.92,13.56,1.92,13.55,1.91z M5.35,9.24c-0.79,0-1.44-0.72-1.44-1.61c0-0.89,0.64-1.61,1.44-1.61c0.81,0,1.45,0.73,1.44,1.61C6.79,8.52,6.15,9.24,5.35,9.24z M10.66,9.24c-0.79,0-1.44-0.72-1.44-1.61c0-0.89,0.64-1.61,1.44-1.61c0.81,0,1.45,0.73,1.44,1.61C12.1,8.52,11.46,9.24,10.66,9.24z"/>
               </svg>
-              {% trans "Join Discord" %}
+              {% trans "join Discord" %}
             </a>
           </div>
         </div>

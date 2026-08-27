@@ -14,4 +14,9 @@ urlpatterns = [
         views.newsletter_subscribe_view,
         name="newsletter-subscribe",
     ),
+    path(
+        "supported-apps/",
+        views.supported_apps_view,
+        name="supported-apps",
+    ),
 ]

@@ -57,6 +57,19 @@ def newsletter_subscribe_view(request):
     return redirect(f"{reverse('core:landing')}#newsletter")
 
 
+def supported_apps_view(request):
+    """Lists every workout-tracking app "very easy" links to (TASK-254).
+
+    Hardcoded content, not model-backed: a tracker can only appear here
+    once its client/importer already shipped, so the row can never lead
+    the deploy it describes -- and a DB-sourced description would sit
+    outside the gettext catalog, so the Spanish page would silently
+    render English while everything else translated (verified: the seed
+    descriptions never appeared in locale/es/LC_MESSAGES/django.po).
+    """
+    return render(request, "supported_apps.html")
+
+
 def protected_media_view(request, path, document_root=None):
     """Serve a MEDIA_ROOT file, but only to an authenticated session.
 
