@@ -54,6 +54,12 @@
             class="mt-4 inline-block bg-accent text-accent-on text-sm font-medium px-6 py-3 rounded hover:bg-accent-hover">
             {% trans "get started" %}
           </a>
+          {% if app.coupon_code %}
+            <p class="mt-3 text-sm text-content-body flex items-center gap-1.5">
+              {% trans "use code" %}
+              {% include "components/_copy_code.html" with code=app.coupon_code %}
+            </p>
+          {% endif %}
           {% if app.is_affiliate %}
             <p class="mt-3 text-xs text-content-subtle">
               {% brand as brand_name %}

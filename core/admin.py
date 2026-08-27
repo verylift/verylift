@@ -75,7 +75,7 @@ class SupportedAppModeInline(admin.TabularInline):
 
 @admin.register(SupportedApp)
 class SupportedAppAdmin(admin.ModelAdmin):
-    list_display = ["name", "is_affiliate", "sort_order", "url"]
+    list_display = ["name", "is_affiliate", "coupon_code", "sort_order", "url"]
     list_filter = ["is_affiliate"]
     ordering = ["sort_order", "name"]
     inlines = [SupportedAppModeInline]

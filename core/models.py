@@ -163,6 +163,14 @@ class SupportedApp(models.Model):
     )
     sort_order = models.PositiveIntegerField(default=0)
     description = models.CharField(max_length=255, blank=True)
+    coupon_code = models.CharField(
+        max_length=50,
+        blank=True,
+        default="",
+        help_text="Affiliate coupon code for this app, if any (e.g. "
+        "Liftosaur's VERYLIFT). Blank means no code renders on this "
+        "app's card.",
+    )
 
     objects = SupportedAppQuerySet.as_manager()
 

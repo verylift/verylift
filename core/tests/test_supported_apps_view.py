@@ -77,3 +77,25 @@ class TestSupportedAppsView:
         app = SupportedAppFactory(is_affiliate=False, url="https://example.com/tracker")
         response = client.get(reverse("core:supported-apps"))
         assert app.url in response.content.decode()
+
+    def test_coupon_code_renders_alongside_its_own_cta_and_disclosure(self, client, db):
+        """The seeded Liftosaur row has a coupon_code, so its card should
+        show the bare code + copy button (via components/_copy_code.html)
+        in addition to -- not instead of -- its own "get started" CTA and
+        its own affiliate disclosure."""
+        response = client.get(reverse("core:supported-apps"))
+        content = response.content.decode()
+
+        assert "VERYLIFT" in content
+        assert content.count("data-copy-code>") == 1
+        assert "get started" in content
+        assert "affiliate relationship with Liftosaur" in content
+
+    def test_app_without_coupon_code_gets_no_copy_chip(self, client, db):
+        SupportedAppFactory(is_affiliate=False, name="No Coupon Co")
+        response = client.get(reverse("core:supported-apps"))
+        content = response.content.decode()
+
+        # Only the seeded Liftosaur row has a coupon_code -- a second app
+        # with none set must not add a second copy chip.
+        assert content.count("data-copy-code>") == 1
