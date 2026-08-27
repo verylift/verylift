@@ -312,7 +312,11 @@ class CustomGoal(models.Model):
     that at write time so an active goal is complete by construction.
 
     created_at IS the lock timestamp: charts cannot be edited after joining
-    (AC#4), so there is no separate locked_at to track.
+    (AC#4), so there is no separate locked_at to track. That lock is a
+    participant-facing rule, not a database invariant -- CustomGoalAdmin
+    deliberately permits edits as an operator override (e.g. repairing a
+    mis-synced target during a scoring dispute), so nothing here should assume
+    a saved goal is immutable.
     """
 
     class SourceMethod(models.TextChoices):
@@ -421,7 +425,8 @@ class RepTargetGoal(models.Model):
     to HISTORY (a "Suggest targets" prefill from the participant's own synced
     LiftHistory) and CUSTOM (manual entry). created_at is the lock timestamp,
     same as CustomGoal -- goals are create-only (save_rep_target_goal) and
-    cannot be edited after joining.
+    cannot be edited after joining. As with CustomGoal that lock is
+    participant-facing only; RepTargetGoalAdmin permits operator edits.
     """
 
     class SourceMethod(models.TextChoices):
