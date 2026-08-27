@@ -6,8 +6,10 @@ import secrets
 from dataclasses import dataclass
 from datetime import UTC, datetime, time, timedelta
 from decimal import Decimal
+from io import BytesIO
 from zoneinfo import ZoneInfo
 
+import qrcode
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
@@ -639,6 +641,30 @@ def resolve_invite_token(token):
     if link.max_uses is not None and link.use_count >= link.max_uses:
         return link, "exhausted"
     return link, None
+
+
+def build_invite_link_qr_png(url: str) -> bytes:
+    """Render ``url`` as a PNG QR code (TASK-339 / issue #79).
+
+    Error correction M (~15% recoverable) rather than the library's default
+    L: these get printed on flyers and shown on gym screens, both of which
+    take glare and creasing that a screen-only code wouldn't need to
+    survive, without inflating the module count much for a URL this short.
+    box_size=10 keeps each module comfortably scannable at arm's length once
+    printed; border=4 is the spec's minimum quiet zone, below which some
+    scanners refuse to lock on.
+    """
+    qr = qrcode.QRCode(
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(url)
+    qr.make(fit=True)
+    image = qr.make_image(fill_color="black", back_color="white")
+    buffer = BytesIO()
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
 
 
 def remove_participant(participant) -> None:

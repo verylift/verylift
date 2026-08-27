@@ -17,6 +17,11 @@ urlpatterns = [
         views.invite_accept_view,
         name="invite-accept",
     ),
+    path(
+        "join/<str:token>/qr.png",
+        views.invite_link_qr_view,
+        name="invite-link-qr",
+    ),
     path("challenges/create/", views.create_challenge_view, name="create"),
     path("challenges/", views.find_challenges_view, name="find"),
     path(

@@ -62,6 +62,7 @@ from challenges.rep_target_goals import (
 from challenges.services import (
     activate_draft_for_creator,
     build_custom_goal_context,
+    build_invite_link_qr_png,
     build_participant_chart,
     build_personal_data,
     build_rep_target_goal_context,
@@ -741,6 +742,52 @@ def _render_invite_accept(request, challenge, link):
         "accept_url": reverse("challenges:invite-accept", args=[link.token]),
     }
     return render(request, "challenges/invite_accept.html", context)
+
+
+def _invite_link_qr_ip_rate(group, request):
+    return settings.RATELIMIT_INVITE_LINK_QR_IP
+
+
+@never_cache
+@ratelimit(group="invite_link_qr_ip", key=client_ip, rate=_invite_link_qr_ip_rate)
+def invite_link_qr_view(request, token):
+    """PNG QR code encoding a challenge's invite link (TASK-339 / issue #79).
+
+    Deliberately public and unauthenticated, same boundary as
+    invite_link_view: the URL this encodes is already public by design (a
+    bearer link, not a per-user secret), and gating the image behind auth
+    would break the print/screen-display use case the QR exists for.
+
+    Keyed on the token exactly like invite_link_view rather than on the
+    challenge, so this can never drift from the link it's meant to
+    represent: regenerating a link mints a new token and revokes the old
+    one, which makes every image encoding the old token 404 automatically,
+    with nothing to separately invalidate.
+
+    404s uniformly whenever ``resolve_invite_token`` doesn't report a live
+    link (unknown, expired, revoked, or exhausted) rather than
+    invite_link_view's friendlier per-reason pages -- there's no useful
+    "here's an image of a link that used to work" response for a bare PNG,
+    and treating every dead reason identically means a scan of this
+    endpoint gives no signal beyond 404/not-404, so it can't be used to
+    enumerate which tokens are currently live any more than the join page
+    already can. A *live* link for a since-ended challenge still renders
+    normally here -- scanning it lands on invite_link_view's own
+    invite_link_ended.html, so the QR never needs to know about that case
+    itself.
+
+    ``@never_cache`` plus the per-request rate limit keep this from being
+    servable stale past a regeneration by an intermediate cache or CDN.
+    """
+    _link, reason = resolve_invite_token(token)
+    if reason is not None:
+        raise Http404
+
+    url = request.build_absolute_uri(reverse("challenges:invite-link", args=[token]))
+    png = build_invite_link_qr_png(url)
+    response = HttpResponse(png, content_type="image/png")
+    response["Content-Disposition"] = 'attachment; filename="verylift-invite-qr.png"'
+    return response
 
 
 @login_required

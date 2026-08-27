@@ -206,6 +206,13 @@ RATELIMIT_NEWSLETTER_IP = env("RATELIMIT_NEWSLETTER_IP", default="5/m")
 # force, but this bounds a fast unthrottled scan across many guesses from one
 # IP the same way the auth endpoints above are bounded.
 RATELIMIT_INVITE_LINK_IP = env("RATELIMIT_INVITE_LINK_IP", default="20/m")
+# The QR PNG endpoint (TASK-339) is keyed on the same token space and is
+# public for the same reason, so it gets its own budget rather than sharing
+# invite_link_ip's -- an <img> load alongside every invite_link_view visit
+# would otherwise burn through that bucket twice as fast for legitimate
+# traffic. Slightly looser than the join page's own limit since a scan here
+# can only ever learn 404-vs-not, not join a challenge.
+RATELIMIT_INVITE_LINK_QR_IP = env("RATELIMIT_INVITE_LINK_QR_IP", default="30/m")
 
 _VALIDATORS = "django.contrib.auth.password_validation"
 AUTH_PASSWORD_VALIDATORS = [

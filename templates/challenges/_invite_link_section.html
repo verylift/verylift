@@ -34,6 +34,20 @@
       {% trans "copy" %}
     </button>
   </div>
+  <div class="flex items-center gap-3 mb-4">
+    <img
+      src="{% url 'challenges:invite-link-qr' current_invite_link.token %}"
+      alt="{% trans 'QR code for the invite link' %}"
+      width="132"
+      height="132"
+      class="border border-line-subtle rounded bg-surface-sunken">
+    <a
+      href="{% url 'challenges:invite-link-qr' current_invite_link.token %}"
+      download
+      class="text-sm font-medium text-accent hover:underline">
+      {% trans "save QR code" %}
+    </a>
+  </div>
   {% if challenge.creator_id == request.user.id %}
     {% if invite_link_editing %}
     <form
