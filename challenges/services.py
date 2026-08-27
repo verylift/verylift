@@ -51,6 +51,7 @@ from scoring.domain.calculator import (
 )
 from scoring.models import PointEarnEvent
 from scoring.services import score_pooled_history
+from wger.services import sync_wger_lifts
 
 # Default rep-count the self-report carousel opens on for a lift with no
 # current-best PointEarnEvent -- 10RM, the easiest target (TASK-25 design
@@ -71,13 +72,14 @@ def sync_and_score(user, challenge, *, sync=True) -> None:
     locked challenge takes no writes) or redundant (the goal-setup POST already
     pulled on the matching GET).
 
-    Both live-sync trackers pull into the same shared pool, so a lifter could
-    in principle have both connected; each pull is independently cooldown-gated
-    and a no-op when its own API key is unset.
+    All three live-sync trackers pull into the same shared pool, so a lifter
+    could in principle have several connected; each pull is independently
+    cooldown-gated and a no-op when its own credentials are unset.
     """
     if sync:
         sync_user_lifts(user)
         sync_hevy_lifts(user)
+        sync_wger_lifts(user)
     score_pooled_history(user=user, challenge=challenge)
 
 

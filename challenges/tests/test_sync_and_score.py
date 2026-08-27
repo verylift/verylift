@@ -1,16 +1,19 @@
-"""Tests for challenges.services.sync_and_score's Hevy failure handling (TASK-318)
-and its Liftosaur-then-Hevy sync ordering (TASK-319)."""
+"""Tests for challenges.services.sync_and_score's Hevy failure handling (TASK-318),
+its Liftosaur-then-Hevy sync ordering (TASK-319), and its coverage of every
+live-sync tracker (TASK-331)."""
 
 import urllib.error
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
+from wger_api_client.models.repetition_unit import RepetitionUnit
 
 from accounts.tests.factories import UserFactory
 from challenges.services import sync_and_score
 from challenges.tests.factories import ChallengeFactory
 from hevy_api.services import HISTORY_BACKFILL_DAYS
+from wger.services import HISTORY_BACKFILL_DAYS as WGER_HISTORY_BACKFILL_DAYS
 
 pytestmark = pytest.mark.django_db
 
@@ -78,3 +81,32 @@ class TestSyncAndScoreOrdering:
             datetime.now(tz=UTC) - timedelta(days=HISTORY_BACKFILL_DAYS)
         ).date().isoformat() + "T00:00:00Z"
         assert kwargs["since"] == expected_start
+
+
+class TestSyncAndScoreWgerCoverage:
+    def test_wger_only_lifter_gets_a_pull(self):
+        """TASK-331: sync_and_score refreshed the Liftosaur and Hevy pools but
+        never Wger's, so a Wger-only lifter entering goal setup scored against
+        whatever a manual "sync now" had last pulled. Asserts the pull actually
+        reached the client with the backfill window, not merely that a function
+        was called."""
+        user = UserFactory(
+            wger_instance_url="https://wger.example.com",
+            wger_api_token="token",
+        )
+        challenge = ChallengeFactory()
+
+        client = MagicMock()
+        client.get_workout_logs.return_value = ([], False, 100)
+        client.get_weight_units.return_value = {1: "kg", 2: "lb"}
+        client.get_repetition_units.return_value = {
+            1: RepetitionUnit(id=1, name="Repetitions", unit_type="REPETITIONS")
+        }
+
+        with patch("wger.services.WgerClient", return_value=client):
+            sync_and_score(user, challenge)
+
+        expected_start = (
+            (datetime.now(tz=UTC) - timedelta(days=WGER_HISTORY_BACKFILL_DAYS)).date()
+        ).isoformat()
+        assert client.get_workout_logs.call_args.kwargs["date_gte"] == expected_start
