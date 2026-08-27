@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-26 16:59+0000\n"
+"POT-Creation-Date: 2026-08-26 23:48+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -1580,7 +1580,7 @@ msgstr "Continuar"
 
 #: templates/base/base.html:33 templates/challenges/detail.html:9
 #: templates/challenges/invite_accept.html:7 templates/challenges/share.html:7
-#: templates/landing.html:7 templates/landing.html:18
+#: templates/landing.html:7
 msgid "Friendly lifting challenges where everyone chases their own goals."
 msgstr "Retos amistosos de fuerza donde cada quien persigue sus propias metas."
 
@@ -2435,7 +2435,6 @@ msgstr "Propietario: %(owner)s"
 #: templates/components/sidebar.html:37 templates/components/sidebar.html:123
 #: templates/components/sidebar.html:221 templates/dashboard.html:32
 #: templates/dashboard.html:60 templates/dashboard.html:63
-#: templates/landing.html:72
 msgid "Challenges"
 msgstr "Retos"
 
@@ -2653,13 +2652,13 @@ msgstr "Únete a %(name)s en very lift"
 
 #: templates/challenges/invite_accept.html:17
 #: templates/challenges/invite_accept.html:155
-#: templates/challenges/invite_link_preview.html:59 templates/landing.html:166
+#: templates/challenges/invite_link_preview.html:59 templates/landing.html:159
 msgid "GitHub"
 msgstr "GitHub"
 
 #: templates/challenges/invite_accept.html:22
 #: templates/challenges/invite_accept.html:160
-#: templates/challenges/invite_link_preview.html:64 templates/landing.html:171
+#: templates/challenges/invite_link_preview.html:64 templates/landing.html:164
 msgid "Discord"
 msgstr "Discord"
 
@@ -2846,21 +2845,21 @@ msgstr "Crear mi cuenta"
 msgid "nah"
 msgstr "paso"
 
-#: templates/challenges/invite_link_preview.html:54 templates/landing.html:161
+#: templates/challenges/invite_link_preview.html:54 templates/landing.html:154
 #: templates/registration/login.html:81
 #: templates/registration/password_reset.html:49
 #: templates/registration/register.html:120
 msgid "Terms"
 msgstr "Términos"
 
-#: templates/challenges/invite_link_preview.html:56 templates/landing.html:163
+#: templates/challenges/invite_link_preview.html:56 templates/landing.html:156
 #: templates/registration/login.html:83
 #: templates/registration/password_reset.html:51
 #: templates/registration/register.html:122
 msgid "Privacy"
 msgstr "Privacidad"
 
-#: templates/challenges/invite_link_preview.html:72 templates/landing.html:179
+#: templates/challenges/invite_link_preview.html:72 templates/landing.html:172
 msgid ""
 "\n"
 "        Made with ❤️ by 🏳️‍🌈 in <a href=\"https://www.nationalgeographic.com/"
@@ -3153,203 +3152,170 @@ msgstr ""
 msgid "Challenge your friends"
 msgstr "Desafía a tus amigos"
 
-#: templates/landing.html:15
-msgid "Challenge your friends."
-msgstr "Desafía a tus amigos."
-
 #: templates/landing.html:24
-msgid "Get Started"
-msgstr "Empezar"
+msgid "challenge yourself."
+msgstr "desafíate a ti mismo."
 
-#: templates/landing.html:29
-msgid "Log in"
-msgstr "Iniciar sesión"
+#: templates/landing.html:25
+msgid "bring your friends."
+msgstr "trae a tus amigos."
 
-#: templates/landing.html:35
-msgid "Why very lift"
-msgstr "Por qué very lift"
-
-#: templates/landing.html:38
-msgid "Motivation without the group-class price tag"
-msgstr "Motivación sin el precio de una clase grupal"
-
-#: templates/landing.html:40
+#: templates/landing.html:28
 msgid ""
 "\n"
-"            Get the social accountability of a training group without "
-"paying\n"
-"            for one.\n"
+"        Set your own strength goals and compete with friends of any level.\n"
+"        Whether you're very strong or very beginner, everyone can enter the\n"
+"        same challenge and chase their own personal best. Sound good? Go "
+"get\n"
+"        'em, champ!\n"
+"        "
+msgstr ""
+"\n"
+"        Fija tus propias metas de fuerza y compite con amigos de cualquier "
+"nivel. Ya seas muy fuerte o muy principiante, todos pueden entrar al mismo "
+"reto y perseguir su propia mejor marca. ¿Listo? ¡A por ello, campeón!\n"
+"        "
+
+#: templates/landing.html:39
+msgid "get started"
+msgstr "empezar"
+
+#: templates/landing.html:44
+msgid "log in"
+msgstr "iniciar sesión"
+
+#: templates/landing.html:50
+msgid "how it works"
+msgstr "cómo funciona"
+
+#: templates/landing.html:53
+msgid "very challenging"
+msgstr "muy desafiante"
+
+#: templates/landing.html:55
+msgid ""
+"\n"
+"            Beginner? Intermediate? Advanced? Elite? Challenge yourself to\n"
+"            hit your level's requirements — or set a custom goal and get\n"
+"            after it. Go solo or bring your friends. May the very-est\n"
+"            athlete win!\n"
 "            "
 msgstr ""
 "\n"
-"            Obtén la responsabilidad social de un grupo de entrenamiento\n"
-"            sin pagar por uno.\n"
+"            ¿Principiante? ¿Intermedio? ¿Avanzado? ¿Élite? Ponte a prueba "
+"para cumplir los requisitos de tu nivel, o fija una meta personalizada y ve "
+"a por ella. Solo o con amigos. ¡Que gane el atleta más \"very\"!\n"
 "            "
 
-#: templates/landing.html:47
-msgid "See your progress instantly"
-msgstr "Ve tu progreso al instante"
+#: templates/landing.html:64
+msgid "very easy"
+msgstr "muy fácil"
 
-#: templates/landing.html:49
+#: templates/landing.html:68
 msgid ""
 "\n"
-"            Every lift updates your points and standing in real time: "
-"visual,\n"
-"            gamified, and satisfying to watch climb.\n"
+"            Sync with one of our supported apps and we'll score your lifts\n"
+"            for you. No compatible app? Enter your lifts manually and we'll\n"
+"            do the rest!\n"
 "            "
 msgstr ""
 "\n"
-"            Cada levantamiento actualiza tus puntos y posición en tiempo "
-"real:\n"
-"            visual, gamificado y satisfactorio de ver crecer.\n"
+"            Sincroniza con una de nuestras apps compatibles y calcularemos "
+"tus puntos por ti. ¿No tienes una app compatible? Ingresa tus levantamientos "
+"a mano y nosotros hacemos el resto.\n"
 "            "
 
-#: templates/landing.html:56
-msgid "Break fuckarounditis"
-msgstr "Vence la fuckarounditis"
+#: templates/landing.html:76
+msgid "very fair"
+msgstr "muy justo"
 
-#: templates/landing.html:58
+#: templates/landing.html:78
 msgid ""
 "\n"
-"            <a href=\"https://leangains.com/fuckarounditis/\" class=\"text-"
-"accent hover:underline\" target=\"_blank\" rel=\"noopener "
-"noreferrer\">Fuckarounditis</a>\n"
-"            can be overcome by having realistic goals and working "
-"consistently\n"
-"            toward them. very lift makes that easy.\n"
+"            Everyone sets their goals and gets scored on how close they get\n"
+"            to hitting it. So whether you're after a 100 lb or 300 lb back\n"
+"            squat, you can compete right alongside your friend chasing\n"
+"            their own goal.\n"
 "            "
 msgstr ""
 "\n"
-"            <a href=\"https://leangains.com/fuckarounditis/\" class=\"text-"
-"accent hover:underline\" target=\"_blank\" rel=\"noopener "
-"noreferrer\">Fuckarounditis</a>\n"
-"            se puede superar con objetivos realistas y trabajando de forma\n"
-"            constante hacia ellos. very lift lo hace fácil.\n"
+"            Cada persona fija sus propias metas y se puntúa según lo cerca "
+"que esté de alcanzarlas. Así que, ya sea que busques una sentadilla de 100 "
+"o 300 libras, puedes competir junto a tu amigo mientras cada uno persigue "
+"su propia meta.\n"
 "            "
 
-#: templates/landing.html:69
-msgid "How it works"
-msgstr "Cómo funciona"
+#: templates/landing.html:87
+msgid "very competitive"
+msgstr "muy competitivo"
 
-#: templates/landing.html:74
+#: templates/landing.html:89
 msgid ""
 "\n"
-"            Create a challenge, choose when it starts and ends, and pick "
-"the\n"
-"            lifts everyone competes on. Each person then sets their own "
-"goals\n"
-"            to chase. Invite friends or go solo.\n"
+"            See your progress in real time with a points chart and personal\n"
+"            performance cards, and see exactly how close you are to the\n"
+"            next point. Not gonna lie, this feature might bring out the\n"
+"            competitive monster in you. And to that we say: let her loose!\n"
 "            "
 msgstr ""
 "\n"
-"            Crea un desafío, elige cuándo empieza y termina, y elige\n"
-"            los ejercicios en los que todos competirán. Cada persona\n"
-"            establece luego sus propios objetivos a alcanzar. Invita a\n"
-"            amigos o participa en solitario.\n"
+"            Sigue tu progreso en tiempo real con un gráfico de puntos y "
+"tarjetas de rendimiento personal, y ve exactamente qué tan cerca estás del "
+"siguiente punto. Para qué mentir: esta función puede despertar tu lado más "
+"competitivo. Y ante eso, solo decimos: ¡suéltalo!\n"
 "            "
 
-#: templates/landing.html:82
-msgid "Automatic scoring"
-msgstr "Puntuación automática"
+#: templates/landing.html:101
+msgid "join the beta"
+msgstr "únete a la beta"
 
-#: templates/landing.html:84
+#: templates/landing.html:103
 msgid ""
-"\n"
-"            Syncs lift data from workout trackers like <a href=\"https://www."
-"liftosaur.com\" class=\"text-accent hover:underline\" target=\"_blank\" "
-"rel=\"noopener noreferrer\">Liftosaur</a> and awards points when you hit "
-"the\n"
-"            rep-max targets on your own goal chart.\n"
-"            "
+"Subscribe to our newsletter for updates, or hop into our Discord, the beta "
+"home base."
 msgstr ""
-"\n"
-"            Sincroniza tus datos de levantamientos desde aplicaciones de "
-"seguimiento como <a href=\"https://www.liftosaur.com\" class=\"text-accent "
-"hover:underline\" target=\"_blank\" rel=\"noopener noreferrer\">Liftosaur</"
-"a> y otorga\n"
-"            puntos cuando alcanzas los objetivos de repeticiones máximas de\n"
-"            tu propia tabla.\n"
-"            "
+"Suscríbete a nuestro boletín para recibir novedades, o entra a nuestro "
+"Discord, la base de operaciones de la beta."
 
-#: templates/landing.html:91
-msgid "Fair by design"
-msgstr "Justa por diseño"
+#: templates/landing.html:107
+msgid "get the newsletter"
+msgstr "recibe el boletín"
 
-#: templates/landing.html:93
-msgid ""
-"\n"
-"            Each participant sets their own targets when they join, so "
-"points\n"
-"            always measure progress against your own chart, not someone "
-"else's.\n"
-"            "
-msgstr ""
-"\n"
-"            Cada participante establece sus propios objetivos al unirse,\n"
-"            así que los puntos siempre miden el progreso frente a tu propia\n"
-"            tabla, no la de otra persona.\n"
-"            "
-
-#: templates/landing.html:100
-msgid "Live leaderboard"
-msgstr "Clasificación en vivo"
-
-#: templates/landing.html:102
-msgid ""
-"\n"
-"            A points chart, personal performance cards, and gap-to-next-"
-"point hints\n"
-"            keep everyone tracking their standing per lift.\n"
-"            "
-msgstr ""
-"\n"
-"            Un gráfico de puntos, tarjetas de rendimiento personal y pistas "
-"de\n"
-"            distancia al siguiente punto mantienen a todos al tanto de su "
-"posición\n"
-"            por ejercicio.\n"
-"            "
-
-#: templates/landing.html:112
-msgid "Stay in touch"
-msgstr "Mantente en contacto"
-
-#: templates/landing.html:115
-msgid "Get the newsletter"
-msgstr "Recibe el boletín"
-
-#: templates/landing.html:117
+#: templates/landing.html:109
 msgid "Opt-in updates as we build. No spam, unsubscribe anytime."
 msgstr ""
 "Novedades opcionales mientras construimos. Sin spam, cancela cuando quieras."
 
-#: templates/landing.html:126
+#: templates/landing.html:118
 msgid "you@example.com"
 msgstr "tu@ejemplo.com"
 
-#: templates/landing.html:131
-msgid "Subscribe"
-msgstr "Suscribirse"
+#: templates/landing.html:123
+msgid "subscribe"
+msgstr "suscribirse"
 
-#: templates/landing.html:135
-msgid "By subscribing, you agree to receive emails from us."
-msgstr "Al suscribirte, aceptas recibir correos de nuestra parte."
-
-#: templates/landing.html:139
-msgid "Join our Discord"
-msgstr "Únete a nuestro Discord"
-
-#: templates/landing.html:141
+#: templates/landing.html:128
+#, python-format
 msgid ""
-"Find and share challenges, chat with other lifters, share feedback, and help "
-"shape the app."
+"By subscribing you agree to receive occasional emails from %(brand_name)s."
 msgstr ""
-"Encuentra y comparte desafíos, chatea con otros levantadores, comparte "
+"Al suscribirte, aceptas recibir correos ocasionales de %(brand_name)s."
+
+#: templates/landing.html:132
+msgid "join our Discord"
+msgstr "únete a nuestro Discord"
+
+#: templates/landing.html:134
+msgid ""
+"The beta home base — chat with other lifters, share feedback, and help shape "
+"the app."
+msgstr ""
+"La base de operaciones de la beta: chatea con otros levantadores, comparte "
 "comentarios y ayuda a dar forma a la app."
 
-#: templates/landing.html:151
-msgid "Join Discord"
-msgstr "Unirse a Discord"
+#: templates/landing.html:144
+msgid "join Discord"
+msgstr "unirse a Discord"
 
 #: templates/notifications/_notification_list.html:12
 msgid "Mark all as read"

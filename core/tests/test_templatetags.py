@@ -39,3 +39,24 @@ def test_icon_stroke_width_override_is_applied():
 def test_icon_unknown_name_raises_template_syntax_error():
     with pytest.raises(template.TemplateSyntaxError, match="Unknown icon 'nope'"):
         render('{% icon "nope" %}')
+
+
+def render_brand(snippet, **context):
+    tpl = Template("{% load brand %}" + snippet)
+    return tpl.render(Context(context))
+
+
+def test_brand_renders_bold_accent_wordmark():
+    output = render_brand("{% brand %}")
+    assert output == '<span class="font-bold text-accent">very lift</span>'
+
+
+def test_brand_as_variable_is_safe_inside_blocktrans():
+    # blocktrans HTML-escapes any substituted variable unless it's marked
+    # safe -- this is the regression that matters: forgetting mark_safe in
+    # brand() would silently turn the <span> into escaped text here.
+    output = render_brand(
+        "{% load i18n %}{% brand as brand_name %}"
+        "{% blocktrans %}Hello {{ brand_name }}.{% endblocktrans %}"
+    )
+    assert output == 'Hello <span class="font-bold text-accent">very lift</span>.'

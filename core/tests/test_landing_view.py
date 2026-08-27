@@ -25,9 +25,8 @@ class TestLandingPage:
         assert response.status_code == 200
         assert "landing.html" in [t.name for t in response.templates]
 
-    def test_landing_page_content_and_links(self, db):
+    def test_landing_page_links(self, db):
         content = Client().get(reverse("core:landing")).content.decode()
-        assert "Challenge your friends." in content
         assert reverse("accounts:register") in content
         assert reverse("accounts:login") in content
         assert reverse("terms") in content
