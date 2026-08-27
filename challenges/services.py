@@ -16,7 +16,7 @@ from django.db.models.functions import Lower
 from django.utils import timezone
 from django.utils.translation import gettext
 
-from accounts.timezones import is_valid_timezone
+from accounts.timezones import user_zoneinfo
 from accounts.units import to_display_weight
 from challenges.custom_goals import (
     _bodyweight_added_lift_names,
@@ -465,11 +465,7 @@ def challenge_timezone(challenge) -> ZoneInfo:
     """
     if not challenge.creator_id:
         return ZoneInfo("UTC")
-    creator = challenge.creator
-    for tz_name in (creator.timezone, creator.detected_timezone):
-        if tz_name and is_valid_timezone(tz_name):
-            return ZoneInfo(tz_name)
-    return ZoneInfo("UTC")
+    return user_zoneinfo(challenge.creator)
 
 
 def challenge_instant(challenge, day, time_of_day) -> datetime:

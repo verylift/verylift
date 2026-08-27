@@ -137,6 +137,28 @@ class TestSyncWgerLifts:
         assert row.source == LiftSource.WGER
         assert last_synced_at(user) is not None
 
+    def test_utc_served_timestamp_pooled_under_the_lifters_own_day(self):
+        """A Wger instance left on TIME_ZONE="UTC" serves a 22:00 Toronto
+        session as 02:00Z the next day; performed_at must still be the day
+        the lifter trained, since every downstream reader treats it as a
+        civil date."""
+        user = self._user(timezone="America/Toronto")
+        entries = [_log_entry(date="2026-01-02T02:00:00+00:00")]
+        p1, p2 = _patch_units(STANDARD_WEIGHT_UNITS, STANDARD_REPETITION_UNITS)
+        with (
+            p1,
+            p2,
+            patch(
+                "wger.services.WgerClient.get_workout_logs",
+                return_value=(entries, False, 100),
+            ),
+            patch("wger.services.WgerClient.get_exercise_name", return_value="Squat"),
+        ):
+            sync_wger_lifts(user, force=True)
+
+        row = LiftHistory.objects.get(user=user)
+        assert row.performed_at.isoformat() == "2026-01-01"
+
     def test_decimal_formatted_reps_from_real_api_are_parsed(self):
         """Wger's real API returns repetitions as a decimal-formatted string
         (e.g. "7.00"), not a bare integer string. int("7.00") raises

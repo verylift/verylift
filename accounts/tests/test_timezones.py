@@ -1,6 +1,8 @@
 """Tests for accounts.timezones (TASK-273)."""
 
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -8,7 +10,9 @@ from accounts.tests.factories import UserFactory
 from accounts.timezones import (
     grouped_timezones,
     is_valid_timezone,
+    local_day,
     resolve_timezone,
+    user_zoneinfo,
     with_detect_param,
 )
 
@@ -120,3 +124,54 @@ class TestWithDetectParam:
     def test_path_already_carrying_tzdetect_is_not_duplicated(self):
         result = with_detect_param("/dashboard/?tzdetect=1")
         assert result.count("tzdetect=1") == 1
+
+
+class TestUserZoneinfo:
+    """The request-less ladder background code (cron jobs, the Hevy sync
+    thread) uses in place of resolve_timezone's live-cookie step."""
+
+    def test_pinned_timezone_wins_over_detected(self):
+        user = UserFactory.build(
+            timezone="America/Toronto", detected_timezone="Asia/Tokyo"
+        )
+        assert user_zoneinfo(user) == ZoneInfo("America/Toronto")
+
+    def test_detected_used_when_nothing_pinned(self):
+        user = UserFactory.build(timezone="", detected_timezone="Asia/Tokyo")
+        assert user_zoneinfo(user) == ZoneInfo("Asia/Tokyo")
+
+    def test_falls_back_to_utc_when_neither_is_set(self):
+        user = UserFactory.build(timezone="", detected_timezone="")
+        assert user_zoneinfo(user) == ZoneInfo("UTC")
+
+    def test_invalid_pin_falls_through_to_detected(self):
+        """A stale pin (a zone dropped from the tz database) must not raise
+        ZoneInfoNotFoundError deep inside a background sync."""
+        user = UserFactory.build(timezone="Not/AZone", detected_timezone="Asia/Tokyo")
+        assert user_zoneinfo(user) == ZoneInfo("Asia/Tokyo")
+
+
+class TestLocalDay:
+    """The one conversion point from an external source's timestamp to the
+    plain performed_at DateField every scoring/display path reads."""
+
+    @pytest.mark.parametrize(
+        "moment,tz_name,expected",
+        [
+            # 19:00 on the 1st in Toronto (UTC-4) is 23:00 UTC the same day.
+            (datetime(2024, 6, 1, 23, 0, tzinfo=UTC), "America/Toronto", "2024-06-01"),
+            # 22:00 on the 1st in Toronto has already rolled over in UTC.
+            (datetime(2024, 6, 2, 2, 0, tzinfo=UTC), "America/Toronto", "2024-06-01"),
+            # 08:00 on the 2nd in Tokyo (UTC+9) is still the 1st in UTC.
+            (datetime(2024, 6, 1, 23, 0, tzinfo=UTC), "Asia/Tokyo", "2024-06-02"),
+        ],
+    )
+    def test_aware_timestamp_is_converted(self, moment, tz_name, expected):
+        assert local_day(moment, ZoneInfo(tz_name)).isoformat() == expected
+
+    def test_naive_timestamp_is_taken_at_face_value(self):
+        """A naive source timestamp is already the lifter's wall clock --
+        converting it would reinterpret it as server-local and shift the day.
+        """
+        moment = datetime(2024, 6, 1, 22, 0)
+        assert local_day(moment, ZoneInfo("Asia/Tokyo")).isoformat() == "2024-06-01"
