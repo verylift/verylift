@@ -15,7 +15,6 @@ from django.db import OperationalError
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
-from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.http import url_has_allowed_host_and_scheme, urlsafe_base64_decode
 from django.utils.translation import gettext
@@ -256,7 +255,6 @@ def register_view(request):
                 username=username,
                 email=email,
                 password=password,
-                tos_accepted_at=timezone.now(),
                 acquisition_source=acquisition_source,
             )
             login(request, user, backend="django.contrib.auth.backends.ModelBackend")
