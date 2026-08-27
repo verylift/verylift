@@ -643,12 +643,24 @@ def build_recent_scoring_activity(challenge, viewing_user, limit: int = 5) -> li
     and Points Over Time chart. Weights are converted to ``viewing_user``'s unit
     preference so the feed reads consistently for whoever is looking at it.
 
-    Zero-point events are dropped entirely -- they are not meaningful activity.
-    Superseded events (is_current_best=False) are dropped too, matching
-    rank_participants/get_leader -- a later set on a lift that doesn't beat the
-    existing PR still earns points_earned equal to whatever tier it clears, but
-    it isn't a new personal best, so it shouldn't read as fresh activity here.
-    Events are also collapsed per (lifter, lift, performed_at day): a lifting
+    Membership is decided by ``points_delta``, not by is_current_best: a
+    session appears when it actually raised that lifter's total. So the feed
+    carries a lift's whole progression -- a squat that went 2 points, then 4,
+    then 9 across the challenge is three rows -- rather than only the one PR
+    still standing today, which capped the feed at one row per lift no matter
+    how much someone trained.
+
+    That still excludes what is_current_best filtering was there to exclude
+    (TASK-240): repeating a lift at a tier already reached earns points_earned
+    equal to that tier but moves nothing, so its delta is zero and it does not
+    read as a fresh achievement. The rule is simply stated at the source --
+    every row is a moment the lifter's total went up, and its Gain is exactly
+    how much the Points Over Time line rose on that date.
+
+    Zero-point events are dropped in SQL as well -- they can never raise a
+    total, so they can never qualify anyway.
+
+    Events are collapsed per (lifter, lift, performed_at day): a lifting
     session often has several sets on the same lift the same day, each earning
     progressively more points as the lifter works up, so only the best-scoring
     set from each session is kept rather than showing every intermediate set.
@@ -674,10 +686,12 @@ def build_recent_scoring_activity(challenge, viewing_user, limit: int = 5) -> li
     session-collapsing below: a session is one step, from what the lifter held
     before it to what they held after.
 
-    The delta is always positive for a row that appears here. _persist_best
-    only promotes on a strict improvement, so the current-best row is the
-    first event to reach that lift's maximum and every earlier set in it
-    scored strictly lower.
+    The delta is always positive for a row that appears here, because a
+    non-positive one is what keeps a session out. A session that fell short of
+    what the lifter already held would otherwise compute a negative delta,
+    which is not what happened to their score -- a total never falls -- so
+    zero and below alike mean "this changed nothing" and are filtered rather
+    than clamped and displayed.
 
     Dict shape: {'name': str, 'lift': str, 'weight': Decimal, 'unit': str,
     'reps': int, 'points_earned': int, 'points_delta': int, 'date': date}.
@@ -686,9 +700,6 @@ def build_recent_scoring_activity(challenge, viewing_user, limit: int = 5) -> li
         challenge=challenge, is_bailed=True
     ).values_list("user_id", flat=True)
 
-    # Superseded rows are fetched alongside the current-best ones: they are not
-    # feed material themselves, but they are exactly what a later PR has to
-    # beat, so the delta cannot be computed without them.
     events = list(
         PointEarnEvent.objects.filter(challenge=challenge)
         .exclude(user__in=bailed_user_ids)
@@ -706,8 +717,6 @@ def build_recent_scoring_activity(challenge, viewing_user, limit: int = 5) -> li
     best_by_session: dict[tuple, PointEarnEvent] = {}
     session_order: list[tuple] = []
     for event in events:
-        if not event.is_current_best:
-            continue
         session_key = (event.user_id, event.lift, event.performed_at)
         best = best_by_session.get(session_key)
         if best is None:
@@ -718,11 +727,10 @@ def build_recent_scoring_activity(challenge, viewing_user, limit: int = 5) -> li
 
     unit = viewing_user.unit_preference
     activity = []
-    for session_key in session_order[:limit]:
+    for session_key in session_order:
+        if len(activity) == limit:
+            break
         event = best_by_session[session_key]
-        user = event.user
-        name = user.effective_display_name
-        weight, _ = to_display_weight(event.weight, unit)
         prior_best = max(
             (
                 points
@@ -731,6 +739,12 @@ def build_recent_scoring_activity(challenge, viewing_user, limit: int = 5) -> li
             ),
             default=0,
         )
+        points_delta = event.points_earned - prior_best
+        if points_delta <= 0:
+            continue
+        user = event.user
+        name = user.effective_display_name
+        weight, _ = to_display_weight(event.weight, unit)
         activity.append(
             {
                 "name": name,
@@ -739,7 +753,7 @@ def build_recent_scoring_activity(challenge, viewing_user, limit: int = 5) -> li
                 "unit": unit,
                 "reps": event.reps,
                 "points_earned": event.points_earned,
-                "points_delta": event.points_earned - prior_best,
+                "points_delta": points_delta,
                 "date": event.performed_at,
             }
         )
