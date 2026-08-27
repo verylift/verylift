@@ -120,7 +120,10 @@ class TestTransferOwnershipView:
         response = creator_client.get(transfer_url(challenge, new_owner))
 
         assert response.status_code == 200
-        assert b"Transfer Ownership" in response.content
+        assert any(
+            t.name == "challenges/confirm_action.html" for t in response.templates
+        )
+        assert transfer_url(challenge, new_owner).encode() in response.content
         assert b"Pickle Rick" in response.content
         challenge.refresh_from_db()
         assert challenge.creator_id != new_owner.id
@@ -356,16 +359,6 @@ class TestTransferLinkVisibility:
 
         for user in (invited, declined, bailed, inactive):
             assert transfer_url(comp, user).encode() not in response.content
-
-    def test_detail_shows_owner_label(self, configured_challenge, mock_sync):
-        comp = configured_challenge
-        c = Client()
-        c.force_login(comp.creator)
-
-        response = c.get(reverse("challenges:detail", args=[comp.pk]))
-
-        assert b"Owner:" in response.content
-        assert b"Created by" not in response.content
 
 
 class TestChallengesNeedingNewOwner:

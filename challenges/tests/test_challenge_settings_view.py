@@ -72,7 +72,6 @@ class TestChallengeSettingsViewAccess:
         c.force_login(staff)
 
         settings_response = c.get(reverse("challenges:settings", args=[challenge.pk]))
-        assert b"Cancel Challenge" in settings_response.content
         cancel_url = reverse("challenges:cancel", args=[challenge.pk]).encode()
         assert cancel_url in settings_response.content
 
@@ -98,7 +97,7 @@ class TestChallengeSettingsViewAccess:
         ).content.decode()
 
         # Staff-allowed controls are present.
-        assert "Cancel Challenge" in content
+        assert reverse("challenges:cancel", args=[challenge.pk]) in content
         assert reverse("challenges:remove", args=[challenge.pk, member.pk]) in (content)
         assert (
             reverse("challenges:transfer", args=[challenge.pk, member.user_id])
@@ -106,7 +105,6 @@ class TestChallengeSettingsViewAccess:
         )
 
         # Creator-only controls (no staff override) are hidden from staff.
-        assert "Close Early" not in content
         assert reverse("challenges:close", args=[challenge.pk]) not in content
         assert reverse(
             "challenges:regenerate-invite-link", args=[challenge.pk]
@@ -126,12 +124,11 @@ class TestChallengeSettingsViewAccess:
             reverse("challenges:settings", args=[challenge.pk])
         ).content.decode()
 
-        assert "Close Early" in content
-        assert "Invite Link" in content
+        assert reverse("challenges:close", args=[challenge.pk]) in content
         assert reverse("challenges:regenerate-invite-link", args=[challenge.pk]) in (
             content
         )
-        assert "Cancel Challenge" in content
+        assert reverse("challenges:cancel", args=[challenge.pk]) in content
         assert reverse("challenges:remove", args=[challenge.pk, member.pk]) in (content)
 
     def test_unknown_challenge_404(self, creator_client):
@@ -169,8 +166,8 @@ class TestChallengeSettingsViewContent:
         assert reverse("challenges:regenerate-invite-link", args=[challenge.pk]) in (
             content
         )
-        assert "Close Early" in content
-        assert "Cancel Challenge" in content
+        assert reverse("challenges:close", args=[challenge.pk]) in content
+        assert reverse("challenges:cancel", args=[challenge.pk]) in content
 
     def test_ended_but_still_active_challenge_hides_invite_link_actions(
         self, db, mock_sync
@@ -189,8 +186,7 @@ class TestChallengeSettingsViewContent:
 
         content = c.get(url).content.decode()
 
-        assert "Close Early" in content
-        assert "Invite Link" in content
+        assert reverse("challenges:close", args=[challenge.pk]) in content
         assert (
             reverse("challenges:regenerate-invite-link", args=[challenge.pk])
             not in content
@@ -208,12 +204,19 @@ class TestChallengeSettingsViewContent:
         c.force_login(challenge.creator)
 
         url = reverse("challenges:settings", args=[challenge.pk])
-        content = c.get(url).content.decode()
+        response = c.get(url)
+        content = response.content.decode()
 
-        assert "Challenge Name" not in content
-        assert "Point-Eligible Window" not in content
-        assert "Invite Link" not in content
-        assert "Participants" in content
+        assert reverse("challenges:rename", args=[challenge.pk]) not in content
+        assert reverse("challenges:history-window", args=[challenge.pk]) not in content
+        assert (
+            reverse("challenges:regenerate-invite-link", args=[challenge.pk])
+            not in content
+        )
+        assert any(
+            t.name == "challenges/_participants_section.html"
+            for t in response.templates
+        )
 
     def test_locked_challenge_hides_action_buttons(self, creator_client, mock_sync):
         """Completed/cancelled challenges show participants but no action buttons."""
@@ -227,10 +230,13 @@ class TestChallengeSettingsViewContent:
         assert response.status_code == 200
         content = response.content.decode()
         # Participants section still renders
-        assert "Participants" in content
+        assert any(
+            t.name == "challenges/_participants_section.html"
+            for t in response.templates
+        )
         # But action buttons don't
-        assert "Close Early" not in content
-        assert "Cancel Challenge" not in content
+        assert reverse("challenges:close", args=[challenge.pk]) not in content
+        assert reverse("challenges:cancel", args=[challenge.pk]) not in content
 
     def test_draft_challenge_shows_actions(self, creator_client, mock_sync):
         """Draft challenges show the management actions section."""
@@ -242,7 +248,9 @@ class TestChallengeSettingsViewContent:
         response = c.get(url)
 
         assert response.status_code == 200
-        assert b"Close Early" in response.content
+        assert reverse("challenges:close", args=[challenge.pk]).encode() in (
+            response.content
+        )
 
 
 class TestParticipantRowsExcludeBailed:
@@ -318,7 +326,6 @@ class TestDetailPageHasManageLink:
         assert response.status_code == 200
         settings_url = reverse("challenges:settings", args=[challenge.pk]).encode()
         assert settings_url in response.content
-        assert b"Manage Challenge" in response.content
 
     def test_non_creator_does_not_see_manage_link(self, challenge, mock_sync):
         """Non-creator does not see 'Manage Challenge' link on detail page."""
@@ -337,10 +344,9 @@ class TestDetailPageHasManageLink:
         assert response.status_code == 200
         settings_url = reverse("challenges:settings", args=[challenge.pk]).encode()
         assert settings_url not in response.content
-        assert b"Manage Challenge" not in response.content
 
     def test_leave_link_still_on_detail(self, challenge, mock_sync):
-        """Verify Leave Challenge link remains on detail for all participants."""
+        """Verify the leave-challenge link remains on detail for all participants."""
         other = UserFactory()
         _with_goal(
             challenge=challenge,
@@ -354,7 +360,9 @@ class TestDetailPageHasManageLink:
         response = c.get(url)
 
         assert response.status_code == 200
-        assert b"Leave Challenge" in response.content
+        assert reverse("challenges:bail", args=[challenge.pk]).encode() in (
+            response.content
+        )
 
     def test_creator_sees_manage_link_on_completed_challenge(self, db, mock_sync):
         """Manage link shows for a completed challenge (settings still useful)."""
@@ -371,9 +379,9 @@ class TestDetailPageHasManageLink:
         response = c.get(url)
 
         assert response.status_code == 200
-        assert b"Manage Challenge" in response.content
-        # And the settings page loads (read-only) for the completed challenge.
         settings_url = reverse("challenges:settings", args=[challenge.pk])
+        assert settings_url.encode() in response.content
+        # And the settings page loads (read-only) for the completed challenge.
         assert c.get(settings_url).status_code == 200
 
     def test_staff_sees_manage_link_on_detail(self, challenge, mock_sync):
@@ -391,7 +399,8 @@ class TestDetailPageHasManageLink:
         response = c.get(url)
 
         assert response.status_code == 200
-        assert b"Manage Challenge" in response.content
+        settings_url = reverse("challenges:settings", args=[challenge.pk])
+        assert settings_url.encode() in response.content
 
 
 class TestParticipantsSectionVisibility:
@@ -419,7 +428,10 @@ class TestParticipantsSectionVisibility:
         response = c.get(url)
 
         assert response.status_code == 200
-        assert b"Participants" in response.content
+        assert any(
+            t.name == "challenges/_participants_section.html"
+            for t in response.templates
+        )
 
     def test_deactivated_participant_shown_with_deleted_suffix(
         self, configured_creator_challenge, mock_sync

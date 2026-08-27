@@ -32,7 +32,6 @@ def test_404_renders_styled_template():
     assert response.status_code == 404
     assert "404.html" in _template_names(response)
     content = response.content.decode()
-    assert "Page not found" in content
     assert "404" in content
     assert "Traceback" not in content
 
@@ -50,7 +49,6 @@ def test_403_renders_styled_template_for_permission_denied(monkeypatch):
     assert response.status_code == 403
     assert "403.html" in _template_names(response)
     content = response.content.decode()
-    assert "Access denied" in content
     assert "403" in content
 
 
@@ -60,7 +58,6 @@ def test_403_renders_styled_template_for_csrf_failure():
 
     assert response.status_code == 403
     assert "403.html" in _template_names(response)
-    assert "Access denied" in response.content.decode()
 
 
 @pytest.mark.django_db
@@ -76,7 +73,6 @@ def test_500_renders_styled_template(monkeypatch):
     assert response.status_code == 500
     assert "500.html" in _template_names(response)
     content = response.content.decode()
-    assert "Something went wrong" in content
     assert "Traceback" not in content
 
 

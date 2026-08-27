@@ -480,7 +480,6 @@ class TestSetupView:
         response = authed_client.get(self._url(challenge))
         content = response.content.decode()
         assert "data-copy-prompt" in content
-        assert "Copy AI prompt" in content
         # The prompt names this challenge's lift and embeds the schema/unit.
         assert LIFT in content
         assert "&quot;unit&quot;: &quot;kg&quot;" in content

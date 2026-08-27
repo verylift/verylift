@@ -92,7 +92,7 @@ class TestRegisterViewAcquisitionSource:
 
         response = c.get(reverse("accounts:register"))
         assert response.status_code == 200
-        assert b"Registration is currently closed" not in response.content
+        assert b'id="id_username"' in response.content
 
     def test_stale_token_does_not_bypass_registration_closed(self, settings):
         settings.REGISTRATION_OPEN = False
@@ -103,7 +103,7 @@ class TestRegisterViewAcquisitionSource:
 
         response = c.get(reverse("accounts:register"))
         assert response.status_code == 200
-        assert b"Registration is currently closed" in response.content
+        assert response.context["registration_closed"] is True
 
 
 @pytest.mark.django_db

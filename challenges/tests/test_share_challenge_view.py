@@ -73,7 +73,7 @@ class TestShareChallengeViewContent:
         assert response.context["current_invite_link"] == link
         content = response.content.decode()
         assert reverse("challenges:invite-link", args=[link.token]) in content
-        assert "Copy" in content
+        assert "data-copy-invite-link" in content
 
     def test_offers_generation_when_no_live_link(self, creator_client, challenge):
         assert current_invite_link(challenge) is None
@@ -88,7 +88,6 @@ class TestShareChallengeViewContent:
     def test_links_on_to_goal_setup(self, creator_client, challenge):
         content = creator_client.get(share_url(challenge)).content.decode()
         assert reverse("challenges:goal-setup", args=[challenge.pk]) in content
-        assert "Continue to your chart" in content
 
     def test_includes_open_graph_title_with_challenge_name(
         self, creator_client, challenge

@@ -198,7 +198,9 @@ class TestMethodStep:
         resp = authed_client.post(_url(challenge), {"method": "custom"}, follow=False)
         assert resp.status_code == 302
         chart = authed_client.get(_url(challenge))
-        assert b"Review your chart" in chart.content
+        assert any(
+            t.name == "challenges/custom_goal_setup.html" for t in chart.templates
+        )
         assert b"Back Squat" in chart.content
 
 
@@ -231,7 +233,7 @@ class TestWizardShellCentering:
         user.save(update_fields=["liftosaur_api_key"])
         authed_client.post(_url(challenge), {"method": "history"})
         resp = authed_client.get(_url(challenge))
-        assert b"Stretch above your recent best" in resp.content
+        assert b'id="id_uplift_percent"' in resp.content
         assert b"data-wizard-shell" in resp.content
 
     def test_key_required_interstitial_renders_the_centered_shell(
@@ -266,7 +268,9 @@ class TestStaleWizardStepResubmission:
         assert resp.status_code == 302
         # Not reprocessed as a method change -- still "custom", still chart.
         chart = authed_client.get(_url(challenge))
-        assert b"Review your chart" in chart.content
+        assert any(
+            t.name == "challenges/custom_goal_setup.html" for t in chart.templates
+        )
 
     def test_matching_wizard_step_is_processed_normally(
         self, authed_client, participant, challenge
@@ -276,7 +280,9 @@ class TestStaleWizardStepResubmission:
         )
         assert resp.status_code == 302
         chart = authed_client.get(_url(challenge))
-        assert b"Review your chart" in chart.content
+        assert any(
+            t.name == "challenges/custom_goal_setup.html" for t in chart.templates
+        )
 
     def test_missing_wizard_step_still_works(
         self, authed_client, participant, challenge
@@ -319,7 +325,7 @@ class TestStaleWizardStepResubmission:
         # misparsed as a method-step submission (which would have errored
         # on a missing "method" field) or accidentally advanced the wizard.
         still_inputs = authed_client.get(url)
-        assert b"Sex" in still_inputs.content
+        assert b'name="sex"' in still_inputs.content
 
     def test_continue_posted_to_a_back_1_url_does_not_regress_a_step(
         self, authed_client, participant, challenge, settings
@@ -356,7 +362,7 @@ class TestStaleWizardStepResubmission:
         )
         # Now on chart (index 2); follow "Back" to inputs (index 1).
         back_resp = authed_client.get(url + "?back=1")
-        assert b"Sex" in back_resp.content
+        assert b'name="sex"' in back_resp.content
         resp = authed_client.post(
             url + "?back=1",
             {
@@ -369,8 +375,9 @@ class TestStaleWizardStepResubmission:
         assert resp.status_code == 302
         assert resp.url == url
         chart = authed_client.get(url)
-        assert b"Review your chart" in chart.content
-        assert b"How do you want to set your goal" not in chart.content
+        assert any(
+            t.name == "challenges/custom_goal_setup.html" for t in chart.templates
+        )
 
 
 class TestCustomMethodFullFlow:
@@ -440,13 +447,17 @@ class TestCustomMethodFullFlow:
         assert resp.url == reverse("challenges:detail", args=[challenge.pk])
         # Session cleared: revisiting starts over at the method step.
         restart = authed_client.get(url)
-        assert b"How do you want to set your goal" in restart.content
+        assert any(
+            t.name == "challenges/goal_setup_method.html" for t in restart.templates
+        )
 
     def test_back_returns_to_method_step(self, authed_client, participant, challenge):
         url = _url(challenge)
         authed_client.post(url, {"method": "custom"})
         resp = authed_client.get(url + "?back=1")
-        assert b"How do you want to set your goal" in resp.content
+        assert any(
+            t.name == "challenges/goal_setup_method.html" for t in resp.templates
+        )
 
 
 class TestJsonMethodFullFlow:
@@ -490,7 +501,7 @@ class TestJsonMethodFullFlow:
         resp = authed_client.post(_url(challenge), {"method": "json"}, follow=False)
         assert resp.status_code == 302
         chart = authed_client.get(_url(challenge))
-        assert b"Paste JSON" in chart.content
+        assert b'data-input-panel="json"' in chart.content
         assert b"Back Squat" in chart.content
 
 
@@ -514,9 +525,9 @@ class TestHistoryMethodFlow:
         url = _url(challenge)
         authed_client.post(url, {"method": "history"})
         resp = authed_client.get(url)
-        assert b"Bodyweight" not in resp.content
-        assert b"Stretch above your recent best" in resp.content
-        assert b"Round targets to nearest" in resp.content
+        assert b'id="id_bodyweight"' not in resp.content
+        assert b'id="id_uplift_percent"' in resp.content
+        assert b'id="id_rounding_increment"' in resp.content
 
     def test_chart_step_prefills_name_from_uplift(
         self, authed_client, participant, challenge
@@ -584,8 +595,8 @@ class TestHistoryMethodFlow:
         with patch("challenges.services.sync_user_lifts"):
             client.post(_url(challenge), {"method": "history"})
             resp = client.get(_url(challenge))
-        assert b"Bodyweight" in resp.content
-        assert b"Round targets to nearest" in resp.content
+        assert b'id="id_bodyweight"' in resp.content
+        assert b'id="id_rounding_increment"' in resp.content
 
     def test_confirm_records_uplift_lookback_and_rounding_no_sex_or_bodyweight(
         self, authed_client, participant, challenge, user, settings
@@ -727,8 +738,9 @@ class TestHistoryMethodRequiresLiftosaurKey:
         assert resp.status_code == 200
         content = resp.content.decode()
         assert "liftosaur_api_key" in content
-        assert "Connect & Continue" in content
-        assert "Review your chart" not in content
+        assert not any(
+            t.name == "challenges/custom_goal_setup.html" for t in resp.templates
+        )
 
     def test_method_step_itself_is_never_gated(
         self, authed_client, participant, challenge
@@ -741,7 +753,9 @@ class TestHistoryMethodRequiresLiftosaurKey:
         resp = authed_client.post(_url(challenge), {"method": "custom"})
         assert resp.status_code == 302
         chart = authed_client.get(_url(challenge))
-        assert b"Review your chart" in chart.content
+        assert any(
+            t.name == "challenges/custom_goal_setup.html" for t in chart.templates
+        )
 
     @patch("challenges.views.validate_liftosaur_key", return_value=False)
     def test_invalid_key_redisplays_prompt_with_error(
@@ -786,10 +800,12 @@ class TestHistoryMethodRequiresLiftosaurKey:
 
         # Inputs (rounding choice) always runs for history now, then chart.
         inputs = authed_client.get(url)
-        assert b"Round targets to nearest" in inputs.content
+        assert b'id="id_rounding_increment"' in inputs.content
         authed_client.post(url, {"rounding_increment": "kg:2.5"})
         chart = authed_client.get(url)
-        assert b"Review your chart" in chart.content
+        assert any(
+            t.name == "challenges/custom_goal_setup.html" for t in chart.templates
+        )
 
 
 class TestHistoryMethodRecognizesNonLiftosaurHistory:
@@ -813,7 +829,7 @@ class TestHistoryMethodRecognizesNonLiftosaurHistory:
         authed_client.post(url, {"method": "history"})
         resp = authed_client.get(url)
         assert resp.status_code == 200
-        assert b"Round targets to nearest" in resp.content
+        assert b'id="id_rounding_increment"' in resp.content
         assert "liftosaur_api_key" not in resp.content.decode()
 
     def test_pooled_manual_history_skips_the_key_prompt(
@@ -831,7 +847,7 @@ class TestHistoryMethodRecognizesNonLiftosaurHistory:
         authed_client.post(url, {"method": "history"})
         resp = authed_client.get(url)
         assert resp.status_code == 200
-        assert b"Round targets to nearest" in resp.content
+        assert b'id="id_rounding_increment"' in resp.content
         assert "liftosaur_api_key" not in resp.content.decode()
 
     def test_no_key_and_no_history_still_prompts(
@@ -902,9 +918,9 @@ class TestStandardsMethodFlow:
         authed_client.post(url, {"method": "standards"})
         resp = authed_client.get(url)
         content = resp.content.decode()
-        assert "Sex" in content
-        assert "Population" in content
-        assert "Tier" in content
+        assert 'name="sex"' in content
+        assert 'id="id_population"' in content
+        assert 'id="id_tier"' in content
 
     def test_chart_step_prefills_name_from_population_and_tier(
         self, authed_client, participant, challenge, settings
@@ -1015,7 +1031,7 @@ class TestStandardsMethodFlow:
 
         chart = authed_client.get(url)
         assert chart.status_code == 200
-        assert "Paste JSON" not in chart.content.decode()
+        assert 'data-input-panel="json"' not in chart.content.decode()
         lift_ctx = next(
             lift for lift in chart.context["lifts"] if lift["name"] == "Back Squat"
         )
