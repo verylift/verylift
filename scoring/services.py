@@ -659,24 +659,55 @@ def build_recent_scoring_activity(challenge, viewing_user, limit: int = 5) -> li
     no scoring activity yet, which the template renders as an explicit empty
     state.
 
+    ``points_delta`` is what the event actually did to that lifter's total:
+    its points minus the best they already held in that lift from any earlier
+    day. A first-ever scoring set in a lift is worth its full value; a set that
+    beats a previous PR is worth only the improvement. Without it the feed's
+    raw ``points_earned`` misreads badly -- a 6-point squat that replaced a
+    4-point squat looks like six points of progress when it moved the
+    leaderboard by two.
+
+    Deliberately the same per-lift high-watermark difference
+    build_points_over_time traces, so the column and the chart's rise on that
+    date agree rather than telling two stories about the same event. Earlier
+    sets from the *same* day are not counted as prior, matching the
+    session-collapsing below: a session is one step, from what the lifter held
+    before it to what they held after.
+
+    The delta is always positive for a row that appears here. _persist_best
+    only promotes on a strict improvement, so the current-best row is the
+    first event to reach that lift's maximum and every earlier set in it
+    scored strictly lower.
+
     Dict shape: {'name': str, 'lift': str, 'weight': Decimal, 'unit': str,
-    'reps': int, 'points_earned': int, 'date': date}.
+    'reps': int, 'points_earned': int, 'points_delta': int, 'date': date}.
     """
     bailed_user_ids = ChallengeParticipant.objects.filter(
         challenge=challenge, is_bailed=True
     ).values_list("user_id", flat=True)
 
-    events = (
-        PointEarnEvent.objects.filter(challenge=challenge, is_current_best=True)
+    # Superseded rows are fetched alongside the current-best ones: they are not
+    # feed material themselves, but they are exactly what a later PR has to
+    # beat, so the delta cannot be computed without them.
+    events = list(
+        PointEarnEvent.objects.filter(challenge=challenge)
         .exclude(user__in=bailed_user_ids)
         .exclude(points_earned=0)
         .select_related("user")
         .order_by("-performed_at", "-synced_at")
     )
 
+    scored_days_by_slot: dict[tuple, list[tuple]] = {}
+    for event in events:
+        scored_days_by_slot.setdefault((event.user_id, event.lift), []).append(
+            (event.performed_at, event.points_earned)
+        )
+
     best_by_session: dict[tuple, PointEarnEvent] = {}
     session_order: list[tuple] = []
     for event in events:
+        if not event.is_current_best:
+            continue
         session_key = (event.user_id, event.lift, event.performed_at)
         best = best_by_session.get(session_key)
         if best is None:
@@ -692,6 +723,14 @@ def build_recent_scoring_activity(challenge, viewing_user, limit: int = 5) -> li
         user = event.user
         name = user.effective_display_name
         weight, _ = to_display_weight(event.weight, unit)
+        prior_best = max(
+            (
+                points
+                for day, points in scored_days_by_slot[(event.user_id, event.lift)]
+                if day < event.performed_at
+            ),
+            default=0,
+        )
         activity.append(
             {
                 "name": name,
@@ -700,6 +739,7 @@ def build_recent_scoring_activity(challenge, viewing_user, limit: int = 5) -> li
                 "unit": unit,
                 "reps": event.reps,
                 "points_earned": event.points_earned,
+                "points_delta": event.points_earned - prior_best,
                 "date": event.performed_at,
             }
         )

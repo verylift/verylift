@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-27 04:10+0000\n"
+"POT-Creation-Date: 2026-08-27 05:57+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -465,7 +465,7 @@ msgstr ""
 msgid "\"%(lift_name)s\" is missing a target."
 msgstr "A \"%(lift_name)s\" le falta un objetivo."
 
-#: challenges/services.py:2194
+#: challenges/services.py:2190
 #, python-format, python-brace-format
 msgid ""
 "Suggested from history: +{percent}% uplift, based on the last {days} days"
@@ -473,12 +473,12 @@ msgstr ""
 "Sugerido a partir del historial: +{percent}% de incremento, basado en los "
 "últimos {days} días"
 
-#: challenges/services.py:2200
+#: challenges/services.py:2196
 #, python-brace-format
 msgid "(rounded to the nearest {amount} {unit})"
 msgstr "(redondeado al {amount} {unit} más cercano)"
 
-#: challenges/services.py:2320
+#: challenges/services.py:2316
 msgid ""
 "Recent history for this lift is entirely machine-assisted, which can't be "
 "converted into a target."
@@ -486,7 +486,7 @@ msgstr ""
 "El historial reciente de este ejercicio es completamente asistido por "
 "máquina y no puede convertirse en un objetivo."
 
-#: challenges/services.py:2325
+#: challenges/services.py:2321
 msgid "No recent history or published standard for this lift yet."
 msgstr ""
 "Todavía no hay historial reciente ni un estándar publicado para este "
@@ -605,7 +605,7 @@ msgid "You have left the challenge."
 msgstr "Has abandonado el reto."
 
 #: challenges/views.py:1992 challenges/views.py:2000
-#: templates/challenges/detail.html:605
+#: templates/challenges/detail.html:608
 msgid "leave challenge"
 msgstr "abandonar reto"
 
@@ -1529,7 +1529,9 @@ msgstr ""
 msgid ""
 "type <code class=\"font-mono bg-surface-hover px-1 rounded\">delete my "
 "account</code> below to confirm"
-msgstr "escribe <code class=\"font-mono bg-surface-hover px-1 rounded\">delete my account</code> a continuación para confirmar"
+msgstr ""
+"escribe <code class=\"font-mono bg-surface-hover px-1 rounded\">delete my "
+"account</code> a continuación para confirmar"
 
 #: templates/accounts/delete_account.html:75
 msgid "permanently delete account"
@@ -1645,6 +1647,7 @@ msgstr "expiración"
 
 #: templates/challenges/_invite_link_section.html:56
 #: templates/challenges/_invite_link_section.html:104
+#, python-format
 msgid "expires in %(when)s"
 msgstr "caduca en %(when)s"
 
@@ -1730,7 +1733,7 @@ msgstr "%(points)s pts"
 #: templates/challenges/_rep_target_summary_card.html:52
 #: templates/challenges/_summary_card.html:47
 #: templates/challenges/custom_goal_setup.html:175
-#: templates/challenges/detail.html:345
+#: templates/challenges/detail.html:348
 msgid "rep"
 msgid_plural "reps"
 msgstr[0] "repetición"
@@ -1754,20 +1757,20 @@ msgstr ""
 #: templates/challenges/_participant_chart.html:63
 #: templates/challenges/_rep_target_goal_table.html:22
 #: templates/challenges/custom_goal_setup.html:169
-#: templates/challenges/detail.html:174 templates/challenges/detail.html:341
+#: templates/challenges/detail.html:174 templates/challenges/detail.html:344
 #: templates/challenges/rep_target_goal_setup.html:59
 msgid "Lift"
 msgstr "Ejercicio"
 
 #: templates/challenges/_participant_chart.html:76
 #: templates/challenges/_rep_target_goal_table.html:33
-#: templates/challenges/detail.html:354
+#: templates/challenges/detail.html:357
 #: templates/challenges/rep_target_goal_setup.html:71
 msgid "BW"
 msgstr "PC"
 
 #: templates/challenges/_participant_chart.html:89
-#: templates/challenges/detail.html:366
+#: templates/challenges/detail.html:369
 #, python-format
 msgid "Thresholds shown in %(unit)s"
 msgstr "Umbrales mostrados en %(unit)s"
@@ -1832,6 +1835,7 @@ msgid "Log a set for %(lift)s"
 msgstr "Registrar una serie de %(lift)s"
 
 #: templates/challenges/_rep_target_summary_card.html:52
+#, python-format
 msgid "target: <span class=\"font-mono\">%(weight)s</span>"
 msgstr "objetivo: <span class=\"font-mono\">%(weight)s</span>"
 
@@ -2183,6 +2187,7 @@ msgid "ignore these and continue with the rest"
 msgstr "ignorar estos y continuar con el resto"
 
 #: templates/challenges/custom_goal_setup.html:112
+#, python-format
 msgid "target grid (%(unit)s)"
 msgstr "cuadrícula de objetivos (%(unit)s)"
 
@@ -2366,81 +2371,90 @@ msgstr "actividad reciente"
 msgid "Lifter"
 msgstr "Participante"
 
-#: templates/challenges/detail.html:176 templates/challenges/detail.html:224
+#: templates/challenges/detail.html:177
+msgid "How much this lift raised their running total"
+msgstr "Cuánto subió este levantamiento su total acumulado"
+
+#: templates/challenges/detail.html:177
+msgid "Gain"
+msgstr "Ganancia"
+
+#: templates/challenges/detail.html:178 templates/challenges/detail.html:227
 #: templates/challenges/invite_accept.html:208 templates/dashboard.html:149
 msgid "Date"
 msgstr "Fecha"
 
-#: templates/challenges/detail.html:192
+#: templates/challenges/detail.html:195
 msgid "No scoring activity yet."
 msgstr "Aún no hay actividad de puntuación."
 
-#: templates/challenges/detail.html:198
+#: templates/challenges/detail.html:201
 msgid "Points Over Time"
 msgstr "Puntos a lo Largo del Tiempo"
 
-#: templates/challenges/detail.html:200
+#: templates/challenges/detail.html:203
 msgid "Points by Lift"
 msgstr "Puntos por Ejercicio"
 
-#: templates/challenges/detail.html:202
+#: templates/challenges/detail.html:205
 msgid "Recent Activity"
 msgstr "Actividad Reciente"
 
-#: templates/challenges/detail.html:227
+#: templates/challenges/detail.html:230
 #: templates/challenges/invite_accept.html:211 templates/dashboard.html:152
 msgid "Cumulative Points"
 msgstr "Puntos Acumulados"
 
-#: templates/challenges/detail.html:261
+#: templates/challenges/detail.html:264
 msgid "Points Earned"
 msgstr "Puntos Obtenidos"
 
-#: templates/challenges/detail.html:310
+#: templates/challenges/detail.html:313
 msgid "your performance"
 msgstr "tu rendimiento"
 
-#: templates/challenges/detail.html:314
+#: templates/challenges/detail.html:317
 msgid "Summary"
 msgstr "Resumen"
 
-#: templates/challenges/detail.html:317
+#: templates/challenges/detail.html:320
 msgid "Goals"
 msgstr "Objetivos"
 
-#: templates/challenges/detail.html:366
+#: templates/challenges/detail.html:369
 msgid "for your custom goal."
 msgstr "para tu objetivo personalizado."
 
-#: templates/challenges/detail.html:513
+#: templates/challenges/detail.html:516
 msgid "Current best"
 msgstr "Mejor actual"
 
-#: templates/challenges/detail.html:515
+#: templates/challenges/detail.html:518
 msgid " pt target"
 msgstr " pt objetivo"
 
-#: templates/challenges/detail.html:516
+#: templates/challenges/detail.html:519
 msgid "RM target"
 msgstr "Objetivo RM"
 
-#: templates/challenges/detail.html:525 templates/dashboard.html:207
+#: templates/challenges/detail.html:528 templates/dashboard.html:207
 msgid "pts"
 msgstr "pts"
 
-#: templates/challenges/detail.html:537
+#: templates/challenges/detail.html:540
 msgid "no points to gain"
 msgstr "no hay puntos que ganar"
 
-#: templates/challenges/detail.html:538
+#: templates/challenges/detail.html:541
 msgid "confirm — I did this"
 msgstr "confirmar — lo hice"
 
-#: templates/challenges/detail.html:598
+#: templates/challenges/detail.html:601
 msgid "manage challenge"
 msgstr "gestionar reto"
 
-#: templates/challenges/detail.html:610
+#: templates/challenges/detail.html:613
+#, python-format
 msgid "owner: %(owner)s"
 msgstr "propietario: %(owner)s"
 
@@ -3502,6 +3516,7 @@ msgid "or"
 msgstr "o"
 
 #: templates/registration/login.html:71
+#, python-format
 msgid "sign in with %(oidc_provider_name)s"
 msgstr "iniciar sesión con %(oidc_provider_name)s"
 
@@ -3714,6 +3729,7 @@ msgid "One more thing"
 msgstr "Una cosa más"
 
 #: templates/registration/onboarding_very_open.html:17
+#, python-format
 msgid "want to join %(very_open_label)s?"
 msgstr "¿quieres unirte a %(very_open_label)s?"
 
@@ -3726,6 +3742,7 @@ msgstr ""
 "saltar este paso y hacerlo más tarde."
 
 #: templates/registration/onboarding_very_open.html:29
+#, python-format
 msgid "join %(very_open_label)s"
 msgstr "únete a %(very_open_label)s"
 
