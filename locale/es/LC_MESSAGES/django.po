@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-27 02:25+0000\n"
+"POT-Creation-Date: 2026-08-27 02:43+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -878,14 +878,6 @@ msgstr "Suscriptor del boletín"
 #: core/models.py:134
 msgid "Newsletter Subscribers"
 msgstr "Suscriptores del boletín"
-
-#: core/models.py:194
-msgid "live sync"
-msgstr "sincronización en vivo"
-
-#: core/models.py:195
-msgid "csv upload"
-msgstr "subida de csv"
 
 #: core/views.py:52
 msgid "You're subscribed. Thanks for joining!"
@@ -3020,7 +3012,7 @@ msgid "New to Liftosaur? Its API requires a premium subscription."
 msgstr "¿Nuevo en Liftosaur? Su API requiere una suscripción premium."
 
 #: templates/components/_liftosaur_coupon_cta.html:15
-#: templates/supported_apps.html:54
+#: templates/supported_apps.html:56
 msgid "Use code"
 msgstr "Usa el código"
 
@@ -3185,7 +3177,7 @@ msgstr ""
 "reto y perseguir su propia mejor marca. ¿Listo? ¡A por ello, campeón!\n"
 "        "
 
-#: templates/landing.html:39 templates/supported_apps.html:71
+#: templates/landing.html:39 templates/supported_apps.html:73
 msgid "get started"
 msgstr "empezar"
 
@@ -3873,11 +3865,11 @@ msgstr ""
 msgid "back to"
 msgstr "volver a"
 
-#: templates/supported_apps.html:26
+#: templates/supported_apps.html:37
 msgid "supported apps"
 msgstr "apps compatibles"
 
-#: templates/supported_apps.html:29
+#: templates/supported_apps.html:40
 #, python-format
 msgid ""
 "Connecting %(brand_name)s with one of the apps below makes everything very "
@@ -3885,34 +3877,76 @@ msgid ""
 msgstr ""
 "Conectar %(brand_name)s con una de las apps de abajo lo hace todo muy fácil."
 
-#: templates/supported_apps.html:37
+#: templates/supported_apps.html:47
 msgid "recommended"
 msgstr "recomendado"
 
-#: templates/supported_apps.html:56
+#: templates/supported_apps.html:53
+msgid ""
+"Automatically syncs every lift you log, or upload a CSV export if you'd "
+"rather not connect the API. We, ourselves, love using Liftosaur."
+msgstr ""
+"Sincroniza automáticamente cada levantamiento que registres, o sube un "
+"archivo CSV si prefieres no conectar la API. Nosotros mismos usamos "
+"Liftosaur y nos encanta."
+
+#: templates/supported_apps.html:58
 msgid ""
 "when you subscribe to Liftosaur's premium subscription, which is required "
 "for the API that live sync depends on."
 msgstr ""
-"cuando te suscribas a la suscripción premium de Liftosaur, necesaria para "
-"la API de la que depende la sincronización en vivo."
+"cuando te suscribas a la suscripción premium de Liftosaur, necesaria para la "
+"API de la que depende la sincronización en vivo."
+
+#: templates/supported_apps.html:62 templates/supported_apps.html:91
+#: templates/supported_apps.html:112
+msgid "live sync"
+msgstr "sincronización en vivo"
+
+#: templates/supported_apps.html:65 templates/supported_apps.html:94
+#: templates/supported_apps.html:130
+msgid "csv upload"
+msgstr "subida de csv"
 
 #: templates/supported_apps.html:76
 #, python-format
 msgid ""
-"%(brand_name)s has an affiliate relationship with %(app_name)s and may earn "
-"a commission from qualifying subscriptions."
+"%(brand_name)s has an affiliate relationship with Liftosaur and may earn a "
+"commission from qualifying subscriptions."
 msgstr ""
-"%(brand_name)s tiene una relación de afiliado con %(app_name)s y podría "
+"%(brand_name)s tiene una relación de afiliado con Liftosaur y podría "
 "recibir una comisión por las suscripciones que califiquen."
 
-#: templates/supported_apps.html:84
+#: templates/supported_apps.html:82
 msgid "you can also use these"
 msgstr "también puedes usar estas"
 
-#: templates/supported_apps.html:102
+#: templates/supported_apps.html:87
+msgid ""
+"Connect your Hevy account for automatic sync, or upload a CSV export instead."
+msgstr ""
+"Conecta tu cuenta de Hevy para sincronizar automáticamente, o sube un "
+"archivo CSV en su lugar."
+
+#: templates/supported_apps.html:102 templates/supported_apps.html:120
+#: templates/supported_apps.html:138
 msgid "learn more"
 msgstr "más información"
+
+#: templates/supported_apps.html:108
+msgid ""
+"Self-hosted and open source. Connect your own Wger instance with an API "
+"token."
+msgstr ""
+"Autoalojado y de código abierto. Conecta tu propia instancia de Wger con "
+"un token de API."
+
+#: templates/supported_apps.html:126
+msgid ""
+"Export your history from Strong and upload the file — we'll do the rest."
+msgstr ""
+"Exporta tu historial desde Strong y sube el archivo; nosotros haremos el "
+"resto."
 
 #: workout_imports/forms.py:37
 msgid "Please upload a .csv file."
