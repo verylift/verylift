@@ -5,3 +5,16 @@ repos:
       - id: ruff
         args: [--fix]
       - id: ruff-format
+
+  - repo: local
+    hooks:
+      # output.css is a checked-in build artifact, and Tailwind only emits the
+      # utilities it finds in the templates. A commit that first introduces a
+      # utility (e.g. `top-6`) without rebuilding ships a stale stylesheet, and
+      # no Django test catches it -- the page renders, just wrong.
+      - id: tailwind-build
+        name: tailwind build
+        entry: npx tailwindcss -i ./static/css/input.css -o ./static/css/output.css
+        language: system
+        pass_filenames: false
+        files: ^(templates/.*\.html|static/css/input\.css|tailwind\.config\.js)$
