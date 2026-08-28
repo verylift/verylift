@@ -11,7 +11,19 @@
     var rawStep = safeMax / (targetTicks || 8);
     var magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
     var residual = rawStep / magnitude;
-    var niceResidual = residual <= 1 ? 1 : residual <= 2 ? 2 : residual <= 5 ? 5 : 10;
+    // Epsilon so float error can't push an exact boundary into the next
+    // bracket -- a rawStep that should give residual 5 landing at
+    // 5.000000000000001 would otherwise pick a step of 10 and halve the
+    // gridline density.
+    var epsilon = 1e-9;
+    var niceResidual =
+      residual <= 1 + epsilon
+        ? 1
+        : residual <= 2 + epsilon
+          ? 2
+          : residual <= 5 + epsilon
+            ? 5
+            : 10;
     return Math.max(1, Math.round(niceResidual * magnitude));
   }
 

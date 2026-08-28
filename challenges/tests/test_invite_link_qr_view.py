@@ -41,18 +41,21 @@ def _expected_invite_url(token: str) -> str:
 
 class TestQrRoundTrip:
     def test_decodes_back_to_the_same_url_the_copy_button_produces(self, link):
+        # This subsumes a separate "is it a valid PNG" check: _decoded_payload
+        # cannot return anything unless Pillow parsed the bytes as an image
+        # and zxing found a barcode in it.
         response = Client().get(reverse("challenges:invite-link-qr", args=[link.token]))
 
         assert _decoded_payload(response.content) == _expected_invite_url(link.token)
 
-    def test_content_type_is_png(self, link):
-        response = Client().get(reverse("challenges:invite-link-qr", args=[link.token]))
-        assert response["Content-Type"] == "image/png"
+    def test_post_is_rejected_without_rendering(self, link):
+        # Read-only endpoint: a POST shouldn't build a PNG or burn a
+        # rate-limit token.
+        response = Client().post(
+            reverse("challenges:invite-link-qr", args=[link.token])
+        )
 
-    def test_response_is_a_valid_png(self, link):
-        response = Client().get(reverse("challenges:invite-link-qr", args=[link.token]))
-        image = Image.open(BytesIO(response.content))
-        assert image.format == "PNG"
+        assert response.status_code == 405
 
 
 class TestUnknownOrDeadToken:

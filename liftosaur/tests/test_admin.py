@@ -49,3 +49,17 @@ class TestLiftHistoryAdmin:
 
         assert response.status_code == 200
         assert b'name="_save"' not in response.content
+
+    def test_changelist_search_resolves_the_user_relation(self, staff_client):
+        # search_fields is deliberately restricted to the one indexed column
+        # (see LiftHistoryAdmin's docstring); a related-lookup typo there only
+        # raises when an operator types in the box, which no plain changelist
+        # GET reaches.
+        LiftHistoryFactory(user=UserFactory(username="searchable"))
+
+        response = staff_client.get(
+            reverse("admin:liftosaur_lifthistory_changelist"), {"q": "searchable"}
+        )
+
+        assert response.status_code == 200
+        assert b"searchable" in response.content

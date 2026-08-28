@@ -1,5 +1,6 @@
 """Tests for the challenge detail view sync trigger (TASK-25)."""
 
+import logging
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from types import SimpleNamespace
@@ -180,6 +181,38 @@ class TestParticipantSyncBudget:
         }
         assert calls_by_user[user] is True
         assert calls_by_user[other] is True
+
+    def test_one_participants_failing_sync_does_not_break_the_shared_page(
+        self, authed_client, participant, challenge, user, caplog
+    ):
+        """The detail page is shared by the whole challenge, so a single
+        member's tracker blowing up must not 500 it for everyone -- the rest of
+        the field still gets scored from whatever is already pooled."""
+        other = UserFactory()
+        ChallengeParticipantFactory(
+            challenge=challenge,
+            user=other,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        )
+        url = reverse("challenges:detail", args=[challenge.pk])
+
+        def explode_for_the_first_participant(participant_user, _challenge, **kwargs):
+            if participant_user == user:
+                raise RuntimeError("self-hosted tracker fell over")
+
+        with (
+            caplog.at_level(logging.ERROR, logger="challenges.views"),
+            patch(
+                "challenges.views.sync_and_score",
+                side_effect=explode_for_the_first_participant,
+            ) as mock_sync_and_score,
+        ):
+            resp = authed_client.get(url)
+
+        assert resp.status_code == 200
+        # The loop kept going rather than aborting on the first raise.
+        assert other in {call.args[0] for call in mock_sync_and_score.call_args_list}
+        assert str(user.id) in caplog.text
 
 
 @pytest.mark.django_db

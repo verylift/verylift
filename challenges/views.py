@@ -748,6 +748,7 @@ def _invite_link_qr_ip_rate(group, request):
     return settings.RATELIMIT_INVITE_LINK_QR_IP
 
 
+@require_GET
 @never_cache
 @ratelimit(group="invite_link_qr_ip", key=client_ip, rate=_invite_link_qr_ip_rate)
 def invite_link_qr_view(request, token):
@@ -1677,9 +1678,23 @@ def challenge_detail_view(request, pk):
                 PARTICIPANT_SYNC_BUDGET_SECONDS,
             )
             budget_exhausted_logged = True
-        sync_and_score(
-            participant_user, challenge, sync=not is_locked and within_budget
-        )
+        try:
+            sync_and_score(
+                participant_user, challenge, sync=not is_locked and within_budget
+            )
+        except Exception:
+            # One participant's tracker must never take down a page shared by
+            # the whole challenge. sync_and_score's own service layer degrades
+            # on the failures it knows about (API errors, network errors, DB
+            # contention), so reaching here means something genuinely
+            # unexpected -- log it with the participant attached and score the
+            # rest of the field from whatever is already pooled.
+            logger.exception(
+                "Skipping participant %s on detail view of challenge %s: "
+                "sync/score raised",
+                participant_user.id,
+                challenge.pk,
+            )
 
     logger.info(
         "Scored %s participant(s) on detail view of challenge %s for user %s",

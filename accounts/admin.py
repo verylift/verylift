@@ -10,7 +10,7 @@ from accounts.models import TrackerRequest
 from accounts.services import mask_api_key
 from hevy_api.services import sync_user_lifts as sync_hevy_lifts
 from liftosaur.services import sync_user_lifts
-from wger.services import sync_wger_lifts
+from wger.services import MAX_LOG_PAGES_PER_BACKGROUND_RUN, sync_wger_lifts
 
 logger = logging.getLogger(__name__)
 
@@ -162,7 +162,9 @@ class UserAdmin(DjangoUserAdmin):
         succeeded = 0
         for user in queryset:
             try:
-                sync_wger_lifts(user, force=True)
+                sync_wger_lifts(
+                    user, force=True, max_pages=MAX_LOG_PAGES_PER_BACKGROUND_RUN
+                )
             except Exception:
                 logger.exception(
                     "Admin Wger lift history backfill failed for user %s", user.id

@@ -57,6 +57,21 @@ POOL_WRITE_BATCH_SIZE = 500
 # Backoff schedule for a pool write that loses a race for the write lock.
 POOL_WRITE_RETRY_DELAYS = (0.1, 0.3, 0.9)
 
+# How many workoutlog pages a single pull will walk, mirroring hevy_api's
+# MAX_EVENT_PAGES_PER_*_RUN split. sync_and_score calls this from the request
+# path (challenges/views.py's detail loop), where an uncapped walk over a
+# first-time 365-day backfill can tie up a worker for minutes -- the detail
+# view's PARTICIPANT_SYNC_BUDGET_SECONDS is only checked *between*
+# participants, so it cannot interrupt one long pull.
+#
+# Unlike Hevy, a truncated walk needs no walk_complete bookkeeping on the sync
+# log: get_workout_logs pages in ascending date order (``ordering="date"``), so
+# the newest row a truncated walk pooled *is* the frontier, and
+# history_watermark resumes the next pull from exactly there. Hevy needs the
+# extra field only because its events feed is newest-first.
+MAX_LOG_PAGES_PER_BACKGROUND_RUN = 500
+MAX_LOG_PAGES_PER_INLINE_RUN = 3
+
 
 def _is_unset(value) -> bool:
     """True for None or Wger's ``Unset`` sentinel (a field absent server-side)."""
@@ -279,16 +294,26 @@ def last_synced_at(user):
     )
 
 
-def pull_workout_logs_into_pool(client, user, *, start_date, synced_at) -> int:
+def pull_workout_logs_into_pool(
+    client, user, *, start_date, synced_at, max_pages: int
+) -> tuple[int, bool]:
     """Walk paginated Wger workout logs, upserting each entry into LiftHistory.
 
-    Returns the number of sets persisted to the shared pool. Each API page is
+    ``max_pages`` bounds how far this single call walks -- see
+    MAX_LOG_PAGES_PER_BACKGROUND_RUN / MAX_LOG_PAGES_PER_INLINE_RUN for which
+    one callers should pass and why they differ.
+
+    Returns ``(sets_pooled, walk_complete)``: the number of sets persisted to
+    the shared pool, and whether the walk reached the end of the feed (False if
+    it stopped at ``max_pages`` with pages still available). Each API page is
     written in exactly one transaction, mirroring
     liftosaur.services.pull_history_into_pool.
     """
     pooled = 0
     offset = 0
     limit = 100
+    pages_walked = 0
+    walk_complete = True
     resolver = LiftNameResolver(_build_maps(), source_label="Wger sync", logger=logger)
     name_cache: dict = {}
     weight_units = client.get_weight_units()
@@ -309,12 +334,22 @@ def pull_workout_logs_into_pool(client, user, *, start_date, synced_at) -> int:
         )
         pooled += len(rows)
         _write_history_batch_with_retry(rows, user=user)
+        pages_walked += 1
 
         if not has_more:
             break
+        if pages_walked >= max_pages:
+            walk_complete = False
+            logger.info(
+                "Wger workoutlog walk for user %s stopped at the %s-page cap "
+                "with pages still available",
+                user.id,
+                max_pages,
+            )
+            break
         offset = next_offset
 
-    return pooled
+    return pooled, walk_complete
 
 
 def _mark_sync_log_failed(sync_log, detail: str, *, user) -> None:
@@ -331,11 +366,21 @@ def _mark_sync_log_failed(sync_log, detail: str, *, user) -> None:
         )
 
 
-def sync_wger_lifts(user, force: bool = False, full_backfill: bool = False) -> int:
+def sync_wger_lifts(
+    user,
+    force: bool = False,
+    full_backfill: bool = False,
+    max_pages: int = MAX_LOG_PAGES_PER_INLINE_RUN,
+) -> int:
     """Pure per-user pull that keeps the shared LiftHistory pool fresh from Wger.
 
     Mirrors liftosaur.services.sync_user_lifts. No-op (returns 0) when the
     user has no Wger instance URL or API token configured.
+
+    ``max_pages`` defaults to the request-cycle-safe cap; callers running off
+    the request path pass MAX_LOG_PAGES_PER_BACKGROUND_RUN. When an inline walk
+    truncates, a background catch-up pass at the higher cap is triggered so the
+    remaining pages still land without a user waiting on them.
     """
     if not user.wger_instance_url or not user.wger_api_token:
         logger.info(
@@ -370,12 +415,31 @@ def sync_wger_lifts(user, force: bool = False, full_backfill: bool = False) -> i
             )
 
         synced_at = datetime.now(tz=UTC)
-        pooled = pull_workout_logs_into_pool(
-            client, user, start_date=start_date, synced_at=synced_at
+        pooled, walk_complete = pull_workout_logs_into_pool(
+            client,
+            user,
+            start_date=start_date,
+            synced_at=synced_at,
+            max_pages=max_pages,
         )
     except WgerAPIError as exc:
         _mark_sync_log_failed(sync_log, str(exc), user=user)
         logger.exception("Wger lift sync failed for user %s", user.id)
+        return 0
+    except (httpx.HTTPError, OSError) as exc:
+        # A slow/unreachable Wger instance. WgerClient documents
+        # httpx.HTTPError for network failures, which is NOT an OSError
+        # subclass, so it needs naming explicitly; OSError additionally covers
+        # the bare TimeoutError a read-phase timeout can surface as. This
+        # matters more here than for the hosted trackers: Wger is
+        # self-hostable, so an offline box, a VPN-only URL or a stale DNS
+        # record is a routine condition, not an outage. Degrade exactly like
+        # the API-error branch -- sync_and_score runs on the request path, and
+        # the challenge detail view loops over every participant, so an
+        # escaping exception would 500 a shared page for one member's
+        # unreachable instance.
+        _mark_sync_log_failed(sync_log, f"Network error: {exc}", user=user)
+        logger.exception("Wger lift sync network error for user %s", user.id)
         return 0
     except OperationalError as exc:
         _mark_sync_log_failed(sync_log, f"DB contention: {exc}", user=user)
@@ -387,6 +451,15 @@ def sync_wger_lifts(user, force: bool = False, full_backfill: bool = False) -> i
     sync_log.result_summary = json.dumps({"sets_pooled": pooled})
     sync_log.save(update_fields=["success", "completed_at", "result_summary"])
     logger.info("Wger lift sync complete for user %s: %s sets pooled", user.id, pooled)
+
+    if not walk_complete and max_pages < MAX_LOG_PAGES_PER_BACKGROUND_RUN:
+        logger.info(
+            "Wger workoutlog walk truncated inline for user %s; triggering a "
+            "background catch-up pass at the higher page cap",
+            user.id,
+        )
+        trigger_wger_lift_history_catchup(user)
+
     return pooled
 
 
@@ -400,11 +473,27 @@ def trigger_wger_lift_history_backfill(user) -> None:
     thread.start()
 
 
-def _run_backfill_in_thread(user) -> None:
+def trigger_wger_lift_history_catchup(user) -> None:
+    """Resume a page-capped inline walk off the request path.
+
+    ``force=True`` because the inline pull that truncated has just written a
+    successful sync log, which would otherwise put this pass inside the
+    cooldown window and make it a no-op.
+    """
+    thread = threading.Thread(
+        target=_run_backfill_in_thread,
+        args=(user,),
+        kwargs={"force": True},
+        daemon=True,
+    )
+    thread.start()
+
+
+def _run_backfill_in_thread(user, *, force: bool = False) -> None:
     from django.db import connection
 
     try:
-        sync_wger_lifts(user)
+        sync_wger_lifts(user, force=force, max_pages=MAX_LOG_PAGES_PER_BACKGROUND_RUN)
     except Exception:
         logger.exception("Wger backfill thread failed for user %s", user.id)
     finally:
