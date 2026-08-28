@@ -3,6 +3,7 @@ from django.test import Client
 from django.urls import reverse
 
 from accounts.tests.factories import UserFactory
+from policies.models import PolicyNotification
 from policies.tests.factories import (
     PolicyConsentFactory,
     PolicyFactory,
@@ -149,11 +150,29 @@ class TestPolicyNotificationAdmin:
 
         assert response.status_code == 403
 
-    def test_staff_can_still_list_notification_rows(self, staff_client):
-        PolicyNotificationFactory()
+    def test_changelist_search_resolves_every_search_field(self, staff_client):
+        # search_fields spans two relations (user__email,
+        # policy_version__policy__name); a typo in either raises FieldError
+        # only once an operator searches, not on a plain changelist GET.
+        PolicyNotificationFactory(user=UserFactory(email="notified@example.com"))
 
         response = staff_client.get(
-            reverse("admin:policies_policynotification_changelist")
+            reverse("admin:policies_policynotification_changelist"),
+            {"q": "notified@example.com"},
         )
 
         assert response.status_code == 200
+        assert b"notified@example.com" in response.content
+
+    def test_cannot_delete_a_notification_row_via_the_admin(self, staff_client):
+        # This log is the evidence that a policy-update notice went out, so an
+        # operator must not be able to erase a row from it.
+        notification = PolicyNotificationFactory()
+
+        response = staff_client.post(
+            reverse("admin:policies_policynotification_delete", args=[notification.pk]),
+            {"post": "yes"},
+        )
+
+        assert response.status_code == 403
+        assert PolicyNotification.objects.filter(pk=notification.pk).exists()

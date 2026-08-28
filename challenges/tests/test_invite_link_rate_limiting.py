@@ -50,3 +50,32 @@ class TestInviteLinkJoinThrottling:
             assert client.get(url).status_code == 404
         url = reverse("challenges:invite-link", args=["guess-3"])
         assert client.get(url).status_code == 429
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("_enable_ratelimit")
+class TestInviteLinkQrThrottling:
+    """The QR endpoint is public and unauthenticated like the join page it
+    mirrors, and each hit renders a PNG, so its own limit has to actually
+    bite rather than just being declared."""
+
+    @override_settings(RATELIMIT_INVITE_LINK_QR_IP="3/m")
+    def test_repeated_requests_from_one_ip_are_blocked(self):
+        challenge = ChallengeFactory()
+        link = ChallengeInviteLinkFactory(challenge=challenge, revoked_at=None)
+        client = Client()
+        url = reverse("challenges:invite-link-qr", args=[link.token])
+        for _ in range(3):
+            assert client.get(url).status_code == 200
+        assert client.get(url).status_code == 429
+
+    @override_settings(RATELIMIT_INVITE_LINK_QR_IP="3/m")
+    def test_the_limit_applies_before_the_token_is_resolved(self):
+        """Unknown tokens count against the limit too -- the throttle has to
+        cover a scan for live tokens, not just legitimate re-renders."""
+        client = Client()
+        for i in range(3):
+            url = reverse("challenges:invite-link-qr", args=[f"guess-{i}"])
+            assert client.get(url).status_code == 404
+        url = reverse("challenges:invite-link-qr", args=["guess-3"])
+        assert client.get(url).status_code == 429

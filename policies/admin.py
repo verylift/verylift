@@ -157,3 +157,10 @@ class PolicyNotificationAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
+
+    def has_delete_permission(self, request, obj=None):
+        # Stricter than PolicyConsentAdmin above, which still permits deletes:
+        # this table is the only record that a policy-update notice went out,
+        # so it is the evidence an operator reaches for when a user says they
+        # were never told. Nothing legitimate needs to erase a row from it.
+        return False

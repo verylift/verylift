@@ -16,6 +16,7 @@ from accounts.tests.factories import UserFactory
 from liftosaur.models import LiftHistory, LiftSource
 from wger.client import WgerAPIError
 from wger.services import (
+    MAX_LOG_PAGES_PER_INLINE_RUN,
     canonical_wger_lift_name,
     history_watermark,
     last_synced_at,
@@ -463,3 +464,80 @@ class TestSyncWgerLifts:
 
         assert pooled == 2
         assert LiftHistory.objects.filter(user=user).count() == 2
+
+    @pytest.mark.parametrize(
+        "exc",
+        [
+            httpx.ConnectError("connection refused"),
+            httpx.ReadTimeout("timed out"),
+            TimeoutError("bare read timeout"),
+        ],
+        ids=["connect_refused", "read_timeout", "bare_timeout_error"],
+    )
+    def test_unreachable_instance_degrades_instead_of_raising(self, exc):
+        # Wger is self-hostable, so an offline box or stale DNS record is
+        # routine. httpx.HTTPError is not an OSError subclass, so this escaped
+        # sync_wger_lifts entirely before -- and sync_and_score runs on the
+        # request path inside a loop over every challenge participant, so one
+        # member's dead instance 500'd the shared detail page.
+        user = self._user()
+        p1, p2 = _patch_units(STANDARD_WEIGHT_UNITS, STANDARD_REPETITION_UNITS)
+        with (
+            p1,
+            p2,
+            patch("wger.services.WgerClient.get_workout_logs", side_effect=exc),
+        ):
+            pooled = sync_wger_lifts(user, force=True)
+
+        assert pooled == 0
+        log = user.wger_sync_logs.get()
+        assert log.success is False
+        assert "Network error" in log.error_detail
+
+    def test_inline_walk_stops_at_the_page_cap_and_hands_off_to_background(self):
+        # An uncapped walk over a first-time 365-day backfill can hold a worker
+        # for minutes; the detail view's sync budget is only checked between
+        # participants, so it cannot interrupt one long pull.
+        user = self._user()
+        endless_pages = [
+            ([_log_entry(date=f"2026-01-{day:02d}")], True, day * 100)
+            for day in range(1, MAX_LOG_PAGES_PER_INLINE_RUN + 5)
+        ]
+        p1, p2 = _patch_units(STANDARD_WEIGHT_UNITS, STANDARD_REPETITION_UNITS)
+        with (
+            p1,
+            p2,
+            patch(
+                "wger.services.WgerClient.get_workout_logs",
+                side_effect=endless_pages,
+            ) as mock_get,
+            patch("wger.services.WgerClient.get_exercise_name", return_value="Squat"),
+            patch("wger.services.trigger_wger_lift_history_catchup") as mock_catchup,
+        ):
+            pooled = sync_wger_lifts(user, force=True)
+
+        assert mock_get.call_count == MAX_LOG_PAGES_PER_INLINE_RUN
+        assert pooled == MAX_LOG_PAGES_PER_INLINE_RUN
+        # The pages it didn't reach still have to land, off the request path.
+        mock_catchup.assert_called_once_with(user)
+
+    def test_background_run_walks_past_the_inline_cap(self):
+        user = self._user()
+        pages = [
+            ([_log_entry(date=f"2026-01-{day:02d}")], True, day * 100)
+            for day in range(1, MAX_LOG_PAGES_PER_INLINE_RUN + 2)
+        ]
+        pages.append(([_log_entry(date="2026-02-01")], False, 9999))
+        p1, p2 = _patch_units(STANDARD_WEIGHT_UNITS, STANDARD_REPETITION_UNITS)
+        with (
+            p1,
+            p2,
+            patch("wger.services.WgerClient.get_workout_logs", side_effect=pages),
+            patch("wger.services.WgerClient.get_exercise_name", return_value="Squat"),
+            patch("wger.services.trigger_wger_lift_history_catchup") as mock_catchup,
+        ):
+            pooled = sync_wger_lifts(user, force=True, max_pages=500)
+
+        assert pooled == len(pages)
+        # A walk that reached the end of the feed needs no catch-up pass.
+        mock_catchup.assert_not_called()
