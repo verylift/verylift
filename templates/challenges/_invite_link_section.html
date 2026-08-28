@@ -3,6 +3,21 @@
   <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "invite link" %}</h2>
 
   {% if current_invite_link %}
+  <div class="flex flex-col items-center gap-2 mb-4">
+    <img
+      src="{% url 'challenges:invite-link-qr' current_invite_link.token %}"
+      alt="{% trans 'QR code for the invite link' %}"
+      width="132"
+      height="132"
+      class="border border-line-subtle rounded bg-surface-sunken">
+    <button
+      type="button"
+      data-copy-invite-qr
+      data-qr-url="{% url 'challenges:invite-link-qr' current_invite_link.token %}"
+      class="text-sm font-medium text-accent hover:underline">
+      {% trans "copy QR code" %}
+    </button>
+  </div>
   <div class="flex flex-wrap gap-2 mb-4">
     <input
       type="text"
@@ -33,20 +48,6 @@
       class="bg-accent text-accent-on text-sm font-medium px-3 py-2 rounded hover:bg-accent-hover whitespace-nowrap">
       {% trans "copy" %}
     </button>
-  </div>
-  <div class="flex items-center gap-3 mb-4">
-    <img
-      src="{% url 'challenges:invite-link-qr' current_invite_link.token %}"
-      alt="{% trans 'QR code for the invite link' %}"
-      width="132"
-      height="132"
-      class="border border-line-subtle rounded bg-surface-sunken">
-    <a
-      href="{% url 'challenges:invite-link-qr' current_invite_link.token %}"
-      download="verylift-invite-qr.png"
-      class="text-sm font-medium text-accent hover:underline">
-      {% trans "save QR code" %}
-    </a>
   </div>
   {% if challenge.creator_id == request.user.id %}
     {% if invite_link_editing %}
@@ -193,6 +194,64 @@
           input.select();
           document.execCommand('copy');
           done();
+        }
+      });
+    })();
+  </script>
+  <script>
+    (function () {
+      // Copies the QR straight to the clipboard as an image, so it can be
+      // pasted into a chat or a doc without a round trip through the
+      // filesystem. Writing an image needs navigator.clipboard.write (not
+      // writeText) plus ClipboardItem, and both need a secure context --
+      // fine over HTTPS and on localhost, absent otherwise, hence the
+      // feature test and the download fallback below.
+      var section = document.currentScript.closest('section');
+      var button = section.querySelector('[data-copy-invite-qr]');
+      if (!button) return;
+      var url = button.getAttribute('data-qr-url');
+
+      var flash = function (label) {
+        var restore = button.textContent;
+        button.textContent = label;
+        setTimeout(function () { button.textContent = restore; }, 1500);
+      };
+
+      // Last resort when the clipboard route is unavailable: hand over the
+      // file instead, so the capability degrades rather than disappearing.
+      var downloadInstead = function () {
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'verylift-invite-qr.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        flash("{% trans 'saved!' %}");
+      };
+
+      button.addEventListener('click', function () {
+        if (!navigator.clipboard || !navigator.clipboard.write || !window.ClipboardItem) {
+          downloadInstead();
+          return;
+        }
+        var copied = function () { flash("{% trans 'copied!' %}"); };
+        // Safari only honours a clipboard write inside the originating user
+        // gesture, and awaiting the fetch first loses that gesture -- so hand
+        // ClipboardItem the pending promise. Firefox wants a resolved Blob
+        // instead, which is what the second attempt provides.
+        try {
+          navigator.clipboard.write([
+            new ClipboardItem({ 'image/png': fetch(url).then(function (r) { return r.blob(); }) }),
+          ]).then(copied, function () {
+            fetch(url)
+              .then(function (r) { return r.blob(); })
+              .then(function (blob) {
+                return navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+              })
+              .then(copied, downloadInstead);
+          });
+        } catch (err) {
+          downloadInstead();
         }
       });
     })();
