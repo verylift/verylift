@@ -1,24 +1,15 @@
 {% load i18n humanize icons %}
-<section class="bg-surface-card border border-line-subtle rounded p-6">
+<section class="bg-surface-card border border-line-subtle rounded p-6 mb-6">
   <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "invite link" %}</h2>
 
   {% if current_invite_link %}
-  <div class="flex flex-col items-center gap-2 mb-4">
-    <img
-      src="{% url 'challenges:invite-link-qr' current_invite_link.token %}"
-      alt="{% trans 'QR code for the invite link' %}"
-      width="132"
-      height="132"
-      class="w-full h-auto [image-rendering:pixelated] border border-line-subtle rounded bg-surface-sunken">
-    <button
-      type="button"
-      data-copy-invite-qr
-      data-qr-url="{% url 'challenges:invite-link-qr' current_invite_link.token %}"
-      class="text-sm font-medium text-accent hover:underline">
-      {% trans "copy QR code" %}
-    </button>
-  </div>
-  <div class="flex flex-wrap gap-2 mb-4">
+  <img
+    src="{% url 'challenges:invite-link-qr' current_invite_link.token %}"
+    alt="{% trans 'QR code for the invite link' %}"
+    width="132"
+    height="132"
+    class="w-full h-auto [image-rendering:pixelated] border border-line-subtle rounded bg-surface-sunken mb-2">
+  <div class="flex gap-2 mb-2">
     <input
       type="text"
       readonly
@@ -42,11 +33,20 @@
       </svg>
     </button>
     {% endif %}
+  </div>
+  <div class="flex gap-2 mb-4">
+    <button
+      type="button"
+      data-copy-invite-qr
+      data-qr-url="{% url 'challenges:invite-link-qr' current_invite_link.token %}"
+      class="flex-1 border border-line-subtle text-content-body text-sm font-medium px-3 py-2 rounded hover:bg-surface-sunken whitespace-nowrap">
+      {% trans "copy QR code" %}
+    </button>
     <button
       type="button"
       data-copy-invite-link
-      class="bg-accent text-accent-on text-sm font-medium px-3 py-2 rounded hover:bg-accent-hover whitespace-nowrap">
-      {% trans "copy" %}
+      class="flex-1 bg-accent text-accent-on text-sm font-medium px-3 py-2 rounded hover:bg-accent-hover whitespace-nowrap">
+      {% trans "copy link" %}
     </button>
   </div>
   {% if challenge.creator_id == request.user.id %}

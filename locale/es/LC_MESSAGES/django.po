@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-28 18:41+0000\n"
+"POT-Creation-Date: 2026-08-28 19:00+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -338,9 +338,9 @@ msgstr "Los estándares de fuerza no están disponibles en este momento."
 msgid "Select a tier."
 msgstr "Selecciona un nivel."
 
-#: challenges/forms.py:414 templates/challenges/_invite_link_section.html:73
-#: templates/challenges/_invite_link_section.html:78
-#: templates/challenges/_invite_link_section.html:121
+#: challenges/forms.py:414 templates/challenges/_invite_link_section.html:71
+#: templates/challenges/_invite_link_section.html:76
+#: templates/challenges/_invite_link_section.html:119
 msgid "never expires"
 msgstr "nunca expira"
 
@@ -465,7 +465,7 @@ msgstr ""
 msgid "\"%(lift_name)s\" is missing a target."
 msgstr "A \"%(lift_name)s\" le falta un objetivo."
 
-#: challenges/services.py:2218
+#: challenges/services.py:2289
 #, python-format, python-brace-format
 msgid ""
 "Suggested from history: +{percent}% uplift, based on the last {days} days"
@@ -473,12 +473,12 @@ msgstr ""
 "Sugerido a partir del historial: +{percent}% de incremento, basado en los "
 "últimos {days} días"
 
-#: challenges/services.py:2224
+#: challenges/services.py:2295
 #, python-brace-format
 msgid "(rounded to the nearest {amount} {unit})"
 msgstr "(redondeado al {amount} {unit} más cercano)"
 
-#: challenges/services.py:2344
+#: challenges/services.py:2415
 msgid ""
 "Recent history for this lift is entirely machine-assisted, which can't be "
 "converted into a target."
@@ -486,7 +486,7 @@ msgstr ""
 "El historial reciente de este ejercicio es completamente asistido por "
 "máquina y no puede convertirse en un objetivo."
 
-#: challenges/services.py:2349
+#: challenges/services.py:2420
 msgid "No recent history or published standard for this lift yet."
 msgstr ""
 "Todavía no hay historial reciente ni un estándar publicado para este "
@@ -624,7 +624,7 @@ msgstr ""
 #: challenges/views.py:2148 challenges/views.py:2780
 #: templates/accounts/_avatar_section.html:117
 #: templates/challenges/_history_window_section.html:41
-#: templates/challenges/_invite_link_section.html:111
+#: templates/challenges/_invite_link_section.html:109
 #: templates/challenges/_rename_section.html:31
 #: templates/challenges/_rep_target_summary_card.html:90
 #: templates/challenges/_summary_card.html:76
@@ -1312,13 +1312,12 @@ msgstr ""
 "entradas de registro de tu cuenta sin pedirte nada más."
 
 #: templates/accounts/_support_id_section.html:20
-#: templates/challenges/_invite_link_section.html:49
 msgid "copy"
 msgstr "copiar"
 
 #: templates/accounts/_support_id_section.html:33
-#: templates/challenges/_invite_link_section.html:184
-#: templates/challenges/_invite_link_section.html:237
+#: templates/challenges/_invite_link_section.html:182
+#: templates/challenges/_invite_link_section.html:235
 #: templates/challenges/custom_goal_setup.html:77
 msgid "copied!"
 msgstr "¡copiado!"
@@ -1609,7 +1608,7 @@ msgid "Saving…"
 msgstr "Guardando…"
 
 #: templates/challenges/_history_window_section.html:33
-#: templates/challenges/_invite_link_section.html:103
+#: templates/challenges/_invite_link_section.html:101
 #: templates/challenges/_rename_section.html:23
 msgid "save"
 msgstr "guardar"
@@ -1633,80 +1632,84 @@ msgstr ""
 msgid "invite link"
 msgstr "enlace de invitación"
 
-#: templates/challenges/_invite_link_section.html:9
+#: templates/challenges/_invite_link_section.html:8
 msgid "QR code for the invite link"
 msgstr "código QR del enlace de invitación"
 
-#: templates/challenges/_invite_link_section.html:18
+#: templates/challenges/_invite_link_section.html:25
 msgid "copy QR code"
 msgstr "copiar código QR"
 
-#: templates/challenges/_invite_link_section.html:35
+#: templates/challenges/_invite_link_section.html:31
+msgid "copy link"
+msgstr "copiar enlace"
+
+#: templates/challenges/_invite_link_section.html:39
 msgid "Generate a new link? The current one will stop working immediately."
 msgstr "¿Generar un nuevo enlace? El actual dejará de funcionar de inmediato."
 
-#: templates/challenges/_invite_link_section.html:36
-#: templates/challenges/_invite_link_section.html:37
+#: templates/challenges/_invite_link_section.html:40
+#: templates/challenges/_invite_link_section.html:41
 msgid "Generate new link (invalidates the current one)"
 msgstr "Generar nuevo enlace (invalida el actual)"
 
-#: templates/challenges/_invite_link_section.html:65
+#: templates/challenges/_invite_link_section.html:63
 msgid "expiry"
 msgstr "expiración"
 
-#: templates/challenges/_invite_link_section.html:71
-#: templates/challenges/_invite_link_section.html:119
+#: templates/challenges/_invite_link_section.html:69
+#: templates/challenges/_invite_link_section.html:117
 #, python-format
 msgid "expires in %(when)s"
 msgstr "caduca en %(when)s"
 
-#: templates/challenges/_invite_link_section.html:82
+#: templates/challenges/_invite_link_section.html:80
 msgid "max uses"
 msgstr "usos máximos"
 
-#: templates/challenges/_invite_link_section.html:88
+#: templates/challenges/_invite_link_section.html:86
 msgid "Clear (unlimited uses)"
 msgstr "Borrar (usos ilimitados)"
 
-#: templates/challenges/_invite_link_section.html:89
+#: templates/challenges/_invite_link_section.html:87
 msgid "Clear max uses (unlimited uses)"
 msgstr "Borrar usos máximos (usos ilimitados)"
 
-#: templates/challenges/_invite_link_section.html:127
+#: templates/challenges/_invite_link_section.html:125
 #, python-format
 msgid "%(used)s of %(total)s uses"
 msgstr "%(used)s de %(total)s usos"
 
-#: templates/challenges/_invite_link_section.html:129
+#: templates/challenges/_invite_link_section.html:127
 msgid "unlimited uses"
 msgstr "usos ilimitados"
 
-#: templates/challenges/_invite_link_section.html:139
+#: templates/challenges/_invite_link_section.html:137
 msgid "Edit invite link expiry and max uses"
 msgstr "Editar la expiración y los usos máximos del enlace de invitación"
 
-#: templates/challenges/_invite_link_section.html:147
+#: templates/challenges/_invite_link_section.html:145
 msgid "No active invite link. Generate one to invite people."
 msgstr ""
 "No hay ningún enlace de invitación activo. Genera uno para invitar a gente."
 
-#: templates/challenges/_invite_link_section.html:155
+#: templates/challenges/_invite_link_section.html:153
 msgid "generate invite link"
 msgstr "generar enlace de invitación"
 
-#: templates/challenges/_invite_link_section.html:229
+#: templates/challenges/_invite_link_section.html:227
 msgid "saved!"
 msgstr "¡guardado!"
 
-#: templates/challenges/_invite_link_section.html:324
+#: templates/challenges/_invite_link_section.html:322
 msgid "expired"
 msgstr "caducado"
 
-#: templates/challenges/_invite_link_section.html:324
+#: templates/challenges/_invite_link_section.html:322
 msgid "ago"
 msgstr "hace"
 
-#: templates/challenges/_invite_link_section.html:326
+#: templates/challenges/_invite_link_section.html:324
 msgid "expires in"
 msgstr "caduca en"
 

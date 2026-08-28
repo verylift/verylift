@@ -4,6 +4,7 @@
 {% block title %}{% blocktrans with name=challenge.name %}{{ name }} Settings{% endblocktrans %} — very lift{% endblock %}
 
 {% block main %}
+  <div class="max-w-lg mx-auto">
     <header class="mb-8">
       <a href="{% url 'challenges:detail' challenge.pk %}"
         class="text-sm font-medium text-accent hover:text-accent mb-2 inline-block"
@@ -12,11 +13,9 @@
     </header>
 
     {% if not is_locked %}
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
-      {% include "challenges/_rename_section.html" %}
-      {% include "challenges/_history_window_section.html" %}
-      {% include "challenges/_invite_link_section.html" %}
-    </div>
+    {% include "challenges/_rename_section.html" %}
+    {% include "challenges/_history_window_section.html" %}
+    {% include "challenges/_invite_link_section.html" %}
     {% endif %}
 
     {% include "challenges/_participants_section.html" %}
@@ -46,4 +45,5 @@
       </div>
     </section>
     {% endif %}
+  </div>
 {% endblock %}
