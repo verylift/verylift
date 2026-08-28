@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+## 2026.8.15 — 2026-08-28
+
+### Added
+- Admins can now inspect pooled lift history, Rep Target and Custom goal targets, and policy notification logs directly in the Django admin.
+- Every invite link now shows a scannable QR code that can be saved as a PNG for flyers, gym screens, or chat
+
+### Changed
+- Challenge settings view on desktop now has a similar layout to user settings
+- Policy-update notification records can no longer be deleted from the admin
+
+### Fixed
+- Challenges now refresh your Wger workout history along with Liftosaur and Hevy — a Wger-only lifter's goal suggestions and scores were computed against history from their last manual sync instead of a fresh pull
+- Points charts now label their gridlines in whole points — previously a chart could show graduations like 1.2 points, which is not a score anyone can earn
+- Connecting Liftosaur no longer silently skips a lifter's own Liftosaur history when they already have workout history pooled from another tracker
+- A challenge's detail page no longer errors for everyone when one participant's Wger instance is unreachable
+- Wger history pulls are page-capped on the request path and finish in the background, so opening a challenge stays responsive during a first-time backfill
+
+### Removed
+- Cleaned up a redundant stored timestamp from account registration. The Terms of Service / Privacy Policy acceptance record itself is unaffected — that's tracked separately and still works exactly as before.
+
 ## 2026.8.14 — 2026-08-27
 
 ### Added
