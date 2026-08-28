@@ -252,9 +252,11 @@ def _write_history_batch_with_retry(rows, *, user) -> None:
 def history_watermark(user):
     """Return the latest performed_at among the user's pooled Wger sets, or None.
 
-    Scoped to source=WGER (unlike liftosaur's history_watermark, which doesn't
-    need the filter since it's the only writer into that pool) so an
-    independent Liftosaur sync's watermark never leaks into Wger's delta pull.
+    Scoped to source=WGER, matching liftosaur.services.history_watermark and
+    hevy_api.services.history_watermark (both scoped for the same TASK-319 /
+    TASK-332 reason), so an independent Liftosaur, Hevy, CSV, or manual
+    history never leaks into Wger's delta pull and truncates a first-ever
+    backfill.
     """
     return LiftHistory.objects.filter(user=user, source=LiftSource.WGER).aggregate(
         latest=Max("performed_at")

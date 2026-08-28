@@ -90,7 +90,7 @@ class TestHevyImporterDetect:
         assert HevyImporter().detect(header) is False
 
     def test_source_is_hevy(self):
-        assert HevyImporter().source == LiftSource.HEVY
+        assert HevyImporter().source == LiftSource.HEVY_CSV
 
 
 class TestLiftosaurImporterDetect:
@@ -113,7 +113,7 @@ class TestLiftosaurImporterDetect:
         assert LiftosaurImporter().detect(HEVY_HEADER) is False
 
     def test_source_is_liftosaur(self):
-        assert LiftosaurImporter().source == LiftSource.LIFTOSAUR
+        assert LiftosaurImporter().source == LiftSource.LIFTOSAUR_CSV
 
 
 class TestStrongImporterDetect:
@@ -134,7 +134,7 @@ class TestStrongImporterDetect:
         assert StrongImporter().detect(HEVY_HEADER) is False
 
     def test_source_is_strong(self):
-        assert StrongImporter().source == LiftSource.STRONG
+        assert StrongImporter().source == LiftSource.STRONG_CSV
 
 
 class TestGetImporterForHeader:

@@ -38,10 +38,10 @@ class TestImportWorkoutCsv:
         user = UserFactory()
         rows = 'Leg day,"01 Jan 2024, 09:15",,,Squat (Barbell),,,1,normal,225,5,,,\n'
         result = import_workout_csv(user, csv_file(rows))
-        assert result.source == LiftSource.HEVY
+        assert result.source == LiftSource.HEVY_CSV
         assert result.pooled_count == 1
         history = LiftHistory.objects.get(user=user)
-        assert history.source == LiftSource.HEVY
+        assert history.source == LiftSource.HEVY_CSV
 
     def test_reimporting_same_file_upserts_not_duplicates(self):
         user = UserFactory()
@@ -72,10 +72,10 @@ class TestImportWorkoutCsv:
             "225,lb,225,lb,0,2026-03-01T10:05:00.000Z,,,\n"
         )
         result = import_workout_csv(user, liftosaur_csv_file(rows))
-        assert result.source == LiftSource.LIFTOSAUR
+        assert result.source == LiftSource.LIFTOSAUR_CSV
         assert result.pooled_count == 1
         history = LiftHistory.objects.get(user=user)
-        assert history.source == LiftSource.LIFTOSAUR
+        assert history.source == LiftSource.LIFTOSAUR_CSV
 
     def test_unrecognized_format_raises_instead_of_pooling_anything(self):
         user = UserFactory()

@@ -369,13 +369,26 @@ def _write_history_batch_with_retry(rows, *, user) -> None:
 
 
 def history_watermark(user):
-    """Return the latest performed_at in the user's LiftHistory pool, or None.
+    """Return the latest performed_at among the user's pooled Liftosaur-sourced
+    sets, or None.
 
-    Drives delta sync: subsequent fetches request only records newer than this.
+    Scoped to source=LIFTOSAUR (TASK-332; this was TASK-319's Hevy fix, unfixed
+    here). LiftHistory is a single pool across every source, and aggregating
+    Max(performed_at) across the whole pool means a lifter who already has
+    Hevy, Wger, CSV, or manual history gets a watermark from a row Liftosaur
+    never wrote the moment they connect Liftosaur for the first time --
+    ``since=<some other tracker's latest date>`` instead of a real full
+    backfill, silently truncating up to HISTORY_BACKFILL_DAYS of genuine
+    Liftosaur history. Scoping to this connector's own source sidesteps it,
+    matching hevy_api.services.history_watermark and
+    wger.services.history_watermark, which made the same call for the same
+    reason. Deliberately excludes LIFTOSAUR_CSV: a CSV upload's dates come
+    from the same tracker but not from this live-sync connector, and folding
+    them in would reintroduce the same class of bug this scoping fixes.
     """
-    return LiftHistory.objects.filter(user=user).aggregate(latest=Max("performed_at"))[
-        "latest"
-    ]
+    return LiftHistory.objects.filter(user=user, source=LiftSource.LIFTOSAUR).aggregate(
+        latest=Max("performed_at")
+    )["latest"]
 
 
 def recent_pull_exists(user) -> bool:

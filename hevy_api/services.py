@@ -304,7 +304,7 @@ def _history_rows(
             reps=parsed_set.reps,
             weight_kg=parsed_set.weight_kg,
             synced_at=synced_at,
-            source=LiftSource.HEVY_API,
+            source=LiftSource.HEVY,
         )
     return list(rows.values())
 
@@ -349,7 +349,7 @@ def history_watermark(user):
     """Return the latest performed_at among the user's pooled Hevy-sourced sets,
     or None.
 
-    Scoped to source=HEVY_API (unlike liftosaur.services.history_watermark, which
+    Scoped to source=HEVY (unlike liftosaur.services.history_watermark, which
     aggregates across the whole shared LiftHistory pool). LiftHistory is a single
     pool across every source, but TASK-319 showed that pooling the watermark
     itself is the wrong move for a *live-sync* connector: a user who already has
@@ -359,13 +359,14 @@ def history_watermark(user):
     challenges.services.sync_and_score (Liftosaur before Hevy) makes it worse:
     Liftosaur's own pull can move the shared watermark before this function ever
     reads it, so even a freshly-onboarded dual-connected user gets poisoned.
-    Scoping to HEVY_API sidesteps both: this connector's watermark can only move
-    by this connector's own writes, so sync order and other-source history are
-    both irrelevant. It's also strictly more accurate on an ongoing basis -- the
-    shared watermark can park on another source's newer date and skip
-    legitimately-new Hevy workouts that are still older than that date (see
-    wger.services.history_watermark, which made the same scoping call for the
-    same reason).
+    Scoping to HEVY sidesteps both: this connector's watermark can only move
+    by this connector's own writes (deliberately excluding HEVY_CSV -- a CSV
+    upload's dates aren't this live connector's own writes either), so sync
+    order and other-source history are both irrelevant. It's also strictly
+    more accurate on an ongoing basis -- the shared watermark can park on
+    another source's newer date and skip legitimately-new Hevy workouts that
+    are still older than that date (see wger.services.history_watermark, which
+    made the same scoping call for the same reason).
 
     One caveat worth naming: Hevy's ``/v1/workouts/events?since=`` filters on
     *event* time (when the workout was created/updated in Hevy), not
@@ -376,7 +377,7 @@ def history_watermark(user):
     doing double duty as an event-time filter, same tolerance the unscoped
     version already accepted.
     """
-    return LiftHistory.objects.filter(user=user, source=LiftSource.HEVY_API).aggregate(
+    return LiftHistory.objects.filter(user=user, source=LiftSource.HEVY).aggregate(
         latest=Max("performed_at")
     )["latest"]
 
@@ -429,7 +430,7 @@ def pull_events_into_pool(
     """Walk paginated Hevy workout events, upserting completed sets into LiftHistory.
 
     ``since`` drives both the initial backfill (a date far in the past) and
-    every subsequent delta sync (this connector's own HEVY_API-scoped
+    every subsequent delta sync (this connector's own HEVY-scoped
     watermark, see ``history_watermark``) -- Hevy's events
     endpoint returns full workout payloads for "updated" events regardless, so
     there is no separate backfill endpoint/code path to maintain. "deleted"
@@ -506,7 +507,7 @@ def sync_user_lifts(
 
     No-op (returns 0) when the user has no Hevy API key. Delta-aware: once this
     connector has ever completed a successful pull for the user, subsequent
-    runs start from ``history_watermark`` (this module's own, HEVY_API-scoped
+    runs start from ``history_watermark`` (this module's own, HEVY-scoped
     watermark -- see its docstring for why the shared pool's watermark is the
     wrong signal here). A user with no prior successful ``HevySyncLog`` always
     gets the full ``HISTORY_BACKFILL_DAYS`` window instead, regardless of what

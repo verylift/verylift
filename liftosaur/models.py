@@ -12,29 +12,52 @@ from accounts.units import (
 class LiftSource(models.TextChoices):
     """Provenance of a pooled LiftHistory/PointEarnEvent row.
 
-    LIFTOSAUR is every row written by liftosaur.services.sync_user_lifts; MANUAL
-    is a lifter self-reporting a completed set with no tracker connected
-    (TASK-25); HEVY and STRONG are one-shot CSV uploads, dispatched by the
-    generic workout_imports.services.import_workout_csv importer registry
-    rather than a tracker-specific service function (#11, #10); WGER is a
-    live-sync integration (wger.services.sync_wger_lifts), mirroring
-    Liftosaur's own sync pattern rather than a one-shot upload (#9). HEVY_API
-    is every row written by hevy_api.services.sync_user_lifts (TASK-312) — a
-    distinct value from HEVY rather than reusing it, so a live-synced set
-    stays distinguishable from a one-shot CSV upload even though both
-    originate from the same tracker. Nothing in the codebase currently
-    branches on a specific source value (both Hevy paths render identically
-    in goal setup / challenge scoring), so this granularity is
-    provenance-only for now, kept for whenever that changes. A new source is
-    a new choice here, never a second boolean field.
+    Naming convention (TASK-332): a bare ``<tracker>`` value always means the
+    live API sync for that tracker; ``<tracker>_CSV`` always means a one-shot
+    CSV upload dispatched through the generic
+    workout_imports.services.import_workout_csv importer registry (#11, #10,
+    TASK-313) rather than a tracker-specific service function. A tracker with
+    no live API (Strong) only ever has the CSV member. MANUAL is a lifter
+    self-reporting a completed set with no tracker connected (TASK-25).
+
+    LIFTOSAUR is liftosaur.services.sync_user_lifts; LIFTOSAUR_CSV is
+    workout_imports.importers.liftosaur.LiftosaurImporter. HEVY is
+    hevy_api.services.sync_user_lifts (TASK-312); HEVY_CSV is
+    workout_imports.importers.hevy.HevyImporter. WGER is
+    wger.services.sync_wger_lifts (#9), which has no CSV counterpart.
+    STRONG_CSV is workout_imports.importers.strong.StrongImporter, which has
+    no live-API counterpart (#10).
+
+    This is not purely provenance-only bookkeeping — four call sites branch
+    on it and depend on getting it right:
+    - liftosaur.services.history_watermark, hevy_api.services.history_watermark,
+      and wger.services.history_watermark each scope their delta-sync
+      watermark query to their own live-sync source, so another source's
+      (or that same tracker's CSV import's) rows never truncate a first-ever
+      backfill (TASK-319, TASK-332).
+    - workout_imports.services.last_imported_at spans every registered
+      importer's ``source`` to report "last CSV import" across trackers.
+    - liftosaur.management.commands.restamp_lb_converted_lift_history's
+      _CANDIDATE_SOURCES depends on which sources ever run a weight through
+      LB_TO_KG: HEVY_CSV and STRONG_CSV always do (their export files carry
+      lbs only, unconditionally converted); LIFTOSAUR, LIFTOSAUR_CSV, and
+      WGER sometimes do (converted only when the synced/uploaded set's unit
+      is lb); HEVY never does (Hevy's API returns weight_kg directly, no
+      conversion ever runs); MANUAL never does (a manual report copies an
+      existing target weight rather than converting a freshly reported
+      one). Get this tuple wrong and the command silently restamps — or
+      fails to restamp — the wrong rows.
+
+    A new source is a new choice here, never a second boolean field.
     """
 
     LIFTOSAUR = "liftosaur", _("Liftosaur")
+    LIFTOSAUR_CSV = "liftosaur_csv", _("Liftosaur (CSV import)")
     MANUAL = "manual", _("Manual")
     HEVY = "hevy", _("Hevy")
+    HEVY_CSV = "hevy_csv", _("Hevy (CSV import)")
     WGER = "wger", _("Wger")
-    STRONG = "strong", _("Strong")
-    HEVY_API = "hevy_api", _("Hevy (live sync)")
+    STRONG_CSV = "strong_csv", _("Strong (CSV import)")
 
 
 class Lift(models.Model):

@@ -83,7 +83,7 @@ def _parse_reps(raw: str) -> int | None:
 class HevyImporter:
     """Recognizes and parses a Hevy CSV workout export."""
 
-    source = LiftSource.HEVY
+    source = LiftSource.HEVY_CSV
 
     def detect(self, header: list[str]) -> bool:
         return set(header) >= REQUIRED_HEADERS

@@ -810,7 +810,7 @@ class TestHistoryMethodRequiresLiftosaurKey:
 
 class TestHistoryMethodRecognizesNonLiftosaurHistory:
     """A lifter with pooled history from a Hevy CSV import or manual
-    self-report (LiftSource.HEVY / LiftSource.MANUAL) has real data to
+    self-report (LiftSource.HEVY_CSV / LiftSource.MANUAL) has real data to
     suggest from even with no Liftosaur key connected -- the key-required
     gate should only fire when there is genuinely nothing pooled yet."""
 
@@ -823,7 +823,7 @@ class TestHistoryMethodRecognizesNonLiftosaurHistory:
             performed_at=timezone.now().date(),
             reps=1,
             weight_kg=Decimal("100.00"),
-            source=LiftSource.HEVY,
+            source=LiftSource.HEVY_CSV,
         )
         url = _url(challenge)
         authed_client.post(url, {"method": "history"})
