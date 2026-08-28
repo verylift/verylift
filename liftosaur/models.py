@@ -57,12 +57,7 @@ class LiftSource(models.TextChoices):
     HEVY = "hevy", _("Hevy")
     HEVY_CSV = "hevy_csv", _("Hevy (CSV import)")
     WGER = "wger", _("Wger")
-    # Value intentionally left as "strong" (unlike HEVY_CSV/LIFTOSAUR_CSV,
-    # which needed a genuinely new string): this is a rename of the Python
-    # identifier only, since Strong has no live-API counterpart to collide
-    # with. Keeping the stored value unchanged is what makes this whole
-    # convention change a zero-data-migration edit for existing Strong rows.
-    STRONG_CSV = "strong", _("Strong (CSV import)")
+    STRONG_CSV = "strong_csv", _("Strong (CSV import)")
 
 
 class Lift(models.Model):

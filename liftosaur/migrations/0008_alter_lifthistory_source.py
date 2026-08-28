@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
                     ("hevy", "Hevy"),
                     ("hevy_csv", "Hevy (CSV import)"),
                     ("wger", "Wger"),
-                    ("strong", "Strong (CSV import)"),
+                    ("strong_csv", "Strong (CSV import)"),
                 ],
                 default="liftosaur",
                 help_text="Where this set came from: a Liftosaur sync pull, or a lifter self-reporting a completed set with no tracker connected.",

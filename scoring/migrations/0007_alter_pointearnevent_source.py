@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
                     ("hevy", "Hevy"),
                     ("hevy_csv", "Hevy (CSV import)"),
                     ("wger", "Wger"),
-                    ("strong", "Strong (CSV import)"),
+                    ("strong_csv", "Strong (CSV import)"),
                 ],
                 default="liftosaur",
                 help_text="Provenance of the source LiftHistory set this event was scored from. PointEarnEvent has no FK to LiftHistory, so this is its own copy, not a derived lookup.",
