@@ -283,7 +283,7 @@ class TestSyncUserLifts:
         assert pooled == 1
         assert (
             LiftHistory.objects.filter(
-                user=user, lift="Back Squat", source=LiftSource.HEVY_API
+                user=user, lift="Back Squat", source=LiftSource.HEVY
             ).count()
             == 1
         )
@@ -359,7 +359,7 @@ class TestSyncUserLifts:
             performed_at=hevy_watermark_date,
             weight_kg=Decimal("100"),
             reps=5,
-            source=LiftSource.HEVY_API,
+            source=LiftSource.HEVY,
         )
         LiftHistory.objects.create(
             user=user,

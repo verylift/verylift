@@ -14,14 +14,16 @@ instead of an upsert. See liftosaur/lb_conversion_repair.py for the full
 reasoning on which rows this can and can't identify.
 
 Only sources that ever run a weight through LB_TO_KG are candidates:
-HEVY and STRONG (workout_imports CSV importers -- their export files carry
-lbs only, unconditionally converted) and LIFTOSAUR and WGER (API/CSV syncs
-that convert only when the synced set's recorded unit is lb; that unit isn't
-stored on the row, so it can't be read back off it). HEVY_API is never a
-candidate: it takes weight_kg directly from Hevy's API, no conversion ever
-runs. MANUAL is never a candidate: a manual rep-target report copies an
-existing CustomGoalTarget.target_weight rather than converting a freshly
-reported weight.
+HEVY_CSV and STRONG_CSV (workout_imports CSV importers -- their export files
+carry lbs only, unconditionally converted) and LIFTOSAUR, LIFTOSAUR_CSV, and
+WGER (API/CSV syncs that convert only when the synced/uploaded set's
+recorded unit is lb; that unit isn't stored on the row, so it can't be read
+back off it). HEVY (TASK-332: the bare value now means the live API sync,
+not the CSV import it meant before that rename) is never a candidate: it
+takes weight_kg directly from Hevy's API, no conversion ever runs. MANUAL is
+never a candidate: a manual rep-target report copies an existing
+CustomGoalTarget.target_weight rather than converting a freshly reported
+weight.
 
 This command repairs existing data:
 
@@ -55,9 +57,10 @@ from scoring.services import score_pooled_history
 logger = logging.getLogger(__name__)
 
 _CANDIDATE_SOURCES = (
-    LiftSource.HEVY,
-    LiftSource.STRONG,
+    LiftSource.HEVY_CSV,
+    LiftSource.STRONG_CSV,
     LiftSource.LIFTOSAUR,
+    LiftSource.LIFTOSAUR_CSV,
     LiftSource.WGER,
 )
 

@@ -100,7 +100,7 @@ def _split_exercise_name(raw: str) -> str:
 class LiftosaurImporter:
     """Recognizes and parses a Liftosaur CSV history export."""
 
-    source = LiftSource.LIFTOSAUR
+    source = LiftSource.LIFTOSAUR_CSV
 
     def detect(self, header: list[str]) -> bool:
         return set(header) >= REQUIRED_HEADERS

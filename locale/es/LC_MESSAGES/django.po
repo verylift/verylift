@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-27 05:57+0000\n"
+"POT-Creation-Date: 2026-08-28 17:33+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -76,16 +76,16 @@ msgstr "Inicio de sesión único"
 msgid "Created by an operator"
 msgstr "Creado por un operador"
 
-#: accounts/models.py:174
+#: accounts/models.py:169
 #, python-format
 msgid "%(name)s (deleted)"
 msgstr "%(name)s (eliminado)"
 
-#: accounts/models.py:215
+#: accounts/models.py:210
 msgid "Tracker Request"
 msgstr "Solicitud de Tracker"
 
-#: accounts/models.py:216
+#: accounts/models.py:211
 msgid "Tracker Requests"
 msgstr "Solicitudes de Tracker"
 
@@ -93,64 +93,64 @@ msgstr "Solicitudes de Tracker"
 msgid "Too many attempts. Try again in a minute."
 msgstr "Demasiados intentos. Inténtalo de nuevo en un minuto."
 
-#: accounts/views.py:246
+#: accounts/views.py:245
 msgid "You must accept the Terms of Service and Privacy Policy."
 msgstr "Debes aceptar los Términos de Servicio y la Política de Privacidad."
 
-#: accounts/views.py:337 challenges/views.py:175
+#: accounts/views.py:335 challenges/views.py:175
 msgid "Could not validate this Liftosaur API key."
 msgstr "No se pudo validar esta clave de API de Liftosaur."
 
-#: accounts/views.py:354 accounts/views.py:818
+#: accounts/views.py:352 accounts/views.py:816
 msgid "Could not validate this Hevy API key."
 msgstr "No se pudo validar esta clave de API de Hevy."
 
-#: accounts/views.py:372
+#: accounts/views.py:370
 msgid "Could not validate this Wger instance URL or API token."
 msgstr "No se pudo validar la URL de la instancia o el token de API de Wger."
 
-#: accounts/views.py:405 accounts/views.py:863
+#: accounts/views.py:403 accounts/views.py:861
 msgid "Couldn't import right now. Please try again in a moment."
 msgstr "No se pudo importar ahora mismo. Inténtalo de nuevo en un momento."
 
-#: accounts/views.py:703
+#: accounts/views.py:701
 msgid "Your password has been updated. Sign in with your new password."
 msgstr ""
 "Tu contraseña se ha actualizado. Inicia sesión con tu contraseña nueva."
 
-#: accounts/views.py:756
+#: accounts/views.py:754
 msgid "Profile photo updated."
 msgstr "Foto de perfil actualizada."
 
-#: accounts/views.py:765
+#: accounts/views.py:763
 msgid "Display name updated."
 msgstr "Nombre para mostrar actualizado."
 
-#: accounts/views.py:775
+#: accounts/views.py:773
 msgid "Email address saved."
 msgstr "Correo electrónico guardado."
 
-#: accounts/views.py:786
+#: accounts/views.py:784
 msgid "Liftosaur API key saved."
 msgstr "Clave de API de Liftosaur guardada."
 
-#: accounts/views.py:791
+#: accounts/views.py:789
 msgid "Liftosaur API key removed."
 msgstr "Clave de API de Liftosaur eliminada."
 
-#: accounts/views.py:798
+#: accounts/views.py:796
 msgid "Wger connected."
 msgstr "Wger conectado."
 
-#: accounts/views.py:804
+#: accounts/views.py:802
 msgid "Wger disconnected."
 msgstr "Wger desconectado."
 
-#: accounts/views.py:823
+#: accounts/views.py:821
 msgid "Hevy API key saved."
 msgstr "Clave de API de Hevy guardada."
 
-#: accounts/views.py:828
+#: accounts/views.py:826
 msgid ""
 "Hevy API key saved, but we couldn't confirm it works right now. We'll let "
 "you know here if syncing fails."
@@ -158,11 +158,11 @@ msgstr ""
 "Clave de API de Hevy guardada, pero no pudimos confirmar que funcione en "
 "este momento. Te avisaremos aquí si la sincronización falla."
 
-#: accounts/views.py:837
+#: accounts/views.py:835
 msgid "Hevy API key removed."
 msgstr "Clave de API de Hevy eliminada."
 
-#: accounts/views.py:870
+#: accounts/views.py:868
 #, python-format
 msgid ""
 "Imported %(count)s set(s) from %(source)s. %(scored)s challenge(s) rescored."
@@ -170,61 +170,61 @@ msgstr ""
 "Se importaron %(count)s serie(s) de %(source)s. Se recalcularon %(scored)s "
 "reto(s)."
 
-#: accounts/views.py:889
+#: accounts/views.py:887
 msgid "Unit preference saved."
 msgstr "Preferencia de unidad guardada."
 
-#: accounts/views.py:895
+#: accounts/views.py:893
 msgid "Timezone saved."
 msgstr "Zona horaria guardada."
 
-#: accounts/views.py:901
+#: accounts/views.py:899
 msgid "Language saved."
 msgstr "Idioma guardado."
 
-#: accounts/views.py:995
+#: accounts/views.py:993
 msgid "Your account has been deleted."
 msgstr "Tu cuenta ha sido eliminada."
 
-#: accounts/views.py:1056
+#: accounts/views.py:1054
 msgid "Connect a Liftosaur API key first."
 msgstr "Conecta primero una clave de API de Liftosaur."
 
-#: accounts/views.py:1080 accounts/views.py:1127 accounts/views.py:1177
-#: accounts/views.py:1197
+#: accounts/views.py:1078 accounts/views.py:1125 accounts/views.py:1175
+#: accounts/views.py:1195
 msgid "Couldn't sync right now. Please try again in a moment."
 msgstr "No se pudo sincronizar ahora mismo. Inténtalo de nuevo en un momento."
 
-#: accounts/views.py:1086 accounts/views.py:1133 accounts/views.py:1202
+#: accounts/views.py:1084 accounts/views.py:1131 accounts/views.py:1200
 #, python-format
 msgid "Sync triggered for %(count)s challenge(s)."
 msgstr "Sincronización iniciada para %(count)s reto(s)."
 
-#: accounts/views.py:1107
+#: accounts/views.py:1105
 msgid "Connect your Wger account first."
 msgstr "Conecta primero tu cuenta de Wger."
 
-#: accounts/views.py:1157
+#: accounts/views.py:1155
 msgid "Connect a Hevy API key first."
 msgstr "Conecta primero una clave de API de Hevy."
 
-#: accounts/views.py:1242 accounts/views.py:1313
+#: accounts/views.py:1240 accounts/views.py:1311
 msgid "No API key provided."
 msgstr "No se proporcionó ninguna clave de API."
 
-#: accounts/views.py:1250 accounts/views.py:1321
+#: accounts/views.py:1248 accounts/views.py:1319
 msgid "Invalid API key or connection error."
 msgstr "Clave de API no válida o error de conexión."
 
-#: accounts/views.py:1254 accounts/views.py:1292 accounts/views.py:1325
+#: accounts/views.py:1252 accounts/views.py:1290 accounts/views.py:1323
 msgid "Connection successful."
 msgstr "Conexión exitosa."
 
-#: accounts/views.py:1280
+#: accounts/views.py:1278
 msgid "No Wger credentials provided."
 msgstr "No se proporcionaron credenciales de Wger."
 
-#: accounts/views.py:1288
+#: accounts/views.py:1286
 msgid "Invalid credentials or connection error."
 msgstr "Credenciales no válidas o error de conexión."
 
@@ -424,20 +424,20 @@ msgstr "Aceptado"
 msgid "Declined"
 msgstr "Rechazado"
 
-#: challenges/models.py:319 templates/challenges/goal_setup_method.html:32
+#: challenges/models.py:323 templates/challenges/goal_setup_method.html:32
 msgid "Strength standards"
 msgstr "Estándares de fuerza"
 
-#: challenges/models.py:320 challenges/models.py:428
+#: challenges/models.py:324 challenges/models.py:433
 msgid "Suggested from history"
 msgstr "Sugerido a partir del historial"
 
-#: challenges/models.py:321 challenges/models.py:429
+#: challenges/models.py:325 challenges/models.py:434
 #: templates/challenges/goal_setup_method.html:49
 msgid "Manual entry"
 msgstr "Entrada manual"
 
-#: challenges/models.py:322 templates/challenges/goal_setup_method.html:57
+#: challenges/models.py:326 templates/challenges/goal_setup_method.html:57
 msgid "Paste JSON"
 msgstr "Pegar JSON"
 
@@ -465,7 +465,7 @@ msgstr ""
 msgid "\"%(lift_name)s\" is missing a target."
 msgstr "A \"%(lift_name)s\" le falta un objetivo."
 
-#: challenges/services.py:2190
+#: challenges/services.py:2192
 #, python-format, python-brace-format
 msgid ""
 "Suggested from history: +{percent}% uplift, based on the last {days} days"
@@ -473,12 +473,12 @@ msgstr ""
 "Sugerido a partir del historial: +{percent}% de incremento, basado en los "
 "últimos {days} días"
 
-#: challenges/services.py:2196
+#: challenges/services.py:2198
 #, python-brace-format
 msgid "(rounded to the nearest {amount} {unit})"
 msgstr "(redondeado al {amount} {unit} más cercano)"
 
-#: challenges/services.py:2316
+#: challenges/services.py:2318
 msgid ""
 "Recent history for this lift is entirely machine-assisted, which can't be "
 "converted into a target."
@@ -486,7 +486,7 @@ msgstr ""
 "El historial reciente de este ejercicio es completamente asistido por "
 "máquina y no puede convertirse en un objetivo."
 
-#: challenges/services.py:2321
+#: challenges/services.py:2323
 msgid "No recent history or published standard for this lift yet."
 msgstr ""
 "Todavía no hay historial reciente ni un estándar publicado para este "
@@ -844,22 +844,21 @@ msgstr ""
 msgid "Site Settings"
 msgstr "Configuración del sitio"
 
-#: core/models.py:73 liftosaur/models.py:32
+#: core/models.py:73 liftosaur/models.py:54
 #: templates/registration/onboarding_tracking_method.html:28
 msgid "Liftosaur"
 msgstr "Liftosaur"
 
-#: core/models.py:74 liftosaur/models.py:34
+#: core/models.py:74 liftosaur/models.py:57
 #: templates/registration/onboarding_tracking_method.html:30
 msgid "Hevy"
 msgstr "Hevy"
 
-#: core/models.py:75 liftosaur/models.py:36
-#: templates/registration/onboarding_tracking_method.html:31
+#: core/models.py:75 templates/registration/onboarding_tracking_method.html:31
 msgid "Strong"
 msgstr "Strong"
 
-#: core/models.py:76 liftosaur/models.py:35
+#: core/models.py:76 liftosaur/models.py:59
 #: templates/accounts/_wger_section.html:4
 #: templates/registration/onboarding_tracking_method.html:29
 msgid "Wger"
@@ -901,13 +900,21 @@ msgstr "Mantener tus datos actualizados"
 msgid "Units & added-weight lifts"
 msgstr "Unidades y ejercicios con peso añadido"
 
-#: liftosaur/models.py:33
+#: liftosaur/models.py:55
+msgid "Liftosaur (CSV import)"
+msgstr "Liftosaur (importación CSV)"
+
+#: liftosaur/models.py:56
 msgid "Manual"
 msgstr "Manual"
 
-#: liftosaur/models.py:37
-msgid "Hevy (live sync)"
-msgstr "Hevy (sincronización en vivo)"
+#: liftosaur/models.py:58
+msgid "Hevy (CSV import)"
+msgstr "Hevy (importación CSV)"
+
+#: liftosaur/models.py:65
+msgid "Strong (CSV import)"
+msgstr "Strong (importación CSV)"
 
 #: notifications/models.py:10
 msgid "Challenge Closed"

@@ -103,7 +103,7 @@ def _parse_reps(raw: str) -> int | None:
 class StrongImporter:
     """Recognizes and parses a Strong CSV workout export."""
 
-    source = LiftSource.STRONG
+    source = LiftSource.STRONG_CSV
 
     def detect(self, header: list[str]) -> bool:
         return set(header) >= REQUIRED_HEADERS

@@ -14,7 +14,7 @@ from django.utils import timezone
 
 from accounts.tests.factories import UserFactory
 from liftosaur.client import LiftosaurAPIError
-from liftosaur.models import LB_TO_KG, LiftHistory, LiftosaurSyncLog
+from liftosaur.models import LB_TO_KG, LiftHistory, LiftosaurSyncLog, LiftSource
 from liftosaur.services import (
     HISTORY_BACKFILL_DAYS,
     POOL_WRITE_RETRY_DELAYS,
@@ -447,6 +447,37 @@ class TestBackfillLiftHistory:
 
         _, kwargs = client.get_history.call_args
         assert kwargs["start_date"] == watermark_date.isoformat()
+
+    def test_first_sync_ignores_shared_pool_history_from_other_source(self):
+        """TASK-332: this is TASK-319's Hevy fix in mirror image. A lifter who
+        already has pooled history from another source (Hevy here) still gets
+        the full HISTORY_BACKFILL_DAYS window on their first-ever Liftosaur
+        connect, not since=<the other source's most recent row> derived from
+        aggregating Max(performed_at) across the whole shared pool. Before the
+        fix, history_watermark ignored source entirely and this assertion
+        failed with kwargs["start_date"] == recent_date.isoformat()."""
+        user = UserFactory(liftosaur_api_key="key")
+        recent_date = (datetime.now(tz=UTC) - timedelta(days=2)).date()
+        LiftHistory.objects.create(
+            user=user,
+            lift="Back Squat",
+            performed_at=recent_date,
+            weight_kg=Decimal("100"),
+            reps=5,
+            source=LiftSource.HEVY,
+        )
+        client = _stub_client()
+
+        with patch("liftosaur.services.LiftosaurClient", return_value=client):
+            sync_user_lifts(user)
+
+        _, kwargs = client.get_history.call_args
+        expected_start = (
+            (datetime.now(tz=UTC) - timedelta(days=HISTORY_BACKFILL_DAYS))
+            .date()
+            .isoformat()
+        )
+        assert kwargs["start_date"] == expected_start
 
     def test_same_day_record_pooled_without_end_date(self):
         """A workout completed earlier today (same UTC day) is pooled, and the

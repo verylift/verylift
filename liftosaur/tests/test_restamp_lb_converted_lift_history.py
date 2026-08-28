@@ -44,7 +44,7 @@ def _setup(*, status=Challenge.Status.ACTIVE):
     return user, challenge
 
 
-def _stale_row(user, source=LiftSource.HEVY, weight_kg=OLD_WEIGHT_KG):
+def _stale_row(user, source=LiftSource.HEVY_CSV, weight_kg=OLD_WEIGHT_KG):
     return LiftHistoryFactory(
         user=user,
         lift="Back Squat",
@@ -87,7 +87,7 @@ class TestRestampLbConvertedLiftHistory:
             performed_at=PERFORMED_AT,
             reps=5,
             weight_kg=NEW_WEIGHT_KG,
-            source=LiftSource.HEVY_API,
+            source=LiftSource.HEVY,
         )
 
         call_command("restamp_lb_converted_lift_history")
@@ -97,15 +97,31 @@ class TestRestampLbConvertedLiftHistory:
         assert rows.get().weight_kg == NEW_WEIGHT_KG
 
     def test_source_never_run_through_lb_to_kg_is_left_untouched(self):
-        # hevy_api takes weight_kg directly from Hevy's API -- it never runs
-        # a conversion, so this value landing on the affected grid is
-        # coincidence, not evidence of a stale conversion.
+        # HEVY (the live API sync, TASK-332) takes weight_kg directly from
+        # Hevy's API -- it never runs a conversion, so this value landing on
+        # the affected grid is coincidence, not evidence of a stale
+        # conversion.
         user, _ = _setup()
-        row = _stale_row(user, source=LiftSource.HEVY_API)
+        row = _stale_row(user, source=LiftSource.HEVY)
 
         call_command("restamp_lb_converted_lift_history")
 
         assert LiftHistory.objects.get(pk=row.pk).weight_kg == OLD_WEIGHT_KG
+
+    def test_liftosaur_csv_import_is_a_candidate(self):
+        """TASK-332: LIFTOSAUR_CSV (the CSV importer's now-distinct source)
+        converts lb the same way LIFTOSAUR (the live sync) does, so it must
+        stay in _CANDIDATE_SOURCES even though it didn't exist as a separate
+        value before this task."""
+        user, challenge = _setup()
+        row = _stale_row(user, source=LiftSource.LIFTOSAUR_CSV)
+
+        call_command("restamp_lb_converted_lift_history")
+
+        assert LiftHistory.objects.get(pk=row.pk).weight_kg == NEW_WEIGHT_KG
+        assert PointEarnEvent.objects.filter(
+            user=user, challenge=challenge, lift="Back Squat"
+        ).exists()
 
     def test_manual_source_is_left_untouched(self):
         user, _ = _setup()
