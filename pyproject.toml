@@ -24,6 +24,7 @@ dependencies = [
     "apscheduler>=3.11.3",
     "structlog>=26.1.0",
     "wger-api-client>=2.6.1",
+    "qrcode>=8.2",
 ]
 
 [dependency-groups]
@@ -36,6 +37,7 @@ dev = [
     "pre-commit>=3.8",
     "pytest-xdist>=3.8.0",
     "hypothesis>=6.100",
+    "zxing-cpp>=2.2",
 ]
 
 [tool.uv]
