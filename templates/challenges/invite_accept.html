@@ -186,6 +186,7 @@
 {{ chart_data_mobile|json_script:"chart-data-mobile" }}
 {{ chart_data_desktop|json_script:"chart-data-desktop" }}
 <script src="{% static 'vendor/chart.js' %}"></script>
+<script src="{% static 'js/points-chart-axis.js' %}"></script>
 <script>
   (function () {
     function renderChart(canvasId, dataElId) {
@@ -208,6 +209,7 @@
             x: { title: { display: true, text: "{% trans 'Date' %}" } },
             y: {
               beginAtZero: true,
+              ticks: integerPointsAxisTicks(chartData.datasets),
               title: { display: true, text: "{% trans 'Cumulative Points' %}" },
             },
           },

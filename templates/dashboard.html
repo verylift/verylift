@@ -124,6 +124,7 @@
     </section>
     {% if active_cards %}
     <script src="{% static 'vendor/chart.js' %}"></script>
+    <script src="{% static 'js/points-chart-axis.js' %}"></script>
     <script>
       (function () {
         const carousel = document.getElementById("potc-carousel");
@@ -149,6 +150,7 @@
                 x: { title: { display: true, text: "{% trans 'Date' %}" } },
                 y: {
                   beginAtZero: true,
+                  ticks: integerPointsAxisTicks(chartData.datasets),
                   title: { display: true, text: "{% trans 'Cumulative Points' %}" },
                 },
               },

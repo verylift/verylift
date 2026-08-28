@@ -209,6 +209,7 @@
     {{ chart_data|json_script:"chart-data" }}
     {{ by_lift_data|json_script:"by-lift-data" }}
     <script src="{% static 'vendor/chart.js' %}"></script>
+    <script src="{% static 'js/points-chart-axis.js' %}"></script>
     <script>
       (function () {
         const chartData = JSON.parse(document.getElementById("chart-data").textContent);
@@ -227,6 +228,7 @@
               x: { title: { display: true, text: "{% trans 'Date' %}" } },
               y: {
                 beginAtZero: true,
+                ticks: integerPointsAxisTicks(chartData.datasets),
                 title: { display: true, text: "{% trans 'Cumulative Points' %}" },
               },
             },
@@ -261,6 +263,7 @@
             scales: {
               x: {
                 beginAtZero: true,
+                ticks: integerPointsAxisTicks(byLiftData.datasets),
                 title: { display: true, text: "{% trans 'Points Earned' %}" },
               },
               // No y-axis title: the lift names are the categories themselves,
