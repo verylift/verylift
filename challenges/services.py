@@ -17,6 +17,7 @@ from django.db.models import Case, CharField, F, Q, When
 from django.db.models.functions import Lower
 from django.utils import timezone
 from django.utils.translation import gettext
+from PIL import Image, ImageDraw
 
 from accounts.timezones import user_zoneinfo
 from accounts.units import to_display_weight
@@ -643,25 +644,95 @@ def resolve_invite_token(token):
     return link, None
 
 
-def build_invite_link_qr_png(url: str) -> bytes:
-    """Render ``url`` as a PNG QR code (TASK-339 / issue #79).
+# very lift's mark, transcribed from static/logo.svg: a rounded green tile
+# holding a barbell. The SVG is nothing but axis-aligned rounded rects, so
+# redrawing it with Pillow avoids taking on an SVG rasteriser (cairosvg and
+# friends pull in native cairo) purely to stamp a logo onto a QR code.
+#
+# Coordinates are the SVG's own, centre-relative, in a 242.4243-unit box; the
+# renderer scales them to whatever pixel size it is handed. Kept in the SVG's
+# paint order because the inner plates deliberately overlap the outer ones.
+#
+# NOTE: this is a transcription, not a live read of static/logo.svg -- if the
+# mark is ever redrawn, this must be updated to match. The decode test guards
+# scannability, not brand fidelity.
+_LOGO_WIDTH_RATIO = 0.22
+_LOGO_UNIT_BOX = 242.4243
+_LOGO_GREEN = (19, 104, 67)
+_LOGO_WHITE = (255, 255, 255)
+_LOGO_PALE = (200, 236, 216)
+_LOGO_SHAPES = (
+    # (x, y, width, height, corner_radius, fill)
+    (-121.2122, -121.2122, 242.4243, 242.4243, 6.0, _LOGO_GREEN),  # tile
+    (-76.9231, -11.3637, 153.8461, 22.7273, 1.0, _LOGO_WHITE),  # bar
+    (-90.9091, -30.3031, 30.303, 60.6061, 1.5, _LOGO_WHITE),  # left outer plate
+    (-68.1819, -45.4546, 22.7273, 90.9091, 1.0, _LOGO_PALE),  # left inner plate
+    (60.606, -30.3031, 30.303, 60.6061, 1.5, _LOGO_WHITE),  # right outer plate
+    (45.4545, -45.4546, 22.7273, 90.9091, 1.0, _LOGO_PALE),  # right inner plate
+)
 
-    Error correction M (~15% recoverable) rather than the library's default
-    L: these get printed on flyers and shown on gym screens, both of which
-    take glare and creasing that a screen-only code wouldn't need to
-    survive, without inflating the module count much for a URL this short.
+
+def _render_logo_tile(size: int) -> Image.Image:
+    """Draw the very lift mark as an RGB image ``size`` pixels square."""
+    scale = size / _LOGO_UNIT_BOX
+    half = _LOGO_UNIT_BOX / 2
+    tile = Image.new("RGB", (size, size), _LOGO_WHITE)
+    draw = ImageDraw.Draw(tile)
+    for x, y, width, height, radius, fill in _LOGO_SHAPES:
+        left = (x + half) * scale
+        top = (y + half) * scale
+        draw.rounded_rectangle(
+            (left, top, left + width * scale, top + height * scale),
+            radius=max(1.0, radius * scale),
+            fill=fill,
+        )
+    return tile
+
+
+def build_invite_link_qr_png(url: str) -> bytes:
+    """Render ``url`` as a PNG QR code with very lift's mark at its centre
+    (TASK-339 / issue #79).
+
+    Error correction H (~30% recoverable) rather than the library's default L
+    or the M this started on. That is not cosmetic: the centred logo covers
+    modules outright, and the code stays scannable only because the level's
+    redundancy can reconstruct what the logo hides. Dropping back to M would
+    leave roughly half the headroom and start producing codes that fail on
+    marginal scans -- silently, since the image still looks like a QR code.
+    The cost is small for a URL this short (version 5 / 37 modules against M's
+    version 4 / 33).
+
+    The logo is held to ``_LOGO_WIDTH_RATIO`` of the code's width, so it
+    occludes ~5% of the code's area against the ~30% budget -- deliberately
+    conservative, because that budget is also what absorbs the glare, creasing
+    and print noise these are meant to survive on a flyer or a gym screen. The
+    white pad around it keeps the mark from reading as part of the data.
+
     box_size=10 keeps each module comfortably scannable at arm's length once
     printed; border=4 is the spec's minimum quiet zone, below which some
     scanners refuse to lock on.
     """
     qr = qrcode.QRCode(
-        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        error_correction=qrcode.constants.ERROR_CORRECT_H,
         box_size=10,
         border=4,
     )
     qr.add_data(url)
     qr.make(fit=True)
-    image = qr.make_image(fill_color="black", back_color="white")
+    image = qr.make_image(fill_color="black", back_color="white").convert("RGB")
+
+    logo_size = int(image.width * _LOGO_WIDTH_RATIO)
+    pad = max(2, logo_size // 12)
+    backing = Image.new("RGB", (logo_size + pad * 2, logo_size + pad * 2), _LOGO_WHITE)
+    backing.paste(_render_logo_tile(logo_size), (pad, pad))
+    image.paste(
+        backing,
+        (
+            (image.width - backing.width) // 2,
+            (image.height - backing.height) // 2,
+        ),
+    )
+
     buffer = BytesIO()
     image.save(buffer, format="PNG")
     return buffer.getvalue()

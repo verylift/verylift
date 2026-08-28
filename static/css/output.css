@@ -1061,6 +1061,10 @@ body {
   height: 22rem;
 }
 
+.h-auto {
+  height: auto;
+}
+
 .h-full {
   height: 100%;
 }
@@ -2166,6 +2170,10 @@ body {
 
 .\[-ms-overflow-style\:none\] {
   -ms-overflow-style: none;
+}
+
+.\[image-rendering\:pixelated\] {
+  image-rendering: pixelated;
 }
 
 .\[scroll-snap-stop\:always\] {

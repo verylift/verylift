@@ -11,7 +11,7 @@ from django.utils import timezone
 from PIL import Image
 
 from challenges.models import Challenge
-from challenges.services import regenerate_invite_link
+from challenges.services import build_invite_link_qr_png, regenerate_invite_link
 from challenges.tests.factories import ChallengeFactory, ChallengeInviteLinkFactory
 
 
@@ -142,3 +142,28 @@ class TestCannotEnumerateTokens:
             reverse("challenges:invite-link-qr", args=[dead_link.token])
         )
         assert unknown_response.status_code == dead_response.status_code == 404
+
+
+class TestBrandedQrStaysScannable:
+    """The centred logo covers modules outright, so the code decodes only
+    because error correction H can reconstruct what it hides. That makes two
+    otherwise-innocuous edits silently destructive -- lowering the correction
+    level, or growing _LOGO_WIDTH_RATIO -- because the result still looks
+    exactly like a QR code and fails only on a real scanner.
+
+    Parametrised by URL length because the risk scales with it: a longer URL
+    packs more modules into the same image, so each one is smaller and the
+    fixed-ratio logo swallows proportionally more data.
+    """
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "https://vl.ca/join/AbCdEf12/",
+            "https://verylift.ca/join/AbCdEf12/",
+            "https://gigaproficiency.jul3s.ca/join/AbCdEf12/",
+            "https://a-rather-long-subdomain.verylift.example.com/join/AbCdEf12/",
+        ],
+    )
+    def test_decodes_at_every_realistic_url_length(self, url):
+        assert _decoded_payload(build_invite_link_qr_png(url)) == url
