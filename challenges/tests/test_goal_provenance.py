@@ -1,12 +1,16 @@
-"""Provenance-boundary tests for the goal-setup wizard (TASK-248 plan step 67).
+"""Provenance-boundary tests for the goal-setup wizard (TASK-248 plan step 67,
+narrowed by TASK-343).
 
-The second silent-wrong-answer risk this task carries: bodyweight/sex must
-flow through the wizard as pure ephemeral inputs, never landing on ``User``,
-never surviving in the session past goal completion, and never persisted
-anywhere except ``CustomGoal.source_detail`` for the STANDARDS method. A bug
-here doesn't crash -- it quietly resurrects exactly the per-user bodyweight
-store this task set out to delete, or leaks it into HISTORY/CUSTOM goals that
-must never carry it.
+The silent-wrong-answer risk here: a goal chart's recorded provenance must say
+exactly what produced it. ``sex`` remains ephemeral -- it flows through the
+wizard as a standards-only input, is never stored on ``User``, and survives
+only inside ``CustomGoal.source_detail`` for the STANDARDS method. Bodyweight
+now has TWO storage sites that must not be confused: the frozen per-goal
+snapshot in ``source_detail`` (unchanged, and still absent from HISTORY/CUSTOM
+goals), and the lifter's single current ``User.bodyweight_kg`` (TASK-343),
+which the wizard may write but which is a separate value with a separate
+lifetime. What must never come back is a bodyweight TIME SERIES, or a ``sex``
+column on ``User``.
 """
 
 from decimal import Decimal
@@ -122,7 +126,7 @@ class TestNoUserFieldChanged:
         assert resp.status_code == 302
         assert _user_row(user) == before
 
-    def test_standards_method_leaves_user_row_untouched(
+    def test_standards_method_writes_only_the_bodyweight_fields_to_user(
         self, authed_client, participant, challenge, user, settings
     ):
         settings.FITNESSVOLT_ENABLED = True
@@ -147,9 +151,19 @@ class TestNoUserFieldChanged:
         )
         resp = _confirm_targets(authed_client, url, "Standards Goal", "Back Squat")
         assert resp.status_code == 302
-        # The submitted sex/bodyweight never touch User -- the row is
-        # bit-for-bit identical to before the wizard ran.
-        assert _user_row(user) == before
+        # The submitted bodyweight IS kept on the account now (TASK-343), so
+        # the lifter is never asked for it again -- but nothing else about
+        # the row moves, and the submitted sex in particular has nowhere on
+        # User to land.
+        after = _user_row(user)
+        changed = {key for key in before if before[key] != after[key]}
+        assert changed == {
+            "bodyweight_kg",
+            "bodyweight_source",
+            "bodyweight_updated_at",
+        }
+        assert after["bodyweight_kg"] == Decimal("80.00")
+        assert after["bodyweight_source"] == User.BodyweightSource.MANUAL
 
 
 class TestStandardsProvenanceExact:
@@ -269,13 +283,20 @@ class TestNoBodyweightPersistenceOutsideProvenance:
     a column anywhere else, ever -- not just "not in the tests we happened to
     write". A regression here is architectural, not a single wrong value."""
 
-    # The only two model fields in the entire codebase allowed to mention
-    # "bodyweight" or "sex": a static exercise-classification boolean (not a
-    # bodyweight value) and a strength-standards *population cohort* label
-    # (not a specific user's sex). Both are reference data, never personal.
+    # Every model field in the entire codebase allowed to mention
+    # "bodyweight" or "sex". Two are reference data, never personal: a static
+    # exercise-classification boolean (not a bodyweight value) and a
+    # strength-standards *population cohort* label (not a specific user's
+    # sex). The other three are TASK-343's single current bodyweight on User
+    # -- one value plus its provenance, deliberately NOT a dated series.
+    # Anything beyond this set is the regression this test exists to catch:
+    # a second bodyweight store, or a per-user sex column.
     _ALLOWED_REFERENCE_FIELDS = {
         "liftosaur.Lift.is_bodyweight_added",
         "fitnessvolt.FitnessVoltStandardCache.sex",
+        "accounts.User.bodyweight_kg",
+        "accounts.User.bodyweight_source",
+        "accounts.User.bodyweight_updated_at",
     }
 
     def test_no_model_field_mentions_bodyweight_or_sex_except_known_reference_data(
@@ -294,18 +315,25 @@ class TestNoBodyweightPersistenceOutsideProvenance:
         table_names = {name.lower() for name in connection.introspection.table_names()}
         assert not any("bodyweightlog" in name for name in table_names)
 
-    def test_user_table_has_no_sex_or_bodyweight_column(self):
+    def test_user_table_has_no_sex_column_and_one_bodyweight_value(self):
         with connection.cursor() as cursor:
             columns = connection.introspection.get_table_description(
                 cursor, User._meta.db_table
             )
         column_names = {c.name.lower() for c in columns}
         assert "sex" not in column_names
-        assert not any("bodyweight" in name for name in column_names)
+        # Exactly one weight, plus its two provenance columns. A second
+        # weight column here (a "previous", a "goal", a "measured_on") is
+        # the beginning of the time series TASK-343 refused to build.
+        assert {name for name in column_names if "bodyweight" in name} == {
+            "bodyweight_kg",
+            "bodyweight_source",
+            "bodyweight_updated_at",
+        }
 
     def test_customgoal_source_detail_is_the_only_json_field_on_the_model(self):
-        # CustomGoal.source_detail is the sole writer of a bodyweight/sex
-        # value anywhere (TASK-248 plan §4); confirm the model has exactly
+        # CustomGoal.source_detail is the only place a *sex* value is ever
+        # written (TASK-248 plan §4); confirm the model has exactly
         # one JSONField, so there is no sibling field a future change could
         # accidentally also start writing bodyweight into.
         json_fields = [
