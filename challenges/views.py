@@ -161,12 +161,17 @@ def _ensure_history_source(request):
     from, for the goal-setup wizard's history-recovery screen (issue #88).
 
     Tries, in order: a Liftosaur/Hevy/Wger credential (any one supplied),
-    or a workout-CSV upload. Returns ``None`` when history now exists --
-    either a credential validated and its initial pull actually ran (see
-    below for why that pull is synchronous here), or a CSV import landed
-    rows -- so the caller redirects to a fresh GET. Returns ``""`` when
-    nothing was submitted at all (first time showing the screen). Otherwise
-    returns a validation-failure message to redisplay inline.
+    or a workout-CSV upload. Returns ``None`` when the attempt got far
+    enough to be worth re-checking -- a credential validated and its
+    initial pull ran to completion (see below for why that pull is
+    synchronous here), or a CSV import completed -- so the caller redirects
+    to a fresh GET. Note that this is deliberately NOT a promise that
+    history now exists: a pull or import that legitimately yields zero rows
+    also returns ``None``, and the caller's own history check then re-fires
+    the recovery screen in its "connected but empty" form, which is the
+    right outcome. Returns ``""`` when nothing was submitted at all (first
+    time showing the screen). Otherwise returns a validation-failure
+    message to redisplay inline.
 
     The credential branches deliberately call this connector's synchronous
     ``sync_user_lifts``/``sync_wger_lifts`` pull directly instead of the
