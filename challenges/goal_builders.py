@@ -5,9 +5,16 @@ Every challenge is CUSTOM (TASK-248 plan §3): the four goal-setting methods
 history) are all just prefill strategies that produce the same flat
 ``{lift: {rep: kg}}``
 table, which ``save_custom_goal`` then persists verbatim. This module is the
-only place in the codebase where a bodyweight number appears in arithmetic,
-and — since there is no legacy-participant backfill (revision 5) — the only
-place one is ever written to storage at all, via :func:`standards_source_detail`.
+only place in the codebase where a bodyweight number appears in arithmetic:
+scoring compares a performed set against a flat target and never sees one.
+
+Two different bodyweight values live in storage, and confusing them is the
+mistake to avoid. ``User.bodyweight_kg`` (TASK-343) is the lifter's ONE
+current figure, mutable and overwritten by tracker sync -- read here as the
+default input to :func:`suggest_from_history`. :func:`standards_source_detail`
+writes something else entirely: a frozen snapshot of the number that produced
+one particular goal chart, pinned inside that goal's ``source_detail`` so the
+targets stay explainable after the current figure moves on.
 """
 
 import logging
@@ -251,6 +258,15 @@ def suggest_from_history(
     recorded weight is net total load, not added weight, and is not
     comparable (see is_assisted_equipment / TASK-248 plan §1b).
 
+    ``bodyweight_kg`` defaults to ``user.bodyweight_kg`` when the caller
+    passes nothing (TASK-343). That is what stopped the wizard demanding the
+    number inline on every single run: the account's own stored figure is the
+    normal source, and an explicit argument is now only the override for a
+    value entered during this wizard run before it was written to the
+    account. ``None`` from both -- an account that skipped the question --
+    still degrades exactly as it always did, into ``lifts_needing_decision``,
+    never into a guessed default.
+
     ``bodyweight_kg`` is NOT persisted by this function — history_source_detail
     takes ``uplift``, ``lookback_days``, ``rounding_amount``, and
     ``rounding_unit`` (the sex/bodyweight asymmetry with the standards method
@@ -267,6 +283,8 @@ def suggest_from_history(
     """
     configured = sorted(covered_lift_names(challenge))
     cutoff = (datetime.now(tz=UTC) - timedelta(days=lookback_days)).date()
+    if bodyweight_kg is None:
+        bodyweight_kg = user.bodyweight_kg
 
     table: dict[str, dict[int, Decimal]] = {}
     needs_decision: list[str] = []

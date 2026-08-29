@@ -704,6 +704,7 @@ class TestGoalSetupComputeLogView:
             "blended_kg": 106.5234,
             "rounding_increment_kg": 2.5,
             "rounded_kg": 105.0,
+            "bodyweight_offset_applied": True,
         }
         with patch("challenges.views.logger") as mock_logger:
             response = authed_client.post(
@@ -726,6 +727,7 @@ class TestGoalSetupComputeLogView:
                 "blended_kg": 106.5234,
                 "rounding_increment_kg": 2.5,
                 "rounded_kg": 105.0,
+                "bodyweight_offset_applied": True,
             },
         )
 
