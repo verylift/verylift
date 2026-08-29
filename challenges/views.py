@@ -270,6 +270,16 @@ def _ensure_history_source(request):
         )
         return None
 
+    # Nothing usable came back. If the lifter picked a tracker in the source
+    # dropdown, they filled in none of the fields it revealed -- say so,
+    # rather than re-rendering an apparently-unchanged screen with no
+    # explanation. An untouched dropdown is the genuine "first time showing
+    # this" case and still returns "".
+    if request.POST.get("history_source"):
+        return gettext(
+            "Add an API key or choose a CSV export for the tracker you picked."
+        )
+
     return ""
 
 
@@ -293,6 +303,9 @@ def _history_needed_response(
         "action_url": action_url,
         "cancel_url": cancel_url or reverse("challenges:dashboard"),
         "error": error,
+        # Re-selects the tracker picker after a failed submit, so a bad key
+        # doesn't also silently collapse the fields the lifter had open.
+        "history_source": request.POST.get("history_source", ""),
     }
     template = (
         "challenges/_history_needed.html"

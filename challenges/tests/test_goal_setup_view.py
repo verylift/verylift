@@ -791,6 +791,21 @@ class TestHistoryMethodNeedsHistory:
             t.name == "challenges/custom_goal_setup.html" for t in chart.templates
         )
 
+    def test_picking_a_tracker_but_filling_nothing_in_explains_why(
+        self, authed_client, participant, challenge
+    ):
+        """The source dropdown reveals that tracker's fields; submitting with
+        them still blank would otherwise re-render an apparently-unchanged
+        screen with no error, reading as a dead button."""
+        url = _url(challenge)
+        authed_client.post(url, {"method": "history"})
+        resp = authed_client.post(url, {"history_source": "hevy"})
+        assert resp.status_code == 200
+        assert resp.context["error"]
+        # The picker stays on the tracker they chose, so the fields they were
+        # looking at don't collapse out from under them.
+        assert resp.context["history_source"] == "hevy"
+
     def test_build_manually_switches_to_the_custom_method(
         self, authed_client, participant, challenge
     ):

@@ -1,0 +1,162 @@
+{% load i18n %}
+{% comment %}
+Shared "which tracker do you use?" picker + its per-app fields, used by both
+the full-page and htmx variants of the history-recovery screen (issue #88).
+
+Deliberately one include rather than two copies: the fields, the export
+instructions and the supported-app list are the kind of copy that goes stale
+in exactly one of two places (this branch already had to un-stale
+"your recent Liftosaur history" in two spots).
+
+Mirrors onboarding's step 1 -> step 2 shape (accounts.views'
+onboarding_tracking_method_view / onboarding_connect_tracker_view): pick the
+app, then see only what that app actually supports -- Liftosaur and Hevy have
+an API key AND a CSV export, Wger is instance URL + token with no CSV
+importer, Strong is CSV only.
+
+Progressive enhancement: every panel renders VISIBLE and the script below
+hides the non-selected ones on load. With JS off the screen degrades to the
+old "everything at once" form, which still submits correctly -- the view
+branches on which fields came back filled, not on the picker.
+
+Context: `compact` (bool) tightens type/spacing for the htmx variant;
+`history_source` re-selects the picker after a failed submit.
+{% endcomment %}
+
+<div class="space-y-4" data-history-source-root>
+  <div>
+    <label for="id_history_source" class="block {% if compact %}text-xs{% else %}text-sm{% endif %} font-medium text-content-body mb-1">
+      {% trans "how do you track your lifts?" %}
+    </label>
+    <select
+      id="id_history_source"
+      name="history_source"
+      data-history-source-select
+      class="w-full bg-surface-card text-content-body border border-line rounded px-3 py-2 {% if compact %}text-xs{% else %}text-sm{% endif %} focus:outline-none focus:border-accent">
+      <option value="" {% if not history_source %}selected{% endif %}>{% trans "Pick an option" %}</option>
+      <option value="liftosaur" {% if history_source == "liftosaur" %}selected{% endif %}>{% trans "Liftosaur" %}</option>
+      <option value="wger" {% if history_source == "wger" %}selected{% endif %}>{% trans "Wger" %}</option>
+      <option value="hevy" {% if history_source == "hevy" %}selected{% endif %}>{% trans "Hevy" %}</option>
+      <option value="strong" {% if history_source == "strong" %}selected{% endif %}>{% trans "Strong" %}</option>
+    </select>
+  </div>
+
+  <div data-history-source-panel="liftosaur">
+    <label for="id_liftosaur_api_key" class="block {% if compact %}text-xs{% else %}text-sm{% endif %} font-medium text-content-body mb-1">
+      {% trans "Liftosaur API key" %}
+    </label>
+    <input
+      type="text"
+      id="id_liftosaur_api_key"
+      name="liftosaur_api_key"
+      autocomplete="off"
+      class="w-full border border-line rounded px-3 py-2 {% if compact %}text-xs{% else %}text-sm{% endif %} focus:outline-none focus:border-accent">
+    <p class="mt-1 text-xs text-content-subtle">
+      {% blocktrans %}For automated tracking, get your key from <a href="https://www.liftosaur.com/doc/api" target="_blank" rel="noopener" class="underline">Liftosaur's API docs</a>.{% endblocktrans %}
+    </p>
+  </div>
+
+  <div data-history-source-panel="wger">
+    <label for="id_wger_instance_url" class="block {% if compact %}text-xs{% else %}text-sm{% endif %} font-medium text-content-body mb-1">
+      {% trans "Wger instance URL" %}
+    </label>
+    <input
+      type="text"
+      id="id_wger_instance_url"
+      name="wger_instance_url"
+      placeholder="{% trans 'e.g. https://my-wger-instance.example.com' %}"
+      autocomplete="off"
+      class="w-full border border-line rounded px-3 py-2 {% if compact %}text-xs{% else %}text-sm{% endif %} focus:outline-none focus:border-accent">
+    <label for="id_wger_api_token" class="block {% if compact %}text-xs{% else %}text-sm{% endif %} font-medium text-content-body mt-3 mb-1">
+      {% trans "Wger API token" %}
+    </label>
+    <input
+      type="text"
+      id="id_wger_api_token"
+      name="wger_api_token"
+      autocomplete="off"
+      class="w-full border border-line rounded px-3 py-2 {% if compact %}text-xs{% else %}text-sm{% endif %} focus:outline-none focus:border-accent">
+    <p class="mt-1 text-xs text-content-subtle">
+      {% trans "You can find your API token in your Wger account under the API page." %}
+    </p>
+  </div>
+
+  <div data-history-source-panel="hevy">
+    <label for="id_hevy_api_key" class="block {% if compact %}text-xs{% else %}text-sm{% endif %} font-medium text-content-body mb-1">
+      {% trans "Hevy API key" %}
+    </label>
+    <input
+      type="text"
+      id="id_hevy_api_key"
+      name="hevy_api_key"
+      autocomplete="off"
+      class="w-full border border-line rounded px-3 py-2 {% if compact %}text-xs{% else %}text-sm{% endif %} focus:outline-none focus:border-accent">
+    <p class="mt-1 text-xs text-content-subtle">
+      {% trans "Requires an active Hevy Pro subscription. No Pro? Use the CSV export below instead." %}
+    </p>
+  </div>
+
+  {% comment %}
+  Wger is deliberately absent from this panel's app list: no CSV importer
+  exists for it (see onboarding_connect_tracker_view's docstring), so
+  offering a dropzone there would be a dead end.
+  {% endcomment %}
+  <div data-history-source-panel="liftosaur hevy strong" class="border-t border-line-subtle pt-4">
+    <p class="{% if compact %}text-xs{% else %}text-sm{% endif %} text-content-muted mb-2">
+      {% trans "or upload a CSV export" %}
+    </p>
+    {% if compact %}
+    <input type="file" id="id_csv_file" name="csv_file" accept=".csv" class="block text-xs">
+    {% else %}
+    <label
+      for="id_csv_file"
+      id="history-needed-csv-dropzone"
+      class="flex flex-col items-center justify-center text-center border-2 border-dashed border-line rounded px-4 py-6 cursor-pointer hover:border-accent hover:bg-surface-sunken transition-colors">
+      <span id="history-needed-csv-dropzone-label" class="text-sm text-content-body">
+        {% trans "drop a CSV file here, or click to choose one" %}
+      </span>
+      <input type="file" id="id_csv_file" name="csv_file" accept=".csv" class="sr-only">
+    </label>
+    {% endif %}
+    <p class="mt-2 text-xs text-content-subtle" data-history-source-hint="liftosaur">
+      {% trans "You can export your history by navigating to Me → Export history to CSV file and pressing Ok." %}
+    </p>
+    <p class="mt-2 text-xs text-content-subtle" data-history-source-hint="hevy">
+      {% blocktrans %}Learn how to export your data in <a href="https://help.hevyapp.com/hc/en-us/articles/38001424401943-How-to-Import-Strong-App-CSV-Files-and-Export-Your-Data-in-Hevy" target="_blank" rel="noopener" class="underline">Hevy's help center</a>.{% endblocktrans %}
+    </p>
+    <p class="mt-2 text-xs text-content-subtle" data-history-source-hint="strong">
+      {% trans "You can export your history from the Strong app under Settings → Export Data." %}
+    </p>
+  </div>
+</div>
+
+<script>
+(function () {
+  // Reveals only the picked app's fields. Panels and hints ship visible so a
+  // no-JS client still gets a working (if busier) form -- this hides the
+  // non-matching ones once, on load, and again on every change.
+  var root = document.querySelector('[data-history-source-root]');
+  if (!root) return;
+  var select = root.querySelector('[data-history-source-select]');
+  if (!select) return;
+
+  function applies(el, attr, value) {
+    // Panels list every app they belong to ("liftosaur hevy strong"), so
+    // match on whole tokens rather than substrings.
+    return (el.getAttribute(attr) || '').split(/\s+/).indexOf(value) !== -1;
+  }
+
+  function sync() {
+    var value = select.value;
+    ['[data-history-source-panel]', '[data-history-source-hint]'].forEach(function (sel) {
+      var attr = sel.slice(1, -1);
+      root.querySelectorAll(sel).forEach(function (el) {
+        el.hidden = !value || !applies(el, attr, value);
+      });
+    });
+  }
+
+  select.addEventListener('change', sync);
+  sync();
+})();
+</script>
