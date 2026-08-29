@@ -64,8 +64,8 @@ docker run --rm ghcr.io/verylift/verylift:latest \
 Each prints one line. Copy both somewhere safe for the next step.
 
 > **Keep `FIELD_ENCRYPTION_KEYS` backed up.** It encrypts everyone's stored
-> Liftosaur API key. If you lose it, those keys are gone permanently and every
-> user has to re-enter theirs. Losing `SECRET_KEY` is milder — it just logs
+> tracker API key and token. If you lose it, those credentials are gone
+> permanently and every user has to re-enter theirs. Losing `SECRET_KEY` is milder — it just logs
 > everyone out.
 
 ## Step 2 — Create your configuration
@@ -142,7 +142,7 @@ SQLite or switch to Postgres later.
 
 Open your site in a browser and register through the normal sign-up page.
 That gives you a regular user account — enough to create challenges, join
-them, and connect Liftosaur.
+them, and connect your workout tracker.
 
 If you also want access to the Django admin panel (for managing other users,
 or poking at data directly), promote yourself to an administrator:

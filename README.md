@@ -3,14 +3,29 @@
 [![CI](https://github.com/verylift/verylift/actions/workflows/ci.yml/badge.svg)](https://github.com/verylift/verylift/actions/workflows/ci.yml)
 [![Security](https://github.com/verylift/verylift/actions/workflows/security.yml/badge.svg)](https://github.com/verylift/verylift/actions/workflows/security.yml)
 
-A strength-challenge platform for friend groups. Connects to your [Liftosaur](https://www.liftosaur.com/) workout log and automatically scores your lifts against the goal chart you set for yourself — so everyone tracks progress against their own targets without double-entering data.
+A strength-challenge platform for friend groups. Connects to the workout tracker you already use — [Liftosaur](https://www.liftosaur.com/), [Hevy](https://www.hevyapp.com/), [Strong](https://www.strong.app/), or [wger](https://wger.de/) — and automatically scores your lifts against the goal chart you set for yourself, so everyone tracks progress against their own targets without double-entering data.
 
 ## What it does
 
 - **Challenges** — create a time-boxed challenge, invite friends, pick the lifts everyone competes on
-- **Automatic scoring** — syncs lift data from Liftosaur; awards points when you hit the rep-max targets on your own goal chart
+- **Automatic scoring** — pulls lift data from your tracker; awards points when you hit the rep-max targets on your own goal chart
+- **Bring your own tracker** — participants in the same challenge can each be on a different app; everything lands in one pooled lift history
 - **Fair by design** — each participant sets their own targets when they join, so points always measure progress against your own chart, not someone else's
 - **Live leaderboard** — points chart, personal performance cards, and gap-to-next-point displayed per lift
+
+## Supported trackers
+
+| Tracker | Live API sync | CSV import | What you supply |
+| --- | --- | --- | --- |
+| [Liftosaur](https://www.liftosaur.com/) | ✅ | ✅ | API key, or a CSV export file |
+| [Hevy](https://www.hevyapp.com/) | ✅ | ✅ | API key, or a CSV export file |
+| [Strong](https://www.strong.app/) | — | ✅ | A CSV export file from Strong|
+| [wger](https://wger.de/) | ✅ | — | Your instance URL, and an API token |
+| No tracker | — | — | Log completed goal milestones manually |
+
+Credentials are encrypted at rest and are never shared with other
+participants. Using a tracker that isn't listed? Open a github issue or 
+holler into our Discord.
 
 ## Documentation
 
@@ -28,7 +43,7 @@ a language, generate its `.po` file, and submit a translation.
 
 - Python 3.13+, Docker, [uv](https://docs.astral.sh/uv/)
 - [just](https://github.com/casey/just) task runner
-- A [Liftosaur](https://www.liftosaur.com/) account and API key (for data sync)
+- (Optional) An account with one of the [supported trackers](#supported-trackers)
 
 ## Development setup
 
@@ -128,7 +143,7 @@ just deploy 2026.8.0     # pulls that exact image, migrates, zero-downtime cutov
 
 `migrate`, `collectstatic`, and `seed_all` all run automatically via the
 `pre-deploy` hook, as the Postgres owner role — reference-data fixtures
-(Liftosaur lifts/aliases, FitnessVolt lift aliases) ship inside the image, so
+(workout tracker lifts/aliases, FitnessVolt lift aliases) ship inside the image, so
 without reseeding every deploy the DB silently drifts from what the newly
 deployed code expects.
 
@@ -199,9 +214,3 @@ changelog section, so `kamal`, Docker, and the `gh` CLI must be available on
 whatever machine cuts the release. It still doesn't deploy anything — run
 `just deploy <version>` as the follow-on step (see Deployment above).
 
-## License
-
-[PolyForm Shield 1.0.0](LICENSE) — source-available, not OSI-approved "open
-source." You're free to self-host, modify, and redistribute this for any
-purpose except offering a competing product or service. See the
-[license text](LICENSE) for the exact terms.
