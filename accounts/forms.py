@@ -8,6 +8,7 @@ from django.utils.translation import gettext_lazy as _
 
 from accounts.services import transcode_avatar_to_avif
 from accounts.timezones import is_valid_timezone
+from accounts.units import KG, from_display_weight
 
 
 class RegistrationForm(UserCreationForm):
@@ -213,6 +214,48 @@ class UnitPreferenceForm(forms.Form):
             else User.UnitPreference.LB
         )
         user.save(update_fields=["unit_preference"])
+
+
+class BodyweightForm(forms.Form):
+    """Settings bodyweight form, entered in the account's own display unit.
+
+    The unit is never a field on this form: it is whatever
+    ``unit_preference`` already says, matching the goal-setup wizard's
+    ``GoalInputsForm``. A per-field unit selector is the exact trap UAT
+    reported there -- it drifts from the preference and silently reinterprets
+    the number.
+
+    A blank submission clears the stored value, same contract as
+    ``NicknameForm``/``EmailForm``: there is no way to un-ask a question the
+    lifter would rather not answer if the only way out is a number.
+    """
+
+    bodyweight = forms.DecimalField(
+        required=False,
+        min_value=0,
+        error_messages={
+            "invalid": _("Enter a bodyweight greater than zero."),
+            "min_value": _("Enter a bodyweight greater than zero."),
+        },
+    )
+
+    def __init__(self, *args, unit=KG, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.unit = unit
+
+    def clean_bodyweight(self):
+        bodyweight = self.cleaned_data.get("bodyweight")
+        if bodyweight is None:
+            return None
+        if bodyweight <= 0:
+            raise forms.ValidationError(_("Enter a bodyweight greater than zero."))
+        return from_display_weight(bodyweight, self.unit)
+
+    def save(self, user):
+        User = get_user_model()
+        user.set_bodyweight(
+            self.cleaned_data["bodyweight"], User.BodyweightSource.MANUAL
+        )
 
 
 class LanguageForm(forms.Form):

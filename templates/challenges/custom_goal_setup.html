@@ -122,6 +122,7 @@
         <div class="mb-4 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap">
           <div class="flex justify-center sm:items-center sm:border sm:border-line-subtle sm:rounded sm:px-3 sm:py-2 sm:bg-surface-sunken/40">
             <button type="button" data-compute-button
+                    data-bodyweight="{{ compute_bodyweight|default_if_none:'' }}"
                     class="bg-surface-card text-accent text-sm font-semibold px-5 py-2 rounded border-2 border-accent hover:bg-accent hover:text-accent-on focus:outline-none focus:ring-2 focus:ring-accent">
               {% trans "compute" %}
             </button>
@@ -180,7 +181,7 @@
             <tbody>
               {% for lift in lifts %}
               <tr class="text-content-body {% if not lift.needs_decision %}border-b border-line-subtle{% endif %}"
-                  {% if show_calculator %}data-lift-row data-lift-name="{{ lift.name }}"{% endif %}>
+                  {% if show_calculator %}data-lift-row data-lift-name="{{ lift.name }}"{% if lift.is_bodyweight_added %} data-bodyweight-added{% endif %}{% endif %}>
                 <td class="py-2 pr-4 font-medium text-content-strong align-top {% if lift.needs_decision %}border-l-4 border-warning pl-2{% endif %}">
                   <div class="flex items-center justify-between gap-1.5 w-full">
                     <span>{{ lift.name }}</span>
@@ -293,6 +294,10 @@
     var computeButton = document.querySelector("[data-compute-button]");
     if (!computeButton) return;
     var roundingSelect = document.querySelector("[data-compute-rounding]");
+    // The account's stored bodyweight, already in the grid's display unit
+    // (build_custom_goal_context), or 0 when there is none on file.
+    var BODYWEIGHT = parseFloat(computeButton.dataset.bodyweight || "");
+    if (!isFinite(BODYWEIGHT) || BODYWEIGHT <= 0) BODYWEIGHT = 0;
     var COMPUTED_CLASSES = ["text-content-muted", "bg-surface-sunken"];
     var COMPUTE_LOG_URL = "{% url 'challenges:goal-setup-compute-log' challenge.pk %}";
     var FORMULA_NAMES = ["epley", "brzycki", "lander", "lombardi", "marzagao"];
@@ -442,12 +447,21 @@
       input.classList.toggle(PINNED_BORDER_CLASS, input.value.trim() !== "");
     }
 
-    function findAnchors(cells) {
+    // `offset` shifts every anchor from what the cell holds into the space the
+    // formulas actually model. For a bodyweight-added lift (Dip/Pull-up/
+    // Chin-up) a cell holds ADDED weight, so a 1RM formula run on it directly
+    // is wrong at every value -- Epley on a +10 dip treats 10 as the whole
+    // load, and a negative (assisted) anchor is worse still. Adding the
+    // lifter's bodyweight turns each anchor into the total load they actually
+    // moved; the result is shifted back by the same amount before it reaches
+    // a cell (see computeRow). Every other lift, and every lift when no
+    // bodyweight is on file, uses offset 0 and is untouched by this.
+    function findAnchors(cells, offset) {
       var anchors = [];
       cells.forEach(function (cell) {
         var weight = parseFloat(cell.el.value);
         if (cell.el.value.trim() !== "" && !isNaN(weight)) {
-          anchors.push({ reps: cell.reps, weight: weight });
+          anchors.push({ reps: cell.reps, weight: weight + offset });
         }
       });
       anchors.sort(function (a, b) { return a.reps - b.reps; });
@@ -567,8 +581,8 @@
       };
     }
 
-    function computeRow(cells, increment, liftName, logEntries, brokenLifts) {
-      var anchors = findAnchors(cells);
+    function computeRow(cells, increment, liftName, logEntries, brokenLifts, offset) {
+      var anchors = findAnchors(cells, offset);
       if (!anchors.length) return;
       if (!anchorsAreMonotonic(anchors)) {
         // Refuse to extrapolate/interpolate on top of anchors that already
@@ -584,6 +598,17 @@
         if (result === null) return;
         var stats = result.stats;
         var isExtrapolation = stats.method === "extrapolation";
+        // Back out of total-load space before anything user-facing happens.
+        // A constant shift applied to the value and to the bound it is
+        // clamped against preserves every inequality below, so the rounding
+        // and re-clamping run unchanged -- and they run on the added weight
+        // the lifter actually sees and loads, which is what the chosen
+        // increment is meant to be a multiple of.
+        result.value -= offset;
+        if (isExtrapolation) {
+          stats.bound -= offset;
+          stats.preClamp -= offset;
+        }
         var rounded = roundTo(result.value, increment);
         if (isExtrapolation) {
           // roundTo's nearest-multiple rounding can push a value that already
@@ -605,9 +630,14 @@
           lift_name: liftName,
           target_rep: cell.reps,
           method: stats.method,
+          // Anchors are logged as they appear in the grid (added weight for
+          // a bodyweight-added lift), not in the total-load space the math
+          // ran in, so a log line can be read against the screen it came
+          // from. The bodyweight itself is deliberately never sent -- see
+          // bodyweight_offset_applied.
           anchors: stats.anchors.map(function (a) {
             if (!isExtrapolation) {
-              return { reps: a.reps, weight_kg: round2(a.weight) };
+              return { reps: a.reps, weight_kg: round2(a.weight - offset) };
             }
             var formulaResults = {};
             FORMULA_NAMES.forEach(function (name) {
@@ -615,11 +645,11 @@
               // marzagao out of domain) has no entry in perFormula --
               // omit it here too rather than logging a NaN/undefined.
               if (!(name in a.perFormula)) return;
-              formulaResults[name] = round2(a.perFormula[name]);
+              formulaResults[name] = round2(a.perFormula[name] - offset);
             });
             return {
               reps: a.anchor.reps,
-              weight_kg: round2(a.anchor.weight),
+              weight_kg: round2(a.anchor.weight - offset),
               formula_results_kg: formulaResults
             };
           }),
@@ -633,7 +663,13 @@
           pre_clamp_kg: isExtrapolation ? Math.round(stats.preClamp * 10000) / 10000 : null,
           blended_kg: Math.round(result.value * 10000) / 10000,
           rounding_increment_kg: increment,
-          rounded_kg: round2(rounded)
+          rounded_kg: round2(rounded),
+          // Whether this cell's math ran in total-load space, NOT the
+          // bodyweight it used. Knowing the model was applied is what a
+          // "these numbers look wrong" report needs; the figure itself is
+          // health-adjacent personal data and has no business in a log
+          // aggregator.
+          bodyweight_offset_applied: offset !== 0
         });
       });
     }
@@ -678,7 +714,11 @@
           row.querySelectorAll("[data-rep]"),
           function (el) { return { reps: parseInt(el.dataset.rep, 10), el: el }; }
         );
-        computeRow(cells, increment, row.dataset.liftName || "", logEntries, brokenLifts);
+        var offset =
+          row.hasAttribute("data-bodyweight-added") ? BODYWEIGHT : 0;
+        computeRow(
+          cells, increment, row.dataset.liftName || "", logEntries, brokenLifts, offset
+        );
       });
       showBrokenLiftsWarning(brokenLifts);
       sendComputeLog(logEntries);

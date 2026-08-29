@@ -35,6 +35,7 @@ from wger_api_client.types import Unset
 
 from accounts.timezones import local_day, user_zoneinfo
 from accounts.units import LB_TO_KG
+from core.bodyweight import TrackerBodyweight
 from core.lift_resolution import (
     LiftNameResolver,
     build_lift_alias_maps,
@@ -119,6 +120,50 @@ def validate_wger_credentials(base_url: str, api_token: str) -> bool:
     except Exception:
         logger.exception("Wger credential validation failed unexpectedly")
         return False
+
+
+def fetch_latest_bodyweight(base_url: str, api_token: str) -> TrackerBodyweight | None:
+    """Read the lifter's most recent Wger body-weight entry.
+
+    Two calls, in this order: the entry itself (the server picks the newest
+    via ``ordering="-date"``), then -- only if there was one -- the profile's
+    ``weight_unit``, since a body-weight entry carries no unit of its own.
+    Skipping the profile lookup when there is no entry keeps the common
+    "connected but never weighed in" case to a single request.
+
+    Returns ``None`` -- never raises -- when the credentials are bad, the
+    instance is unreachable, or the account has no weigh-ins on file.
+    """
+    client = WgerClient(base_url, api_token, timeout=settings.WGER_API_TIMEOUT)
+    try:
+        entry = client.get_latest_body_weight_entry()
+        if entry is None:
+            logger.info("Wger returned no body-weight entries")
+            return None
+        unit = client.get_body_weight_unit()
+    except WgerAPIError as exc:
+        logger.warning("Wger bodyweight fetch rejected by API: %s", exc)
+        return None
+    except (httpx.HTTPError, OSError) as exc:
+        logger.warning("Wger bodyweight fetch failed due to network error: %s", exc)
+        return None
+    except Exception:
+        logger.exception("Wger bodyweight fetch failed unexpectedly")
+        return None
+
+    try:
+        amount = Decimal(str(entry.weight))
+    except ArithmeticError:
+        logger.warning("Wger body-weight entry %s had an unparsable weight", entry.id)
+        return None
+
+    weight_kg = amount * LB_TO_KG if unit == "lb" else amount
+    measured_at = entry.date
+    if measured_at.tzinfo is None:
+        measured_at = measured_at.replace(tzinfo=UTC)
+    return TrackerBodyweight(
+        weight_kg=weight_kg.quantize(Decimal("0.01")), measured_at=measured_at
+    )
 
 
 def _weight_kg(

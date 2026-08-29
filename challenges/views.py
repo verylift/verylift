@@ -8,6 +8,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
@@ -966,7 +967,7 @@ _GOAL_DATA_SESSION_KEY = "goal_setup_data"
 _GOAL_STEP_SESSION_KEY = "goal_setup_step_index"
 
 
-def _goal_setup_steps(challenge, data):
+def _goal_setup_steps(challenge, data, user):
     """Effective step list for the goal-setup wizard so far.
 
     "inputs" (the shared bodyweight/sex/population/tier/rounding step,
@@ -976,10 +977,20 @@ def _goal_setup_steps(challenge, data):
     "crazy numbers") is needed for every history-derived suggestion, not
     just bodyweight-added ones. Whether the bodyweight field ITSELF is
     required within that step is a separate, narrower question — see
-    :func:`_goal_setup_needs_bodyweight`. Before "method" is answered,
-    assume the longer path so the progress bar shows a stable total rather
-    than guessing low and jumping up — standards if it's actually offered,
-    history otherwise.
+    :func:`_goal_setup_needs_bodyweight`.
+
+    Manual entry (CUSTOM) normally skips "inputs" entirely -- there is
+    nothing to derive, so there are no derivation parameters to ask for.
+    The one exception is the just-in-time bodyweight prompt (TASK-343): a
+    manual grid whose challenge includes a bodyweight-added lift runs the
+    Compute button's formula ensemble on ADDED weight, which is wrong at
+    every weight without a bodyweight to convert to total load with. When
+    the account has no bodyweight on file, that one question is worth a step;
+    once it does, the step disappears again and is never asked twice.
+
+    Before "method" is answered, assume the longer path so the progress bar
+    shows a stable total rather than guessing low and jumping up — standards
+    if it's actually offered, history otherwise.
     """
     default_method = (
         CustomGoal.SourceMethod.STANDARDS
@@ -988,26 +999,38 @@ def _goal_setup_steps(challenge, data):
     )
     method = data.get("method", default_method)
     steps = ["method"]
-    if method in (CustomGoal.SourceMethod.STANDARDS, CustomGoal.SourceMethod.HISTORY):
+    if method in (
+        CustomGoal.SourceMethod.STANDARDS,
+        CustomGoal.SourceMethod.HISTORY,
+    ) or _goal_setup_needs_bodyweight(challenge, {**data, "method": method}, user):
         steps.append("inputs")
     steps.append("chart")
     return steps
 
 
-def _goal_setup_needs_bodyweight(challenge, data):
-    """Whether the "inputs" step's bodyweight field is required.
+def _goal_setup_needs_bodyweight(challenge, data, user):
+    """Whether the "inputs" step's bodyweight field is asked for.
 
-    True for standards always; for history, only when the challenge has at
-    least one bodyweight-added lift configured (history needs a bodyweight
-    to convert added weight to e1RM for those lifts; every other lift needs
-    nothing bodyweight-shaped at all). No longer equivalent to "inputs is a
-    step" (see :func:`_goal_setup_steps`) now that history's rounding
-    control means "inputs" is reachable for history regardless.
+    Always False once the account has a bodyweight on file (TASK-343): the
+    stored figure is reused instead, so nobody is asked the same question on
+    every join. That is the whole reason the value is persisted -- the
+    wizard used to demand it inline on every single run.
+
+    With nothing on file: True for standards always (it selects the weight
+    class the published standards are read from); for history and manual
+    entry, only when the challenge has at least one bodyweight-added lift
+    configured. Every other lift needs nothing bodyweight-shaped at all.
+
+    Not equivalent to "inputs is a step" in either direction -- history
+    reaches "inputs" for its rounding control regardless, and manual entry
+    reaches it ONLY through this function.
     """
+    if user.bodyweight_kg is not None:
+        return False
     method = data.get("method")
     if method == CustomGoal.SourceMethod.STANDARDS:
         return True
-    if method == CustomGoal.SourceMethod.HISTORY:
+    if method in (CustomGoal.SourceMethod.HISTORY, CustomGoal.SourceMethod.CUSTOM):
         configured = covered_lift_names(challenge)
         return any(is_bodyweight_added_lift(lift) for lift in configured)
     return False
@@ -1263,7 +1286,18 @@ def goal_setup_view(request, pk):
                 ),
             )
 
-    steps = _goal_setup_steps(challenge, data)
+    steps = _goal_setup_steps(challenge, data, request.user)
+    # The step list can legitimately SHRINK mid-run: answering the
+    # just-in-time bodyweight prompt stores the value, which is exactly the
+    # condition that removes the "inputs" step for manual entry, leaving the
+    # session index pointing one past the end. Clamping lands on the last
+    # step ("chart"), which is where the answer was meant to take the user
+    # anyway. Persisted so a subsequent "Back" decrements from the real
+    # position rather than the stale one.
+    if index >= len(steps):
+        index = len(steps) - 1
+        all_indexes[pk_key] = index
+        request.session[_GOAL_STEP_SESSION_KEY] = all_indexes
     step = steps[index]
 
     # The history method needs the lifter's own pooled lift history to
@@ -1284,9 +1318,11 @@ def goal_setup_view(request, pk):
     ):
         if request.method == "POST" and request.POST.get("build_manually"):
             # Bail out of history suggestions into manual entry instead.
-            # CUSTOM has no "inputs" step (_goal_setup_steps), so the
-            # session's current index now maps straight to "chart" --
-            # no index change needed, only the method itself.
+            # No index change is needed either way, only the method: CUSTOM
+            # either has no "inputs" step (so the session's current index
+            # maps straight to "chart") or has one for exactly the same
+            # reason history did -- a just-in-time bodyweight prompt at the
+            # same position (_goal_setup_steps).
             data = {**data, "method": CustomGoal.SourceMethod.CUSTOM}
             all_data[pk_key] = data
             request.session[_GOAL_DATA_SESSION_KEY] = all_data
@@ -1356,7 +1392,7 @@ def goal_setup_view(request, pk):
             request, data, on_valid=_save_step, step_context=step_context
         )
     if step == "inputs":
-        needs_bodyweight = _goal_setup_needs_bodyweight(challenge, data)
+        needs_bodyweight = _goal_setup_needs_bodyweight(challenge, data, request.user)
         return _goal_setup_inputs_step(
             request,
             data,
@@ -1440,6 +1476,10 @@ def goal_setup_compute_log_view(request, pk):
                 "blended_kg": entry.get("blended_kg"),
                 "rounding_increment_kg": entry.get("rounding_increment_kg"),
                 "rounded_kg": entry.get("rounded_kg"),
+                # A flag, never the figure: the client sends whether the
+                # bodyweight-added total-load model was applied to this cell,
+                # not the bodyweight it used (TASK-343).
+                "bodyweight_offset_applied": entry.get("bodyweight_offset_applied"),
             },
         )
     return HttpResponse(status=204)
@@ -1467,6 +1507,8 @@ def _goal_setup_method_step(request, data, *, on_valid, step_context):
 
 def _goal_setup_inputs_step(request, data, *, needs_bodyweight, on_valid, step_context):
     method = data["method"]
+    # A stored bodyweight is reused verbatim; the field is only rendered when
+    # there is nothing to reuse (see _goal_setup_needs_bodyweight).
     unit = request.user.unit_preference
     if request.method == "POST":
         form = GoalInputsForm(
@@ -1479,6 +1521,15 @@ def _goal_setup_inputs_step(request, data, *, needs_bodyweight, on_valid, step_c
             new_data = {**data}
             if form.cleaned_data["bodyweight_kg"] is not None:
                 new_data["bodyweight_kg"] = str(form.cleaned_data["bodyweight_kg"])
+                # Persisted, not just carried in the wizard session (TASK-343):
+                # this is the just-in-time half of bodyweight collection, and
+                # it only earns its interruption if the answer survives past
+                # this one join. _goal_setup_needs_bodyweight stops asking
+                # from here on.
+                request.user.set_bodyweight(
+                    form.cleaned_data["bodyweight_kg"],
+                    get_user_model().BodyweightSource.MANUAL,
+                )
             if method == CustomGoal.SourceMethod.STANDARDS:
                 new_data["sex"] = form.cleaned_data["sex"]
                 new_data["population"] = form.cleaned_data["population"]
@@ -1502,7 +1553,7 @@ def _goal_setup_inputs_step(request, data, *, needs_bodyweight, on_valid, step_c
             return on_valid(new_data)
     else:
         display_bodyweight = ""
-        stored_bodyweight_kg = data.get("bodyweight_kg")
+        stored_bodyweight_kg = data.get("bodyweight_kg") or request.user.bodyweight_kg
         if stored_bodyweight_kg:
             display_value, _ = to_display_weight(Decimal(stored_bodyweight_kg), unit)
             display_bodyweight = display_value
@@ -1542,7 +1593,13 @@ def _goal_setup_chart_step(request, challenge, participant, data, *, step_contex
     method = data["method"]
     unit = request.user.unit_preference
     raw_bodyweight_kg = data.get("bodyweight_kg")
-    bodyweight_kg = Decimal(raw_bodyweight_kg) if raw_bodyweight_kg else None
+    # The account's stored figure is the fallback, not the other way round:
+    # a bodyweight entered during THIS wizard run is the more recent answer,
+    # and (being written straight to the account by the inputs step) the two
+    # agree anyway except on a session that predates that write.
+    bodyweight_kg = (
+        Decimal(raw_bodyweight_kg) if raw_bodyweight_kg else request.user.bodyweight_kg
+    )
     raw_rounding_amount = data.get("rounding_amount")
     rounding_amount = Decimal(raw_rounding_amount) if raw_rounding_amount else None
     rounding_unit = data.get("rounding_unit") or "kg"

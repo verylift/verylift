@@ -55,7 +55,7 @@ class TestOnboardingUnitsView:
         user.refresh_from_db()
         assert user.unit_preference == "kg"
 
-    def test_post_redirects_to_very_open_step(self, client):
+    def test_post_redirects_to_bodyweight_step(self, client):
         client.force_login(UserFactory())
 
         response = client.post(
@@ -63,7 +63,7 @@ class TestOnboardingUnitsView:
         )
 
         assert response.status_code == 302
-        assert response["Location"] == reverse("accounts:onboarding-very-open")
+        assert response["Location"] == reverse("accounts:onboarding-bodyweight")
 
     def test_get_does_not_render_app_sidebar_or_mobile_nav(self, client):
         user = UserFactory()

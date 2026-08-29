@@ -2372,6 +2372,15 @@ def build_custom_goal_context(
     (e.g. because acknowledging alone wasn't enough -- another error was
     also present) doesn't reset a checkbox the user already ticked.
 
+    ``compute_bodyweight`` is the account's stored bodyweight in the display
+    unit, or ``None``. The Compute calculator needs it to model
+    bodyweight-added lifts at all: their cells hold ADDED weight, and a 1RM
+    formula run on added weight alone is wrong at every value (Epley on a
+    +10 kg dip treats 10 kg as the entire load). See the template's
+    ``liftOffset`` handling. ``None`` -- an account that skipped the question
+    -- leaves those rows computing exactly as they did before, which is the
+    behaviour this replaces, not a regression.
+
     ``computed_fields`` (a set of grid field names, e.g. ``{"target__0__1"}``)
     is which cells the Compute calculator filled in on the client, echoed
     back from the hidden ``computed_fields`` POST field so a failed submit
@@ -2382,6 +2391,10 @@ def build_custom_goal_context(
     round-trip used to silently erase it.
     """
     unit = user.unit_preference
+    # The Compute grid works entirely in the display unit, so its bodyweight
+    # offset has to be in that unit too -- converting per-cell inside the JS
+    # would just re-derive the same number many times over.
+    display_bodyweight, _bodyweight_unit = to_display_weight(user.bodyweight_kg, unit)
     targets = targets or {}
     unavailable_lifts = unavailable_lifts or set()
     assisted_only_lifts = assisted_only_lifts or set()
@@ -2439,6 +2452,7 @@ def build_custom_goal_context(
             {"reps": n, "points": points_for_rep_count(n)} for n in range(10, 0, -1)
         ],
         "lifts": lifts,
+        "compute_bodyweight": display_bodyweight,
         "goal_name": goal_name,
         "targets_json": targets_json,
         "llm_prompt": _custom_goal_llm_prompt(challenge, lifts, unit),

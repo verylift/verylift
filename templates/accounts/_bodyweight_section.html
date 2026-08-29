@@ -1,0 +1,50 @@
+{% load humanize i18n %}
+<!-- Bodyweight section -->
+<section class="bg-surface-card border border-line-subtle rounded p-6 mb-6">
+  <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "bodyweight" %}</h2>
+  <form
+    method="post"
+    action="{% url 'accounts:settings' %}"
+    hx-post="{% url 'accounts:settings' %}"
+    hx-target="closest section"
+    hx-swap="outerHTML"
+    data-loading-message="{% trans 'Saving bodyweight…' %}">
+    {% csrf_token %}
+    <input type="hidden" name="form_name" value="bodyweight">
+
+    <div class="mb-4">
+      <label for="id_bodyweight" class="block text-sm font-medium text-content-body mb-1">
+        {% trans "current bodyweight" %}
+      </label>
+      <div class="flex items-center gap-2 max-w-xs">
+        <input type="number" id="id_bodyweight" name="bodyweight" step="0.1" min="0"
+               value="{{ bodyweight }}"
+               placeholder="{% trans 'e.g. 80' %}"
+               class="flex-1 bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent">
+        <span class="text-sm text-content-muted">{{ unit_preference }}</span>
+      </div>
+      <p class="mt-1 text-xs text-content-muted">
+        {% trans "Used to suggest targets for pull-ups, chin-ups and dips, where your goal is the weight you add on top of your own. It isn't used for scoring, and only this one figure is kept, not a history. Leave it blank to store nothing." %}
+      </p>
+      {% if bodyweight_error %}
+      <p class="mt-1 text-xs text-danger">{{ bodyweight_error }}</p>
+      {% endif %}
+      {% if bodyweight_updated_at %}
+      <p class="mt-1 text-xs text-content-subtle">
+        {% if bodyweight_from_tracker %}
+        {% blocktrans with when=bodyweight_updated_at|naturaltime %}Synced from your tracker {{ when }}.{% endblocktrans %}
+        {% else %}
+        {% blocktrans with when=bodyweight_updated_at|naturaltime %}You set this {{ when }}.{% endblocktrans %}
+        {% endif %}
+      </p>
+      {% endif %}
+    </div>
+
+    <button
+      type="submit"
+      class="bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
+      {% trans "save bodyweight" %}
+    </button>
+  </form>
+  {% if oob_messages %}{% include "components/_messages_oob.html" %}{% endif %}
+</section>

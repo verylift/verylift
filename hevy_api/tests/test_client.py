@@ -101,3 +101,23 @@ class TestGetWorkoutEvents:
             pytest.raises(urllib.error.URLError),
         ):
             HevyClient("test-key").get_workout_events(since="1970-01-01T00:00:00Z")
+
+
+class TestGetBodyMeasurements:
+    def test_requests_the_documented_path_with_pagination_params(self):
+        body = {"page": 2, "page_count": 4, "body_measurements": []}
+        mock_resp = _make_urlopen_response(body)
+        captured_request = {}
+
+        def fake_urlopen(req, timeout):
+            captured_request["req"] = req
+            return mock_resp
+
+        with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+            result = HevyClient("test-key").get_body_measurements(page=2, page_size=5)
+
+        assert result == body
+        sent_req = captured_request["req"]
+        assert "/v1/body_measurements" in sent_req.full_url
+        assert "page=2" in sent_req.full_url
+        assert "pageSize=5" in sent_req.full_url

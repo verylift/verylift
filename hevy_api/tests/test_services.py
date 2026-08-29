@@ -2,6 +2,7 @@
 
 import json
 import logging
+import urllib.error
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
@@ -23,6 +24,7 @@ from hevy_api.services import (
     _build_resolver,
     _parse_workout,
     _run_backfill_in_thread,
+    fetch_latest_bodyweight,
     last_synced_at,
     latest_sync_failure,
     sync_user_lifts,
@@ -941,3 +943,72 @@ class TestCsvApiWeightParity:
         api_parsed = _parse_workout(api_workout, _build_resolver(), ZoneInfo("UTC"))
 
         assert csv_parsed[0].weight_kg == api_parsed[0].weight_kg
+
+
+def _measurement_page(rows, *, page=1, page_count=1):
+    return {"page": page, "page_count": page_count, "body_measurements": rows}
+
+
+class TestFetchLatestBodyweight:
+    def _fetch(self, pages):
+        client = MagicMock()
+        client.get_body_measurements.side_effect = pages
+        with patch("hevy_api.services.HevyClient", return_value=client):
+            return fetch_latest_bodyweight("test-key"), client
+
+    def test_newest_reading_wins_regardless_of_page_order(self):
+        # Hevy's spec documents no ordering for this endpoint, so both ends of
+        # the pagination are fetched and compared -- putting the newest row on
+        # the LAST page (the case a naive "page 1 is newest" read gets wrong)
+        # must still produce the newest reading.
+        pages = [
+            _measurement_page(
+                [{"date": "2024-01-05", "weight_kg": 90.0}], page_count=3
+            ),
+            _measurement_page(
+                [{"date": "2026-08-20", "weight_kg": 82.4}], page=3, page_count=3
+            ),
+        ]
+        reading, client = self._fetch(pages)
+        assert reading.weight_kg == Decimal("82.40")
+        assert reading.measured_at == datetime(2026, 8, 20, tzinfo=UTC)
+        assert [
+            c.kwargs["page"] for c in client.get_body_measurements.call_args_list
+        ] == [1, 3]
+
+    def test_single_page_is_not_refetched(self):
+        pages = [_measurement_page([{"date": "2026-08-20", "weight_kg": 82.4}])]
+        _reading, client = self._fetch(pages)
+        assert client.get_body_measurements.call_count == 1
+
+    def test_rows_without_a_weight_are_skipped_not_read_as_zero(self):
+        # weight_kg is nullable: a lifter logging only waist/chest has rows
+        # with every metric but weight set to null, and treating one of those
+        # as a bodyweight would be a silently catastrophic 0 kg.
+        pages = [
+            _measurement_page(
+                [
+                    {"date": "2026-08-21", "weight_kg": None, "waist": 80},
+                    {"date": "2026-08-19", "weight_kg": 81.0},
+                ]
+            )
+        ]
+        reading, _client = self._fetch(pages)
+        assert reading.weight_kg == Decimal("81.00")
+
+    def test_no_usable_rows_returns_none(self):
+        reading, _client = self._fetch([_measurement_page([{"date": "2026-08-21"}])])
+        assert reading is None
+
+    @pytest.mark.parametrize(
+        "error",
+        [
+            HevyAPIError(403, "Pro required"),
+            urllib.error.URLError("connection refused"),
+        ],
+    )
+    def test_api_and_network_failures_return_none(self, error):
+        client = MagicMock()
+        client.get_body_measurements.side_effect = error
+        with patch("hevy_api.services.HevyClient", return_value=client):
+            assert fetch_latest_bodyweight("test-key") is None
