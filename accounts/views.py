@@ -24,6 +24,7 @@ from django_ratelimit.decorators import ratelimit
 
 from accounts.forms import (
     AvatarForm,
+    BodyweightForm,
     DeleteAccountConfirmationForm,
     EmailForm,
     HevyKeyForm,
@@ -46,13 +47,19 @@ from accounts.ratelimit import (
     register_ip_rate,
     validate_key_user_rate,
 )
-from accounts.services import anonymize_account, mask_api_key, send_password_reset_email
+from accounts.services import (
+    anonymize_account,
+    mask_api_key,
+    send_password_reset_email,
+    sync_bodyweight_from_trackers,
+)
 from accounts.timezones import (
     DETECT_COOKIE_MAX_AGE,
     DETECT_COOKIE_NAME,
     grouped_timezones,
     with_detect_param,
 )
+from accounts.units import to_display_weight
 from challenges.models import Challenge, ChallengeParticipant
 from challenges.services import (
     challenges_needing_new_owner,
@@ -492,21 +499,85 @@ def onboarding_units_view(request):
     step's own default, so a fresh account already shows lb here without
     needing to hardcode it.
 
-    Always hands off to onboarding_very_open_view next, which itself decides
-    whether to show anything or fall straight through to the invite-link/
-    dashboard redirect register_view used to end with.
+    Hands off to onboarding_bodyweight_view next -- which needs the unit
+    preference this step just set, since it asks for a number in it.
     """
     if request.method == "POST":
         form = UnitPreferenceForm(request.POST)
         form.is_valid()
         form.save(request.user)
 
-        return redirect("accounts:onboarding-very-open")
+        return redirect("accounts:onboarding-bodyweight")
 
     return render(
         request,
         "registration/onboarding_units.html",
         {"unit_preference": request.user.unit_preference},
+    )
+
+
+@login_required
+def onboarding_bodyweight_view(request):
+    """Onboarding step 4: current bodyweight, prefilled from a tracker, skippable.
+
+    Bodyweight exists for one job (TASK-343): suggesting targets for
+    bodyweight-added lifts, whose targets are ADDED weight and so need a
+    total load to estimate from. It is asked here rather than only at
+    goal-setup time so the common case is answered once, calmly, instead of
+    interrupting a challenge join.
+
+    GET asks every connected tracker for a figure first
+    (``sync_bodyweight_from_trackers``) and prefills from whatever it stored,
+    so a lifter who already logs weigh-ins in Liftosaur/Wger/Hevy just
+    confirms a number rather than fetching a scale. The tracker call is only
+    made when nothing is stored yet -- revisiting this page must not re-hit
+    three APIs to re-derive an answer already on file.
+
+    Skipping is a first-class outcome, not a dead end: the "skip for now"
+    button stores nothing and moves on, and challenges.views' goal-setup
+    wizard asks again just-in-time if and only if a bodyweight-added lift
+    actually turns up. A blank number is treated as a skip too -- there is no
+    meaningful difference between the two from the lifter's side.
+
+    Runs after the units step because it collects a weight in the account's
+    display unit, and hands off to onboarding_very_open_view, which decides
+    whether it has anything to show.
+    """
+    user = request.user
+    bodyweight_error = None
+    bodyweight_value = None
+    prefilled_from_tracker = False
+
+    if request.method == "POST":
+        if request.POST.get("skip"):
+            logger.info("User %s skipped the onboarding bodyweight step", user.id)
+            return redirect("accounts:onboarding-very-open")
+        form = BodyweightForm(request.POST, unit=user.unit_preference)
+        if form.is_valid():
+            if form.cleaned_data["bodyweight"] is not None:
+                form.save(user)
+            return redirect("accounts:onboarding-very-open")
+        bodyweight_error = form.errors["bodyweight"][0]
+        bodyweight_value = request.POST.get("bodyweight", "")
+    elif user.bodyweight_kg is None and user.has_connected_tracker:
+        prefilled_from_tracker = sync_bodyweight_from_trackers(user)
+
+    display_bodyweight, _unit = to_display_weight(
+        user.bodyweight_kg, user.unit_preference
+    )
+
+    return render(
+        request,
+        "registration/onboarding_bodyweight.html",
+        {
+            "bodyweight": (
+                display_bodyweight if bodyweight_value is None else bodyweight_value
+            )
+            or "",
+            "bodyweight_error": bodyweight_error,
+            "prefilled_from_tracker": prefilled_from_tracker,
+            "unit_preference": user.unit_preference,
+        },
     )
 
 
@@ -728,6 +799,7 @@ _SETTINGS_SECTION_PARTIALS = {
     "remove_hevy_key": "accounts/_hevy_section.html",
     "workout_csv_import": "accounts/_workout_import_section.html",
     "unit_preference": "accounts/_unit_preference_section.html",
+    "bodyweight": "accounts/_bodyweight_section.html",
     "timezone": "accounts/_timezone_section.html",
 }
 
@@ -739,6 +811,11 @@ def settings_view(request):
     email_error = None
     workout_import_error = None
     hevy_key_error = None
+    bodyweight_error = None
+    # None means "show the stored figure"; a rejected submission replaces it
+    # with what was typed so the error has something to point at, same
+    # contract as email_value below.
+    bodyweight_value = None
     # None means "show the stored address"; a rejected submission replaces it
     # with what was typed so the error has something to point at.
     email_value = None
@@ -886,6 +963,20 @@ def settings_view(request):
             form.save(user)
             messages.success(request, gettext("Unit preference saved."))
 
+        elif posted_form_name == "bodyweight":
+            form = BodyweightForm(request.POST, unit=user.unit_preference)
+            if form.is_valid():
+                form.save(user)
+                messages.success(
+                    request,
+                    gettext("Bodyweight saved.")
+                    if form.cleaned_data["bodyweight"] is not None
+                    else gettext("Bodyweight cleared."),
+                )
+            else:
+                bodyweight_error = form.errors["bodyweight"][0]
+                bodyweight_value = request.POST.get("bodyweight", "")
+
         elif posted_form_name == "timezone":
             form = TimezoneForm(request.POST)
             form.is_valid()
@@ -917,11 +1008,25 @@ def settings_view(request):
             and email_error is None
             and workout_import_error is None
             and hevy_key_error is None
+            and bodyweight_error is None
         ):
             return redirect("accounts:settings")
 
+    User = get_user_model()
+    display_bodyweight, _bodyweight_unit = to_display_weight(
+        user.bodyweight_kg, user.unit_preference
+    )
     context = {
         "masked_liftosaur_key": mask_api_key(user.liftosaur_api_key),
+        "bodyweight": (
+            display_bodyweight if bodyweight_value is None else bodyweight_value
+        )
+        or "",
+        "bodyweight_error": bodyweight_error,
+        "bodyweight_updated_at": user.bodyweight_updated_at,
+        "bodyweight_from_tracker": (
+            user.bodyweight_source == User.BodyweightSource.TRACKER
+        ),
         "email": user.email if email_value is None else email_value,
         "email_error": email_error,
         "unit_preference": user.unit_preference,

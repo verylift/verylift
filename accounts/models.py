@@ -6,6 +6,7 @@ from django.contrib.auth.models import (
     PermissionsMixin,
 )
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 
@@ -84,6 +85,39 @@ class User(AbstractBaseUser, PermissionsMixin):
         choices=UnitPreference.choices,
         default=UnitPreference.LB,
     )
+
+    class BodyweightSource(models.TextChoices):
+        MANUAL = "manual", _("Entered manually")
+        TRACKER = "tracker", _("Synced from a connected tracker")
+
+    # ONE current bodyweight, never a dated series (TASK-343). It exists for
+    # exactly one job: goal SUGGESTION for bodyweight-added lifts (Pull-up/
+    # Chin-up/Dip), whose stored targets are ADDED weight, so turning a
+    # historical set or a Compute-grid anchor into a 1RM estimate needs the
+    # total load. Scoring never reads it -- a performed set is still compared
+    # against a flat target with no bodyweight arithmetic anywhere in it.
+    #
+    # Deliberately a single mutable value with no history table behind it:
+    # nothing in the product asks "what did this lifter weigh on some past
+    # date", and a time series would be a materially larger disclosure than
+    # the one number that is actually needed. A tracker sync overwrites it
+    # rather than appending (accounts.services.sync_bodyweight_from_trackers).
+    bodyweight_kg = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True
+    )
+    # Which of the two writers last set the value, so a tracker sync can tell
+    # its own earlier value apart from something the lifter typed by hand.
+    bodyweight_source = models.CharField(
+        max_length=10,
+        choices=BodyweightSource.choices,
+        blank=True,
+        default="",
+    )
+    # When the stored value was last written, NOT when it was measured. Used
+    # to decide whether a tracker measurement is newer than what is already
+    # on file (see sync_bodyweight_from_trackers) and to show the lifter how
+    # stale their own figure is.
+    bodyweight_updated_at = models.DateTimeField(null=True, blank=True)
 
     class AcquisitionSource(models.TextChoices):
         UNKNOWN = "", _("Unknown")
@@ -183,6 +217,29 @@ class User(AbstractBaseUser, PermissionsMixin):
             self.liftosaur_api_key
             or self.hevy_api_key
             or (self.wger_instance_url and self.wger_api_token)
+        )
+
+    def set_bodyweight(self, bodyweight_kg, source) -> None:
+        """Persist ``bodyweight_kg`` (or clear it) and stamp its provenance.
+
+        The single writer for all three bodyweight fields, so no caller can
+        update the number and leave ``bodyweight_source``/
+        ``bodyweight_updated_at`` describing the previous one. Clearing (a
+        ``None`` value, i.e. an emptied Settings field) drops the source and
+        the timestamp with it rather than leaving orphaned provenance behind
+        a value that no longer exists.
+        """
+        self.bodyweight_kg = bodyweight_kg
+        self.bodyweight_source = source if bodyweight_kg is not None else ""
+        self.bodyweight_updated_at = (
+            timezone.now() if bodyweight_kg is not None else None
+        )
+        self.save(
+            update_fields=[
+                "bodyweight_kg",
+                "bodyweight_source",
+                "bodyweight_updated_at",
+            ]
         )
 
 

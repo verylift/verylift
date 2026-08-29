@@ -17,6 +17,11 @@ from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from PIL import Image, ImageOps
 
+from core.bodyweight import TrackerBodyweight
+from hevy_api import services as hevy_services
+from liftosaur import services as liftosaur_services
+from wger import services as wger_services
+
 logger = logging.getLogger(__name__)
 
 AVATAR_MAX_DIMENSION = 1024
@@ -298,6 +303,15 @@ def anonymize_account(user) -> None:
     a support/audit trail can still associate a placeholder with the row it
     replaced, without being identifying itself.
 
+    ``bodyweight_kg`` (and its source/timestamp) is cleared for the same
+    reason ``avatar`` is: it is health-adjacent information about the person
+    behind the row, not a record of anything that happened in a challenge.
+    Nothing else depends on it -- scoring never read it, and a goal chart
+    that was suggested from it stores its own frozen figure in
+    ``CustomGoal.source_detail`` -- so clearing it strands no history. This
+    is not an exception to the no-hard-deletes rule: the row itself survives
+    intact, exactly as it does for every other identity field here.
+
     ``avatar`` is deleted from storage (not just cleared from the field --
     matching AvatarForm.save's ``.delete(save=False)`` convention). ``oidc_sub``
     and every field in ``User.TRACKER_CREDENTIAL_FIELDS`` (currently
@@ -322,6 +336,9 @@ def anonymize_account(user) -> None:
     user.email = email
     user.avatar = None
     user.oidc_sub = None
+    user.bodyweight_kg = None
+    user.bodyweight_source = ""
+    user.bodyweight_updated_at = None
     tracker_credential_fields = get_user_model().TRACKER_CREDENTIAL_FIELDS
     for field_name in tracker_credential_fields:
         setattr(user, field_name, None)
@@ -334,9 +351,84 @@ def anonymize_account(user) -> None:
             "email",
             "avatar",
             "oidc_sub",
+            "bodyweight_kg",
+            "bodyweight_source",
+            "bodyweight_updated_at",
             *tracker_credential_fields,
             "is_active",
             "deactivated_at",
         ]
     )
     logger.info("Account %s anonymized and deactivated", user.id)
+
+
+def _tracker_bodyweight_readings(user) -> list[tuple[str, TrackerBodyweight]]:
+    """Every bodyweight reading the account's connected trackers can offer.
+
+    Each reader is independently fault-tolerant (returns ``None`` rather than
+    raising), so one unreachable tracker never costs the lifter a reading
+    another one could have supplied. A tracker the account has no credentials
+    for is not called at all.
+    """
+    readings: list[tuple[str, TrackerBodyweight]] = []
+    if user.liftosaur_api_key:
+        reading = liftosaur_services.fetch_latest_bodyweight(user.liftosaur_api_key)
+        if reading is not None:
+            readings.append(("liftosaur", reading))
+    if user.wger_instance_url and user.wger_api_token:
+        reading = wger_services.fetch_latest_bodyweight(
+            user.wger_instance_url, user.wger_api_token
+        )
+        if reading is not None:
+            readings.append(("wger", reading))
+    if user.hevy_api_key:
+        reading = hevy_services.fetch_latest_bodyweight(user.hevy_api_key)
+        if reading is not None:
+            readings.append(("hevy", reading))
+    return readings
+
+
+def sync_bodyweight_from_trackers(user) -> bool:
+    """Refresh ``user.bodyweight_kg`` from whichever trackers expose one.
+
+    Every connected tracker is asked, and the reading with the most recent
+    ``measured_at`` wins -- not the first tracker that answers. A lifter with
+    two trackers connected typically weighs in on one of them, and picking by
+    connection order would let a year-old figure from the other one win purely
+    because that app sorts earlier in this function.
+
+    The winning reading is stored only when it is genuinely newer than what
+    is already on file. That is what keeps a hand-entered figure from being
+    silently overwritten by a stale tracker measurement the lifter has
+    already superseded -- while still letting a fresh weigh-in in the tracker
+    replace a figure typed weeks ago, which is the whole point of syncing.
+    Note this compares the tracker's measurement date against when the stored
+    value was *written*; the two are the same thing for a manual entry, and
+    for a tracker-sourced value the comparison is between two measurement
+    dates only to within one sync's lag. That is accurate enough for a number
+    whose only job is prefilling a goal suggestion, and the alternative --
+    storing the measurement date as a fourth bodyweight column -- buys
+    precision nothing in the product can spend.
+
+    Returns whether the stored value changed. Never raises.
+    """
+    readings = _tracker_bodyweight_readings(user)
+    if not readings:
+        return False
+
+    tracker, reading = max(readings, key=lambda item: item[1].measured_at)
+
+    if user.bodyweight_updated_at is not None and (
+        reading.measured_at <= user.bodyweight_updated_at
+    ):
+        logger.info(
+            "Skipping %s bodyweight for user %s: stored value is newer",
+            tracker,
+            user.id,
+        )
+        return False
+
+    User = get_user_model()
+    user.set_bodyweight(reading.weight_kg, User.BodyweightSource.TRACKER)
+    logger.info("Updated bodyweight for user %s from %s", user.id, tracker)
+    return True
