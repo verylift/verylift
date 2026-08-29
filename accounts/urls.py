@@ -35,6 +35,11 @@ urlpatterns = [
         name="onboarding-units",
     ),
     path(
+        "accounts/onboarding/bodyweight/",
+        views.onboarding_bodyweight_view,
+        name="onboarding-bodyweight",
+    ),
+    path(
         "accounts/onboarding/very-open/",
         views.onboarding_very_open_view,
         name="onboarding-very-open",
