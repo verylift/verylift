@@ -371,6 +371,22 @@
       }
     };
 
+    // Marzagao's ln(anchorWeight) term is undefined for zero/negative weight
+    // and blows up as its denominator (-2.55 + 4.58 * ln(anchorWeight))
+    // approaches zero, which happens at anchorWeight == e^(2.55/4.58) (~1.75
+    // in whatever unit the grid is using). Below that singularity the
+    // denominator's sign flips too, inverting the formula's behavior rather
+    // than just failing loudly -- so the whole range up to a margin above the
+    // singularity is out of domain, not just the exact zero-crossing. A
+    // vetted assisted bodyweight lift (Dip/Pull-up/Chin-up) run with a
+    // negative "assistance" anchor weight hits this on every Compute click.
+    var MARZAGAO_SINGULARITY = Math.exp(2.55 / 4.58);
+    var MARZAGAO_MIN_ANCHOR_WEIGHT = MARZAGAO_SINGULARITY * 1.1;
+
+    function marzagaoValidForAnchor(anchorWeight) {
+      return anchorWeight > MARZAGAO_MIN_ANCHOR_WEIGHT;
+    }
+
     function round2(value) {
       return Math.round(value * 100) / 100;
     }
@@ -459,12 +475,19 @@
     // breakdown (for logging), and the spread (max - min) across formulas.
     function projectAnchor(anchor, targetReps) {
       var perFormula = {};
-      FORMULA_NAMES.forEach(function (name) {
+      // marzagao is excluded from this anchor's ensemble entirely (not run,
+      // not present in perFormula) when the anchor weight is outside its
+      // valid domain -- see marzagaoValidForAnchor above. The blend and
+      // spread below only ever see the formulas that actually ran.
+      var activeFormulaNames = FORMULA_NAMES.filter(function (name) {
+        return name !== "marzagao" || marzagaoValidForAnchor(anchor.weight);
+      });
+      activeFormulaNames.forEach(function (name) {
         var formula = FORMULAS[name];
         var oneRm = formula.toOneRm(anchor.weight, anchor.reps);
         perFormula[name] = formula.fromOneRm(oneRm, targetReps, anchor.weight);
       });
-      var values = FORMULA_NAMES.map(function (name) { return perFormula[name]; });
+      var values = activeFormulaNames.map(function (name) { return perFormula[name]; });
       var blended = values.reduce(function (sum, v) { return sum + v; }, 0) / values.length;
       var spread = Math.max.apply(null, values) - Math.min.apply(null, values);
       return { blended: blended, perFormula: perFormula, spread: spread };
@@ -571,6 +594,12 @@
             ? Math.min(rounded, floorToIncrement(stats.bound, increment))
             : Math.max(rounded, ceilToIncrement(stats.bound, increment));
         }
+        // Belt-and-braces alongside the marzagao domain guard above: no
+        // formula bug (this one or a future one) should ever be able to
+        // write NaN/Infinity into a cell. If the math produced a
+        // non-finite result despite the guard, leave the cell blank
+        // instead of rendering garbage to the user.
+        if (!isFinite(rounded)) return;
         markComputed(cell.el, rounded);
         logEntries.push({
           lift_name: liftName,
@@ -582,6 +611,10 @@
             }
             var formulaResults = {};
             FORMULA_NAMES.forEach(function (name) {
+              // A formula excluded from this anchor's ensemble (e.g.
+              // marzagao out of domain) has no entry in perFormula --
+              // omit it here too rather than logging a NaN/undefined.
+              if (!(name in a.perFormula)) return;
               formulaResults[name] = round2(a.perFormula[name]);
             });
             return {
