@@ -18,6 +18,12 @@ Everything below about pulls, throttling, and freshness applies to whichever
 of the API-backed trackers you've connected — the mechanics are the same for
 all of them.
 
+All three also record body weight, so if you log weigh-ins in one of them we
+read the most recent figure and keep your stored bodyweight current. See
+[Units, bodyweight & added-weight lifts](bodyweight-and-units.md) for what
+that figure is used for. A CSV export carries no body weight, so an
+import-only setup means entering it yourself.
+
 ## One shared workout history
 
 Everything you log gets pulled into a single history that belongs to you —
@@ -125,6 +131,6 @@ format.
 
 - [How scoring works](scoring.md) — what happens to a workout once it's
   been pulled into your history.
-- [Units & added-weight lifts](bodyweight-and-units.md) — how added-weight
+- [Units, bodyweight & added-weight lifts](bodyweight-and-units.md) — how added-weight
   lifts like pull-ups and dips are shown and scored, and how weights are
   displayed in your preferred unit.

@@ -16,7 +16,7 @@ public docs on GitHub.
 - [How scoring works](https://raw.githubusercontent.com/verylift/verylift/main/docs/scoring.md)
 - [Running a challenge](https://raw.githubusercontent.com/verylift/verylift/main/docs/challenges.md)
 - [Keeping your data fresh](https://raw.githubusercontent.com/verylift/verylift/main/docs/sync-and-data-freshness.md)
-- [Units & added-weight lifts](https://raw.githubusercontent.com/verylift/verylift/main/docs/bodyweight-and-units.md)
+- [Units, bodyweight & added-weight lifts](https://raw.githubusercontent.com/verylift/verylift/main/docs/bodyweight-and-units.md)
 - [Self-hosting guide](https://raw.githubusercontent.com/verylift/verylift/main/docs/self-hosting.md)
 
 ## Site

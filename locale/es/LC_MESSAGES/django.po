@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-02 23:35+0000\n"
+"POT-Creation-Date: 2026-10-24 00:26+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -15,77 +15,90 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: accounts/forms.py:34
+#: accounts/forms.py:35
 msgid "Passwords do not match."
 msgstr "Las contraseñas no coinciden."
 
-#: accounts/forms.py:35
+#: accounts/forms.py:36
 msgid "Username is required."
 msgstr "El nombre de usuario es obligatorio."
 
-#: accounts/forms.py:36
+#: accounts/forms.py:37
 msgid "Password is required."
 msgstr "La contraseña es obligatoria."
 
-#: accounts/forms.py:46
+#: accounts/forms.py:47
 msgid "That username is already taken."
 msgstr "Ese nombre de usuario ya está en uso."
 
-#: accounts/forms.py:158
+#: accounts/forms.py:159
 msgid "Image is too large (max 10 MB)."
 msgstr "La imagen es demasiado grande (máximo 10 MB)."
 
-#: accounts/forms.py:162
+#: accounts/forms.py:163
 msgid "Image dimensions are too large (max 25 megapixels)."
 msgstr ""
 "Las dimensiones de la imagen son demasiado grandes (máximo 25 megapíxeles)."
 
-#: accounts/forms.py:272
+#: accounts/forms.py:237 accounts/forms.py:238 accounts/forms.py:251
+#: challenges/forms.py:190 challenges/forms.py:273
+msgid "Enter a bodyweight greater than zero."
+msgstr "Introduce un peso corporal mayor que cero."
+
+#: accounts/forms.py:315
 msgid "Type \"delete my account\" exactly to confirm."
 msgstr "Escribe \"delete my account\" exactamente para confirmar."
 
-#: accounts/models.py:76 challenges/models.py:14
+#: accounts/models.py:77 challenges/models.py:14
 #: templates/accounts/_unit_preference_section.html:19
 #: templates/registration/onboarding_units.html:24
 msgid "Kilograms (kg)"
 msgstr "Kilogramos (kg)"
 
-#: accounts/models.py:77 challenges/models.py:13
+#: accounts/models.py:78 challenges/models.py:13
 #: templates/accounts/_unit_preference_section.html:22
 #: templates/registration/onboarding_units.html:27
 msgid "Pounds (lb)"
 msgstr "Libras (lb)"
 
-#: accounts/models.py:89
+#: accounts/models.py:90
+msgid "Entered manually"
+msgstr "Introducido manualmente"
+
+#: accounts/models.py:91
+msgid "Synced from a connected tracker"
+msgstr "Sincronizado desde una aplicación conectada"
+
+#: accounts/models.py:123
 msgid "Unknown"
 msgstr "Desconocido"
 
-#: accounts/models.py:90
+#: accounts/models.py:124
 msgid "Challenge invite link"
 msgstr "Enlace de invitación a un reto"
 
-#: accounts/models.py:91
+#: accounts/models.py:125
 msgid "Direct signup"
 msgstr "Registro directo"
 
-#: accounts/models.py:92
+#: accounts/models.py:126
 msgid "Single sign-on"
 msgstr "Inicio de sesión único"
 
-#: accounts/models.py:93
+#: accounts/models.py:127
 msgid "Created by an operator"
 msgstr "Creado por un operador"
 
-#: accounts/models.py:174
+#: accounts/models.py:208
 #, python-format
 msgid "%(name)s (deleted)"
 msgstr "%(name)s (eliminado)"
 
-#: accounts/models.py:215
+#: accounts/models.py:272
 msgid "Tracker Request"
 msgstr "Solicitud de Tracker"
 
-#: accounts/models.py:216
+#: accounts/models.py:273
 msgid "Tracker Requests"
 msgstr "Solicitudes de Tracker"
 
@@ -93,64 +106,64 @@ msgstr "Solicitudes de Tracker"
 msgid "Too many attempts. Try again in a minute."
 msgstr "Demasiados intentos. Inténtalo de nuevo en un minuto."
 
-#: accounts/views.py:245
+#: accounts/views.py:252
 msgid "You must accept the Terms of Service and Privacy Policy."
 msgstr "Debes aceptar los Términos de Servicio y la Política de Privacidad."
 
-#: accounts/views.py:335 challenges/views.py:203
+#: accounts/views.py:342 challenges/views.py:203
 msgid "Could not validate this Liftosaur API key."
 msgstr "No se pudo validar esta clave de API de Liftosaur."
 
-#: accounts/views.py:352 accounts/views.py:816 challenges/views.py:220
+#: accounts/views.py:359 accounts/views.py:893 challenges/views.py:220
 msgid "Could not validate this Hevy API key."
 msgstr "No se pudo validar esta clave de API de Hevy."
 
-#: accounts/views.py:370 challenges/views.py:243
+#: accounts/views.py:377 challenges/views.py:243
 msgid "Could not validate this Wger instance URL or API token."
 msgstr "No se pudo validar la URL de la instancia o el token de API de Wger."
 
-#: accounts/views.py:403 accounts/views.py:861 challenges/views.py:262
+#: accounts/views.py:410 accounts/views.py:938 challenges/views.py:262
 msgid "Couldn't import right now. Please try again in a moment."
 msgstr "No se pudo importar ahora mismo. Inténtalo de nuevo en un momento."
 
-#: accounts/views.py:701
+#: accounts/views.py:772
 msgid "Your password has been updated. Sign in with your new password."
 msgstr ""
 "Tu contraseña se ha actualizado. Inicia sesión con tu contraseña nueva."
 
-#: accounts/views.py:754
+#: accounts/views.py:831
 msgid "Profile photo updated."
 msgstr "Foto de perfil actualizada."
 
-#: accounts/views.py:763
+#: accounts/views.py:840
 msgid "Display name updated."
 msgstr "Nombre para mostrar actualizado."
 
-#: accounts/views.py:773
+#: accounts/views.py:850
 msgid "Email address saved."
 msgstr "Correo electrónico guardado."
 
-#: accounts/views.py:784
+#: accounts/views.py:861
 msgid "Liftosaur API key saved."
 msgstr "Clave de API de Liftosaur guardada."
 
-#: accounts/views.py:789
+#: accounts/views.py:866
 msgid "Liftosaur API key removed."
 msgstr "Clave de API de Liftosaur eliminada."
 
-#: accounts/views.py:796
+#: accounts/views.py:873
 msgid "Wger connected."
 msgstr "Wger conectado."
 
-#: accounts/views.py:802
+#: accounts/views.py:879
 msgid "Wger disconnected."
 msgstr "Wger desconectado."
 
-#: accounts/views.py:821
+#: accounts/views.py:898
 msgid "Hevy API key saved."
 msgstr "Clave de API de Hevy guardada."
 
-#: accounts/views.py:826
+#: accounts/views.py:903
 msgid ""
 "Hevy API key saved, but we couldn't confirm it works right now. We'll let "
 "you know here if syncing fails."
@@ -158,11 +171,11 @@ msgstr ""
 "Clave de API de Hevy guardada, pero no pudimos confirmar que funcione en "
 "este momento. Te avisaremos aquí si la sincronización falla."
 
-#: accounts/views.py:835
+#: accounts/views.py:912
 msgid "Hevy API key removed."
 msgstr "Clave de API de Hevy eliminada."
 
-#: accounts/views.py:868
+#: accounts/views.py:945
 #, python-format
 msgid ""
 "Imported %(count)s set(s) from %(source)s. %(scored)s challenge(s) rescored."
@@ -170,61 +183,71 @@ msgstr ""
 "Se importaron %(count)s serie(s) de %(source)s. Se recalcularon %(scored)s "
 "reto(s)."
 
-#: accounts/views.py:887
+#: accounts/views.py:964
 msgid "Unit preference saved."
 msgstr "Preferencia de unidad guardada."
 
-#: accounts/views.py:893
+#: accounts/views.py:972
+#| msgid "bodyweight"
+msgid "Bodyweight saved."
+msgstr "Peso corporal guardado."
+
+#: accounts/views.py:974
+#| msgid "bodyweight"
+msgid "Bodyweight cleared."
+msgstr "Peso corporal borrado."
+
+#: accounts/views.py:984
 msgid "Timezone saved."
 msgstr "Zona horaria guardada."
 
-#: accounts/views.py:899
+#: accounts/views.py:990
 msgid "Language saved."
 msgstr "Idioma guardado."
 
-#: accounts/views.py:993
+#: accounts/views.py:1098
 msgid "Your account has been deleted."
 msgstr "Tu cuenta ha sido eliminada."
 
-#: accounts/views.py:1054
+#: accounts/views.py:1159
 msgid "Connect a Liftosaur API key first."
 msgstr "Conecta primero una clave de API de Liftosaur."
 
-#: accounts/views.py:1078 accounts/views.py:1125 accounts/views.py:1175
-#: accounts/views.py:1195
+#: accounts/views.py:1183 accounts/views.py:1230 accounts/views.py:1280
+#: accounts/views.py:1300
 msgid "Couldn't sync right now. Please try again in a moment."
 msgstr "No se pudo sincronizar ahora mismo. Inténtalo de nuevo en un momento."
 
-#: accounts/views.py:1084 accounts/views.py:1131 accounts/views.py:1200
+#: accounts/views.py:1189 accounts/views.py:1236 accounts/views.py:1305
 #, python-format
 msgid "Sync triggered for %(count)s challenge(s)."
 msgstr "Sincronización iniciada para %(count)s reto(s)."
 
-#: accounts/views.py:1105
+#: accounts/views.py:1210
 msgid "Connect your Wger account first."
 msgstr "Conecta primero tu cuenta de Wger."
 
-#: accounts/views.py:1155
+#: accounts/views.py:1260
 msgid "Connect a Hevy API key first."
 msgstr "Conecta primero una clave de API de Hevy."
 
-#: accounts/views.py:1240 accounts/views.py:1311
+#: accounts/views.py:1345 accounts/views.py:1416
 msgid "No API key provided."
 msgstr "No se proporcionó ninguna clave de API."
 
-#: accounts/views.py:1248 accounts/views.py:1319
+#: accounts/views.py:1353 accounts/views.py:1424
 msgid "Invalid API key or connection error."
 msgstr "Clave de API no válida o error de conexión."
 
-#: accounts/views.py:1252 accounts/views.py:1290 accounts/views.py:1323
+#: accounts/views.py:1357 accounts/views.py:1395 accounts/views.py:1428
 msgid "Connection successful."
 msgstr "Conexión exitosa."
 
-#: accounts/views.py:1278
+#: accounts/views.py:1383
 msgid "No Wger credentials provided."
 msgstr "No se proporcionaron credenciales de Wger."
 
-#: accounts/views.py:1286
+#: accounts/views.py:1391
 msgid "Invalid credentials or connection error."
 msgstr "Credenciales no válidas o error de conexión."
 
@@ -242,8 +265,7 @@ msgstr "El objetivo de %(rep)sRM de \"%(lift_name)s\" debe ser un número."
 #: challenges/custom_goals.py:80
 #, python-format
 msgid "Unknown lift \"%(lift_name)s\" — not configured for this challenge."
-msgstr ""
-"Ejercicio desconocido \"%(lift_name)s\" — no configurado para este reto."
+msgstr "Ejercicio desconocido \"%(lift_name)s\" — no configurado para este reto."
 
 #: challenges/custom_goals.py:145
 msgid "Could not parse JSON. Please paste a valid JSON object."
@@ -260,11 +282,11 @@ msgstr "Unidad desconocida \"%(unit)s\"; usa \"kg\" o \"lb\"."
 
 #: challenges/custom_goals.py:168
 msgid ""
-"JSON payload must contain a \"targets\" object mapping lift names to rep-max "
-"weights."
+"JSON payload must contain a \"targets\" object mapping lift names to rep-max"
+" weights."
 msgstr ""
-"El JSON debe contener un objeto \"targets\" que asocie nombres de ejercicios "
-"con pesos máximos por repetición."
+"El JSON debe contener un objeto \"targets\" que asocie nombres de ejercicios"
+" con pesos máximos por repetición."
 
 #: challenges/custom_goals.py:185
 #, python-format
@@ -280,8 +302,8 @@ msgid ""
 "%(lower_rep)sRM target — lifting more reps can never require more weight "
 "than fewer reps."
 msgstr ""
-"El objetivo de %(higher_rep)sRM de \"%(lift_name)s\" no puede ser más pesado "
-"que su objetivo de %(lower_rep)sRM — levantar más repeticiones nunca puede "
+"El objetivo de %(higher_rep)sRM de \"%(lift_name)s\" no puede ser más pesado"
+" que su objetivo de %(lower_rep)sRM — levantar más repeticiones nunca puede "
 "requerir más peso que menos repeticiones."
 
 #: challenges/custom_goals.py:306
@@ -304,10 +326,6 @@ msgstr "La fecha de finalización debe ser posterior a la fecha de inicio."
 #: challenges/forms.py:128
 msgid "Select at least one lift."
 msgstr "Selecciona al menos un ejercicio."
-
-#: challenges/forms.py:190 challenges/forms.py:273
-msgid "Enter a bodyweight greater than zero."
-msgstr "Introduce un peso corporal mayor que cero."
 
 #: challenges/forms.py:198
 msgid "Enter a stretch percentage (e.g. 10)."
@@ -395,11 +413,13 @@ msgstr "Completado"
 msgid "Cancelled"
 msgstr "Cancelado"
 
-#: challenges/models.py:31 templates/challenges/_history_window_section.html:51
+#: challenges/models.py:31
+#: templates/challenges/_history_window_section.html:51
 msgid "From join date"
 msgstr "Desde la fecha de inscripción"
 
-#: challenges/models.py:32 templates/challenges/_history_window_section.html:49
+#: challenges/models.py:32
+#: templates/challenges/_history_window_section.html:49
 msgid "From challenge start"
 msgstr "Desde el inicio del reto"
 
@@ -497,7 +517,7 @@ msgstr ""
 msgid "(rounded to the nearest {amount} {unit})"
 msgstr "(redondeado al {amount} {unit} más cercano)"
 
-#: challenges/services.py:2493
+#: challenges/services.py:2506
 msgid ""
 "Recent history for this lift is entirely machine-assisted, which can't be "
 "converted into a target."
@@ -505,7 +525,7 @@ msgstr ""
 "El historial reciente de este ejercicio es completamente asistido por "
 "máquina y no puede convertirse en un objetivo."
 
-#: challenges/services.py:2498
+#: challenges/services.py:2511
 msgid "No recent history or published standard for this lift yet."
 msgstr ""
 "Todavía no hay historial reciente ni un estándar publicado para este "
@@ -531,7 +551,7 @@ msgstr ""
 msgid "Challenge is not active"
 msgstr "El reto no está activo"
 
-#: challenges/views.py:1039 challenges/views.py:1258
+#: challenges/views.py:1061 challenges/views.py:1280
 msgid ""
 "Couldn't refresh your Liftosaur history just now. Showing the history we "
 "already have."
@@ -539,7 +559,7 @@ msgstr ""
 "No se pudo actualizar tu historial de Liftosaur ahora mismo. Se muestra el "
 "historial que ya tenemos."
 
-#: challenges/views.py:1074
+#: challenges/views.py:1096
 #, python-format
 msgid "No recent history for %(lifts)s. Enter a target manually."
 msgid_plural "No recent history for %(lifts)s. Enter targets manually."
@@ -549,7 +569,7 @@ msgstr[1] ""
 "No hay historial reciente para %(lifts)s. Introduce los objetivos "
 "manualmente."
 
-#: challenges/views.py:1086
+#: challenges/views.py:1108
 msgid ""
 "Blank fields were filled from your recent history; values you typed were "
 "kept. Review every row before confirming."
@@ -557,15 +577,15 @@ msgstr ""
 "Los campos vacíos se rellenaron a partir de tu historial reciente; los "
 "valores que escribiste se conservaron. Revisa cada fila antes de confirmar."
 
-#: challenges/views.py:1178
+#: challenges/views.py:1200
 msgid "This challenge has ended; goals can no longer be set."
 msgstr "Este reto ha terminado; ya no se pueden establecer objetivos."
 
-#: challenges/views.py:1185
+#: challenges/views.py:1207
 msgid "Your chart for this challenge is locked and can't be changed."
 msgstr "Tu tabla para este desafío está bloqueada y no se puede cambiar."
 
-#: challenges/views.py:1642
+#: challenges/views.py:1698
 msgid ""
 "Prefilled from FitnessVolt strength standards. Review every row before "
 "confirming — this chart is locked once you save it."
@@ -573,7 +593,7 @@ msgstr ""
 "Prellenado con los estándares de fuerza de FitnessVolt. Revisa cada fila "
 "antes de confirmar — esta tabla queda bloqueada en cuanto la guardes."
 
-#: challenges/views.py:1658
+#: challenges/views.py:1714
 #, python-brace-format
 msgid ""
 "Prefilled from your recent lift history, uplifted {percent}%. Review every "
@@ -583,75 +603,76 @@ msgstr ""
 "incremento del {percent}%. Revisa cada fila antes de confirmar — esta tabla "
 "queda bloqueada en cuanto la guardes."
 
-#: challenges/views.py:1745
+#: challenges/views.py:1801
 msgid "Set your goal to view this challenge."
 msgstr "Establece tu objetivo para ver este reto."
 
-#: challenges/views.py:1990 challenges/views.py:2080
+#: challenges/views.py:2044 challenges/views.py:2134
 msgid "This challenge has ended; no further sets can be logged."
 msgstr "Este reto ha terminado; ya no se pueden registrar series."
 
-#: challenges/views.py:2003 challenges/views.py:2093 challenges/views.py:2095
+#: challenges/views.py:2057 challenges/views.py:2147 challenges/views.py:2149
 msgid "Invalid rep count."
 msgstr "Número de repeticiones inválido."
 
-#: challenges/views.py:2008 challenges/views.py:2100
+#: challenges/views.py:2062 challenges/views.py:2154
 msgid "Invalid date."
 msgstr "Fecha inválida."
 
-#: challenges/views.py:2010 challenges/views.py:2102
+#: challenges/views.py:2064 challenges/views.py:2156
 msgid "Date cannot be in the future."
 msgstr "La fecha no puede ser futura."
 
-#: challenges/views.py:2021
+#: challenges/views.py:2075
 msgid "Could not log this lift."
 msgstr "No se pudo registrar este levantamiento."
 
-#: challenges/views.py:2027 challenges/views.py:2119
+#: challenges/views.py:2081 challenges/views.py:2173
 #, python-format
 msgid "Logged %(points)s point on %(lift)s."
 msgid_plural "Logged %(points)s points on %(lift)s."
 msgstr[0] "Registrado %(points)s punto en %(lift)s."
 msgstr[1] "Registrados %(points)s puntos en %(lift)s."
 
-#: challenges/views.py:2037 challenges/views.py:2129
+#: challenges/views.py:2091 challenges/views.py:2183
 msgid "Unknown lift for this challenge."
 msgstr "Levantamiento desconocido para este desafío."
 
-#: challenges/views.py:2113
+#: challenges/views.py:2167
 msgid "Could not log this set."
 msgstr "No se pudo registrar esta serie."
 
-#: challenges/views.py:2210
+#: challenges/views.py:2264
 msgid "This challenge has already ended."
 msgstr "Este reto ya ha terminado."
 
-#: challenges/views.py:2224
+#: challenges/views.py:2278
 msgid "You cannot leave this challenge."
 msgstr "No puedes abandonar este reto."
 
-#: challenges/views.py:2238
+#: challenges/views.py:2292
 msgid "You have left the challenge."
 msgstr "Has abandonado el reto."
 
-#: challenges/views.py:2244 challenges/views.py:2252
+#: challenges/views.py:2298 challenges/views.py:2306
 #: templates/challenges/detail.html:639
 msgid "leave challenge"
 msgstr "abandonar reto"
 
-#: challenges/views.py:2245
+#: challenges/views.py:2299
 msgid "leave"
 msgstr "abandonar"
 
-#: challenges/views.py:2247
+#: challenges/views.py:2301
 msgid ""
 "Leaving freezes your scoring — no further points will be earned for you in "
-"this challenge. Your past entries stay visible. This action cannot be undone."
+"this challenge. Your past entries stay visible. This action cannot be "
+"undone."
 msgstr ""
 "Abandonar congela tu puntuación — no ganarás más puntos en este reto. Tus "
 "entradas anteriores seguirán visibles. Esta acción no se puede deshacer."
 
-#: challenges/views.py:2348 challenges/views.py:3001
+#: challenges/views.py:2402 challenges/views.py:3055
 #: templates/accounts/_avatar_section.html:117
 #: templates/challenges/_history_window_section.html:41
 #: templates/challenges/_invite_link_section.html:111
@@ -660,40 +681,40 @@ msgstr ""
 #: templates/challenges/_summary_card.html:110
 #: templates/challenges/create.html:42 templates/challenges/create.html:76
 #: templates/challenges/create.html:114 templates/challenges/create.html:189
-#: templates/challenges/custom_goal_setup.html:303
-#: templates/challenges/goal_setup_inputs.html:147
+#: templates/challenges/custom_goal_setup.html:304
+#: templates/challenges/goal_setup_inputs.html:151
 #: templates/challenges/history_needed.html:52
 #: templates/challenges/rep_target_goal_setup.html:160
 msgid "cancel"
 msgstr "cancelar"
 
-#: challenges/views.py:2454
+#: challenges/views.py:2508
 msgid "This challenge can no longer be modified."
 msgstr "Este reto ya no se puede modificar."
 
-#: challenges/views.py:2473
+#: challenges/views.py:2527
 msgid "The creator cannot be removed from their own challenge."
 msgstr "El creador no puede ser eliminado de su propio reto."
 
-#: challenges/views.py:2489
+#: challenges/views.py:2543
 msgid "This participant cannot be removed."
 msgstr "Este participante no se puede eliminar."
 
-#: challenges/views.py:2503
+#: challenges/views.py:2557
 #, python-format
 msgid "%(name)s has been removed from the challenge."
 msgstr "%(name)s ha sido eliminado/a del reto."
 
-#: challenges/views.py:2510 challenges/views.py:2519
+#: challenges/views.py:2564 challenges/views.py:2573
 msgid "remove participant"
 msgstr "eliminar participante"
 
-#: challenges/views.py:2511
+#: challenges/views.py:2565
 #, python-format
 msgid "remove %(name)s from"
 msgstr "eliminar a %(name)s de"
 
-#: challenges/views.py:2513
+#: challenges/views.py:2567
 msgid ""
 "Removing freezes their scoring — no further points will be earned for them "
 "in this challenge. Their past entries stay on the leaderboard. They cannot "
@@ -704,98 +725,99 @@ msgstr ""
 "unirse, ni siquiera con un enlace de invitación. Esta acción no se puede "
 "deshacer."
 
-#: challenges/views.py:2532
+#: challenges/views.py:2586
 msgid "This challenge can no longer be closed."
 msgstr "Este reto ya no se puede cerrar."
 
-#: challenges/views.py:2541
+#: challenges/views.py:2595
 msgid "Challenge closed."
 msgstr "Reto cerrado."
 
-#: challenges/views.py:2547 challenges/views.py:2556
+#: challenges/views.py:2601 challenges/views.py:2610
 msgid "close challenge"
 msgstr "cerrar reto"
 
-#: challenges/views.py:2548 templates/challenges/_participant_chart.html:24
+#: challenges/views.py:2602 templates/challenges/_participant_chart.html:24
 #: templates/challenges/_participant_chart.html:99
 msgid "close"
 msgstr "cerrar"
 
-#: challenges/views.py:2549
+#: challenges/views.py:2603
 msgid " early"
 msgstr " anticipadamente"
 
-#: challenges/views.py:2551
+#: challenges/views.py:2605
 msgid ""
 "Closing runs a final sync for every participant, locks the leaderboard, and "
-"notifies everyone that the challenge has ended. This action cannot be undone."
+"notifies everyone that the challenge has ended. This action cannot be "
+"undone."
 msgstr ""
 "Cerrar ejecuta una sincronización final para cada participante, bloquea la "
-"clasificación y notifica a todos que el reto ha terminado. Esta acción no se "
-"puede deshacer."
+"clasificación y notifica a todos que el reto ha terminado. Esta acción no se"
+" puede deshacer."
 
-#: challenges/views.py:2585
+#: challenges/views.py:2639
 msgid "This challenge can no longer be renamed."
 msgstr "Este reto ya no se puede renombrar."
 
-#: challenges/views.py:2608
+#: challenges/views.py:2662
 msgid "Challenge name updated."
 msgstr "Nombre del reto actualizado."
 
-#: challenges/views.py:2650
+#: challenges/views.py:2704
 msgid "This challenge's point-eligible window can no longer be changed."
 msgstr ""
 "La ventana de elegibilidad de puntos de este desafío ya no se puede cambiar."
 
-#: challenges/views.py:2668
+#: challenges/views.py:2722
 msgid "Point-eligible window updated."
 msgstr "Ventana de elegibilidad de puntos actualizada."
 
-#: challenges/views.py:2725 challenges/views.py:2734 challenges/views.py:2790
-#: challenges/views.py:2799
+#: challenges/views.py:2779 challenges/views.py:2788 challenges/views.py:2844
+#: challenges/views.py:2853
 msgid "This challenge can no longer accept invites."
 msgstr "Este reto ya no puede aceptar invitaciones."
 
-#: challenges/views.py:2751
+#: challenges/views.py:2805
 msgid "A new invite link has been generated."
 msgstr "Se ha generado un nuevo enlace de invitación."
 
-#: challenges/views.py:2824
+#: challenges/views.py:2878
 msgid "The invite link has been updated."
 msgstr "El enlace de invitación se ha actualizado."
 
-#: challenges/views.py:2830
+#: challenges/views.py:2884
 msgid "Could not update the invite link."
 msgstr "No se pudo actualizar el enlace de invitación."
 
-#: challenges/views.py:2895
+#: challenges/views.py:2949
 msgid "This challenge's ownership can no longer be transferred."
 msgstr "La propiedad de este reto ya no se puede transferir."
 
-#: challenges/views.py:2920
+#: challenges/views.py:2974
 msgid "Ownership can only be transferred to an active, accepted participant."
 msgstr ""
 "La propiedad solo se puede transferir a un participante activo y aceptado."
 
-#: challenges/views.py:2945
+#: challenges/views.py:2999
 #, python-format
 msgid "Ownership transferred to %(name)s."
 msgstr "Propiedad transferida a %(name)s."
 
-#: challenges/views.py:2952 challenges/views.py:2963
+#: challenges/views.py:3006 challenges/views.py:3017
 msgid "transfer ownership"
 msgstr "transferir la propiedad"
 
-#: challenges/views.py:2953
+#: challenges/views.py:3007
 msgid "transfer ownership of"
 msgstr "transferir la propiedad de"
 
-#: challenges/views.py:2954
+#: challenges/views.py:3008
 #, python-format
 msgid " to %(name)s"
 msgstr " a %(name)s"
 
-#: challenges/views.py:2956
+#: challenges/views.py:3010
 #, python-format
 msgid ""
 "%(name)s will gain full control of this challenge — closing, cancelling, "
@@ -804,24 +826,24 @@ msgid ""
 "undone on your own."
 msgstr ""
 "%(name)s obtendrá el control total de este reto — cerrar, cancelar, invitar "
-"y eliminar participantes. Tú seguirás siendo un participante normal. Solo el "
-"nuevo propietario puede transferirte la propiedad de vuelta, por lo que no "
+"y eliminar participantes. Tú seguirás siendo un participante normal. Solo el"
+" nuevo propietario puede transferirte la propiedad de vuelta, por lo que no "
 "puedes deshacer esto por tu cuenta."
 
-#: challenges/views.py:2981
+#: challenges/views.py:3035
 msgid "This challenge can no longer be cancelled."
 msgstr "Este reto ya no se puede cancelar."
 
-#: challenges/views.py:2994
+#: challenges/views.py:3048
 msgid "Challenge cancelled."
 msgstr "Reto cancelado."
 
-#: challenges/views.py:3000 challenges/views.py:3009
+#: challenges/views.py:3054 challenges/views.py:3063
 #: templates/challenges/settings.html:46
 msgid "cancel challenge"
 msgstr "cancelar reto"
 
-#: challenges/views.py:3003
+#: challenges/views.py:3057
 msgid ""
 "Cancelling voids the challenge entirely — no final sync runs, no scores are "
 "recorded, and no closing notifications are sent. The challenge is removed "
@@ -832,83 +854,99 @@ msgstr ""
 "cierre. El reto se elimina de la lista de Buscar Retos. Esta acción no se "
 "puede deshacer."
 
-#: challenges/views.py:3011 templates/accounts/delete_account.html:77
+#: challenges/views.py:3065 templates/accounts/delete_account.html:77
 msgid "go back"
 msgstr "volver"
 
-#: challenges/views.py:3044
+#: challenges/views.py:3098
 msgid "Only draft challenges can be deleted."
 msgstr "Solo se pueden eliminar los retos en borrador."
 
-#: challenges/views.py:3048
+#: challenges/views.py:3102
 msgid "Draft challenge deleted."
 msgstr "Reto en borrador eliminado."
 
-#: core/models.py:18
+#: core/models.py:19
 msgid "Community Discord invite link, shown on the landing page."
 msgstr ""
 "Enlace de invitación a la comunidad de Discord, mostrado en la página de "
 "inicio."
 
-#: core/models.py:24
+#: core/models.py:25
 msgid ""
 "Join link for the current year's Very Open. Blank hides the onboarding "
-"invite step entirely -- clear this once the invite window closes rather than "
-"leaving a dead link live."
+"invite step entirely -- clear this once the invite window closes rather than"
+" leaving a dead link live."
 msgstr ""
 "Enlace de invitación al Very Open de este año. Si se deja en blanco, se "
 "oculta por completo el paso de invitación durante la incorporación -- "
 "bórralo una vez que se cierre la ventana de invitación en lugar de dejar un "
 "enlace inactivo."
 
-#: core/models.py:34
+#: core/models.py:35
 msgid ""
-"Displayed name for the current year's Very Open, e.g. \"The Very Open '26\". "
-"Only shown when the invite URL above is also set."
+"Displayed name for the current year's Very Open, e.g. \"The Very Open '26\"."
+" Only shown when the invite URL above is also set."
 msgstr ""
 "Nombre mostrado del Very Open de este año, p. ej. \"The Very Open '26\". "
 "Solo se muestra cuando también se ha configurado el enlace de invitación "
 "anterior."
 
-#: core/models.py:40 core/models.py:41
+#: core/models.py:41 core/models.py:42
 msgid "Site Settings"
 msgstr "Configuración del sitio"
 
-#: core/models.py:73 liftosaur/models.py:54
+#: core/models.py:82 core/models.py:191
 #: templates/challenges/_history_source_fields.html:37
 #: templates/registration/onboarding_tracking_method.html:28
 msgid "Liftosaur"
 msgstr "Liftosaur"
 
-#: core/models.py:74 liftosaur/models.py:57
+#: core/models.py:83 core/models.py:194
 #: templates/challenges/_history_source_fields.html:39
 #: templates/registration/onboarding_tracking_method.html:30
 msgid "Hevy"
 msgstr "Hevy"
 
-#: core/models.py:75 templates/challenges/_history_source_fields.html:40
+#: core/models.py:84 templates/challenges/_history_source_fields.html:40
 #: templates/registration/onboarding_tracking_method.html:31
 msgid "Strong"
 msgstr "Strong"
 
-#: core/models.py:76 liftosaur/models.py:59
+#: core/models.py:85 core/models.py:196
 #: templates/accounts/_wger_section.html:4
 #: templates/challenges/_history_source_fields.html:38
 #: templates/registration/onboarding_tracking_method.html:29
 msgid "Wger"
 msgstr "Wger"
 
-#: core/models.py:77
+#: core/models.py:86
 msgid "FitnessVolt"
 msgstr "FitnessVolt"
 
-#: core/models.py:133
+#: core/models.py:142
 msgid "Newsletter Subscriber"
 msgstr "Suscriptor del boletín"
 
-#: core/models.py:134
+#: core/models.py:143
 msgid "Newsletter Subscribers"
 msgstr "Suscriptores del boletín"
+
+#: core/models.py:192
+msgid "Liftosaur (CSV import)"
+msgstr "Liftosaur (importación CSV)"
+
+#: core/models.py:193
+msgid "Manual"
+msgstr "Manual"
+
+#: core/models.py:195
+msgid "Hevy (CSV import)"
+msgstr "Hevy (importación CSV)"
+
+#: core/models.py:197
+msgid "Strong (CSV import)"
+msgstr "Strong (importación CSV)"
 
 #: core/views.py:52
 msgid "You're subscribed. Thanks for joining!"
@@ -933,22 +971,6 @@ msgstr "Mantener tus datos actualizados"
 #: guide/views.py:27
 msgid "Units & added-weight lifts"
 msgstr "Unidades y ejercicios con peso añadido"
-
-#: liftosaur/models.py:55
-msgid "Liftosaur (CSV import)"
-msgstr "Liftosaur (importación CSV)"
-
-#: liftosaur/models.py:56
-msgid "Manual"
-msgstr "Manual"
-
-#: liftosaur/models.py:58
-msgid "Hevy (CSV import)"
-msgstr "Hevy (importación CSV)"
-
-#: liftosaur/models.py:60
-msgid "Strong (CSV import)"
-msgstr "Strong (importación CSV)"
 
 #: notifications/models.py:23
 msgid "Challenge Closed"
@@ -1058,9 +1080,11 @@ msgstr "solicitud incorrecta"
 
 #: templates/400.html:8
 msgid ""
-"Something about that request didn't look right. Please go back and try again."
+"Something about that request didn't look right. Please go back and try "
+"again."
 msgstr ""
-"Algo en esa solicitud no parecía correcto. Vuelve atrás e inténtalo de nuevo."
+"Algo en esa solicitud no parecía correcto. Vuelve atrás e inténtalo de "
+"nuevo."
 
 #: templates/403.html:4
 msgid "Access Denied"
@@ -1156,6 +1180,55 @@ msgstr "establecer foto de perfil"
 msgid "That file could not be read as an image."
 msgstr "No se pudo leer ese archivo como imagen."
 
+#: templates/accounts/_bodyweight_section.html:4
+#: templates/challenges/goal_setup_inputs.html:33
+#: templates/registration/onboarding_bodyweight.html:28
+msgid "bodyweight"
+msgstr "peso corporal"
+
+#: templates/accounts/_bodyweight_section.html:11
+#| msgid "bodyweight"
+msgid "Saving bodyweight…"
+msgstr "Guardando peso corporal…"
+
+#: templates/accounts/_bodyweight_section.html:17
+#| msgid "bodyweight"
+msgid "current bodyweight"
+msgstr "peso corporal actual"
+
+#: templates/accounts/_bodyweight_section.html:22
+#: templates/challenges/goal_setup_inputs.html:38
+#: templates/registration/onboarding_bodyweight.html:33
+msgid "e.g. 80"
+msgstr "p. ej. 80"
+
+#: templates/accounts/_bodyweight_section.html:27
+msgid ""
+"Used to suggest targets for pull-ups, chin-ups and dips, where your goal is "
+"the weight you add on top of your own. It isn't used for scoring, and only "
+"this one figure is kept, not a history. Leave it blank to store nothing."
+msgstr ""
+"Se usa para sugerir objetivos de dominadas, dominadas supinas y fondos, "
+"donde tu objetivo es el peso que añades al tuyo propio. No se usa para "
+"puntuar, y solo se guarda esta cifra, no un historial. Déjalo en blanco para"
+" no guardar nada."
+
+#: templates/accounts/_bodyweight_section.html:35
+#, python-format
+msgid "Synced from your tracker %(when)s."
+msgstr "Sincronizado desde tu aplicación %(when)s."
+
+#: templates/accounts/_bodyweight_section.html:37
+#, python-format
+#| msgid "Last synced %(when)s"
+msgid "You set this %(when)s."
+msgstr "Lo estableciste %(when)s."
+
+#: templates/accounts/_bodyweight_section.html:46
+#| msgid "bodyweight"
+msgid "save bodyweight"
+msgstr "guardar peso corporal"
+
 #: templates/accounts/_email_section.html:4
 msgid "email"
 msgstr "correo electrónico"
@@ -1171,7 +1244,8 @@ msgid "email address"
 msgstr "correo electrónico"
 
 #: templates/accounts/_email_section.html:26
-msgid "Used only for password resets. Leave it blank to keep no email on file."
+msgid ""
+"Used only for password resets. Leave it blank to keep no email on file."
 msgstr ""
 "Se usa únicamente para restablecer la contraseña. Déjalo en blanco para no "
 "guardar ningún correo."
@@ -1191,8 +1265,8 @@ msgid ""
 "Connect your Hevy account to import your exercise data. Requires an active "
 "Hevy Pro subscription."
 msgstr ""
-"Conecta tu cuenta de Hevy para importar tus datos de ejercicio. Requiere una "
-"suscripción activa a Hevy Pro."
+"Conecta tu cuenta de Hevy para importar tus datos de ejercicio. Requiere una"
+" suscripción activa a Hevy Pro."
 
 #: templates/accounts/_hevy_section.html:13
 #: templates/accounts/_liftosaur_section.html:13
@@ -1349,8 +1423,8 @@ msgid ""
 "Quote this if you contact us about a problem — it lets us find your "
 "account's log entries without asking for anything else."
 msgstr ""
-"Menciona esto si nos contactas sobre un problema — nos permite encontrar las "
-"entradas de registro de tu cuenta sin pedirte nada más."
+"Menciona esto si nos contactas sobre un problema — nos permite encontrar las"
+" entradas de registro de tu cuenta sin pedirte nada más."
 
 #: templates/accounts/_support_id_section.html:20
 msgid "copy"
@@ -1384,8 +1458,8 @@ msgid ""
 "Timestamps across the app are shown in this timezone. Automatic uses your "
 "browser's detected timezone:"
 msgstr ""
-"Las marcas de tiempo en toda la aplicación se muestran en esta zona horaria. "
-"Automático usa la zona horaria detectada por tu navegador:"
+"Las marcas de tiempo en toda la aplicación se muestran en esta zona horaria."
+" Automático usa la zona horaria detectada por tu navegador:"
 
 #: templates/accounts/_timezone_section.html:36
 msgid "save timezone"
@@ -1516,7 +1590,8 @@ msgstr "Última importación %(when)s"
 msgid "Delete Account"
 msgstr "Eliminar cuenta"
 
-#: templates/accounts/delete_account.html:8 templates/accounts/settings.html:61
+#: templates/accounts/delete_account.html:8
+#: templates/accounts/settings.html:63
 msgid "delete account"
 msgstr "eliminar cuenta"
 
@@ -1524,8 +1599,8 @@ msgstr "eliminar cuenta"
 msgid ""
 "This permanently signs you out and anonymizes your account: your username, "
 "display name, and email are replaced with a randomly generated placeholder, "
-"your profile photo is deleted, and any connected Liftosaur API key or single "
-"sign-on link is removed."
+"your profile photo is deleted, and any connected Liftosaur API key or single"
+" sign-on link is removed."
 msgstr ""
 "Esto cierra tu sesión de forma permanente y anonimiza tu cuenta: tu nombre "
 "de usuario, nombre para mostrar y correo electrónico se reemplazan por un "
@@ -1541,9 +1616,10 @@ msgid ""
 "are re-ranked without you. This action cannot be undone."
 msgstr ""
 "Los retos en los que has participado conservan sus puntuaciones y entradas "
-"pasadas en nuestros registros, pero tú ya no apareces en ellos: tu nombre se "
-"elimina de sus clasificaciones, gráficos y registros de actividad, y quienes "
-"siguen jugando se reclasifican sin ti. Esta acción no se puede deshacer."
+"pasadas en nuestros registros, pero tú ya no apareces en ellos: tu nombre se"
+" elimina de sus clasificaciones, gráficos y registros de actividad, y "
+"quienes siguen jugando se reclasifican sin ti. Esta acción no se puede "
+"deshacer."
 
 #: templates/accounts/delete_account.html:26
 #, python-format
@@ -1569,8 +1645,8 @@ msgid ""
 "By default, each goes to whoever has been in it the longest. Open this to "
 "pick someone else."
 msgstr ""
-"De forma predeterminada, cada uno pasa a quien lleve más tiempo en él. "
-"Abre esto para elegir a otra persona."
+"De forma predeterminada, cada uno pasa a quien lleve más tiempo en él. Abre "
+"esto para elegir a otra persona."
 
 #: templates/accounts/delete_account.html:59
 msgid ""
@@ -1609,12 +1685,13 @@ msgstr "Claro"
 msgid "Dark"
 msgstr "Oscuro"
 
-#: templates/accounts/settings.html:54
+#: templates/accounts/settings.html:56
 msgid "danger zone"
 msgstr "zona de peligro"
 
-#: templates/accounts/settings.html:56
-msgid "Permanently anonymize your account and sign out. This cannot be undone."
+#: templates/accounts/settings.html:58
+msgid ""
+"Permanently anonymize your account and sign out. This cannot be undone."
 msgstr ""
 "Anonimiza tu cuenta permanentemente y cierra tu sesión. Esto no se puede "
 "deshacer."
@@ -1631,7 +1708,8 @@ msgstr "Continuar"
 #: templates/challenges/invite_accept.html:7 templates/challenges/share.html:7
 #: templates/landing.html:7
 msgid "Friendly lifting challenges where everyone chases their own goals."
-msgstr "Retos amistosos de fuerza donde cada quien persigue sus propias metas."
+msgstr ""
+"Retos amistosos de fuerza donde cada quien persigue sus propias metas."
 
 #: templates/challenges/_event_log_section.html:17
 msgid "activity"
@@ -1720,8 +1798,8 @@ msgstr ""
 #: templates/challenges/_history_needed.html:30
 #: templates/challenges/create.html:72 templates/challenges/create.html:110
 #: templates/challenges/create.html:185
-#: templates/challenges/custom_goal_setup.html:294
-#: templates/challenges/goal_setup_inputs.html:141
+#: templates/challenges/custom_goal_setup.html:295
+#: templates/challenges/goal_setup_inputs.html:145
 #: templates/challenges/history_needed.html:46
 msgid "back"
 msgstr "atrás"
@@ -1729,9 +1807,10 @@ msgstr "atrás"
 #: templates/challenges/_history_needed.html:34
 #: templates/challenges/create.html:40 templates/challenges/create.html:74
 #: templates/challenges/create.html:112
-#: templates/challenges/goal_setup_inputs.html:143
+#: templates/challenges/goal_setup_inputs.html:147
 #: templates/challenges/goal_setup_method.html:67
 #: templates/challenges/history_needed.html:50
+#: templates/registration/onboarding_bodyweight.html:50
 #: templates/registration/onboarding_connect_tracker.html:143
 #: templates/registration/onboarding_no_tracker.html:54
 #: templates/registration/onboarding_other_tracker.html:36
@@ -1756,13 +1835,14 @@ msgstr "Elige una opción"
 #: templates/challenges/_history_source_fields.html:55
 #: templates/registration/onboarding_connect_tracker.html:69
 msgid ""
-"For automated tracking, get your key from <a href=\"https://www.liftosaur."
-"com/doc/api\" target=\"_blank\" rel=\"noopener\" "
-"class=\"underline\">Liftosaur's API docs</a>."
+"For automated tracking, get your key from <a "
+"href=\"https://www.liftosaur.com/doc/api\" target=\"_blank\" "
+"rel=\"noopener\" class=\"underline\">Liftosaur's API docs</a>."
 msgstr ""
-"Para el seguimiento automático, obtén tu clave en <a href=\"https://www."
-"liftosaur.com/doc/api\" target=\"_blank\" rel=\"noopener\" "
-"class=\"underline\">la documentación de la API de Liftosaur</a>."
+"Para el seguimiento automático, obtén tu clave en <a "
+"href=\"https://www.liftosaur.com/doc/api\" target=\"_blank\" "
+"rel=\"noopener\" class=\"underline\">la documentación de la API de "
+"Liftosaur</a>."
 
 #: templates/challenges/_history_source_fields.html:61
 msgid "Wger instance URL"
@@ -1794,29 +1874,30 @@ msgstr "o sube una exportación CSV"
 #: templates/challenges/_history_source_fields.html:123
 #: templates/registration/onboarding_connect_tracker.html:87
 msgid ""
-"You can export your history by navigating to Me → Export history to CSV file "
-"and pressing Ok."
+"You can export your history by navigating to Me → Export history to CSV file"
+" and pressing Ok."
 msgstr ""
-"Puedes exportar tu historial yendo a Yo → Exportar historial a archivo CSV y "
-"pulsando Aceptar."
+"Puedes exportar tu historial yendo a Yo → Exportar historial a archivo CSV y"
+" pulsando Aceptar."
 
 #: templates/challenges/_history_source_fields.html:126
 #: templates/registration/onboarding_connect_tracker.html:118
 msgid ""
-"Learn how to export your data in <a href=\"https://help.hevyapp.com/hc/en-us/"
-"articles/38001424401943-How-to-Import-Strong-App-CSV-Files-and-Export-Your-"
-"Data-in-Hevy\" target=\"_blank\" rel=\"noopener\" class=\"underline\">Hevy's "
-"help center</a>."
-msgstr ""
-"Descubre cómo exportar tus datos en <a href=\"https://help.hevyapp.com/hc/en-"
+"Learn how to export your data in <a href=\"https://help.hevyapp.com/hc/en-"
 "us/articles/38001424401943-How-to-Import-Strong-App-CSV-Files-and-Export-"
 "Your-Data-in-Hevy\" target=\"_blank\" rel=\"noopener\" "
-"class=\"underline\">el centro de ayuda de Hevy</a>."
+"class=\"underline\">Hevy's help center</a>."
+msgstr ""
+"Descubre cómo exportar tus datos en <a "
+"href=\"https://help.hevyapp.com/hc/en-us/articles/38001424401943-How-to-"
+"Import-Strong-App-CSV-Files-and-Export-Your-Data-in-Hevy\" target=\"_blank\""
+" rel=\"noopener\" class=\"underline\">el centro de ayuda de Hevy</a>."
 
 #: templates/challenges/_history_source_fields.html:129
 #: templates/registration/onboarding_connect_tracker.html:135
 msgid ""
-"You can export your history from the Strong app under Settings → Export Data."
+"You can export your history from the Strong app under Settings → Export "
+"Data."
 msgstr ""
 "Puedes exportar tu historial desde la app de Strong en Configuración → "
 "Exportar datos."
@@ -1971,18 +2052,19 @@ msgstr "Peso mostrado en %(unit)s"
 #: templates/challenges/_participant_chart.html:56
 msgid "Highlighted column = the points this lifter's best set earned."
 msgstr ""
-"Columna resaltada = los puntos que consiguió el mejor intento de este atleta."
+"Columna resaltada = los puntos que consiguió el mejor intento de este "
+"atleta."
 
 #: templates/challenges/_participant_chart.html:63
 #: templates/challenges/_rep_target_goal_table.html:22
-#: templates/challenges/custom_goal_setup.html:187
+#: templates/challenges/custom_goal_setup.html:188
 #: templates/challenges/detail.html:195 templates/challenges/detail.html:368
 #: templates/challenges/rep_target_goal_setup.html:77
 msgid "Lift"
 msgstr "Ejercicio"
 
 #: templates/challenges/_participant_chart.html:67
-#: templates/challenges/custom_goal_setup.html:193
+#: templates/challenges/custom_goal_setup.html:194
 #: templates/challenges/detail.html:372
 #, python-format
 msgid "%(reps)s RM"
@@ -2158,8 +2240,8 @@ msgid ""
 "Finished <span class=\"font-mono\">%(gap)s</span> %(unit)s short of your "
 "first point."
 msgstr ""
-"Te quedaste a <span class=\"font-mono\">%(gap)s</span> %(unit)s de tu primer "
-"punto."
+"Te quedaste a <span class=\"font-mono\">%(gap)s</span> %(unit)s de tu primer"
+" punto."
 
 #: templates/challenges/_summary_card.html:85
 #, python-format
@@ -2167,8 +2249,8 @@ msgid ""
 "To reach your first point: add <span class=\"font-mono\">%(gap)s</span> "
 "%(unit)s"
 msgstr ""
-"Para alcanzar tu primer punto: añade <span class=\"font-mono\">%(gap)s</"
-"span> %(unit)s"
+"Para alcanzar tu primer punto: añade <span class=\"font-"
+"mono\">%(gap)s</span> %(unit)s"
 
 #: templates/challenges/_summary_card.html:85
 #, python-format
@@ -2234,8 +2316,8 @@ msgid ""
 "Scoring can apply retroactively from the start date — a participant's "
 "existing Liftosaur history on or after that date counts once they join."
 msgstr ""
-"La puntuación puede aplicarse retroactivamente desde la fecha de inicio — el "
-"historial existente de Liftosaur de un participante en o después de esa "
+"La puntuación puede aplicarse retroactivamente desde la fecha de inicio — el"
+" historial existente de Liftosaur de un participante en o después de esa "
 "fecha cuenta una vez que se une."
 
 #: templates/challenges/create.html:55
@@ -2254,12 +2336,13 @@ msgstr "elige un modo de puntuación"
 msgid ""
 "This applies to the whole challenge and can't be changed once you continue."
 msgstr ""
-"Esto se aplica a todo el desafío y no se puede cambiar una vez que continúes."
+"Esto se aplica a todo el desafío y no se puede cambiar una vez que "
+"continúes."
 
 #: templates/challenges/create.html:97
 msgid ""
-"Score against a personal rep-max weight chart — a target weight for each rep "
-"count, 1 through 10."
+"Score against a personal rep-max weight chart — a target weight for each rep"
+" count, 1 through 10."
 msgstr ""
 "Puntúa contra una tabla personal de peso máximo por repetición — un peso "
 "objetivo para cada número de repeticiones, del 1 al 10."
@@ -2283,8 +2366,8 @@ msgid ""
 "everything; \"Popular\" and \"Calisthenics\" are curated shortcuts into the "
 "same list."
 msgstr ""
-"Esta lista de ejercicios se aplica a todos los participantes durante todo el "
-"desafío. El gráfico de objetivos de cada persona cubrirá exactamente estos "
+"Esta lista de ejercicios se aplica a todos los participantes durante todo el"
+" desafío. El gráfico de objetivos de cada persona cubrirá exactamente estos "
 "ejercicios. «Todos los ejercicios» incluye todo; «Populares» y «Calistenia» "
 "son accesos directos seleccionados a la misma lista."
 
@@ -2361,7 +2444,8 @@ msgstr ""
 
 #: templates/challenges/custom_goal_setup.html:40
 msgid ""
-"This chart is locked once you confirm it — there's no editing after you join."
+"This chart is locked once you confirm it — there's no editing after you "
+"join."
 msgstr ""
 "Esta tabla queda bloqueada en cuanto la confirmes — no se puede editar "
 "después de unirte."
@@ -2382,17 +2466,14 @@ msgstr "pegar JSON"
 #: templates/challenges/custom_goal_setup.html:67
 msgid ""
 "\n"
-"          Don't know JSON? Copy the prompt below into any AI chat — it'll "
-"ask\n"
+"          Don't know JSON? Copy the prompt below into any AI chat — it'll ask\n"
 "          for your weights and hand you back JSON to paste here. Already\n"
 "          comfortable with JSON? Paste it in the shape shown below.\n"
 "          "
 msgstr ""
 "\n"
-"          ¿No sabes qué es JSON? Copia el mensaje de abajo en cualquier chat "
-"de IA:\n"
-"          te pedirá tus pesos y te devolverá el JSON para pegar aquí. ¿Ya "
-"sabes\n"
+"          ¿No sabes qué es JSON? Copia el mensaje de abajo en cualquier chat de IA:\n"
+"          te pedirá tus pesos y te devolverá el JSON para pegar aquí. ¿Ya sabes\n"
 "          usar JSON? Pégalo con la forma que se muestra abajo.\n"
 "          "
 
@@ -2408,13 +2489,11 @@ msgstr "error al copiar — selecciona y copia manualmente"
 #: templates/challenges/custom_goal_setup.html:89
 msgid ""
 "\n"
-"            This lift name isn't configured for this challenge and will be "
-"skipped:\n"
+"            This lift name isn't configured for this challenge and will be skipped:\n"
 "            "
 msgid_plural ""
 "\n"
-"            These lift names aren't configured for this challenge and will "
-"be skipped:\n"
+"            These lift names aren't configured for this challenge and will be skipped:\n"
 "            "
 msgstr[0] ""
 "\n"
@@ -2422,27 +2501,26 @@ msgstr[0] ""
 "            "
 msgstr[1] ""
 "\n"
-"            Estos ejercicios no están configurados para este reto y se "
-"omitirán:\n"
+"            Estos ejercicios no están configurados para este reto y se omitirán:\n"
 "            "
 
 #: templates/challenges/custom_goal_setup.html:103
 msgid "ignore these and continue with the rest"
 msgstr "ignorar estos y continuar con el resto"
 
-#: templates/challenges/custom_goal_setup.html:122
+#: templates/challenges/custom_goal_setup.html:123
 msgid "compute"
 msgstr "calcular"
 
-#: templates/challenges/custom_goal_setup.html:127
+#: templates/challenges/custom_goal_setup.html:128
 msgid "rounding"
 msgstr "redondeo"
 
-#: templates/challenges/custom_goal_setup.html:131
+#: templates/challenges/custom_goal_setup.html:132
 msgid "exact"
 msgstr "exacto"
 
-#: templates/challenges/custom_goal_setup.html:145
+#: templates/challenges/custom_goal_setup.html:146
 msgid ""
 "\n"
 "              Enter at least one weight in a row, pick a rounding, then hit\n"
@@ -2456,7 +2534,7 @@ msgstr ""
 "              que ya hayas escrito se deja intacto.\n"
 "              "
 
-#: templates/challenges/custom_goal_setup.html:155
+#: templates/challenges/custom_goal_setup.html:156
 msgid ""
 "Compute skipped these lifts because their pinned weights increase with reps "
 "— fix the pinned values first: "
@@ -2464,21 +2542,21 @@ msgstr ""
 "Calcular omitió estos levantamientos porque sus pesos fijados aumentan con "
 "las repeticiones — corrige los valores fijados primero: "
 
-#: templates/challenges/custom_goal_setup.html:185
-#: templates/challenges/custom_goal_setup.html:214
+#: templates/challenges/custom_goal_setup.html:186
 #: templates/challenges/custom_goal_setup.html:215
+#: templates/challenges/custom_goal_setup.html:216
 #: templates/challenges/rep_target_goal_setup.html:75
 #: templates/challenges/rep_target_goal_setup.html:98
 #: templates/challenges/rep_target_goal_setup.html:99
 msgid "Clear this row"
 msgstr "Borrar esta fila"
 
-#: templates/challenges/custom_goal_setup.html:233
+#: templates/challenges/custom_goal_setup.html:234
 #: templates/challenges/rep_target_goal_setup.html:115
 msgid "BW +"
 msgstr "PC +"
 
-#: templates/challenges/custom_goal_setup.html:234
+#: templates/challenges/custom_goal_setup.html:235
 #: templates/challenges/rep_target_goal_setup.html:116
 msgid ""
 "enter the weight added on top of your bodyweight; 0 means bodyweight alone"
@@ -2486,21 +2564,21 @@ msgstr ""
 "introduce el peso añadido sobre tu peso corporal; 0 significa solo peso "
 "corporal"
 
-#: templates/challenges/custom_goal_setup.html:286
+#: templates/challenges/custom_goal_setup.html:287
 msgid "This challenge has no lifts configured."
 msgstr "Este reto no tiene ejercicios configurados."
 
-#: templates/challenges/custom_goal_setup.html:299
+#: templates/challenges/custom_goal_setup.html:300
 #: templates/challenges/rep_target_goal_setup.html:158
 msgid "confirm goal"
 msgstr "confirmar objetivo"
 
-#: templates/challenges/custom_goal_setup.html:302
-#: templates/challenges/goal_setup_inputs.html:146
+#: templates/challenges/custom_goal_setup.html:303
+#: templates/challenges/goal_setup_inputs.html:150
 msgid "Cancel and discard everything entered so far?"
 msgstr "¿Cancelar y descartar todo lo introducido hasta ahora?"
 
-#: templates/challenges/custom_goal_setup.html:309
+#: templates/challenges/custom_goal_setup.html:310
 msgid ""
 "\n"
 "      Compute's suggestions blend the Epley, Brzycki, Lander, Lombardi, and\n"
@@ -2599,14 +2677,14 @@ msgid ""
 "<span class=\"font-mono\">%(gap)s</span> %(unit)s away from your next point "
 "on %(lift)s."
 msgstr ""
-"<span class=\"font-mono\">%(gap)s</span> %(unit)s de distancia de tu próximo "
-"punto en %(lift)s."
+"<span class=\"font-mono\">%(gap)s</span> %(unit)s de distancia de tu próximo"
+" punto en %(lift)s."
 
 #: templates/challenges/detail.html:137
 #, python-format
 msgid ""
-"<span class=\"font-mono\">%(gap)s</span> %(unit)s away from your first point "
-"on %(lift)s, or"
+"<span class=\"font-mono\">%(gap)s</span> %(unit)s away from your first point"
+" on %(lift)s, or"
 msgstr ""
 "<span class=\"font-mono\">%(gap)s</span> %(unit)s de distancia de tu primer "
 "punto en %(lift)s, o"
@@ -2623,13 +2701,14 @@ msgid "more rep at this weight would earn your first point on %(lift)s."
 msgid_plural ""
 "more reps at this weight would earn your first point on %(lift)s."
 msgstr[0] "repetición más a este peso te daría tu primer punto en %(lift)s."
-msgstr[1] "repeticiones más a este peso te darían tu primer punto en %(lift)s."
+msgstr[1] ""
+"repeticiones más a este peso te darían tu primer punto en %(lift)s."
 
 #: templates/challenges/detail.html:144
 #, python-format
 msgid ""
-"<span class=\"font-mono\">%(gap)s</span> %(unit)s away from your first point "
-"on %(lift)s."
+"<span class=\"font-mono\">%(gap)s</span> %(unit)s away from your first point"
+" on %(lift)s."
 msgstr ""
 "<span class=\"font-mono\">%(gap)s</span> %(unit)s de distancia de tu primer "
 "punto en %(lift)s."
@@ -2831,55 +2910,74 @@ msgid "a few details for your standards"
 msgstr "algunos detalles para tus estándares"
 
 #: templates/challenges/goal_setup_inputs.html:8
+#| msgid "a couple of quick details"
+msgid "one quick detail"
+msgstr "un dato rápido"
+
+#: templates/challenges/goal_setup_inputs.html:8
 msgid "a couple of quick details"
 msgstr "un par de datos rápidos"
 
-#: templates/challenges/goal_setup_inputs.html:11
+#: templates/challenges/goal_setup_inputs.html:12
+#| msgid ""
+#| "This is used to compute the numbers below and is kept with this chart as a "
+#| "record of how its targets were calculated — it is not tracked over time or "
+#| "used anywhere else."
 msgid ""
-"This is used to compute the numbers below and is kept with this chart as a "
-"record of how its targets were calculated — it is not tracked over time or "
-"used anywhere else."
+"These are used to compute the numbers below. Your bodyweight is saved to "
+"your account so we don't ask again, and a copy is kept with this chart as "
+"the record of how its targets were calculated. It never affects your score, "
+"and you can change or clear it in Settings."
 msgstr ""
-"Esto se usa para calcular las cifras a continuación y se guarda con esta "
-"tabla como registro de cómo se calcularon sus objetivos — no se rastrea a lo "
-"largo del tiempo ni se usa en ningún otro lugar."
+"Se usan para calcular las cifras a continuación. Tu peso corporal se guarda "
+"en tu cuenta para no volver a preguntártelo, y se conserva una copia con "
+"esta tabla como registro de cómo se calcularon sus objetivos. Nunca afecta a"
+" tu puntuación y puedes cambiarlo o borrarlo en Ajustes."
 
-#: templates/challenges/goal_setup_inputs.html:29
-msgid "bodyweight"
-msgstr "peso corporal"
+#: templates/challenges/goal_setup_inputs.html:14
+#| msgid ""
+#| "This is used to compute the numbers below and is kept with this chart as a "
+#| "record of how its targets were calculated — it is not tracked over time or "
+#| "used anywhere else."
+msgid ""
+"These are used to compute the numbers below and are kept with this chart as "
+"the record of how its targets were calculated."
+msgstr ""
+"Se usan para calcular las cifras a continuación y se guardan con esta tabla "
+"como registro de cómo se calcularon sus objetivos."
 
-#: templates/challenges/goal_setup_inputs.html:34
-msgid "e.g. 80"
-msgstr "p. ej. 80"
-
-#: templates/challenges/goal_setup_inputs.html:39
+#: templates/challenges/goal_setup_inputs.html:43
 #, python-format
 msgid "In %(unit)s, matching your settings."
 msgstr "En %(unit)s, según tu configuración."
 
-#: templates/challenges/goal_setup_inputs.html:41
-msgid ""
-"Needed only to estimate targets for your bodyweight-added lifts (Pull-up, "
-"Chin-up, Dip) — Liftosaur records just the added weight for these, so your "
-"bodyweight fills in the rest of the load."
-msgstr ""
-"Solo se necesita para estimar objetivos de tus ejercicios con peso corporal "
-"añadido (dominadas, fondos en barra, flexiones de tríceps) — Liftosaur solo "
-"registra el peso añadido en estos, así que tu peso corporal completa el "
-"resto de la carga."
-
-#: templates/challenges/goal_setup_inputs.html:43
+#: templates/challenges/goal_setup_inputs.html:45
 msgid ""
 "Needed to look up the right FitnessVolt weight class for your standards."
 msgstr ""
 "Se necesita para buscar la categoría de peso correcta de FitnessVolt para "
 "tus estándares."
 
-#: templates/challenges/goal_setup_inputs.html:55
+#: templates/challenges/goal_setup_inputs.html:47
+#| msgid ""
+#| "Needed only to estimate targets for your bodyweight-added lifts (Pull-up, "
+#| "Chin-up, Dip) — Liftosaur records just the added weight for these, so your "
+#| "bodyweight fills in the rest of the load."
+msgid ""
+"Needed to estimate targets for your bodyweight-added lifts (Pull-up, Chin-"
+"up, Dip). Trackers record only the added weight for these, so your "
+"bodyweight fills in the rest of the load."
+msgstr ""
+"Se necesita para estimar objetivos de tus ejercicios con peso corporal "
+"añadido (dominadas, dominadas supinas, fondos). Las aplicaciones solo "
+"registran el peso añadido en estos, así que tu peso corporal completa el "
+"resto de la carga."
+
+#: templates/challenges/goal_setup_inputs.html:59
 msgid "stretch above your recent best"
 msgstr "incremento sobre tu mejor marca reciente"
 
-#: templates/challenges/goal_setup_inputs.html:64
+#: templates/challenges/goal_setup_inputs.html:68
 msgid ""
 "Each target is your best recent lift for that rep range, stretched by this "
 "percentage."
@@ -2887,32 +2985,32 @@ msgstr ""
 "Cada objetivo es tu mejor levantamiento reciente para ese rango de "
 "repeticiones, incrementado por este porcentaje."
 
-#: templates/challenges/goal_setup_inputs.html:75
+#: templates/challenges/goal_setup_inputs.html:79
 msgid "round targets to nearest"
 msgstr "redondear objetivos al múltiplo más cercano de"
 
-#: templates/challenges/goal_setup_inputs.html:84
+#: templates/challenges/goal_setup_inputs.html:88
 msgid ""
 "Suggested targets are rounded to this increment so they're actual loadable "
 "numbers, not raw calculated decimals."
 msgstr ""
-"Los objetivos sugeridos se redondean a este incremento para que sean números "
-"cargables reales, no decimales calculados sin ajustar."
+"Los objetivos sugeridos se redondean a este incremento para que sean números"
+" cargables reales, no decimales calculados sin ajustar."
 
-#: templates/challenges/goal_setup_inputs.html:94
+#: templates/challenges/goal_setup_inputs.html:98
 msgid "sex"
 msgstr "sexo"
 
-#: templates/challenges/goal_setup_inputs.html:108
+#: templates/challenges/goal_setup_inputs.html:112
 msgid "population"
 msgstr "población"
 
-#: templates/challenges/goal_setup_inputs.html:111
-#: templates/challenges/goal_setup_inputs.html:125
+#: templates/challenges/goal_setup_inputs.html:115
+#: templates/challenges/goal_setup_inputs.html:129
 msgid "Select…"
 msgstr "Seleccionar…"
 
-#: templates/challenges/goal_setup_inputs.html:122
+#: templates/challenges/goal_setup_inputs.html:126
 msgid "tier"
 msgstr "nivel"
 
@@ -2947,8 +3045,8 @@ msgid ""
 "Propose targets based on your recent lift history, with a bit of stretch "
 "built in."
 msgstr ""
-"Propone objetivos basados en tu historial reciente de levantamientos, con un "
-"poco de margen incorporado."
+"Propone objetivos basados en tu historial reciente de levantamientos, con un"
+" poco de margen incorporado."
 
 #: templates/challenges/goal_setup_method.html:50
 msgid "Type in your own target for each lift, from scratch."
@@ -3075,23 +3173,19 @@ msgstr ""
 #, python-format
 msgid ""
 "\n"
-"        %(counter)s person competed in it. This invite link doesn't expire, "
-"but the challenge itself is over.\n"
+"        %(counter)s person competed in it. This invite link doesn't expire, but the challenge itself is over.\n"
 "        "
 msgid_plural ""
 "\n"
-"        %(counter)s people competed in it. This invite link doesn't expire, "
-"but the challenge itself is over.\n"
+"        %(counter)s people competed in it. This invite link doesn't expire, but the challenge itself is over.\n"
 "        "
 msgstr[0] ""
 "\n"
-"        %(counter)s persona compitió en él. Este enlace de invitación no "
-"caduca, pero el reto en sí ha terminado.\n"
+"        %(counter)s persona compitió en él. Este enlace de invitación no caduca, pero el reto en sí ha terminado.\n"
 "        "
 msgstr[1] ""
 "\n"
-"        %(counter)s personas compitieron en él. Este enlace de invitación no "
-"caduca, pero el reto en sí ha terminado.\n"
+"        %(counter)s personas compitieron en él. Este enlace de invitación no caduca, pero el reto en sí ha terminado.\n"
 "        "
 
 #: templates/challenges/invite_link_ended.html:28
@@ -3210,15 +3304,11 @@ msgstr "Privacidad"
 #: templates/challenges/invite_link_preview.html:72 templates/landing.html:168
 msgid ""
 "\n"
-"        Made with ❤️ by 🏳️‍🌈 in <a href=\"https://www.nationalgeographic.com/"
-"travel/article/canada-photos\" class=\"hover:opacity-75\" target=\"_blank\" "
-"rel=\"noopener noreferrer\">🇨🇦</a>\n"
+"        Made with ❤️ by 🏳️‍🌈 in <a href=\"https://www.nationalgeographic.com/travel/article/canada-photos\" class=\"hover:opacity-75\" target=\"_blank\" rel=\"noopener noreferrer\">🇨🇦</a>\n"
 "        "
 msgstr ""
 "\n"
-"        Hecho con ❤️ por 🏳️‍🌈 en <a href=\"https://www.nationalgeographic.com/"
-"travel/article/canada-photos\" class=\"hover:opacity-75\" target=\"_blank\" "
-"rel=\"noopener noreferrer\">🇨🇦</a>\n"
+"        Hecho con ❤️ por 🏳️‍🌈 en <a href=\"https://www.nationalgeographic.com/travel/article/canada-photos\" class=\"hover:opacity-75\" target=\"_blank\" rel=\"noopener noreferrer\">🇨🇦</a>\n"
 "        "
 
 #: templates/challenges/participant_chart.html:10
@@ -3234,17 +3324,14 @@ msgstr "define tu objetivo de repeticiones"
 #, python-format
 msgid ""
 "\n"
-"      One target weight and rep count per lift in <strong>%(name)s</"
-"strong>,\n"
+"      One target weight and rep count per lift in <strong>%(name)s</strong>,\n"
 "      in %(unit)s. A qualifying set is any at or above the target weight,\n"
 "      and reps earn points toward the target, up to 10.\n"
 "      "
 msgstr ""
 "\n"
-"      Un peso objetivo y número de repeticiones por ejercicio en "
-"<strong>%(name)s</strong>,\n"
-"      en %(unit)s. Una serie válida es cualquiera igual o superior al peso "
-"objetivo,\n"
+"      Un peso objetivo y número de repeticiones por ejercicio en <strong>%(name)s</strong>,\n"
+"      en %(unit)s. Una serie válida es cualquiera igual o superior al peso objetivo,\n"
 "      y las repeticiones suman puntos hacia el objetivo, hasta 10.\n"
 "      "
 
@@ -3262,14 +3349,12 @@ msgstr "sugerir"
 #: templates/challenges/rep_target_goal_setup.html:55
 msgid ""
 "\n"
-"            Fills blank rows from your recent history, uplifted a little "
-"past\n"
+"            Fills blank rows from your recent history, uplifted a little past\n"
 "            your best. Anything you have already typed is kept.\n"
 "            "
 msgstr ""
 "\n"
-"            Rellena las filas vacías con tu historial reciente, un poco por "
-"encima\n"
+"            Rellena las filas vacías con tu historial reciente, un poco por encima\n"
 "            de tu mejor marca. Se conserva todo lo que ya hayas escrito.\n"
 "            "
 
@@ -3478,8 +3563,8 @@ msgstr ""
 
 #: templates/dashboard.html:237
 msgid ""
-"Join a challenge and this will fill in with how far each lift has come since "
-"your first scored set."
+"Join a challenge and this will fill in with how far each lift has come since"
+" your first scored set."
 msgstr ""
 "Únete a un reto y esto se completará con cuánto ha progresado cada "
 "levantamiento desde tu primera serie puntuada."
@@ -3505,15 +3590,12 @@ msgid ""
 "\n"
 "        Set your own strength goals and compete with friends of any level.\n"
 "        Whether you're very strong or very beginner, everyone can enter the\n"
-"        same challenge and chase their own personal best. Sound good? Go "
-"get\n"
+"        same challenge and chase their own personal best. Sound good? Go get\n"
 "        'em, champ!\n"
 "        "
 msgstr ""
 "\n"
-"        Fija tus propias metas de fuerza y compite con amigos de cualquier "
-"nivel. Ya seas muy fuerte o muy principiante, todos pueden entrar al mismo "
-"reto y perseguir su propia mejor marca. ¿Listo? ¡A por ello, campeón!\n"
+"        Fija tus propias metas de fuerza y compite con amigos de cualquier nivel. Ya seas muy fuerte o muy principiante, todos pueden entrar al mismo reto y perseguir su propia mejor marca. ¿Listo? ¡A por ello, campeón!\n"
 "        "
 
 #: templates/landing.html:39 templates/supported_apps.html:76
@@ -3542,9 +3624,7 @@ msgid ""
 "            "
 msgstr ""
 "\n"
-"            ¿Principiante? ¿Intermedio? ¿Avanzado? ¿Élite? Ponte a prueba "
-"para cumplir los requisitos de tu nivel, o fija una meta personalizada y ve "
-"a por ella. Solo o con amigos. ¡Que gane el atleta más \"very\"!\n"
+"            ¿Principiante? ¿Intermedio? ¿Avanzado? ¿Élite? Ponte a prueba para cumplir los requisitos de tu nivel, o fija una meta personalizada y ve a por ella. Solo o con amigos. ¡Que gane el atleta más \"very\"!\n"
 "            "
 
 #: templates/landing.html:64
@@ -3555,17 +3635,13 @@ msgstr "muy fácil"
 #, python-format
 msgid ""
 "\n"
-"            Sync with <a href=\"%(supported_apps_url)s\" class=\"text-accent "
-"hover:underline\">one of our supported apps</a> and we'll score your lifts\n"
+"            Sync with <a href=\"%(supported_apps_url)s\" class=\"text-accent hover:underline\">one of our supported apps</a> and we'll score your lifts\n"
 "            for you. No compatible app? Enter your lifts manually and we'll\n"
 "            do the rest!\n"
 "            "
 msgstr ""
 "\n"
-"            Sincroniza con <a href=\"%(supported_apps_url)s\" class=\"text-"
-"accent hover:underline\">una de nuestras apps compatibles</a> y calcularemos "
-"tus puntos por ti. ¿No tienes una app compatible? Ingresa tus levantamientos "
-"a mano y nosotros hacemos el resto.\n"
+"            Sincroniza con <a href=\"%(supported_apps_url)s\" class=\"text-accent hover:underline\">una de nuestras apps compatibles</a> y calcularemos tus puntos por ti. ¿No tienes una app compatible? Ingresa tus levantamientos a mano y nosotros hacemos el resto.\n"
 "            "
 
 #: templates/landing.html:75
@@ -3582,10 +3658,7 @@ msgid ""
 "            "
 msgstr ""
 "\n"
-"            Cada persona fija sus propias metas y se puntúa según lo cerca "
-"que esté de alcanzarlas. Así que, ya sea que busques una sentadilla de 100 o "
-"300 libras, puedes competir junto a tu amigo mientras cada uno persigue su "
-"propia meta.\n"
+"            Cada persona fija sus propias metas y se puntúa según lo cerca que esté de alcanzarlas. Así que, ya sea que busques una sentadilla de 100 o 300 libras, puedes competir junto a tu amigo mientras cada uno persigue su propia meta.\n"
 "            "
 
 #: templates/landing.html:86
@@ -3602,10 +3675,7 @@ msgid ""
 "            "
 msgstr ""
 "\n"
-"            Sigue tu progreso en tiempo real con un gráfico de puntos y "
-"tarjetas de rendimiento personal, y ve exactamente qué tan cerca estás del "
-"siguiente punto. Para qué mentir: esta función puede despertar tu lado más "
-"competitivo. Y ante eso, solo decimos: ¡suéltalo!\n"
+"            Sigue tu progreso en tiempo real con un gráfico de puntos y tarjetas de rendimiento personal, y ve exactamente qué tan cerca estás del siguiente punto. Para qué mentir: esta función puede despertar tu lado más competitivo. Y ante eso, solo decimos: ¡suéltalo!\n"
 "            "
 
 #: templates/landing.html:100
@@ -3640,8 +3710,8 @@ msgstr "únete a nuestro Discord"
 
 #: templates/landing.html:130
 msgid ""
-"Find and share challenges, chat with other lifters, share feedback, and help "
-"shape the app."
+"Find and share challenges, chat with other lifters, share feedback, and help"
+" shape the app."
 msgstr ""
 "Encuentra y comparte desafíos, chatea con otros levantadores, comparte "
 "comentarios y ayuda a dar forma a la app."
@@ -3752,7 +3822,8 @@ msgstr "Reemplazada"
 msgid "View"
 msgstr "Ver"
 
-#: templates/policies/policy_list.html:4 templates/policies/policy_list.html:13
+#: templates/policies/policy_list.html:4
+#: templates/policies/policy_list.html:13
 msgid "Policies"
 msgstr "Políticas"
 
@@ -3792,7 +3863,8 @@ msgstr "iniciar sesión"
 msgid "Invalid username or password."
 msgstr "Nombre de usuario o contraseña no válidos."
 
-#: templates/registration/login.html:27 templates/registration/register.html:37
+#: templates/registration/login.html:27
+#: templates/registration/register.html:37
 msgid "username"
 msgstr "nombre de usuario"
 
@@ -3823,6 +3895,55 @@ msgstr "¿No tienes una cuenta?"
 msgid "Create one"
 msgstr "Crea una"
 
+#: templates/registration/onboarding_bodyweight.html:4
+#| msgid "bodyweight"
+msgid "Bodyweight"
+msgstr "Peso corporal"
+
+#: templates/registration/onboarding_bodyweight.html:9
+#| msgid "Step 2 of 3"
+msgid "Step 4 of 4"
+msgstr "Paso 4 de 4"
+
+#: templates/registration/onboarding_bodyweight.html:16
+#| msgid "which app do you use?"
+msgid "what do you weigh?"
+msgstr "¿cuánto pesas?"
+
+#: templates/registration/onboarding_bodyweight.html:18
+msgid ""
+"Pull-ups, chin-ups and dips are scored on the weight you add to your own, so"
+" suggesting targets for them needs a rough idea of what you're already "
+"lifting."
+msgstr ""
+"Las dominadas, las dominadas supinas y los fondos se puntúan por el peso que"
+" añades al tuyo propio, así que sugerir objetivos para ellos requiere una "
+"idea aproximada de lo que ya levantas."
+
+#: templates/registration/onboarding_bodyweight.html:21
+msgid ""
+"We keep this one number and update it when your tracker has something newer."
+" There's no weight history, it never affects your score, and you can change "
+"or clear it in Settings. Skip it and we'll ask again only if a challenge "
+"needs it."
+msgstr ""
+"Guardamos solo esta cifra y la actualizamos cuando tu aplicación tiene algo "
+"más reciente. No hay historial de peso, nunca afecta a tu puntuación y "
+"puedes cambiarla o borrarla en Ajustes. Sáltalo y te lo preguntaremos de "
+"nuevo solo si un reto lo necesita."
+
+#: templates/registration/onboarding_bodyweight.html:39
+msgid ""
+"Pulled from the tracker you just connected. Change it if it's out of date."
+msgstr ""
+"Obtenido de la aplicación que acabas de conectar. Cámbialo si está "
+"desactualizado."
+
+#: templates/registration/onboarding_bodyweight.html:57
+#: templates/registration/onboarding_very_open.html:37
+msgid "skip for now"
+msgstr "omitir por ahora"
+
 #: templates/registration/onboarding_connect_tracker.html:4
 msgid "Connect Your Tracker"
 msgstr "Conecta Tu Tracker"
@@ -3830,8 +3951,9 @@ msgstr "Conecta Tu Tracker"
 #: templates/registration/onboarding_connect_tracker.html:9
 #: templates/registration/onboarding_no_tracker.html:9
 #: templates/registration/onboarding_other_tracker.html:9
-msgid "Step 2 of 3"
-msgstr "Paso 2 de 3"
+#| msgid "Step 2 of 3"
+msgid "Step 2 of 4"
+msgstr "Paso 2 de 4"
 
 #: templates/registration/onboarding_connect_tracker.html:17
 msgid "connect your Wger account"
@@ -3910,8 +4032,9 @@ msgid "Track Your Lifts"
 msgstr "Registra Tus Levantamientos"
 
 #: templates/registration/onboarding_tracking_method.html:9
-msgid "Step 1 of 3"
-msgstr "Paso 1 de 3"
+#| msgid "Step 1 of 3"
+msgid "Step 1 of 4"
+msgstr "Paso 1 de 4"
 
 #: templates/registration/onboarding_tracking_method.html:16
 msgid "do you use a tracking app?"
@@ -3934,8 +4057,8 @@ msgid ""
 "It's ok if you don't — you can log lifts manually one at a time, or use CSV "
 "uploads, anytime from Settings."
 msgstr ""
-"No pasa nada si no la usas — puedes registrar tus levantamientos manualmente "
-"uno a uno, o usar cargas CSV, cuando quieras desde Configuración."
+"No pasa nada si no la usas — puedes registrar tus levantamientos manualmente"
+" uno a uno, o usar cargas CSV, cuando quieras desde Configuración."
 
 #: templates/registration/onboarding_tracking_method.html:51
 msgid "no, I don't use one"
@@ -3946,8 +4069,9 @@ msgid "Display Units"
 msgstr "Unidades de Visualización"
 
 #: templates/registration/onboarding_units.html:9
-msgid "Step 3 of 3"
-msgstr "Paso 3 de 3"
+#| msgid "Step 3 of 3"
+msgid "Step 3 of 4"
+msgstr "Paso 3 de 4"
 
 #: templates/registration/onboarding_units.html:16
 msgid "which unit do you lift in?"
@@ -3958,8 +4082,8 @@ msgid ""
 "Weights across the app are shown in this unit. You can change it anytime "
 "from Settings."
 msgstr ""
-"Los pesos en toda la aplicación se muestran en esta unidad. Puedes cambiarla "
-"en cualquier momento desde Configuración."
+"Los pesos en toda la aplicación se muestran en esta unidad. Puedes cambiarla"
+" en cualquier momento desde Configuración."
 
 #: templates/registration/onboarding_very_open.html:4
 msgid "Join the Very Open"
@@ -3987,10 +4111,6 @@ msgstr ""
 msgid "join %(very_open_label)s"
 msgstr "únete a %(very_open_label)s"
 
-#: templates/registration/onboarding_very_open.html:37
-msgid "skip for now"
-msgstr "omitir por ahora"
-
 #: templates/registration/password_reset.html:4
 msgid "Reset Password"
 msgstr "Restablecer contraseña"
@@ -4004,8 +4124,8 @@ msgid ""
 "Enter the email address on your account. If it matches an account with a "
 "password, you'll get a link to set a new one."
 msgstr ""
-"Introduce el correo electrónico de tu cuenta. Si coincide con una cuenta que "
-"tenga contraseña, recibirás un enlace para establecer una nueva."
+"Introduce el correo electrónico de tu cuenta. Si coincide con una cuenta que"
+" tenga contraseña, recibirás un enlace para establecer una nueva."
 
 #: templates/registration/password_reset.html:40
 msgid "send reset link"
@@ -4039,8 +4159,8 @@ msgstr "este enlace ha caducado"
 
 #: templates/registration/password_reset_confirm.html:54
 msgid ""
-"Password reset links work once and don't last long. Request a new one to try "
-"again."
+"Password reset links work once and don't last long. Request a new one to try"
+" again."
 msgstr ""
 "Los enlaces de restablecimiento funcionan una sola vez y caducan pronto. "
 "Solicita uno nuevo para volver a intentarlo."
@@ -4059,18 +4179,18 @@ msgstr "revisa tu correo"
 
 #: templates/registration/password_reset_done.html:20
 msgid ""
-"If that email address matches an account with a password, a reset link is on "
-"its way. The link works once, and expires after a short time."
+"If that email address matches an account with a password, a reset link is on"
+" its way. The link works once, and expires after a short time."
 msgstr ""
 "Si ese correo electrónico coincide con una cuenta que tenga contraseña, el "
-"enlace de restablecimiento está en camino. El enlace funciona una sola vez y "
-"caduca al poco tiempo."
+"enlace de restablecimiento está en camino. El enlace funciona una sola vez y"
+" caduca al poco tiempo."
 
 #: templates/registration/password_reset_done.html:24
 msgid "Nothing arrived? Check your spam folder, then request another link."
 msgstr ""
-"¿No ha llegado nada? Revisa tu carpeta de correo no deseado y luego solicita "
-"otro enlace."
+"¿No ha llegado nada? Revisa tu carpeta de correo no deseado y luego solicita"
+" otro enlace."
 
 #: templates/registration/password_reset_done.html:28
 msgid "Request a new link"
@@ -4204,8 +4324,8 @@ msgid ""
 "when you subscribe to Liftosaur's premium subscription, which is required "
 "for the API that live sync depends on."
 msgstr ""
-"cuando te suscribas a la suscripción premium de Liftosaur, necesaria para la "
-"API de la que depende la sincronización en vivo."
+"cuando te suscribas a la suscripción premium de Liftosaur, necesaria para la"
+" API de la que depende la sincronización en vivo."
 
 #: templates/supported_apps.html:65 templates/supported_apps.html:94
 #: templates/supported_apps.html:115
@@ -4223,8 +4343,8 @@ msgid ""
 "%(brand_name)s has an affiliate relationship with Liftosaur and may earn a "
 "commission from qualifying subscriptions."
 msgstr ""
-"%(brand_name)s tiene una relación de afiliado con Liftosaur y podría recibir "
-"una comisión por las suscripciones que califiquen."
+"%(brand_name)s tiene una relación de afiliado con Liftosaur y podría recibir"
+" una comisión por las suscripciones que califiquen."
 
 #: templates/supported_apps.html:85
 msgid "you can also use these"
@@ -4232,7 +4352,8 @@ msgstr "también puedes usar estas"
 
 #: templates/supported_apps.html:90
 msgid ""
-"Connect your Hevy account for automatic sync, or upload a CSV export instead."
+"Connect your Hevy account for automatic sync, or upload a CSV export "
+"instead."
 msgstr ""
 "Conecta tu cuenta de Hevy para sincronizar automáticamente, o sube un "
 "archivo CSV en su lugar."

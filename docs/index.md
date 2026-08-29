@@ -17,8 +17,8 @@ wondering about right now.
   minutes to catch up.
 - **[Running a challenge](challenges.md)** — how challenges get created,
   how invites work, and what happens when one wraps up.
-- **[Units & added-weight lifts](bodyweight-and-units.md)** — kg or lb, and
-  how added-weight lifts like pull-ups are shown.
+- **[Units, bodyweight & added-weight lifts](bodyweight-and-units.md)** — kg or lb, your
+  bodyweight, and how added-weight lifts like pull-ups are shown.
 
 Running your own copy rather than using someone else's?
 
