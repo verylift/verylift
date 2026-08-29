@@ -1,9 +1,22 @@
 # Keeping your data fresh
 
-very lift pulls your workouts from Liftosaur and scores them
-against your challenges. This page explains where that data lives, when a
-pull actually happens, and why a workout you just logged might not show up
+very lift pulls your workouts from the tracker you've connected and scores
+them against your challenges. This page explains where that data lives, when
+a pull actually happens, and why a workout you just logged might not show up
 on the leaderboard right away.
+
+## Which trackers can sync
+
+Liftosaur, Hevy, and wger each have an API very lift can pull from directly:
+connect one on your settings page and your workouts come across on their own.
+Strong has no public API, so its data comes in as a CSV export instead — see
+[Importing a workout CSV](#importing-a-workout-csv-is-a-one-shot-action-not-a-sync)
+below, which also covers Liftosaur and Hevy exports. You can also log a lift
+by hand with no tracker connected at all.
+
+Everything below about pulls, throttling, and freshness applies to whichever
+of the API-backed trackers you've connected — the mechanics are the same for
+all of them.
 
 ## One shared workout history
 
@@ -12,6 +25,13 @@ not to any one challenge. If you're in three challenges at once, they
 all draw from that same history rather than each keeping their own copy.
 Re-pulling a workout you've already synced just updates it in place; it
 never creates a duplicate.
+
+The history is shared across sources as well as challenges: an API sync, a
+CSV import, and a lift you logged by hand all land in the same place, so
+switching trackers or backfilling from an export doesn't fragment your
+record. Each pull only ever advances against its own source's data, so
+connecting a second tracker or uploading an export never cuts short what
+another source has already brought in.
 
 Because the history is shared, one pull refreshes it for every challenge
 you're in at once — there's no need for each challenge to fetch your data
@@ -23,21 +43,21 @@ This is the most important thing to understand about how freshness works:
 **getting your workouts into the app, and turning them into points, are two
 different things that happen at different times.**
 
-- **Pulling** fetches your recent workouts from Liftosaur and adds them to
+- **Pulling** fetches your recent workouts from your tracker and adds them to
   your shared history. It doesn't touch scoring or know anything about
   which challenges you're in.
 - **Scoring** looks at your shared history and works out your points for one
-  specific challenge. It never talks to Liftosaur — it only works with
+  specific challenge. It never talks to your tracker — it only works with
   data that's already been pulled in.
 
-Because scoring never has to call out to Liftosaur, the app can safely
+Because scoring never has to call out to your tracker, the app can safely
 re-check your standing every time you open a challenge page, without
 worrying about hammering an external service or double-counting a set
 you've already been credited for.
 
 ## Why pulls are throttled
 
-To avoid pulling from Liftosaur too often, each person's pulls are limited
+To avoid pulling from your tracker too often, each person's pulls are limited
 to roughly once every **10 minutes**. If you've had a successful pull in the
 last 10 minutes, opening another challenge page won't trigger a fresh
 pull — it'll just re-score whatever is already in your history.
@@ -59,7 +79,7 @@ fast no matter how much history has built up.
 
 ## Why a workout you just logged might not show up yet
 
-If you log a set in Liftosaur and don't see it reflected right away, it's
+If you log a set in your tracker and don't see it reflected right away, it's
 usually one of these:
 
 - **You're within the 10-minute cooldown.** If you had a pull recently, the
@@ -79,16 +99,19 @@ the challenge after that.
 
 ## Importing a workout CSV is a one-shot action, not a sync
 
-If your tracker app doesn't offer very lift a direct sync — its API is
-paywalled, or it simply isn't integrated yet — you can often still get your
-data in by uploading the CSV file the app exports for you. One upload
-control on the settings page accepts CSV exports from any supported tracker
-app: the app is detected automatically from the file itself, so there's
-nothing to pick from a list. Hevy is the first supported format.
+If your tracker app doesn't offer very lift a direct sync — it has no public
+API, its API is paywalled, or it simply isn't integrated yet — you can often
+still get your data in by uploading the CSV file the app exports for you. One
+upload control on the settings page accepts CSV exports from any supported
+tracker app: the app is detected automatically from the file itself, so
+there's nothing to pick from a list. Strong, Hevy, and Liftosaur exports are
+recognized today. For Strong that's the only route in; for Hevy and Liftosaur
+it's an alternative to connecting the API, handy for backfilling history from
+before you signed up.
 
 Whichever app produced the file, an upload pools whatever working sets are
 in it and immediately rescores every active challenge you're in — this is
-closer to logging a lift manually than it is to a Liftosaur sync: there's no
+closer to logging a lift manually than it is to an API sync: there's no
 cooldown, no watermark, and no background pull. Each upload is a complete,
 explicit action — nothing happens with that data until you upload a file,
 and re-uploading the same file is safe (it updates your existing history in

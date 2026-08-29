@@ -9,7 +9,7 @@ covers both.
 You can set your preferred unit — kilograms or pounds — in your account
 settings. This only changes how weights are **displayed** to you; behind
 the scenes everything is tracked consistently, and workouts pulled from
-Liftosaur are automatically converted to match, so you always see numbers
+your tracker are automatically converted to match, so you always see numbers
 in the unit you're comfortable with.
 
 ## How added-weight lifts are shown

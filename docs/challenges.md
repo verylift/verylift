@@ -55,7 +55,7 @@ Creating a challenge is a short guided wizard:
    retroactively from the start date once someone joins.
 3. **Mode** — Classic or Rep Target (see [above](#two-scoring-modes)).
    Locked once you continue past this step.
-4. **Lifts** — choose from every Liftosaur-supported lift (a searchable
+4. **Lifts** — choose from very lift's whole lift catalog (a searchable
    list, with pinned Popular and Calisthenics groups up top). This list
    applies to every participant for the whole challenge — each person
    builds their own targets for these lifts when they join.
@@ -104,7 +104,7 @@ For Classic, you pick one of four ways to build your chart:
   population, sex, bodyweight, and tier, and use them as your starting
   targets.
 - **Suggested from history** — the app proposes targets based on your own
-  recent Liftosaur lift history, with a bit of stretch built in.
+  recent lift history, with a bit of stretch built in.
 - **Manual entry** — type in your own target for each lift, from scratch.
 - **Paste JSON** — paste a JSON goal payload (e.g. one an AI chat generated
   for you) instead of typing into the grid.
