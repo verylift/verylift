@@ -1,0 +1,63 @@
+{% load i18n %}
+{% comment %}
+Inline "get some history in here" recovery screen, htmx variant, for the
+goal-setup wizard's history method (issue #88). Swapped in place of the
+triggering form's own content -- that form has no explicit hx-target, so
+htmx's default (innerHTML of the form itself) leaves its hx-post/action
+pointed at the same URL. Submitting this content re-posts whichever field
+was filled in there.
+{% endcomment %}
+<div class="w-full space-y-4">
+  {% if tracker_connected %}
+  <p class="text-xs text-content-muted">
+    {% blocktrans with name=challenge.name %}Your tracker is connected, but we haven't found any lifts yet to suggest targets from for {{ name }}.{% endblocktrans %}
+  </p>
+  {% else %}
+  <p class="text-xs text-content-muted">
+    {% trans "Add your history to suggest targets: connect a tracker or upload a CSV export below." %}
+  </p>
+  {% endif %}
+
+  {% if error %}<p class="text-xs text-danger-dark">{{ error }}</p>{% endif %}
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+    <input
+      type="text"
+      name="liftosaur_api_key"
+      placeholder="{% trans 'Liftosaur API key' %}"
+      class="border border-line rounded px-2 py-1.5 text-sm focus:outline-none focus:border-accent">
+    <input
+      type="text"
+      name="hevy_api_key"
+      placeholder="{% trans 'Hevy API key' %}"
+      class="border border-line rounded px-2 py-1.5 text-sm focus:outline-none focus:border-accent">
+    <input
+      type="text"
+      name="wger_instance_url"
+      placeholder="{% trans 'Wger instance URL' %}"
+      class="border border-line rounded px-2 py-1.5 text-sm focus:outline-none focus:border-accent">
+    <input
+      type="text"
+      name="wger_api_token"
+      placeholder="{% trans 'Wger API token' %}"
+      class="border border-line rounded px-2 py-1.5 text-sm focus:outline-none focus:border-accent">
+  </div>
+  <div>
+    <label for="id_csv_file_inline" class="text-xs text-content-muted">{% trans "or upload a CSV export" %}</label>
+    <input type="file" id="id_csv_file_inline" name="csv_file" accept=".csv" class="block text-xs mt-1">
+  </div>
+  <div class="flex items-center gap-4">
+    <button
+      type="submit"
+      class="bg-accent text-accent-on text-xs font-medium px-4 py-1.5 rounded hover:bg-accent-hover whitespace-nowrap">
+      {% trans "continue" %}
+    </button>
+    <button
+      type="submit"
+      name="build_manually"
+      value="1"
+      class="text-xs text-content-muted hover:text-content-strong underline">
+      {% trans "set up manually instead" %}
+    </button>
+  </div>
+</div>

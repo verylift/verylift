@@ -21,6 +21,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_POST
 from django_ratelimit.decorators import ratelimit
 
+from accounts.forms import HevyKeyForm, LiftosaurKeyForm, WgerCredentialsForm
 from accounts.ratelimit import client_ip
 from accounts.units import to_display_weight
 from challenges.custom_goals import detach_active_goal, save_custom_goal
@@ -87,10 +88,12 @@ from challenges.standards import covered_lift_names
 from core.http import is_htmx
 from core.models import SiteSettings
 from fitnessvolt.services import standards_method_available
+from hevy_api.services import sync_user_lifts as sync_hevy_lifts
+from hevy_api.services import validate_hevy_key
 from liftosaur.models import LiftHistory
 from liftosaur.services import (
     last_synced_at,
-    trigger_lift_history_backfill,
+    sync_user_lifts,
     validate_liftosaur_key,
 )
 from notifications.models import Notification
@@ -105,6 +108,9 @@ from scoring.services import (
     get_user_standing,
     rank_participants,
 )
+from wger.services import sync_wger_lifts, validate_wger_credentials
+from workout_imports.forms import WorkoutCsvImportForm
+from workout_imports.services import import_workout_csv
 
 logger = logging.getLogger(__name__)
 
@@ -150,58 +156,143 @@ def _hx_redirect(request, url):
     return redirect(url)
 
 
-def _ensure_liftosaur_key(request):
-    """Make sure the requesting user has a Liftosaur API key for the
-    goal-setup wizard's history method.
+def _ensure_history_source(request):
+    """Try to get the requesting user some pooled LiftHistory to suggest
+    from, for the goal-setup wizard's history-recovery screen (issue #88).
 
-    Returns ``None`` when the user already has a key, or one was just submitted
-    alongside this request and validated successfully (it's saved and a
-    backfill is triggered). Otherwise returns an error string to redisplay
-    inline: empty when no key was submitted at all (first time showing the
-    prompt), or a validation-failure message when one was submitted but
-    rejected.
+    Tries, in order: a Liftosaur/Hevy/Wger credential (any one supplied),
+    or a workout-CSV upload. Returns ``None`` when history now exists --
+    either a credential validated and its initial pull actually ran (see
+    below for why that pull is synchronous here), or a CSV import landed
+    rows -- so the caller redirects to a fresh GET. Returns ``""`` when
+    nothing was submitted at all (first time showing the screen). Otherwise
+    returns a validation-failure message to redisplay inline.
+
+    The credential branches deliberately call this connector's synchronous
+    ``sync_user_lifts``/``sync_wger_lifts`` pull directly instead of the
+    fire-and-forget ``trigger_*_backfill`` daemon-thread pattern used
+    everywhere else a key is connected (Settings, onboarding). Those
+    threads are fine when nothing downstream depends on the pull finishing,
+    but a goal chart LOCKS PERMANENTLY once saved -- advancing into the
+    suggestion step while a backfill thread is still mid-pull risks a
+    silently-wrong, uncorrectable chart. Each sync function already caps
+    itself to a request-cycle-safe amount of work per call (see
+    MAX_*_PAGES_PER_INLINE_RUN / the Liftosaur pull's own page-cap
+    behaviour), so calling it inline here is within the same budget the
+    rest of the app already spends synchronously (e.g. sync_and_score at
+    wizard entry).
     """
     user = request.user
-    if user.liftosaur_api_key:
+
+    liftosaur_form = LiftosaurKeyForm(request.POST)
+    if liftosaur_form.is_valid() and liftosaur_form.cleaned_data["liftosaur_api_key"]:
+        api_key = liftosaur_form.cleaned_data["liftosaur_api_key"]
+        if not validate_liftosaur_key(api_key):
+            logger.warning(
+                "Liftosaur key validation failed for user %s during history recovery",
+                user.id,
+            )
+            return gettext("Could not validate this Liftosaur API key.")
+        liftosaur_form.save(user)
+        sync_user_lifts(user)
+        logger.info(
+            "User %s connected a Liftosaur key during history recovery for goal-setup",
+            user.id,
+        )
         return None
 
-    submitted = request.POST.get("liftosaur_api_key", "").strip()
-    if not submitted:
-        return ""
-
-    if not validate_liftosaur_key(submitted):
-        logger.warning(
-            "Liftosaur key validation failed for user %s during goal-setup", user.id
+    hevy_form = HevyKeyForm(request.POST)
+    if hevy_form.is_valid() and hevy_form.cleaned_data["hevy_api_key"]:
+        api_key = hevy_form.cleaned_data["hevy_api_key"]
+        if not validate_hevy_key(api_key):
+            logger.warning(
+                "Hevy key validation failed for user %s during history recovery",
+                user.id,
+            )
+            return gettext("Could not validate this Hevy API key.")
+        hevy_form.save(user)
+        sync_hevy_lifts(user)
+        logger.info(
+            "User %s connected a Hevy key during history recovery for goal-setup",
+            user.id,
         )
-        return gettext("Could not validate this Liftosaur API key.")
+        return None
 
-    user.liftosaur_api_key = submitted
-    user.save(update_fields=["liftosaur_api_key"])
-    trigger_lift_history_backfill(user)
-    logger.info(
-        "User %s connected a Liftosaur key during goal-setup's history method",
-        user.id,
-    )
-    return None
+    wger_form = WgerCredentialsForm(request.POST)
+    if wger_form.is_valid() and (
+        wger_form.cleaned_data["wger_instance_url"]
+        or wger_form.cleaned_data["wger_api_token"]
+    ):
+        instance_url = wger_form.cleaned_data["wger_instance_url"]
+        api_token = wger_form.cleaned_data["wger_api_token"]
+        if not (instance_url and api_token) or not validate_wger_credentials(
+            instance_url, api_token
+        ):
+            logger.warning(
+                "Wger credential validation failed for user %s during history recovery",
+                user.id,
+            )
+            return gettext("Could not validate this Wger instance URL or API token.")
+        wger_form.save(user)
+        sync_wger_lifts(user)
+        logger.info(
+            "User %s connected Wger during history recovery for goal-setup",
+            user.id,
+        )
+        return None
+
+    if request.FILES.get("csv_file"):
+        csv_form = WorkoutCsvImportForm(request.POST, request.FILES, user=user)
+        if not csv_form.is_valid():
+            return csv_form.errors["csv_file"][0]
+        try:
+            result = import_workout_csv(user, csv_form.cleaned_data["csv_file"])
+        except OperationalError:
+            logger.exception(
+                "History-recovery workout CSV import failed for user %s", user.id
+            )
+            return gettext("Couldn't import right now. Please try again in a moment.")
+        logger.info(
+            "User %s imported %s set(s) from %s during history recovery for goal-setup",
+            user.id,
+            result.pooled_count,
+            result.source,
+        )
+        messages.success(
+            request,
+            gettext("Imported %(count)s set(s) from %(source)s.")
+            % {"count": result.pooled_count, "source": result.source.label},
+        )
+        return None
+
+    return ""
 
 
-def _key_required_response(
-    request, challenge, *, action_url, error=None, cancel_url=None
+def _history_needed_response(
+    request, challenge, *, tracker_connected, action_url, error=None, cancel_url=None
 ):
-    """Render the inline 'connect your Liftosaur key' prompt for the
-    goal-setup wizard's history method -- the only remaining caller now that
-    joining a challenge no longer requires a key.
+    """Render the source-agnostic "let's get some history in here" screen for
+    the goal-setup wizard's history method (issue #88), reached whenever the
+    lifter has no pooled LiftHistory to suggest from yet.
+
+    Replaces the old Liftosaur-only "connect your key" interstitial: offers
+    any of Liftosaur/Hevy/Wger connect, a workout-CSV upload, or bailing out
+    to manual entry. ``tracker_connected`` branches the copy -- a lifter with
+    a live-sync tracker already connected (a fresh Wger instance, a sync
+    that silently failed, an empty lookback window) reads very differently
+    from one who has connected nothing at all.
     """
     context = {
         "challenge": challenge,
+        "tracker_connected": tracker_connected,
         "action_url": action_url,
         "cancel_url": cancel_url or reverse("challenges:dashboard"),
         "error": error,
     }
     template = (
-        "challenges/_key_required.html"
+        "challenges/_history_needed.html"
         if is_htmx(request)
-        else "challenges/key_required.html"
+        else "challenges/history_needed.html"
     )
     return render(request, template, context)
 
@@ -1159,49 +1250,56 @@ def goal_setup_view(request, pk):
 
     # The history method needs the lifter's own pooled lift history to
     # suggest anything. Joining a challenge no longer requires a tracker
-    # connection at all, so picking "history" with neither a connected
-    # tracker (Liftosaur, Hevy, or Wger -- see User.has_connected_tracker)
-    # nor any pooled LiftHistory (from a live sync, a Hevy CSV import, or
-    # manual self-report -- any source counts, per LiftHistory.source) would
-    # otherwise silently produce an all-blank chart with no explanation.
-    # Gated on data (not the method-step's own form) so it applies once past
-    # "method" regardless of how it was reached, and never blocks the
-    # method-selection step itself. The remaining prompt below is still
-    # Liftosaur-specific by design: it's the only remaining case where the
-    # user genuinely has no tracker connected at all, and Liftosaur is the
-    # one live-sync option this wizard can complete inline without leaving
-    # the page.
+    # connection at all, and even a connected tracker (Liftosaur, Hevy, or
+    # Wger -- see User.has_connected_tracker) can have zero pooled
+    # LiftHistory: a fresh Wger instance, a sync that silently failed, or a
+    # lookback window with nothing recent in it. Both cases would otherwise
+    # silently produce an all-blank chart with no explanation, so both are
+    # caught here -- with different copy on the recovery screen itself (see
+    # _history_needed_response). Gated on data (not the method-step's own
+    # form) so it applies once past "method" regardless of how it was
+    # reached, and never blocks the method-selection step itself.
     if (
         step != "method"
         and data.get("method") == CustomGoal.SourceMethod.HISTORY
-        and not request.user.has_connected_tracker
         and not LiftHistory.objects.filter(user=request.user).exists()
     ):
-        key_error = _ensure_liftosaur_key(request)
-        if key_error is not None:
-            return _key_required_response(
+        if request.method == "POST" and request.POST.get("build_manually"):
+            # Bail out of history suggestions into manual entry instead.
+            # CUSTOM has no "inputs" step (_goal_setup_steps), so the
+            # session's current index now maps straight to "chart" --
+            # no index change needed, only the method itself.
+            data = {**data, "method": CustomGoal.SourceMethod.CUSTOM}
+            all_data[pk_key] = data
+            request.session[_GOAL_DATA_SESSION_KEY] = all_data
+            logger.info(
+                "User %s opted out of history suggestions into manual "
+                "entry for challenge %s",
+                request.user.id,
+                challenge.pk,
+            )
+            return redirect(reverse("challenges:goal-setup", args=[pk]))
+
+        recovery_error = _ensure_history_source(request)
+        if recovery_error is not None:
+            return _history_needed_response(
                 request,
                 challenge,
-                error=key_error or None,
+                tracker_connected=request.user.has_connected_tracker,
+                error=recovery_error or None,
                 action_url=reverse("challenges:goal-setup", args=[pk]),
                 cancel_url=reverse("challenges:goal-setup", args=[pk]) + "?cancel=1",
             )
-        # key_error is None here means a key was just submitted and validated
-        # in this exact POST -- the guard above already ruled out the user
-        # having one walking in. _ensure_liftosaur_key already kicked off an
-        # async backfill thread; do NOT also call sync_and_score here -- it
-        # would pull and pool the same LiftHistory rows the thread is already
-        # pooling, which is redundant work and a second concurrent writer for
-        # no gain. (This comment used to blame an explicit select_for_update
-        # on LiftHistory "which SQLite cannot arbitrate". There is no such
-        # call in the sync path, and SQLite never emits FOR UPDATE at all --
-        # the real contention was one auto-committed write per parsed set,
-        # which TASK-274 replaced with one batched upsert per API page.) The
-        # suggestion step may briefly see partial or no history if the thread
-        # hasn't finished yet; that's an accepted tradeoff. Redirect to a
-        # fresh GET so the actual step renders normally instead of trying to
-        # parse this POST (which only carries liftosaur_api_key) as that
-        # step's own form.
+        # recovery_error is None here means a credential was just
+        # connected (with its initial pull already run synchronously
+        # inside _ensure_history_source -- see that function's docstring
+        # for why it must not be the usual fire-and-forget backfill
+        # thread) or a CSV import landed rows. Redirect to a fresh GET so
+        # the actual step renders normally instead of trying to parse
+        # this POST as that step's own form. If the pull actually pooled
+        # nothing (an empty tracker), the guard above fires again on that
+        # GET -- now with tracker_connected=True, so the recovery screen
+        # explains the tracker is connected but empty, not disconnected.
         return redirect(reverse("challenges:goal-setup", args=[pk]))
 
     posted_step = request.POST.get("wizard_step")
@@ -1546,7 +1644,7 @@ def _goal_setup_chart_step(request, challenge, participant, data, *, step_contex
         unavailable_lifts = set(needs_decision)
         assisted_only_lifts = set(assisted_only_lifts)
         source_note = gettext(
-            "Prefilled from your recent Liftosaur history, uplifted {percent}%. "
+            "Prefilled from your recent lift history, uplifted {percent}%. "
             "Review every row before confirming — this chart is locked once "
             "you save it."
         ).format(percent=f"{float(uplift * 100):g}")

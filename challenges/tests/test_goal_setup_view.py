@@ -13,6 +13,7 @@ from decimal import Decimal
 from unittest.mock import patch
 
 import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import OperationalError
 from django.test import Client
 from django.urls import reverse
@@ -26,9 +27,15 @@ from challenges.tests.factories import (
     make_custom_challenge,
 )
 from fitnessvolt.tests.factories import FitnessVoltStandardCacheFactory
-from liftosaur.models import LiftSource
+from liftosaur.models import LiftHistory, LiftSource
 from liftosaur.tests.factories import LiftHistoryFactory
 from scoring.models import PointEarnEvent
+
+_HEVY_CSV_HEADER = (
+    "title,start_time,end_time,description,exercise_title,superset_id,"
+    "exercise_notes,set_index,set_type,weight_lbs,reps,distance_km,"
+    "duration_seconds,rpe\n"
+)
 
 
 @pytest.fixture(autouse=True)
@@ -231,19 +238,27 @@ class TestWizardShellCentering:
     ):
         user.liftosaur_api_key = "existing-key"
         user.save(update_fields=["liftosaur_api_key"])
+        LiftHistoryFactory(
+            user=user,
+            lift="Back Squat",
+            performed_at=timezone.now().date(),
+            reps=1,
+            weight_kg=Decimal("100.00"),
+        )
         authed_client.post(_url(challenge), {"method": "history"})
         resp = authed_client.get(_url(challenge))
         assert b'id="id_uplift_percent"' in resp.content
         assert b"data-wizard-shell" in resp.content
 
-    def test_key_required_interstitial_renders_the_centered_shell(
+    def test_history_needed_interstitial_renders_the_centered_shell(
         self, authed_client, participant, challenge
     ):
-        """Reached mid-flow when the history method needs a Liftosaur key --
-        it centers too, so the wizard doesn't visibly jump."""
+        """Reached mid-flow when the history method has no pooled history to
+        suggest from yet -- it centers too, so the wizard doesn't visibly
+        jump."""
         authed_client.post(_url(challenge), {"method": "history"})
         resp = authed_client.get(_url(challenge))
-        assert "challenges/key_required.html" in [t.name for t in resp.templates]
+        assert "challenges/history_needed.html" in [t.name for t in resp.templates]
         assert b"data-wizard-shell" in resp.content
 
 
@@ -506,14 +521,26 @@ class TestJsonMethodFullFlow:
 
 
 class TestHistoryMethodFlow:
-    """These tests assume the user already has a connected Liftosaur key --
-    the gate that gets one when they don't is covered separately in
-    TestHistoryMethodRequiresLiftosaurKey."""
+    """These tests assume the user already has a connected Liftosaur key AND
+    some pooled history to suggest from -- the recovery screen that appears
+    with neither, or a key but no pooled history, is covered separately in
+    TestHistoryMethodRequiresLiftosaurKey and
+    TestHistoryMethodRecognizesOtherConnectedTrackers."""
 
     @pytest.fixture(autouse=True)
     def _has_liftosaur_key(self, user):
         user.liftosaur_api_key = "existing-key"
         user.save(update_fields=["liftosaur_api_key"])
+        # A baseline row unrelated to any of this class's challenge lifts
+        # (Back Squat, Chin-up) so the history-needed guard is satisfied
+        # without perturbing any test's own per-lift suggestion assertions.
+        LiftHistoryFactory(
+            user=user,
+            lift="Deadlift",
+            performed_at=timezone.now().date(),
+            reps=1,
+            weight_kg=Decimal("100.00"),
+        )
 
     def test_no_bodyweight_added_lift_still_shows_inputs_step_for_rounding(
         self, authed_client, participant, challenge
@@ -582,6 +609,13 @@ class TestHistoryMethodFlow:
 
     def test_bodyweight_added_lift_also_shows_bodyweight_field(self, db):
         user = UserFactory(liftosaur_api_key="existing-key")
+        LiftHistoryFactory(
+            user=user,
+            lift="Chin-up",
+            performed_at=timezone.now().date(),
+            reps=1,
+            weight_kg=Decimal("0.00"),
+        )
         challenge = make_custom_challenge(
             lifts=["Chin-up"], creator=user, status=Challenge.Status.DRAFT
         )
@@ -721,23 +755,23 @@ class TestHistoryMethodFlow:
         assert "confirm(" in resp.content.decode()
 
 
-class TestHistoryMethodRequiresLiftosaurKey:
-    """Joining a challenge never requires a Liftosaur key, and a challenge's
-    creator never goes through a key gate at all (they're auto-added as a
-    participant at creation) -- so without a gate here, picking "history"
-    with neither a key nor any pooled history would silently produce an
-    all-blank chart with no explanation why.
+class TestHistoryMethodNeedsHistory:
+    """Joining a challenge never requires a tracker connection, and a
+    challenge's creator never goes through any gate at all (they're
+    auto-added as a participant at creation) -- so without this recovery
+    screen, picking "history" with nothing pooled yet would silently
+    produce an all-blank chart with no explanation why (issue #88).
     """
 
-    def test_prompts_for_key_instead_of_inputs_or_chart(
+    def test_prompts_for_history_instead_of_inputs_or_chart(
         self, authed_client, participant, challenge
     ):
         url = _url(challenge)
         authed_client.post(url, {"method": "history"})
         resp = authed_client.get(url)
         assert resp.status_code == 200
-        content = resp.content.decode()
-        assert "liftosaur_api_key" in content
+        assert "challenges/history_needed.html" in [t.name for t in resp.templates]
+        assert resp.context["tracker_connected"] is False
         assert not any(
             t.name == "challenges/custom_goal_setup.html" for t in resp.templates
         )
@@ -747,7 +781,7 @@ class TestHistoryMethodRequiresLiftosaurKey:
     ):
         resp = authed_client.get(_url(challenge))
         assert resp.status_code == 200
-        assert "liftosaur_api_key" not in resp.content.decode()
+        assert "challenges/history_needed.html" not in [t.name for t in resp.templates]
 
     def test_other_methods_are_never_gated(self, authed_client, participant, challenge):
         resp = authed_client.post(_url(challenge), {"method": "custom"})
@@ -757,8 +791,22 @@ class TestHistoryMethodRequiresLiftosaurKey:
             t.name == "challenges/custom_goal_setup.html" for t in chart.templates
         )
 
+    def test_build_manually_switches_to_the_custom_method(
+        self, authed_client, participant, challenge
+    ):
+        """The recovery screen's escape hatch: bail out of history
+        suggestions into manual entry instead of connecting anything."""
+        url = _url(challenge)
+        authed_client.post(url, {"method": "history"})
+        resp = authed_client.post(url, {"build_manually": "1"})
+        assert resp.status_code == 302
+        chart = authed_client.get(url)
+        assert any(
+            t.name == "challenges/custom_goal_setup.html" for t in chart.templates
+        )
+
     @patch("challenges.views.validate_liftosaur_key", return_value=False)
-    def test_invalid_key_redisplays_prompt_with_error(
+    def test_invalid_liftosaur_key_redisplays_prompt_with_error(
         self, mock_validate, authed_client, participant, challenge, user
     ):
         url = _url(challenge)
@@ -769,52 +817,106 @@ class TestHistoryMethodRequiresLiftosaurKey:
         user.refresh_from_db()
         assert user.liftosaur_api_key is None
 
-    @patch("challenges.views.trigger_lift_history_backfill")
     @patch("challenges.views.validate_liftosaur_key", return_value=True)
-    def test_valid_key_saves_and_proceeds(
-        self,
-        mock_validate,
-        mock_backfill,
-        authed_client,
-        participant,
-        challenge,
-        user,
+    def test_valid_liftosaur_key_runs_the_initial_pull_synchronously_before_advancing(
+        self, mock_validate, authed_client, participant, challenge, user
     ):
+        """The tracker-connect path must not race an async backfill thread
+        the way every other "connect a key" entry point in the app does: a
+        goal chart LOCKS PERMANENTLY once saved, so advancing into the
+        suggestion step before the initial pull actually lands risks a
+        silently-wrong, uncorrectable chart. Proven behaviourally: fake
+        sync_user_lifts (the same synchronous primitive the view must call
+        inline) to pool a row as a side effect, then confirm the very next
+        GET already sees it. If this path instead fired a background
+        thread, sync_user_lifts would not have run by the time this test's
+        assertions execute and the recovery screen would still be showing.
+        """
+
+        def _fake_sync(pulled_user):
+            LiftHistoryFactory(
+                user=pulled_user,
+                lift="Back Squat",
+                performed_at=timezone.now().date(),
+                reps=1,
+                weight_kg=Decimal("100.00"),
+            )
+
         url = _url(challenge)
         authed_client.post(url, {"method": "history"})
-        # Must NOT also call sync_and_score here: it would pull and pool the
-        # same LiftHistory rows trigger_lift_history_backfill's own async
-        # thread is already pooling -- redundant work, plus a second
-        # concurrent writer that produced a real "database is locked" 500 in
-        # UAT. (No explicit select_for_update was ever involved, despite what
-        # this comment used to claim; the contention was one auto-committed
-        # write per parsed set, batched away in TASK-274.)
-        with patch("challenges.views.sync_and_score") as mock_sync:
+        with patch(
+            "challenges.views.sync_user_lifts", side_effect=_fake_sync
+        ) as mock_sync:
             resp = authed_client.post(url, {"liftosaur_api_key": "brand-new-key"})
-        mock_sync.assert_not_called()
+        mock_sync.assert_called_once_with(user)
         assert resp.status_code == 302
         mock_validate.assert_called_once_with("brand-new-key")
         user.refresh_from_db()
         assert user.liftosaur_api_key == "brand-new-key"
-        mock_backfill.assert_called_once_with(user)
 
-        # Inputs (rounding choice) always runs for history now, then chart.
+        # Inputs (rounding choice) always runs for history now, then chart --
+        # not the recovery screen again, since the pull already landed.
         inputs = authed_client.get(url)
         assert b'id="id_rounding_increment"' in inputs.content
+        assert "challenges/history_needed.html" not in [
+            t.name for t in inputs.templates
+        ]
         authed_client.post(url, {"rounding_increment": "kg:2.5"})
         chart = authed_client.get(url)
         assert any(
             t.name == "challenges/custom_goal_setup.html" for t in chart.templates
         )
 
+    @patch("challenges.views.validate_liftosaur_key", return_value=True)
+    def test_connected_but_empty_pull_shows_connected_messaging(
+        self, mock_validate, authed_client, participant, challenge, user
+    ):
+        """A key that validates but pools nothing (an empty Liftosaur
+        account) must land back on the recovery screen, not a blank chart --
+        now with the "connected but empty" copy, since the credential
+        really did just get connected."""
+        url = _url(challenge)
+        authed_client.post(url, {"method": "history"})
+        with patch("challenges.views.sync_user_lifts"):
+            resp = authed_client.post(url, {"liftosaur_api_key": "brand-new-key"})
+        assert resp.status_code == 302
+        still_needed = authed_client.get(url)
+        assert "challenges/history_needed.html" in [
+            t.name for t in still_needed.templates
+        ]
+        assert still_needed.context["tracker_connected"] is True
+
+    def test_csv_upload_lands_rows_and_advances(
+        self, authed_client, participant, challenge, user
+    ):
+        rows = 'Leg day,"01 Jan 2024, 09:15",,,Squat (Barbell),,,1,normal,225,5,,,\n'
+        csv_upload = SimpleUploadedFile(
+            "export.csv",
+            (_HEVY_CSV_HEADER + rows).encode("utf-8"),
+            content_type="text/csv",
+        )
+        url = _url(challenge)
+        authed_client.post(url, {"method": "history"})
+        resp = authed_client.post(url, {"csv_file": csv_upload})
+        assert resp.status_code == 302
+        assert LiftHistory.objects.filter(
+            user=user, source=LiftSource.HEVY_CSV
+        ).exists()
+
+        inputs = authed_client.get(url)
+        assert "challenges/history_needed.html" not in [
+            t.name for t in inputs.templates
+        ]
+        assert b'id="id_rounding_increment"' in inputs.content
+
 
 class TestHistoryMethodRecognizesNonLiftosaurHistory:
     """A lifter with pooled history from a Hevy CSV import or manual
     self-report (LiftSource.HEVY_CSV / LiftSource.MANUAL) has real data to
-    suggest from even with no Liftosaur key connected -- the key-required
-    gate should only fire when there is genuinely nothing pooled yet."""
+    suggest from even with no Liftosaur key connected -- the recovery
+    screen should only appear when there is genuinely nothing pooled yet."""
 
-    def test_pooled_hevy_history_skips_the_key_prompt(
+    def test_pooled_hevy_history_skips_the_recovery_screen(
         self, authed_client, participant, challenge, user
     ):
         LiftHistoryFactory(
@@ -830,9 +932,9 @@ class TestHistoryMethodRecognizesNonLiftosaurHistory:
         resp = authed_client.get(url)
         assert resp.status_code == 200
         assert b'id="id_rounding_increment"' in resp.content
-        assert "liftosaur_api_key" not in resp.content.decode()
+        assert "challenges/history_needed.html" not in [t.name for t in resp.templates]
 
-    def test_pooled_manual_history_skips_the_key_prompt(
+    def test_pooled_manual_history_skips_the_recovery_screen(
         self, authed_client, participant, challenge, user
     ):
         LiftHistoryFactory(
@@ -848,24 +950,26 @@ class TestHistoryMethodRecognizesNonLiftosaurHistory:
         resp = authed_client.get(url)
         assert resp.status_code == 200
         assert b'id="id_rounding_increment"' in resp.content
-        assert "liftosaur_api_key" not in resp.content.decode()
+        assert "challenges/history_needed.html" not in [t.name for t in resp.templates]
 
-    def test_no_key_and_no_history_still_prompts(
+    def test_no_history_at_all_still_prompts(
         self, authed_client, participant, challenge
     ):
         url = _url(challenge)
         authed_client.post(url, {"method": "history"})
         resp = authed_client.get(url)
         assert resp.status_code == 200
-        assert "liftosaur_api_key" in resp.content.decode()
+        assert "challenges/history_needed.html" in [t.name for t in resp.templates]
 
 
-class TestHistoryMethodRecognizesOtherConnectedTrackers:
-    """A user connected to Hevy or Wger (but with no first sync landed yet,
-    so no LiftHistory pooled) must not be shown the Liftosaur-specific
-    prompt -- they already have a tracker, just not this one."""
+class TestHistoryMethodConnectedTrackerNoHistory:
+    """A user with a tracker already connected (Hevy or Wger) but zero
+    pooled LiftHistory -- a fresh instance, a sync that silently failed, an
+    empty lookback window -- still needs the recovery screen, but with the
+    "your tracker is connected, we just found nothing" copy, not the
+    "you haven't connected anything" one (issue #88)."""
 
-    def test_hevy_key_skips_the_key_prompt(
+    def test_hevy_connected_no_history_shows_connected_messaging(
         self, authed_client, participant, challenge, user
     ):
         user.hevy_api_key = "hevy-key"
@@ -874,9 +978,10 @@ class TestHistoryMethodRecognizesOtherConnectedTrackers:
         authed_client.post(url, {"method": "history"})
         resp = authed_client.get(url)
         assert resp.status_code == 200
-        assert "liftosaur_api_key" not in resp.content.decode()
+        assert "challenges/history_needed.html" in [t.name for t in resp.templates]
+        assert resp.context["tracker_connected"] is True
 
-    def test_full_wger_credentials_skip_the_key_prompt(
+    def test_full_wger_credentials_no_history_shows_connected_messaging(
         self, authed_client, participant, challenge, user
     ):
         user.wger_instance_url = "https://example.com"
@@ -886,20 +991,22 @@ class TestHistoryMethodRecognizesOtherConnectedTrackers:
         authed_client.post(url, {"method": "history"})
         resp = authed_client.get(url)
         assert resp.status_code == 200
-        assert "liftosaur_api_key" not in resp.content.decode()
+        assert "challenges/history_needed.html" in [t.name for t in resp.templates]
+        assert resp.context["tracker_connected"] is True
 
-    def test_partial_wger_credentials_still_prompt(
+    def test_partial_wger_credentials_shows_disconnected_messaging(
         self, authed_client, participant, challenge, user
     ):
         """Only one of the two Wger fields set can't authenticate, so it
-        must not satisfy the gate."""
+        must not count as a connected tracker."""
         user.wger_instance_url = "https://example.com"
         user.save(update_fields=["wger_instance_url"])
         url = _url(challenge)
         authed_client.post(url, {"method": "history"})
         resp = authed_client.get(url)
         assert resp.status_code == 200
-        assert "liftosaur_api_key" in resp.content.decode()
+        assert "challenges/history_needed.html" in [t.name for t in resp.templates]
+        assert resp.context["tracker_connected"] is False
 
 
 class TestStandardsMethodFlow:
