@@ -29,6 +29,11 @@ wger-project/wger source for background):
 - Exercise names: ``GET /api/v2/exerciseinfo/<id>/`` returns all
   ``translations`` for that exercise (no server-side language filter); the
   human-readable name lives at ``translations[i].name``.
+- Body weight: ``GET /api/v2/weightentry/`` (``WeightEntryViewSet``) lists the
+  requesting user's weigh-ins as ``{id, date, weight, user}``, where ``weight``
+  is a decimal string with NO unit attached. The unit is a per-user setting
+  read from ``GET /api/v2/userprofile/`` (``weight_unit``, "kg" or "lb"), which
+  is why reading a body weight takes two calls rather than one.
 - Weight/repetition units: ``GET /api/v2/setting-weightunit/`` and
   ``GET /api/v2/setting-repetitionunit/`` are small reference tables (a
   handful of rows, effectively unpaginated in practice) that resolve the
@@ -46,8 +51,11 @@ from wger_api_client import AuthenticatedClient
 from wger_api_client.api.exerciseinfo import exerciseinfo_retrieve
 from wger_api_client.api.setting_repetitionunit import setting_repetitionunit_list
 from wger_api_client.api.setting_weightunit import setting_weightunit_list
+from wger_api_client.api.userprofile import userprofile_retrieve
+from wger_api_client.api.weightentry import weightentry_list
 from wger_api_client.api.workoutlog import workoutlog_list
 from wger_api_client.models.repetition_unit import RepetitionUnit
+from wger_api_client.models.weight_entry import WeightEntry
 from wger_api_client.models.workout_log import WorkoutLog
 
 logger = logging.getLogger(__name__)
@@ -164,6 +172,68 @@ class WgerClient:
                 return translation.name
 
         return translations[0].name
+
+    def get_body_weight_unit(self) -> str:
+        """Return the unit ("kg"/"lb") this instance records body weight in.
+
+        Body-weight entries carry a bare ``weight`` string with no unit on
+        them, unlike workout logs (which reference a numeric
+        ``setting-weightunit`` row). The unit lives once on the user's
+        profile, so it has to be read separately -- and read rather than
+        assumed, since a lifter on an lb profile whose entries are silently
+        treated as kg lands roughly 2.2x off.
+
+        Defaults to kg (Wger's own default) when the profile can't be read or
+        doesn't declare a unit.
+        """
+        logger.info("Wger API GET /api/v2/userprofile/")
+        response = userprofile_retrieve.sync_detailed(client=self._client)
+
+        if response.status_code != 200:
+            logger.warning(
+                "Wger API returned %s for GET /api/v2/userprofile/; assuming kg",
+                response.status_code,
+            )
+            return "kg"
+
+        unit = response.parsed.weight_unit
+        return unit if unit in ("kg", "lb") else "kg"
+
+    def get_latest_body_weight_entry(self) -> WeightEntry | None:
+        """Fetch the lifter's most recent body-weight entry, or None if none.
+
+        ``GET /api/v2/weightentry/`` (``WeightEntryViewSet``), scoped to the
+        requesting user server-side like every other endpoint here. Verified
+        against Wger's published OpenAPI schema as generated into
+        ``wger_api_client``: the list endpoint supports DRF ``ordering`` plus
+        the usual ``limit``/``offset`` pagination, and each row is
+        ``{id, date, weight, user}`` where ``weight`` is a decimal STRING and
+        carries no unit of its own (see :meth:`get_body_weight_unit`).
+
+        ``ordering="-date"`` with ``limit=1`` pushes "which one is newest" to
+        the server, so this is a single request regardless of how many years
+        of weigh-ins the account holds.
+
+        Raises:
+            WgerAPIError: on non-2xx responses.
+            httpx.HTTPError: on network failures.
+        """
+        logger.info("Wger API GET /api/v2/weightentry/")
+        response = weightentry_list.sync_detailed(
+            client=self._client, limit=1, ordering="-date"
+        )
+
+        if response.status_code != 200:
+            logger.warning(
+                "Wger API returned %s for GET /api/v2/weightentry/",
+                response.status_code,
+            )
+            raise WgerAPIError(
+                response.status_code, response.content.decode(errors="replace")
+            )
+
+        results = response.parsed.results
+        return results[0] if results else None
 
     def get_weight_units(self) -> dict[int, str]:
         """Return ``{id: name}`` for every weight unit Wger's instance defines.
