@@ -58,6 +58,7 @@ from django.db.models import Max
 from django.utils import timezone
 
 from accounts.timezones import local_day, user_zoneinfo
+from core.bodyweight import TrackerBodyweight
 from core.lift_resolution import LiftNameResolver, build_lift_alias_maps
 from core.models import LiftAliasSource
 from hevy_api.client import HevyAPIError, HevyClient
@@ -186,6 +187,77 @@ def validate_hevy_key(api_key: str) -> bool:
     HEVY_KEY_VALID as a failure, unlike the Settings save path.
     """
     return validate_hevy_key_status(api_key) == HEVY_KEY_VALID
+
+
+def _parse_body_measurement(entry) -> TrackerBodyweight | None:
+    """Turn one ``BodyMeasurement`` row into a reading, or None if unusable.
+
+    ``weight_kg`` is nullable in Hevy's schema -- a lifter who logs only
+    waist/chest measurements has rows with every metric but weight set to
+    null -- so a row without one is skipped rather than treated as zero.
+    ``date`` is a bare ``YYYY-MM-DD`` with no time or zone; it is read as
+    midnight UTC so readings stay orderable against Liftosaur's real
+    timestamps.
+    """
+    if not isinstance(entry, dict):
+        return None
+    raw_weight = entry.get("weight_kg")
+    raw_date = entry.get("date")
+    if raw_weight is None or not isinstance(raw_date, str):
+        return None
+    try:
+        weight = Decimal(str(raw_weight)).quantize(Decimal("0.01"))
+        measured_on = date.fromisoformat(raw_date[:10])
+    except (ArithmeticError, ValueError):
+        return None
+    return TrackerBodyweight(
+        weight_kg=weight,
+        measured_at=datetime.combine(measured_on, datetime.min.time(), tzinfo=UTC),
+    )
+
+
+def fetch_latest_bodyweight(api_key: str) -> TrackerBodyweight | None:
+    """Read the lifter's most recent Hevy bodyweight measurement.
+
+    Hevy's spec documents no ordering for ``/v1/body_measurements`` (unlike
+    the workout-events endpoint, whose summary states its ordering outright),
+    so neither "page 1 is newest" nor "the last page is newest" can be
+    assumed. Both ends of the pagination are fetched and the newest reading
+    across them wins: that is correct for either ordering at a cost of at
+    most two requests, where walking every page of a lifter's full weigh-in
+    history to be certain would cost one request per ten rows for a number
+    that is only ever a goal-setup prefill.
+
+    Returns ``None`` -- never raises -- when the key is bad, the network is
+    down, or the account has no weight measurements on file.
+    """
+    client = HevyClient(api_key)
+    try:
+        first = client.get_body_measurements(page=1)
+        pages = [first]
+        page_count = first.get("page_count") or 1
+        if isinstance(page_count, int) and page_count > 1:
+            pages.append(client.get_body_measurements(page=page_count))
+    except HevyAPIError as exc:
+        logger.warning("Hevy bodyweight fetch rejected by API: %s", exc)
+        return None
+    except (urllib.error.URLError, OSError) as exc:
+        logger.warning("Hevy bodyweight fetch failed on network error: %s", exc)
+        return None
+    except Exception:
+        logger.exception("Hevy bodyweight fetch failed unexpectedly")
+        return None
+
+    readings = [
+        reading
+        for page in pages
+        for reading in map(_parse_body_measurement, page.get("body_measurements") or [])
+        if reading is not None
+    ]
+    if not readings:
+        logger.info("Hevy returned no usable bodyweight measurement")
+        return None
+    return max(readings, key=lambda reading: reading.measured_at)
 
 
 @dataclass(frozen=True)

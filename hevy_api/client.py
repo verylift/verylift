@@ -87,6 +87,42 @@ class HevyClient:
             "GET", "/v1/workouts", {"page": page, "pageSize": page_size}
         )
 
+    def get_body_measurements(
+        self, page: int = 1, page_size: int = MAX_PAGE_SIZE
+    ) -> dict:
+        """Fetch one page of the user's body measurements.
+
+        Hevy DOES expose bodyweight, contrary to the assumption this app
+        carried while only workouts were wired up: ``GET
+        /v1/body_measurements`` is present in Hevy's live OpenAPI spec at
+        https://api.hevyapp.com/docs/ (operationId ``getV1BodyMeasurements``,
+        tag "Measurements", summary "Get a paginated list of body
+        measurements for the authenticated user"), alongside a
+        ``/v1/body_measurements/{date}`` detail route. Each row is a
+        ``BodyMeasurement``: ``date`` (``YYYY-MM-DD``, the only required
+        field) plus a set of nullable metrics of which ``weight_kg`` is the
+        one this app has any use for. Note the unit is fixed in the field
+        name -- Hevy normalises to kg on the wire regardless of the display
+        unit the lifter uses in the app.
+
+        The spec documents ``page``/``pageSize`` (max 10, same cap as
+        workouts) and a ``{"page", "page_count", "body_measurements"}``
+        envelope, but -- unlike ``/v1/workouts/events``, whose summary states
+        its ordering outright -- says nothing about what order rows come back
+        in. Callers must therefore not assume page 1 holds the newest
+        reading; see ``hevy_api.services.fetch_latest_bodyweight``.
+
+        Returns the raw ``{"page", "page_count", "body_measurements"}``
+        payload.
+
+        Raises:
+            HevyAPIError: on non-2xx responses.
+            urllib.error.URLError: on network failures.
+        """
+        return self._request(
+            "GET", "/v1/body_measurements", {"page": page, "pageSize": page_size}
+        )
+
     def get_workout_events(
         self, since: str, page: int = 1, page_size: int = MAX_PAGE_SIZE
     ) -> dict:

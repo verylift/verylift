@@ -7,6 +7,7 @@ to prove request construction (auth header, query params) end-to-end, since
 that's exactly the kind of thing hand-mocking sync_detailed would paper over.
 """
 
+import datetime
 from http import HTTPStatus
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -15,6 +16,7 @@ import httpx
 import pytest
 from wger_api_client.models.repetition_unit import RepetitionUnit
 from wger_api_client.models.routine_weight_unit import RoutineWeightUnit
+from wger_api_client.models.weight_entry import WeightEntry
 from wger_api_client.models.workout_log import WorkoutLog
 from wger_api_client.types import UNSET
 
@@ -242,3 +244,68 @@ class TestGetRepetitionUnits:
         ):
             self._client().get_repetition_units()
         assert exc_info.value.status_code == 403
+
+
+class TestGetBodyWeight:
+    def _client(self):
+        return WgerClient("https://example.com", "test-token")
+
+    def test_latest_entry_query_asks_the_server_for_the_newest_one(self):
+        entry = WeightEntry(
+            id=7,
+            date=datetime.datetime(2026, 8, 1, tzinfo=datetime.UTC),
+            weight="82.5",
+            user=1,
+        )
+        with patch(
+            "wger.client.weightentry_list.sync_detailed",
+            return_value=_response(200, SimpleNamespace(results=[entry])),
+        ) as mock_list:
+            assert self._client().get_latest_body_weight_entry() is entry
+
+        # Newest-first with a page size of one: the "which is latest" decision
+        # is the server's, so this stays a single request whatever the size of
+        # the lifter's weigh-in history.
+        kwargs = mock_list.call_args.kwargs
+        assert kwargs["ordering"] == "-date"
+        assert kwargs["limit"] == 1
+
+    def test_no_entries_returns_none(self):
+        with patch(
+            "wger.client.weightentry_list.sync_detailed",
+            return_value=_response(200, SimpleNamespace(results=[])),
+        ):
+            assert self._client().get_latest_body_weight_entry() is None
+
+    def test_non_200_raises(self):
+        with (
+            patch(
+                "wger.client.weightentry_list.sync_detailed",
+                return_value=_response(403, None, b"Forbidden"),
+            ),
+            pytest.raises(WgerAPIError) as excinfo,
+        ):
+            self._client().get_latest_body_weight_entry()
+        assert excinfo.value.status_code == 403
+
+    @pytest.mark.parametrize(
+        ("profile_unit", "expected"),
+        [("lb", "lb"), ("kg", "kg"), (UNSET, "kg"), ("stone", "kg")],
+    )
+    def test_unit_read_from_profile_defaulting_to_kg(self, profile_unit, expected):
+        # A body-weight entry carries no unit of its own, so misreading the
+        # profile is a silent 2.2x error, not a visible failure -- an
+        # unrecognised or absent value has to land on Wger's own default.
+        parsed = SimpleNamespace(weight_unit=profile_unit)
+        with patch(
+            "wger.client.userprofile_retrieve.sync_detailed",
+            return_value=_response(200, parsed),
+        ):
+            assert self._client().get_body_weight_unit() == expected
+
+    def test_unreadable_profile_degrades_to_kg(self):
+        with patch(
+            "wger.client.userprofile_retrieve.sync_detailed",
+            return_value=_response(404, None, b"Not found"),
+        ):
+            assert self._client().get_body_weight_unit() == "kg"

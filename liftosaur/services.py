@@ -15,6 +15,7 @@ from django.db import OperationalError, transaction
 from django.db.models import Max
 from django.utils import timezone
 
+from core.bodyweight import TrackerBodyweight
 from core.lift_resolution import (
     LiftNameResolver,
     build_lift_alias_maps,
@@ -89,11 +90,12 @@ def liftosaur_builtin_lift_names() -> frozenset[str]:
 def validate_liftosaur_key(api_key: str) -> bool:
     """Validate a Liftosaur API key by calling the measurements/weight endpoint.
 
-    This is purely a key-validation probe (it happens to hit the
-    weight-measurements endpoint, but nothing about bodyweight survives past
-    this call — TASK-248 removed bodyweight from the product entirely). Keep
-    the call: it is what confirms the key actually works against the live API
-    before an account is created or a key is saved.
+    A key-validation probe only: it confirms the key actually works against
+    the live API before an account is created or a key is saved, and
+    deliberately discards the response body. Reading a bodyweight out of that
+    same endpoint is :func:`fetch_latest_bodyweight` -- a separate call with
+    its own failure handling, so a tracker with no weight measurements on
+    file still validates as a perfectly good key.
     """
     client = LiftosaurClient(api_key)
     try:
@@ -168,6 +170,85 @@ def _parse_date(raw: str) -> datetime | None:
             parsed = parsed.replace(tzinfo=UTC)
         return parsed
     return None
+
+
+_MEASUREMENT_TIMESTAMP_KEYS = ("timestamp", "date", "createdAt", "created_at", "id")
+
+
+def _parse_measurement_timestamp(raw) -> datetime | None:
+    """Parse a weight measurement's timestamp, string or epoch-milliseconds.
+
+    Liftosaur stamps measurements with ISO-8601-with-millis strings
+    ("2025-12-05T05:19:08.000Z"), but its record ``id`` is itself an
+    epoch-milliseconds integer and is the only timestamp-shaped field on some
+    payloads -- so both encodings are accepted rather than assuming one.
+    """
+    if isinstance(raw, bool):
+        return None
+    if isinstance(raw, int | float):
+        try:
+            return datetime.fromtimestamp(raw / 1000, tz=UTC)
+        except (OverflowError, OSError, ValueError):
+            return None
+    if isinstance(raw, str):
+        return _parse_date(raw)
+    return None
+
+
+def fetch_latest_bodyweight(api_key: str) -> TrackerBodyweight | None:
+    """Read the lifter's most recent Liftosaur bodyweight measurement.
+
+    Only the first page is fetched. The endpoint's own pagination walks
+    backwards through history, and this needs exactly one number -- the
+    newest -- so pulling further pages could only ever surface older
+    readings. The newest entry on that page is picked explicitly (by parsed
+    timestamp) instead of trusting position, since the API documents no
+    ordering guarantee for this endpoint; an entry whose value or timestamp
+    won't parse is skipped rather than failing the whole read.
+
+    Returns ``None`` -- never raises -- when the key is bad, the network is
+    down, or the account simply has no weight measurements on file. A missing
+    bodyweight must degrade to "we'll ask you for it", not to a broken sync.
+    """
+    client = LiftosaurClient(api_key)
+    try:
+        values, _has_more, _cursor = client.get_weight_measurements()
+    except LiftosaurAPIError as exc:
+        logger.warning("Liftosaur bodyweight fetch rejected by API: %s", exc)
+        return None
+    except (urllib.error.URLError, OSError) as exc:
+        logger.warning("Liftosaur bodyweight fetch failed on network error: %s", exc)
+        return None
+    except Exception:
+        logger.exception("Liftosaur bodyweight fetch failed unexpectedly")
+        return None
+
+    latest: TrackerBodyweight | None = None
+    for entry in values:
+        if not isinstance(entry, dict):
+            continue
+        parsed = _parse_weight_value(entry.get("value") or "")
+        if parsed is None:
+            continue
+        amount, unit = parsed
+        measured_at = None
+        for key in _MEASUREMENT_TIMESTAMP_KEYS:
+            if key in entry:
+                measured_at = _parse_measurement_timestamp(entry[key])
+                if measured_at is not None:
+                    break
+        if measured_at is None:
+            continue
+        weight_kg = amount * LB_TO_KG if unit == "lb" else amount
+        if latest is None or measured_at > latest.measured_at:
+            latest = TrackerBodyweight(
+                weight_kg=weight_kg.quantize(Decimal("0.01")),
+                measured_at=measured_at,
+            )
+
+    if latest is None:
+        logger.info("Liftosaur returned no usable bodyweight measurement")
+    return latest
 
 
 def _parse_reps(token: str) -> int | None:

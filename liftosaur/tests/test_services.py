@@ -20,10 +20,12 @@ from liftosaur.services import (
     POOL_WRITE_RETRY_DELAYS,
     _parse_date,
     _parse_history_record,
+    _parse_measurement_timestamp,
     _parse_weight_value,
     _run_backfill_in_thread,
     _write_history_batch,
     canonical_lift_name,
+    fetch_latest_bodyweight,
     last_synced_at,
     sync_user_lifts,
     trigger_lift_history_backfill,
@@ -43,9 +45,10 @@ def _make_response(status, body):
 
 
 class TestValidateLiftosaurKey:
-    """validate_liftosaur_key is purely a key-validation probe (TASK-248): it
-    happens to hit the weight-measurements endpoint, but returns only a bool
-    now — nothing about the measurement values survives the call."""
+    """validate_liftosaur_key is purely a key-validation probe: it happens to
+    hit the weight-measurements endpoint but returns only a bool, discarding
+    the body. Reading a bodyweight out of the same endpoint is
+    fetch_latest_bodyweight (TASK-343), tested separately below."""
 
     def test_valid_key_returns_true(self):
         body = [{"value": "80kg", "date": "2024-01-01"}]
@@ -1030,3 +1033,76 @@ class TestPoolWriteBatching:
         log = LiftosaurSyncLog.objects.get(user=user)
         assert log.success is False
         assert "boom" in log.error_detail
+
+
+class TestParseMeasurementTimestamp:
+    @pytest.mark.parametrize(
+        ("raw", "expected"),
+        [
+            ("2025-12-05T05:19:08.000Z", datetime(2025, 12, 5, 5, 19, 8, tzinfo=UTC)),
+            # Liftosaur's record id doubles as an epoch-milliseconds stamp, and
+            # on some payloads it is the only timestamp-shaped field present.
+            (1764912000000, datetime(2025, 12, 5, 5, 20, tzinfo=UTC)),
+            ("not a date", None),
+            (True, None),
+            (None, None),
+        ],
+    )
+    def test_accepts_both_encodings_and_rejects_the_rest(self, raw, expected):
+        assert _parse_measurement_timestamp(raw) == expected
+
+
+class TestFetchLatestBodyweight:
+    def _fetch(self, values):
+        client = MagicMock()
+        client.get_weight_measurements.return_value = (values, False, None)
+        with patch("liftosaur.services.LiftosaurClient", return_value=client):
+            return fetch_latest_bodyweight("good-key")
+
+    def test_newest_measurement_wins_over_page_position(self):
+        # The endpoint documents no ordering, so position is not trusted: the
+        # newest parsed timestamp wins even when it arrives last.
+        reading = self._fetch(
+            [
+                {"value": "90kg", "timestamp": "2024-01-05T00:00:00.000Z"},
+                {"value": "82.4kg", "timestamp": "2026-08-20T06:00:00.000Z"},
+            ]
+        )
+        assert reading.weight_kg == Decimal("82.40")
+        assert reading.measured_at == datetime(2026, 8, 20, 6, 0, tzinfo=UTC)
+
+    def test_pounds_are_converted_to_kg(self):
+        reading = self._fetch(
+            [{"value": "180lb", "timestamp": "2026-08-20T00:00:00.000Z"}]
+        )
+        assert reading.weight_kg == (Decimal("180") * LB_TO_KG).quantize(
+            Decimal("0.01")
+        )
+
+    @pytest.mark.parametrize(
+        "values",
+        [
+            [],
+            # Unparsable value, and a value with no timestamp to order by:
+            # both are skipped rather than failing the whole read.
+            [{"value": "heavy", "timestamp": "2026-08-20T00:00:00.000Z"}],
+            [{"value": "80kg"}],
+            ["not-a-dict"],
+        ],
+    )
+    def test_nothing_usable_returns_none(self, values):
+        assert self._fetch(values) is None
+
+    @pytest.mark.parametrize(
+        "error",
+        [
+            LiftosaurAPIError(401, "Unauthorized"),
+            urllib.error.URLError("connection refused"),
+            ValueError("something unexpected"),
+        ],
+    )
+    def test_every_failure_mode_returns_none(self, error):
+        client = MagicMock()
+        client.get_weight_measurements.side_effect = error
+        with patch("liftosaur.services.LiftosaurClient", return_value=client):
+            assert fetch_latest_bodyweight("good-key") is None
