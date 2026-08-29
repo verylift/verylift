@@ -22,7 +22,13 @@
     </div>
     {% endif %}
 
-    <form method="post" action="{{ action_url }}" enctype="multipart/form-data" class="bg-surface-card border border-line-subtle rounded p-6 space-y-6">
+    {% comment %}
+    pt-3 halves only the top padding: this card opens on a small field label
+    rather than the section heading the wizard's other steps start with, so a
+    full p-6 above it reads as a gap instead of breathing room. Sides and
+    bottom stay on p-6 so the card still lines up with its siblings.
+    {% endcomment %}
+    <form method="post" action="{{ action_url }}" enctype="multipart/form-data" class="bg-surface-card border border-line-subtle rounded p-6 pt-3 space-y-6">
       {% csrf_token %}
 
       {% include "challenges/_history_source_fields.html" %}
