@@ -1,0 +1,108 @@
+{% extends "base/wizard.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Add Your History" %} — very lift{% endblock %}
+
+{% block wizard_body %}
+    <h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "let's get some history in here" %}</h1>
+
+    {% if tracker_connected %}
+    <p class="text-sm text-content-muted mb-6">
+      {% blocktrans with name=challenge.name %}Your tracker is connected, but we haven't found any lifts yet to suggest targets from for <strong>{{ name }}</strong>.{% endblocktrans %}
+    </p>
+    {% else %}
+    <p class="text-sm text-content-muted mb-6">
+      {% blocktrans with name=challenge.name %}Suggesting targets from your history for <strong>{{ name }}</strong> needs some recent lifts to work from.{% endblocktrans %}
+    </p>
+    {% endif %}
+
+    {% if error %}
+    <div class="mb-4 px-4 py-3 rounded bg-danger-light text-danger-dark text-sm font-medium">
+      {{ error }}
+    </div>
+    {% endif %}
+
+    {% comment %}
+    pt-3 halves only the top padding: this card opens on a small field label
+    rather than the section heading the wizard's other steps start with, so a
+    full p-6 above it reads as a gap instead of breathing room. Sides and
+    bottom stay on p-6 so the card still lines up with its siblings.
+    {% endcomment %}
+    <form method="post" action="{{ action_url }}" enctype="multipart/form-data" class="bg-surface-card border border-line-subtle rounded p-6 pt-3 space-y-6">
+      {% csrf_token %}
+
+      {% include "challenges/_history_source_fields.html" %}
+
+      {% comment %}
+      Same back | continue | cancel row, in the same order, as the wizard's
+      other steps (goal_setup_inputs.html, custom_goal_setup.html). "back"
+      is an ordinary ?back=1 link: the view decrements the step index before
+      deriving `step`, so returning lands on the method step, where picking
+      anything other than "history" leaves this screen behind entirely.
+      {% endcomment %}
+      <div class="flex items-center gap-4">
+        <a href="{% url 'challenges:goal-setup' challenge.pk %}?back=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "back" %}</a>
+        <button
+          type="submit"
+          class="bg-accent text-accent-on text-sm font-medium px-6 py-2 rounded hover:bg-accent-hover">
+          {% trans "continue" %}
+        </button>
+        <a href="{{ cancel_url }}" class="text-sm text-content-muted hover:text-content-strong">{% trans "cancel" %}</a>
+      </div>
+
+      <div class="border-t border-line-subtle pt-4">
+        <button
+          type="submit"
+          name="build_manually"
+          value="1"
+          class="text-sm text-content-muted hover:text-content-strong underline">
+          {% trans "or set up your chart manually instead" %}
+        </button>
+      </div>
+    </form>
+
+    <script>
+    (function () {
+      // Same dropzone affordance as Settings' and onboarding's own CSV
+      // upload UI: click-to-choose already works via the <label for>, this
+      // only adds drag-and-drop and an updated filename label.
+      var dropzone = document.getElementById('history-needed-csv-dropzone');
+      var input = document.getElementById('id_csv_file');
+      var labelText = document.getElementById('history-needed-csv-dropzone-label');
+      if (!dropzone || !input || !labelText) return;
+
+      var defaultLabel = labelText.textContent;
+
+      function showFileName() {
+        if (input.files && input.files.length > 0) {
+          labelText.textContent = input.files[0].name;
+        } else {
+          labelText.textContent = defaultLabel;
+        }
+      }
+
+      input.addEventListener('change', showFileName);
+
+      ['dragover', 'dragenter'].forEach(function (evt) {
+        dropzone.addEventListener(evt, function (e) {
+          e.preventDefault();
+          dropzone.classList.add('border-accent', 'bg-surface-sunken');
+        });
+      });
+      ['dragleave', 'dragend'].forEach(function (evt) {
+        dropzone.addEventListener(evt, function () {
+          dropzone.classList.remove('border-accent', 'bg-surface-sunken');
+        });
+      });
+      dropzone.addEventListener('drop', function (e) {
+        e.preventDefault();
+        dropzone.classList.remove('border-accent', 'bg-surface-sunken');
+        var files = e.dataTransfer && e.dataTransfer.files;
+        if (files && files.length > 0) {
+          input.files = files;
+          showFileName();
+        }
+      });
+    })();
+    </script>
+{% endblock %}

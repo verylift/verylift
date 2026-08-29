@@ -7,7 +7,7 @@ instead of base/app.html so a brand-new user isn't shown the full nav
 sidebar/mobile hamburger before they've had any reason to navigate away
 mid-onboarding. Do not repoint this to base/wizard.html or vice versa --
 wizard.html is shared with other already-authenticated in-app wizards
-(create-challenge, goal-setup, key_required, share) that DO want the sidebar.
+(create-challenge, goal-setup, history_needed, share) that DO want the sidebar.
 
 Fill {% block wizard_body %}. Override {% block wizard_width %} for a step
 that needs a wider column than the default.

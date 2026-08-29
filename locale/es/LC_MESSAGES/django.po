@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-28 20:54+0000\n"
+"POT-Creation-Date: 2026-08-29 20:53+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -97,19 +97,19 @@ msgstr "Demasiados intentos. Inténtalo de nuevo en un minuto."
 msgid "You must accept the Terms of Service and Privacy Policy."
 msgstr "Debes aceptar los Términos de Servicio y la Política de Privacidad."
 
-#: accounts/views.py:335 challenges/views.py:176
+#: accounts/views.py:335 challenges/views.py:200
 msgid "Could not validate this Liftosaur API key."
 msgstr "No se pudo validar esta clave de API de Liftosaur."
 
-#: accounts/views.py:352 accounts/views.py:816
+#: accounts/views.py:352 accounts/views.py:816 challenges/views.py:217
 msgid "Could not validate this Hevy API key."
 msgstr "No se pudo validar esta clave de API de Hevy."
 
-#: accounts/views.py:370
+#: accounts/views.py:370 challenges/views.py:240
 msgid "Could not validate this Wger instance URL or API token."
 msgstr "No se pudo validar la URL de la instancia o el token de API de Wger."
 
-#: accounts/views.py:403 accounts/views.py:861
+#: accounts/views.py:403 accounts/views.py:861 challenges/views.py:259
 msgid "Couldn't import right now. Please try again in a moment."
 msgstr "No se pudo importar ahora mismo. Inténtalo de nuevo en un momento."
 
@@ -492,16 +492,27 @@ msgstr ""
 "Todavía no hay historial reciente ni un estándar publicado para este "
 "ejercicio."
 
-#: challenges/views.py:629
+#: challenges/views.py:268
+#, python-format
+msgid "Imported %(count)s set(s) from %(source)s."
+msgstr "Se importaron %(count)s serie(s) de %(source)s."
+
+#: challenges/views.py:280
+msgid "Add an API key or choose a CSV export for the tracker you picked."
+msgstr ""
+"Añade una clave de API o elige una exportación CSV para el tracker que "
+"seleccionaste."
+
+#: challenges/views.py:738
 msgid "You were removed from this challenge and cannot rejoin with this link."
 msgstr ""
 "Se te eliminó de este reto y no puedes volver a unirte con este enlace."
 
-#: challenges/views.py:838
+#: challenges/views.py:948
 msgid "Challenge is not active"
 msgstr "El reto no está activo"
 
-#: challenges/views.py:928 challenges/views.py:1151
+#: challenges/views.py:1038 challenges/views.py:1261
 msgid ""
 "Couldn't refresh your Liftosaur history just now. Showing the history we "
 "already have."
@@ -509,7 +520,7 @@ msgstr ""
 "No se pudo actualizar tu historial de Liftosaur ahora mismo. Se muestra el "
 "historial que ya tenemos."
 
-#: challenges/views.py:964
+#: challenges/views.py:1074
 #, python-format
 msgid "No recent history for %(lifts)s. Enter a target manually."
 msgid_plural "No recent history for %(lifts)s. Enter targets manually."
@@ -519,7 +530,7 @@ msgstr[1] ""
 "No hay historial reciente para %(lifts)s. Introduce los objetivos "
 "manualmente."
 
-#: challenges/views.py:977
+#: challenges/views.py:1087
 msgid ""
 "Blank fields were filled from your recent history; values you typed were "
 "kept. Review every row before confirming."
@@ -527,19 +538,19 @@ msgstr ""
 "Los campos vacíos se rellenaron a partir de tu historial reciente; los "
 "valores que escribiste se conservaron. Revisa cada fila antes de confirmar."
 
-#: challenges/views.py:988
+#: challenges/views.py:1098
 msgid "Goal name must be 100 characters or fewer."
 msgstr "El nombre del objetivo debe tener 100 caracteres o menos."
 
-#: challenges/views.py:1071
+#: challenges/views.py:1181
 msgid "This challenge has ended; goals can no longer be set."
 msgstr "Este reto ha terminado; ya no se pueden establecer objetivos."
 
-#: challenges/views.py:1078
+#: challenges/views.py:1188
 msgid "Your chart for this challenge is locked and can't be changed."
 msgstr "Tu tabla para este desafío está bloqueada y no se puede cambiar."
 
-#: challenges/views.py:1532
+#: challenges/views.py:1649
 msgid ""
 "Prefilled from FitnessVolt strength standards. Review every row before "
 "confirming — this chart is locked once you save it."
@@ -547,73 +558,73 @@ msgstr ""
 "Prellenado con los estándares de fuerza de FitnessVolt. Revisa cada fila "
 "antes de confirmar — esta tabla queda bloqueada en cuanto la guardes."
 
-#: challenges/views.py:1548
+#: challenges/views.py:1665
 #, python-brace-format
 msgid ""
-"Prefilled from your recent Liftosaur history, uplifted {percent}%. Review "
-"every row before confirming — this chart is locked once you save it."
+"Prefilled from your recent lift history, uplifted {percent}%. Review every "
+"row before confirming — this chart is locked once you save it."
 msgstr ""
-"Prellenado a partir de tu historial reciente en Liftosaur, con un incremento "
-"del {percent}%. Revisa cada fila antes de confirmar — esta tabla queda "
-"bloqueada en cuanto la guardes."
+"Prellenado a partir de tu historial reciente de levantamientos, con un "
+"incremento del {percent}%. Revisa cada fila antes de confirmar — esta tabla "
+"queda bloqueada en cuanto la guardes."
 
-#: challenges/views.py:1636
+#: challenges/views.py:1753
 msgid "Set your goal to view this challenge."
 msgstr "Establece tu objetivo para ver este reto."
 
-#: challenges/views.py:1823 challenges/views.py:1901 challenges/views.py:1903
+#: challenges/views.py:1954 challenges/views.py:2032 challenges/views.py:2034
 msgid "Invalid rep count."
 msgstr "Número de repeticiones inválido."
 
-#: challenges/views.py:1828 challenges/views.py:1908
+#: challenges/views.py:1959 challenges/views.py:2039
 msgid "Invalid date."
 msgstr "Fecha inválida."
 
-#: challenges/views.py:1830 challenges/views.py:1910
+#: challenges/views.py:1961 challenges/views.py:2041
 msgid "Date cannot be in the future."
 msgstr "La fecha no puede ser futura."
 
-#: challenges/views.py:1841
+#: challenges/views.py:1972
 msgid "Could not log this lift."
 msgstr "No se pudo registrar este levantamiento."
 
-#: challenges/views.py:1847 challenges/views.py:1927
+#: challenges/views.py:1978 challenges/views.py:2058
 #, python-format
 msgid "Logged %(points)s point on %(lift)s."
 msgid_plural "Logged %(points)s points on %(lift)s."
 msgstr[0] "Registrado %(points)s punto en %(lift)s."
 msgstr[1] "Registrados %(points)s puntos en %(lift)s."
 
-#: challenges/views.py:1857 challenges/views.py:1937
+#: challenges/views.py:1988 challenges/views.py:2068
 msgid "Unknown lift for this challenge."
 msgstr "Levantamiento desconocido para este desafío."
 
-#: challenges/views.py:1921
+#: challenges/views.py:2052
 msgid "Could not log this set."
 msgstr "No se pudo registrar esta serie."
 
-#: challenges/views.py:2013
+#: challenges/views.py:2144
 msgid "This challenge has already ended."
 msgstr "Este reto ya ha terminado."
 
-#: challenges/views.py:2027
+#: challenges/views.py:2158
 msgid "You cannot leave this challenge."
 msgstr "No puedes abandonar este reto."
 
-#: challenges/views.py:2038
+#: challenges/views.py:2169
 msgid "You have left the challenge."
 msgstr "Has abandonado el reto."
 
-#: challenges/views.py:2044 challenges/views.py:2052
+#: challenges/views.py:2175 challenges/views.py:2183
 #: templates/challenges/detail.html:611
 msgid "leave challenge"
 msgstr "abandonar reto"
 
-#: challenges/views.py:2045
+#: challenges/views.py:2176
 msgid "leave"
 msgstr "abandonar"
 
-#: challenges/views.py:2047
+#: challenges/views.py:2178
 msgid ""
 "Leaving freezes your scoring — no further points will be earned for you in "
 "this challenge. Your past entries stay visible. This action cannot be undone."
@@ -621,7 +632,7 @@ msgstr ""
 "Abandonar congela tu puntuación — no ganarás más puntos en este reto. Tus "
 "entradas anteriores seguirán visibles. Esta acción no se puede deshacer."
 
-#: challenges/views.py:2148 challenges/views.py:2780
+#: challenges/views.py:2279 challenges/views.py:2911
 #: templates/accounts/_avatar_section.html:117
 #: templates/challenges/_history_window_section.html:41
 #: templates/challenges/_invite_link_section.html:111
@@ -632,38 +643,38 @@ msgstr ""
 #: templates/challenges/create.html:114 templates/challenges/create.html:189
 #: templates/challenges/custom_goal_setup.html:236
 #: templates/challenges/goal_setup_inputs.html:147
-#: templates/challenges/key_required.html:38
+#: templates/challenges/history_needed.html:45
 #: templates/challenges/rep_target_goal_setup.html:113
 msgid "cancel"
 msgstr "cancelar"
 
-#: challenges/views.py:2246
+#: challenges/views.py:2377
 msgid "This challenge can no longer be modified."
 msgstr "Este reto ya no se puede modificar."
 
-#: challenges/views.py:2265
+#: challenges/views.py:2396
 msgid "The creator cannot be removed from their own challenge."
 msgstr "El creador no puede ser eliminado de su propio reto."
 
-#: challenges/views.py:2281
+#: challenges/views.py:2412
 msgid "This participant cannot be removed."
 msgstr "Este participante no se puede eliminar."
 
-#: challenges/views.py:2295
+#: challenges/views.py:2426
 #, python-format
 msgid "%(name)s has been removed from the challenge."
 msgstr "%(name)s ha sido eliminado/a del reto."
 
-#: challenges/views.py:2302 challenges/views.py:2311
+#: challenges/views.py:2433 challenges/views.py:2442
 msgid "remove participant"
 msgstr "eliminar participante"
 
-#: challenges/views.py:2303
+#: challenges/views.py:2434
 #, python-format
 msgid "remove %(name)s from"
 msgstr "eliminar a %(name)s de"
 
-#: challenges/views.py:2305
+#: challenges/views.py:2436
 msgid ""
 "Removing freezes their scoring — no further points will be earned for them "
 "in this challenge. Their past entries stay on the leaderboard. They cannot "
@@ -674,28 +685,28 @@ msgstr ""
 "unirse, ni siquiera con un enlace de invitación. Esta acción no se puede "
 "deshacer."
 
-#: challenges/views.py:2324
+#: challenges/views.py:2455
 msgid "This challenge can no longer be closed."
 msgstr "Este reto ya no se puede cerrar."
 
-#: challenges/views.py:2333
+#: challenges/views.py:2464
 msgid "Challenge closed."
 msgstr "Reto cerrado."
 
-#: challenges/views.py:2339 challenges/views.py:2348
+#: challenges/views.py:2470 challenges/views.py:2479
 msgid "close challenge"
 msgstr "cerrar reto"
 
-#: challenges/views.py:2340 templates/challenges/_participant_chart.html:24
+#: challenges/views.py:2471 templates/challenges/_participant_chart.html:24
 #: templates/challenges/_participant_chart.html:99
 msgid "close"
 msgstr "cerrar"
 
-#: challenges/views.py:2341
+#: challenges/views.py:2472
 msgid " early"
 msgstr " anticipadamente"
 
-#: challenges/views.py:2343
+#: challenges/views.py:2474
 msgid ""
 "Closing runs a final sync for every participant, locks the leaderboard, and "
 "notifies everyone that the challenge has ended. This action cannot be undone."
@@ -704,68 +715,68 @@ msgstr ""
 "clasificación y notifica a todos que el reto ha terminado. Esta acción no se "
 "puede deshacer."
 
-#: challenges/views.py:2377
+#: challenges/views.py:2508
 msgid "This challenge can no longer be renamed."
 msgstr "Este reto ya no se puede renombrar."
 
-#: challenges/views.py:2390
+#: challenges/views.py:2521
 msgid "Challenge name updated."
 msgstr "Nombre del reto actualizado."
 
-#: challenges/views.py:2432
+#: challenges/views.py:2563
 msgid "This challenge's point-eligible window can no longer be changed."
 msgstr ""
 "La ventana de elegibilidad de puntos de este desafío ya no se puede cambiar."
 
-#: challenges/views.py:2450
+#: challenges/views.py:2581
 msgid "Point-eligible window updated."
 msgstr "Ventana de elegibilidad de puntos actualizada."
 
-#: challenges/views.py:2507 challenges/views.py:2516 challenges/views.py:2572
-#: challenges/views.py:2581
+#: challenges/views.py:2638 challenges/views.py:2647 challenges/views.py:2703
+#: challenges/views.py:2712
 msgid "This challenge can no longer accept invites."
 msgstr "Este reto ya no puede aceptar invitaciones."
 
-#: challenges/views.py:2533
+#: challenges/views.py:2664
 msgid "A new invite link has been generated."
 msgstr "Se ha generado un nuevo enlace de invitación."
 
-#: challenges/views.py:2606
+#: challenges/views.py:2737
 msgid "The invite link has been updated."
 msgstr "El enlace de invitación se ha actualizado."
 
-#: challenges/views.py:2612
+#: challenges/views.py:2743
 msgid "Could not update the invite link."
 msgstr "No se pudo actualizar el enlace de invitación."
 
-#: challenges/views.py:2677
+#: challenges/views.py:2808
 msgid "This challenge's ownership can no longer be transferred."
 msgstr "La propiedad de este reto ya no se puede transferir."
 
-#: challenges/views.py:2702
+#: challenges/views.py:2833
 msgid "Ownership can only be transferred to an active, accepted participant."
 msgstr ""
 "La propiedad solo se puede transferir a un participante activo y aceptado."
 
-#: challenges/views.py:2727
+#: challenges/views.py:2858
 #, python-format
 msgid "Ownership transferred to %(name)s."
 msgstr "Propiedad transferida a %(name)s."
 
-#: challenges/views.py:2734 challenges/views.py:2745
+#: challenges/views.py:2865 challenges/views.py:2876
 msgid "transfer ownership"
 msgstr "transferir la propiedad"
 
-#: challenges/views.py:2735
+#: challenges/views.py:2866
 msgid "transfer ownership of"
 msgstr "transferir la propiedad de"
 
-#: challenges/views.py:2736
+#: challenges/views.py:2867
 #, python-format
 msgid " to %(name)s"
 msgstr " a %(name)s"
 
-#: challenges/views.py:2738
+#: challenges/views.py:2869
 #, python-format
 msgid ""
 "%(name)s will gain full control of this challenge — closing, cancelling, "
@@ -778,20 +789,20 @@ msgstr ""
 "nuevo propietario puede transferirte la propiedad de vuelta, por lo que no "
 "puedes deshacer esto por tu cuenta."
 
-#: challenges/views.py:2763
+#: challenges/views.py:2894
 msgid "This challenge can no longer be cancelled."
 msgstr "Este reto ya no se puede cancelar."
 
-#: challenges/views.py:2773
+#: challenges/views.py:2904
 msgid "Challenge cancelled."
 msgstr "Reto cancelado."
 
-#: challenges/views.py:2779 challenges/views.py:2788
+#: challenges/views.py:2910 challenges/views.py:2919
 #: templates/challenges/settings.html:44
 msgid "cancel challenge"
 msgstr "cancelar reto"
 
-#: challenges/views.py:2782
+#: challenges/views.py:2913
 msgid ""
 "Cancelling voids the challenge entirely — no final sync runs, no scores are "
 "recorded, and no closing notifications are sent. The challenge is removed "
@@ -802,15 +813,15 @@ msgstr ""
 "cierre. El reto se elimina de la lista de Buscar Retos. Esta acción no se "
 "puede deshacer."
 
-#: challenges/views.py:2790 templates/accounts/delete_account.html:77
+#: challenges/views.py:2921 templates/accounts/delete_account.html:77
 msgid "go back"
 msgstr "volver"
 
-#: challenges/views.py:2823
+#: challenges/views.py:2954
 msgid "Only draft challenges can be deleted."
 msgstr "Solo se pueden eliminar los retos en borrador."
 
-#: challenges/views.py:2827
+#: challenges/views.py:2958
 msgid "Draft challenge deleted."
 msgstr "Reto en borrador eliminado."
 
@@ -845,21 +856,25 @@ msgid "Site Settings"
 msgstr "Configuración del sitio"
 
 #: core/models.py:73 liftosaur/models.py:54
+#: templates/challenges/_history_source_fields.html:37
 #: templates/registration/onboarding_tracking_method.html:28
 msgid "Liftosaur"
 msgstr "Liftosaur"
 
 #: core/models.py:74 liftosaur/models.py:57
+#: templates/challenges/_history_source_fields.html:39
 #: templates/registration/onboarding_tracking_method.html:30
 msgid "Hevy"
 msgstr "Hevy"
 
-#: core/models.py:75 templates/registration/onboarding_tracking_method.html:31
+#: core/models.py:75 templates/challenges/_history_source_fields.html:40
+#: templates/registration/onboarding_tracking_method.html:31
 msgid "Strong"
 msgstr "Strong"
 
 #: core/models.py:76 liftosaur/models.py:59
 #: templates/accounts/_wger_section.html:4
+#: templates/challenges/_history_source_fields.html:38
 #: templates/registration/onboarding_tracking_method.html:29
 msgid "Wger"
 msgstr "Wger"
@@ -1147,6 +1162,7 @@ msgid "save email"
 msgstr "guardar correo"
 
 #: templates/accounts/_hevy_section.html:4
+#: templates/challenges/_history_source_fields.html:86
 #: templates/registration/onboarding_connect_tracker.html:92
 msgid "Hevy API key"
 msgstr "Clave de API de Hevy"
@@ -1268,8 +1284,7 @@ msgid "save language"
 msgstr "guardar idioma"
 
 #: templates/accounts/_liftosaur_section.html:4
-#: templates/challenges/_key_required.html:20
-#: templates/challenges/key_required.html:23
+#: templates/challenges/_history_source_fields.html:46
 #: templates/registration/onboarding_connect_tracker.html:58
 msgid "Liftosaur API key"
 msgstr "Clave de API de Liftosaur"
@@ -1413,6 +1428,7 @@ msgid "disconnect"
 msgstr "desconectar"
 
 #: templates/accounts/_wger_section.html:117
+#: templates/challenges/_history_source_fields.html:67
 #: templates/registration/onboarding_connect_tracker.html:37
 msgid "e.g. https://my-wger-instance.example.com"
 msgstr "p. ej. https://mi-instancia-wger.ejemplo.com"
@@ -1453,6 +1469,7 @@ msgstr ""
 "grandes…"
 
 #: templates/accounts/_workout_import_section.html:38
+#: templates/challenges/_history_source_fields.html:117
 #: templates/registration/onboarding_connect_tracker.html:81
 #: templates/registration/onboarding_connect_tracker.html:112
 #: templates/registration/onboarding_connect_tracker.html:129
@@ -1606,6 +1623,127 @@ msgstr "FitnessVolt Strength Standards"
 msgid "(data snapshot %(version)s)"
 msgstr "(instantánea de datos %(version)s)"
 
+#: templates/challenges/_history_needed.html:17
+#, python-format
+msgid ""
+"Your tracker is connected, but we haven't found any lifts yet to suggest "
+"targets from for %(name)s."
+msgstr ""
+"Tu tracker está conectado, pero aún no hemos encontrado levantamientos para "
+"sugerir objetivos para %(name)s."
+
+#: templates/challenges/_history_needed.html:21
+msgid ""
+"Add your history to suggest targets: connect a tracker or upload a CSV "
+"export below."
+msgstr ""
+"Añade tu historial para sugerir objetivos: conecta un tracker o sube una "
+"exportación CSV abajo."
+
+#: templates/challenges/_history_needed.html:30
+#: templates/challenges/create.html:72 templates/challenges/create.html:110
+#: templates/challenges/create.html:185
+#: templates/challenges/custom_goal_setup.html:227
+#: templates/challenges/goal_setup_inputs.html:141
+#: templates/challenges/history_needed.html:39
+msgid "back"
+msgstr "atrás"
+
+#: templates/challenges/_history_needed.html:34
+#: templates/challenges/create.html:40 templates/challenges/create.html:74
+#: templates/challenges/create.html:112
+#: templates/challenges/goal_setup_inputs.html:143
+#: templates/challenges/goal_setup_method.html:67
+#: templates/challenges/history_needed.html:43
+#: templates/registration/onboarding_connect_tracker.html:143
+#: templates/registration/onboarding_no_tracker.html:54
+#: templates/registration/onboarding_other_tracker.html:36
+#: templates/registration/onboarding_tracking_method.html:44
+#: templates/registration/onboarding_units.html:35
+msgid "continue"
+msgstr "continuar"
+
+#: templates/challenges/_history_needed.html:41
+msgid "set up manually instead"
+msgstr "configurar manualmente"
+
+#: templates/challenges/_history_source_fields.html:29
+msgid "how do you track your lifts?"
+msgstr "¿cómo registras tus levantamientos?"
+
+#: templates/challenges/_history_source_fields.html:36
+#: templates/registration/onboarding_tracking_method.html:27
+msgid "Pick an option"
+msgstr "Elige una opción"
+
+#: templates/challenges/_history_source_fields.html:55
+#: templates/registration/onboarding_connect_tracker.html:69
+msgid ""
+"For automated tracking, get your key from <a href=\"https://www.liftosaur."
+"com/doc/api\" target=\"_blank\" rel=\"noopener\" "
+"class=\"underline\">Liftosaur's API docs</a>."
+msgstr ""
+"Para el seguimiento automático, obtén tu clave en <a href=\"https://www."
+"liftosaur.com/doc/api\" target=\"_blank\" rel=\"noopener\" "
+"class=\"underline\">la documentación de la API de Liftosaur</a>."
+
+#: templates/challenges/_history_source_fields.html:61
+msgid "Wger instance URL"
+msgstr "URL de la instancia de Wger"
+
+#: templates/challenges/_history_source_fields.html:71
+msgid "Wger API token"
+msgstr "Token de API de Wger"
+
+#: templates/challenges/_history_source_fields.html:80
+#: templates/registration/onboarding_connect_tracker.html:54
+msgid "You can find your API token in your Wger account under the API page."
+msgstr ""
+"Puedes encontrar tu token de API en tu cuenta de Wger, en la página de API."
+
+#: templates/challenges/_history_source_fields.html:95
+#: templates/registration/onboarding_connect_tracker.html:103
+msgid ""
+"Requires an active Hevy Pro subscription. No Pro? Use the CSV export below "
+"instead."
+msgstr ""
+"Requiere una suscripción activa a Hevy Pro. ¿No tienes Pro? Usa la "
+"exportación CSV de abajo."
+
+#: templates/challenges/_history_source_fields.html:107
+msgid "or upload a CSV export"
+msgstr "o sube una exportación CSV"
+
+#: templates/challenges/_history_source_fields.html:123
+#: templates/registration/onboarding_connect_tracker.html:87
+msgid ""
+"You can export your history by navigating to Me → Export history to CSV file "
+"and pressing Ok."
+msgstr ""
+"Puedes exportar tu historial yendo a Yo → Exportar historial a archivo CSV y "
+"pulsando Aceptar."
+
+#: templates/challenges/_history_source_fields.html:126
+#: templates/registration/onboarding_connect_tracker.html:118
+msgid ""
+"Learn how to export your data in <a href=\"https://help.hevyapp.com/hc/en-us/"
+"articles/38001424401943-How-to-Import-Strong-App-CSV-Files-and-Export-Your-"
+"Data-in-Hevy\" target=\"_blank\" rel=\"noopener\" class=\"underline\">Hevy's "
+"help center</a>."
+msgstr ""
+"Descubre cómo exportar tus datos en <a href=\"https://help.hevyapp.com/hc/en-"
+"us/articles/38001424401943-How-to-Import-Strong-App-CSV-Files-and-Export-"
+"Your-Data-in-Hevy\" target=\"_blank\" rel=\"noopener\" "
+"class=\"underline\">el centro de ayuda de Hevy</a>."
+
+#: templates/challenges/_history_source_fields.html:129
+#: templates/registration/onboarding_connect_tracker.html:135
+msgid ""
+"You can export your history from the Strong app under Settings → Export Data."
+msgstr ""
+"Puedes exportar tu historial desde la app de Strong en Configuración → "
+"Exportar datos."
+
 #: templates/challenges/_history_window_section.html:3
 msgid "point-eligible window"
 msgstr "ventana válida para puntos"
@@ -1719,22 +1857,6 @@ msgstr "hace"
 #: templates/challenges/_invite_link_section.html:326
 msgid "expires in"
 msgstr "caduca en"
-
-#: templates/challenges/_key_required.html:12
-#, python-format
-msgid ""
-"Add your Liftosaur API key to suggest targets from your recent lifts, or "
-"import a workout CSV from <a href=\"%(url)s\" class=\"text-accent hover:"
-"underline\">Settings</a> instead."
-msgstr ""
-"Añade tu clave de API de Liftosaur para sugerir objetivos a partir de tus "
-"levantamientos recientes, o importa un CSV de entrenamientos desde <a "
-"href=\"%(url)s\" class=\"text-accent hover:underline\">Configuración</a>."
-
-#: templates/challenges/_key_required.html:25
-#: templates/challenges/key_required.html:36
-msgid "connect & continue"
-msgstr "conectar y continuar"
 
 #: templates/challenges/_participant_chart.html:16
 #: templates/challenges/detail.html:46
@@ -1985,18 +2107,6 @@ msgstr "nombra tu desafío"
 msgid "Pick something your group will recognize."
 msgstr "Elige algo que tu grupo reconozca."
 
-#: templates/challenges/create.html:40 templates/challenges/create.html:74
-#: templates/challenges/create.html:112
-#: templates/challenges/goal_setup_inputs.html:143
-#: templates/challenges/goal_setup_method.html:67
-#: templates/registration/onboarding_connect_tracker.html:143
-#: templates/registration/onboarding_no_tracker.html:54
-#: templates/registration/onboarding_other_tracker.html:36
-#: templates/registration/onboarding_tracking_method.html:44
-#: templates/registration/onboarding_units.html:35
-msgid "continue"
-msgstr "continuar"
-
 #: templates/challenges/create.html:47
 msgid "when does it run?"
 msgstr "¿cuándo se lleva a cabo?"
@@ -2017,13 +2127,6 @@ msgstr "fecha de inicio"
 #: templates/challenges/create.html:64
 msgid "end date"
 msgstr "fecha de fin"
-
-#: templates/challenges/create.html:72 templates/challenges/create.html:110
-#: templates/challenges/create.html:185
-#: templates/challenges/custom_goal_setup.html:227
-#: templates/challenges/goal_setup_inputs.html:141
-msgid "back"
-msgstr "atrás"
 
 #: templates/challenges/create.html:81
 msgid "choose a scoring mode"
@@ -2683,11 +2786,11 @@ msgstr "Sugerido a partir de mi historial"
 
 #: templates/challenges/goal_setup_method.html:42
 msgid ""
-"Propose targets based on your recent Liftosaur lift history, with a bit of "
-"stretch built in."
+"Propose targets based on your recent lift history, with a bit of stretch "
+"built in."
 msgstr ""
-"Propone objetivos basados en tu historial reciente de levantamientos en "
-"Liftosaur, con un poco de margen incorporado."
+"Propone objetivos basados en tu historial reciente de levantamientos, con un "
+"poco de margen incorporado."
 
 #: templates/challenges/goal_setup_method.html:50
 msgid "Type in your own target for each lift, from scratch."
@@ -2696,6 +2799,36 @@ msgstr "Escribe tu propio objetivo para cada ejercicio, desde cero."
 #: templates/challenges/goal_setup_method.html:58
 msgid "Paste a JSON goal, e.g. one generated by an AI chat."
 msgstr "Pega un objetivo en JSON, por ejemplo uno generado por un chat de IA."
+
+#: templates/challenges/history_needed.html:4
+msgid "Add Your History"
+msgstr "Añade tu historial"
+
+#: templates/challenges/history_needed.html:7
+msgid "let's get some history in here"
+msgstr "vamos a añadir algo de historial"
+
+#: templates/challenges/history_needed.html:11
+#, python-format
+msgid ""
+"Your tracker is connected, but we haven't found any lifts yet to suggest "
+"targets from for <strong>%(name)s</strong>."
+msgstr ""
+"Tu tracker está conectado, pero aún no hemos encontrado levantamientos para "
+"sugerir objetivos para <strong>%(name)s</strong>."
+
+#: templates/challenges/history_needed.html:15
+#, python-format
+msgid ""
+"Suggesting targets from your history for <strong>%(name)s</strong> needs "
+"some recent lifts to work from."
+msgstr ""
+"Sugerir objetivos a partir de tu historial para <strong>%(name)s</strong> "
+"necesita algunos levantamientos recientes con los que trabajar."
+
+#: templates/challenges/history_needed.html:54
+msgid "or set up your chart manually instead"
+msgstr "o configura tu tabla manualmente"
 
 #: templates/challenges/invite_accept.html:6
 #: templates/challenges/invite_link_preview.html:6
@@ -2929,35 +3062,6 @@ msgstr ""
 "travel/article/canada-photos\" class=\"hover:opacity-75\" target=\"_blank\" "
 "rel=\"noopener noreferrer\">🇨🇦</a>\n"
 "        "
-
-#: templates/challenges/key_required.html:4
-msgid "Connect Liftosaur"
-msgstr "Conectar Liftosaur"
-
-#: templates/challenges/key_required.html:7
-msgid "connect your Liftosaur API key"
-msgstr "conecta tu clave de API de Liftosaur"
-
-#: templates/challenges/key_required.html:11
-#, python-format
-msgid ""
-"Suggesting targets from your history for <strong>%(name)s</strong> needs "
-"some recent lifts to work from."
-msgstr ""
-"Sugerir objetivos a partir de tu historial para <strong>%(name)s</strong> "
-"necesita algunos levantamientos recientes con los que trabajar."
-
-#: templates/challenges/key_required.html:15
-#, python-format
-msgid ""
-"Paste a Liftosaur API key below, or head to <a href=\"%(url)s\" class=\"text-"
-"accent hover:underline\">Settings</a> to import a workout CSV (e.g. from "
-"Hevy) -- either gives us history to suggest from."
-msgstr ""
-"Pega una clave de API de Liftosaur abajo, o ve a <a href=\"%(url)s\" "
-"class=\"text-accent hover:underline\">Configuración</a> para importar un CSV "
-"de entrenamientos (por ejemplo de Hevy) -- cualquiera de las dos nos da "
-"historial para sugerir."
 
 #: templates/challenges/participant_chart.html:10
 #: templates/challenges/settings.html:11
@@ -3581,64 +3685,14 @@ msgstr "conecta tu cuenta de Liftosaur"
 msgid "Optional — you can add or change this later from Settings."
 msgstr "Opcional — puedes añadirla o cambiarla más tarde desde Configuración."
 
-#: templates/registration/onboarding_connect_tracker.html:54
-msgid "You can find your API token in your Wger account under the API page."
-msgstr ""
-"Puedes encontrar tu token de API en tu cuenta de Wger, en la página de API."
-
-#: templates/registration/onboarding_connect_tracker.html:69
-msgid ""
-"For automated tracking, get your key from <a href=\"https://www.liftosaur."
-"com/doc/api\" target=\"_blank\" rel=\"noopener\" "
-"class=\"underline\">Liftosaur's API docs</a>."
-msgstr ""
-"Para el seguimiento automático, obtén tu clave en <a href=\"https://www."
-"liftosaur.com/doc/api\" target=\"_blank\" rel=\"noopener\" "
-"class=\"underline\">la documentación de la API de Liftosaur</a>."
-
 #: templates/registration/onboarding_connect_tracker.html:75
 #: templates/registration/onboarding_connect_tracker.html:106
 msgid "Or upload a CSV export instead"
 msgstr "O sube una exportación CSV en su lugar"
 
-#: templates/registration/onboarding_connect_tracker.html:87
-msgid ""
-"You can export your history by navigating to Me → Export history to CSV file "
-"and pressing Ok."
-msgstr ""
-"Puedes exportar tu historial yendo a Yo → Exportar historial a archivo CSV y "
-"pulsando Aceptar."
-
-#: templates/registration/onboarding_connect_tracker.html:103
-msgid ""
-"Requires an active Hevy Pro subscription. No Pro? Use the CSV export below "
-"instead."
-msgstr ""
-"Requiere una suscripción activa a Hevy Pro. ¿No tienes Pro? Usa la "
-"exportación CSV de abajo."
-
-#: templates/registration/onboarding_connect_tracker.html:118
-msgid ""
-"Learn how to export your data in <a href=\"https://help.hevyapp.com/hc/en-us/"
-"articles/38001424401943-How-to-Import-Strong-App-CSV-Files-and-Export-Your-"
-"Data-in-Hevy\" target=\"_blank\" rel=\"noopener\" class=\"underline\">Hevy's "
-"help center</a>."
-msgstr ""
-"Descubre cómo exportar tus datos en <a href=\"https://help.hevyapp.com/hc/en-"
-"us/articles/38001424401943-How-to-Import-Strong-App-CSV-Files-and-Export-"
-"Your-Data-in-Hevy\" target=\"_blank\" rel=\"noopener\" "
-"class=\"underline\">el centro de ayuda de Hevy</a>."
-
 #: templates/registration/onboarding_connect_tracker.html:123
 msgid "Strong CSV export"
 msgstr "Exportación CSV de Strong"
-
-#: templates/registration/onboarding_connect_tracker.html:135
-msgid ""
-"You can export your history from the Strong app under Settings → Export Data."
-msgstr ""
-"Puedes exportar tu historial desde la app de Strong en Configuración → "
-"Exportar datos."
 
 #: templates/registration/onboarding_no_tracker.html:4
 msgid "Try Liftosaur"
@@ -3702,10 +3756,6 @@ msgstr "Puedes cambiar esto en cualquier momento desde Configuración."
 #: templates/registration/onboarding_tracking_method.html:22
 msgid "tracking app"
 msgstr "aplicación de seguimiento"
-
-#: templates/registration/onboarding_tracking_method.html:27
-msgid "Pick an option"
-msgstr "Elige una opción"
 
 #: templates/registration/onboarding_tracking_method.html:32
 msgid "A different one"
