@@ -16,14 +16,26 @@
     </p>
     {% endif %}
 
-    {% if error %}<p class="mb-4 text-sm text-danger-dark">{{ error }}</p>{% endif %}
+    {% if error %}
+    <div class="mb-4 px-4 py-3 rounded bg-danger-light text-danger-dark text-sm font-medium">
+      {{ error }}
+    </div>
+    {% endif %}
 
     <form method="post" action="{{ action_url }}" enctype="multipart/form-data" class="bg-surface-card border border-line-subtle rounded p-6 space-y-6">
       {% csrf_token %}
 
       {% include "challenges/_history_source_fields.html" %}
 
+      {% comment %}
+      Same back | continue | cancel row, in the same order, as the wizard's
+      other steps (goal_setup_inputs.html, custom_goal_setup.html). "back"
+      is an ordinary ?back=1 link: the view decrements the step index before
+      deriving `step`, so returning lands on the method step, where picking
+      anything other than "history" leaves this screen behind entirely.
+      {% endcomment %}
       <div class="flex items-center gap-4">
+        <a href="{% url 'challenges:goal-setup' challenge.pk %}?back=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "back" %}</a>
         <button
           type="submit"
           class="bg-accent text-accent-on text-sm font-medium px-6 py-2 rounded hover:bg-accent-hover">

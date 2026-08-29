@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-29 20:43+0000\n"
+"POT-Creation-Date: 2026-08-29 20:53+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -499,7 +499,9 @@ msgstr "Se importaron %(count)s serie(s) de %(source)s."
 
 #: challenges/views.py:280
 msgid "Add an API key or choose a CSV export for the tracker you picked."
-msgstr "Añade una clave de API o elige una exportación CSV para el tracker que seleccionaste."
+msgstr ""
+"Añade una clave de API o elige una exportación CSV para el tracker que "
+"seleccionaste."
 
 #: challenges/views.py:738
 msgid "You were removed from this challenge and cannot rejoin with this link."
@@ -641,7 +643,7 @@ msgstr ""
 #: templates/challenges/create.html:114 templates/challenges/create.html:189
 #: templates/challenges/custom_goal_setup.html:236
 #: templates/challenges/goal_setup_inputs.html:147
-#: templates/challenges/history_needed.html:32
+#: templates/challenges/history_needed.html:45
 #: templates/challenges/rep_target_goal_setup.html:113
 msgid "cancel"
 msgstr "cancelar"
@@ -1638,12 +1640,21 @@ msgstr ""
 "Añade tu historial para sugerir objetivos: conecta un tracker o sube una "
 "exportación CSV abajo."
 
-#: templates/challenges/_history_needed.html:33
+#: templates/challenges/_history_needed.html:30
+#: templates/challenges/create.html:72 templates/challenges/create.html:110
+#: templates/challenges/create.html:185
+#: templates/challenges/custom_goal_setup.html:227
+#: templates/challenges/goal_setup_inputs.html:141
+#: templates/challenges/history_needed.html:39
+msgid "back"
+msgstr "atrás"
+
+#: templates/challenges/_history_needed.html:34
 #: templates/challenges/create.html:40 templates/challenges/create.html:74
 #: templates/challenges/create.html:112
 #: templates/challenges/goal_setup_inputs.html:143
 #: templates/challenges/goal_setup_method.html:67
-#: templates/challenges/history_needed.html:30
+#: templates/challenges/history_needed.html:43
 #: templates/registration/onboarding_connect_tracker.html:143
 #: templates/registration/onboarding_no_tracker.html:54
 #: templates/registration/onboarding_other_tracker.html:36
@@ -1652,7 +1663,7 @@ msgstr ""
 msgid "continue"
 msgstr "continuar"
 
-#: templates/challenges/_history_needed.html:40
+#: templates/challenges/_history_needed.html:41
 msgid "set up manually instead"
 msgstr "configurar manualmente"
 
@@ -2116,13 +2127,6 @@ msgstr "fecha de inicio"
 #: templates/challenges/create.html:64
 msgid "end date"
 msgstr "fecha de fin"
-
-#: templates/challenges/create.html:72 templates/challenges/create.html:110
-#: templates/challenges/create.html:185
-#: templates/challenges/custom_goal_setup.html:227
-#: templates/challenges/goal_setup_inputs.html:141
-msgid "back"
-msgstr "atrás"
 
 #: templates/challenges/create.html:81
 msgid "choose a scoring mode"
@@ -2822,7 +2826,7 @@ msgstr ""
 "Sugerir objetivos a partir de tu historial para <strong>%(name)s</strong> "
 "necesita algunos levantamientos recientes con los que trabajar."
 
-#: templates/challenges/history_needed.html:41
+#: templates/challenges/history_needed.html:54
 msgid "or set up your chart manually instead"
 msgstr "o configura tu tabla manualmente"
 

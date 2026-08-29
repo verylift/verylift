@@ -791,6 +791,24 @@ class TestHistoryMethodNeedsHistory:
             t.name == "challenges/custom_goal_setup.html" for t in chart.templates
         )
 
+    def test_back_returns_to_the_method_step(
+        self, authed_client, participant, challenge
+    ):
+        """The recovery screen isn't a wizard step of its own -- it's an
+        interruption of one -- so "back" has to unwind the step index far
+        enough that the guard stops re-firing and lands on the method
+        chooser, rather than bouncing straight back here."""
+        url = _url(challenge)
+        authed_client.post(url, {"method": "history"})
+        assert "challenges/history_needed.html" in [
+            t.name for t in authed_client.get(url).templates
+        ]
+        resp = authed_client.get(url + "?back=1")
+        assert resp.status_code == 200
+        template_names = [t.name for t in resp.templates]
+        assert "challenges/goal_setup_method.html" in template_names
+        assert "challenges/history_needed.html" not in template_names
+
     def test_picking_a_tracker_but_filling_nothing_in_explains_why(
         self, authed_client, participant, challenge
     ):
