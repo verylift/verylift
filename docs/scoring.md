@@ -194,7 +194,7 @@ is cleared.
 
 ## Related pages
 
-- [Units & added-weight lifts](bodyweight-and-units.md) — how lifts like
+- [Units, bodyweight & added-weight lifts](bodyweight-and-units.md) — how lifts like
   pull-ups and dips (where you add or remove weight from your bodyweight)
   get scored, and how weights are displayed in your preferred unit.
 - [Keeping your data fresh](sync-and-data-freshness.md) — how your logged
