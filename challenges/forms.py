@@ -491,7 +491,7 @@ class CustomGoalForm(forms.Form):
         max_length=100,
         required=False,
         widget=forms.TextInput(
-            attrs={"class": _INPUT_CSS, "placeholder": _("e.g. Spring targets")}
+            attrs={"class": _INPUT_CSS, "placeholder": _("e.g. My Goals")}
         ),
     )
     targets_json = forms.CharField(

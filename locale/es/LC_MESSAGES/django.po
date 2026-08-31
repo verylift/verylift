@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-31 18:35+0000\n"
+"POT-Creation-Date: 2026-08-31 18:40+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -362,8 +362,9 @@ msgid "goal name"
 msgstr "nombre del objetivo"
 
 #: challenges/forms.py:494 templates/challenges/custom_goal_setup.html:118
-msgid "e.g. Spring targets"
-msgstr "p. ej. Objetivos de primavera"
+#: templates/challenges/rep_target_goal_setup.html:49
+msgid "e.g. My Goals"
+msgstr "p. ej. Mis objetivos"
 
 #: challenges/forms.py:498
 msgid "targets JSON"
@@ -3112,10 +3113,6 @@ msgid ""
 msgstr ""
 "Este objetivo queda bloqueado en cuanto lo confirmes. No se puede editar "
 "después de unirte."
-
-#: templates/challenges/rep_target_goal_setup.html:49
-msgid "e.g. Calisthenics goals"
-msgstr "p. ej. Objetivos de calistenia"
 
 #: templates/challenges/rep_target_goal_setup.html:63
 msgid "Reps"
