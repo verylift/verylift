@@ -61,8 +61,7 @@
       {% endif %}
 
       {% if is_json_method %}
-      <section class="bg-surface-card border border-line-subtle rounded p-6 mb-6"
-                data-input-panel="json">
+      <section class="mb-6" data-input-panel="json">
         <h2 class="text-lg font-semibold text-content-strong mb-2">{% trans "paste JSON" %}</h2>
         <p class="text-sm text-content-muted mb-3">
           {% blocktrans %}
@@ -107,10 +106,11 @@
         {% endif %}
       </section>
       {% else %}
-      <section class="bg-surface-card border border-line-subtle rounded p-6 mb-6"
-               data-input-panel="grid">
-        <h2 class="text-lg font-semibold text-content-strong mb-4">{% blocktrans with unit=display_unit %}target grid ({{ unit }}){% endblocktrans %}</h2>
-        <div class="mb-4 max-w-sm">
+      {# No "target grid (unit)" heading any more: the h1 above already names #}
+      {# the screen, every cell carries its own unit, and Rep Target's        #}
+      {# equivalent form has no section heading either.                       #}
+      <section class="mb-6" data-input-panel="grid">
+        <div class="mb-6 max-w-sm">
           <label for="id_goal_name" class="block text-sm font-medium text-content-body mb-1">
             {% trans "goal name" %}
           </label>
@@ -119,20 +119,24 @@
                  class="w-full bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent">
         </div>
         {% if show_calculator and lifts %}
-        <div class="mb-4 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap">
-          <div class="flex justify-center sm:items-center sm:border sm:border-line-subtle sm:rounded sm:px-3 sm:py-2 sm:bg-surface-sunken/40">
+        {# Compute and its rounding control stay side by side at every width -- #}
+        {# they are one action and its one parameter, and stacking them on a    #}
+        {# phone pushed the grid itself below the fold. The explanation wraps    #}
+        {# onto its own line instead, where losing width costs nothing.          #}
+        <div class="mb-4 flex flex-wrap items-stretch gap-3">
+          <div class="flex flex-1 sm:flex-initial items-center justify-center border border-line-subtle rounded px-3 py-2 bg-surface-sunken/40">
             <button type="button" data-compute-button
-                    class="bg-surface-card text-accent text-sm font-semibold px-5 py-2 rounded border-2 border-accent hover:bg-accent hover:text-accent-on focus:outline-none focus:ring-2 focus:ring-accent">
+                    class="w-full sm:w-auto bg-surface-card text-accent text-sm font-semibold px-5 py-2 rounded border-2 border-accent hover:bg-accent hover:text-accent-on focus:outline-none focus:ring-2 focus:ring-accent">
               {% trans "compute" %}
             </button>
           </div>
-          <div class="border border-line-subtle rounded px-3 py-2 bg-surface-sunken/40">
+          <div class="flex-1 sm:flex-initial border border-line-subtle rounded px-2 py-2 bg-surface-sunken/40">
             <label for="id_compute_rounding" class="block text-xs font-medium text-content-body mb-1">
-              {% trans "rounding precision" %}
+              {% trans "rounding" %}
             </label>
             <select id="id_compute_rounding" data-compute-rounding
-                    class="bg-surface-card text-content-body border border-line rounded px-2 py-1.5 text-sm focus:outline-none focus:border-accent">
-              <option value="0">{% trans "No rounding (exact)" %}</option>
+                    class="w-full bg-surface-card text-content-body border border-line rounded px-2 py-1.5 text-sm focus:outline-none focus:border-accent">
+              <option value="0">{% trans "exact" %}</option>
               {% if display_unit == "lb" %}
               <option value="2.5">2.5 lb</option>
               <option value="5" selected>5 lb</option>
@@ -144,7 +148,7 @@
               {% endif %}
             </select>
           </div>
-          <div class="flex items-center flex-1 min-w-[12rem] border border-line-subtle rounded px-3 py-2 bg-surface-sunken/40">
+          <div class="flex items-center w-full sm:w-auto sm:flex-1 sm:min-w-[12rem] border border-line-subtle rounded px-3 py-2 bg-surface-sunken/40">
             <p class="text-xs text-content-muted">
               {% blocktrans %}
               Clicking compute fills in blank cells for rows that have at
@@ -167,10 +171,26 @@
           {# row: a sticky cell in a border-collapse table loses its borders   #}
           {# to the cells it scrolls over. Same construction as the chart      #}
           {# tables on the challenge detail page.                              #}
-          <table class="text-sm text-left w-full border-separate border-spacing-0">
+          {# min-w-full, not w-full: width:100% forces auto layout to fit every #}
+          {# column inside the container, which lets it override the lift        #}
+          {# column's width. Sizing to content instead makes that width real and #}
+          {# lets the grid scroll under the pinned column.                       #}
+          <table class="text-sm text-left min-w-full border-separate border-spacing-0">
             <thead>
               <tr class="text-content-muted">
-                <th class="py-2 pr-4 font-medium sticky left-0 z-20 bg-surface-card border-r border-b border-line-subtle">{% trans "Lift" %}</th>
+                {# w-[9rem] in both modes, and explicit because auto layout would #}
+                {# otherwise collapse this column to its longest word: every    #}
+                {# other column here is nowrap, so the name is the only one     #}
+                {# that can be squeezed. The grid scrolls under the pinned      #}
+                {# column when that costs it width.                            #}
+                {# Clear-row gets its own thin column, pinned left of the name. #}
+                {# Its width is fixed (w-6) precisely so the lift column can be  #}
+                {# pinned at exactly that offset (left-6) -- the two numbers      #}
+                {# must stay in step or the columns overlap while scrolling.      #}
+                <th class="w-6 min-w-[1.5rem] sticky left-0 z-20 bg-surface border-b border-line-subtle">
+                  <span class="sr-only">{% trans "Clear this row" %}</span>
+                </th>
+                <th class="w-[9rem] min-w-[9rem] py-2 pr-4 font-medium sticky left-6 z-20 bg-surface border-b border-line-subtle">{% trans "Lift" %}</th>
                 {% for col in rep_range %}
                 {# Centered over the inputs beneath, matching the rep target #}
                 {# grid; only display charts right-align their numbers.      #}
@@ -190,23 +210,24 @@
                 {# its own name left "Deadlift" short between two taller       #}
                 {# neighbours, and the grid looked ragged. Names still wrap    #}
                 {# rather than widening the column out of the viewport.        #}
-                <td class="h-14 py-2 pr-2 font-medium text-content-strong sticky left-0 z-10 bg-surface-card border-r {% if not lift.needs_decision %}border-b{% endif %} border-line-subtle {% if lift.needs_decision %}border-l-4 border-warning pl-2{% endif %}">
+                {# The needs-decision marker rides on this column now, since it #}
+                {# is the leftmost one -- a warning rule between the icon and    #}
+                {# the name would read as separating them.                      #}
+                <td class="h-14 sticky left-0 z-10 bg-surface {% if not lift.needs_decision %}border-b{% endif %} border-line-subtle {% if lift.needs_decision %}border-l-4 border-warning{% endif %}">
+                  {% if show_calculator %}
+                  <button type="button" data-clear-row
+                          class="mx-auto block text-content-muted hover:text-danger focus:outline-none"
+                          title="{% trans "Clear this row" %}"
+                          aria-label="{% trans "Clear this row" %}">
+                    {% icon "trash-2" css_class="h-3.5 w-3.5" %}
+                  </button>
+                  {% endif %}
+                </td>
+                <td class="h-14 py-2 pr-3 font-medium text-content-strong sticky left-6 z-10 bg-surface {% if not lift.needs_decision %}border-b{% endif %} border-line-subtle">
                   <div class="flex items-center gap-1.5 w-full">
-                    {# Clear-row sits ahead of the name, not after it: trailing #}
-                    {# the name put it in a different place on every row --     #}
-                    {# after the text on plain rows, shoved left by "BW +" on   #}
-                    {# bodyweight ones. Leading, it is a column of its own.     #}
-                    {% if show_calculator %}
-                    <button type="button" data-clear-row
-                            class="shrink-0 text-content-muted hover:text-danger focus:outline-none"
-                            title="{% trans "Clear this row" %}"
-                            aria-label="{% trans "Clear this row" %}">
-                      {% icon "trash-2" css_class="h-3.5 w-3.5" %}
-                    </button>
-                    {% endif %}
                     {# Bare name: the "BW +" affix carries the marker on this #}
                     {# grid (see rep_target_goal_setup.html).                  #}
-                    <span class="grow">{{ lift.name }}</span>
+                    <span class="grow min-w-0">{{ lift.name }}</span>
                     {# One "BW +" per row, not per cell: every cell in a       #}
                     {# bodyweight-added row is ADDED weight (0 means bodyweight #}
                     {# alone), and ten copies across a 10-column grid cramped   #}
@@ -214,7 +235,7 @@
                     {# name cell so it still abuts the first visible input once #}
                     {# the grid is scrolled.                                    #}
                     {% if lift.is_bodyweight_added %}
-                    <span id="{{ lift.name|slugify }}-bw" class="shrink-0 text-xs font-normal text-content-muted">
+                    <span id="{{ lift.name|slugify }}-bw" class="shrink-0 text-[10px] font-normal text-content-muted">
                       {% trans "BW +" %}
                       <span class="sr-only">{% trans "enter the weight added on top of your bodyweight; 0 means bodyweight alone" %}</span>
                     </span>
@@ -230,11 +251,16 @@
                   {# input gives up the width the suffix takes, keeping the     #}
                   {# column close to what it was.                               #}
                   <div class="flex items-center gap-0.5">
-                    <input type="text" inputmode="decimal" name="{{ cell.field }}"
+                    {# type=number (spinners suppressed, as in Rep Target): a #}
+                    {# text input let letters be typed into a weight cell and,  #}
+                    {# on a phone, did not reliably bring up the numeric keypad. #}
+                    {# The server parses the raw string either way, and the      #}
+                    {# Compute JS reads these with parseFloat.                   #}
+                    <input type="number" step="any" inputmode="decimal" name="{{ cell.field }}"
                            value="{{ cell.value }}"
                            aria-describedby="{% if lift.is_bodyweight_added %}{{ lift.name|slugify }}-bw {% endif %}{{ cell.field }}-suffix"
                            {% if show_calculator %}data-rep="{{ cell.rep }}" data-source="{% if cell.is_computed %}computed{% else %}typed{% endif %}"{% endif %}
-                           class="w-full min-w-[3rem] bg-surface-card text-content-body border border-line rounded px-1 py-1 text-sm text-right font-mono focus:outline-none focus:border-accent">
+                           class="no-spinner w-full min-w-[3rem] bg-surface-card text-content-body border border-line rounded px-1 py-1 text-sm text-right font-mono focus:outline-none focus:border-accent">
                     <span id="{{ cell.field }}-suffix"
                           class="shrink-0 text-[10px] font-mono text-content-subtle whitespace-nowrap">{{ display_unit }}&times;{{ cell.rep }}</span>
                   </div>
@@ -243,7 +269,7 @@
               </tr>
               {% if lift.needs_decision %}
               <tr>
-                <td colspan="{{ rep_range|length|add:1 }}" class="pb-2 pt-0 pl-2 border-l-4 border-warning border-b border-line-subtle">
+                <td colspan="{{ rep_range|length|add:2 }}" class="pb-2 pt-0 pl-2 border-l-4 border-warning border-b border-line-subtle">
                   <p class="text-xs font-normal text-warning-dark">{{ lift.needs_decision_reason }}</p>
                 </td>
               </tr>

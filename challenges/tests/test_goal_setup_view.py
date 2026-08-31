@@ -82,7 +82,7 @@ def _grid_rows(html):
     rows = {}
     for match in re.finditer(r'<tr class="text-content-body(.*?)</tr>', html, re.S):
         row = re.sub(r"\s+", " ", match.group(1))
-        rows[re.search(r'class="grow">([^<]*)', row).group(1).strip()] = row
+        rows[re.search(r'class="grow[^"]*">([^<]*)', row).group(1).strip()] = row
     return rows
 
 
@@ -774,9 +774,8 @@ class TestHistoryMethodFlow:
         content = resp.content.decode()
         assert "bg-warning-light" not in content
         assert "border-warning" in content
-        # 10 rep columns + the lift name (the "BW +" affix rides inside the
-        # name cell, so it is not a column of its own).
-        assert 'colspan="11"' in content
+        # 10 rep columns + the two pinned ones (clear-row, lift name).
+        assert 'colspan="12"' in content
 
     def test_cancel_link_confirms_before_discarding(
         self, authed_client, participant, challenge
