@@ -80,8 +80,17 @@
               {# Unit sits beside the field rather than in the header: which #}
               {# unit you are typing matters most at the moment you type.    #}
               <td class="py-2 pl-2 pr-1 sm:px-3 text-right whitespace-nowrap">
+                {# "BW +" fronts the field for bodyweight-added lifts: the target #}
+                {# is the ADDED weight, so 0 means bodyweight alone. Without it   #}
+                {# participants typed their bodyweight in here.                   #}
+                {% if lift.is_bodyweight_added %}
+                <span id="{{ lift.weight_field }}-bw" class="mr-1 text-xs text-content-muted">
+                  {% trans "BW +" %}
+                  <span class="sr-only">{% trans "enter the weight added on top of your bodyweight; 0 means bodyweight alone" %}</span>
+                </span>
+                {% endif %}
                 <input type="number" step="any" inputmode="decimal" name="{{ lift.weight_field }}" value="{{ lift.weight_value }}"
-                       aria-describedby="{{ lift.weight_field }}-unit"
+                       aria-describedby="{% if lift.is_bodyweight_added %}{{ lift.weight_field }}-bw {% endif %}{{ lift.weight_field }}-unit"
                        {% if lift.weight_suggested %}data-suggested="1"{% endif %}
                        class="w-16 sm:w-24 border border-line rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:border-accent {% if lift.weight_suggested %}text-content-muted bg-surface-sunken{% else %}bg-surface-card text-content-body{% endif %}">
                 <span id="{{ lift.weight_field }}-unit" class="ml-1 text-xs text-content-muted">{{ display_unit }}</span>

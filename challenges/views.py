@@ -1013,6 +1013,11 @@ def _goal_setup_needs_bodyweight(challenge, data):
     return False
 
 
+# Used only when a participant leaves the name field blank -- the field is not
+# required, so a goal still needs *some* name to be saved under.
+REP_TARGET_FALLBACK_GOAL_NAME = "My Goal"
+
+
 def _rep_target_goal_setup_view(request, challenge, participant):
     """Single-page Rep Target goal-setup form (issue #85).
 
@@ -1044,7 +1049,10 @@ def _rep_target_goal_setup_view(request, challenge, participant):
 
     if request.method == "POST":
         targets, errors = parse_rep_target_grid(request.POST, challenge, unit)
-        goal_name = (request.POST.get("name") or "").strip() or "My Goal"
+        # Kept raw (blank stays blank) so a re-render echoes what the
+        # participant actually typed and the placeholder keeps prompting for a
+        # descriptive name. The "My Goal" fallback applies at save time only.
+        goal_name = (request.POST.get("name") or "").strip()
 
         if request.POST.get("action") == "suggest":
             suggested, no_history_lifts = suggest_rep_targets_from_history(
@@ -1122,7 +1130,7 @@ def _rep_target_goal_setup_view(request, challenge, participant):
         )
         save_rep_target_goal(
             participant,
-            goal_name,
+            goal_name or REP_TARGET_FALLBACK_GOAL_NAME,
             targets,
             source_method=source_method,
         )
@@ -1132,9 +1140,11 @@ def _rep_target_goal_setup_view(request, challenge, participant):
         activate_draft_for_creator(challenge, request.user)
         return redirect(f"/challenges/{challenge.pk}/")
 
-    context = build_rep_target_goal_context(
-        request.user, challenge, goal_name="My Goal"
-    )
+    # Deliberately unprefilled: "My Goal" as a starting value was simply
+    # confirmed as-is, leaving charts that all read alike. The field's
+    # placeholder asks for something descriptive instead, and a name left
+    # blank still falls back to REP_TARGET_FALLBACK_GOAL_NAME on save.
+    context = build_rep_target_goal_context(request.user, challenge, goal_name="")
     return render(request, "challenges/rep_target_goal_setup.html", context)
 
 

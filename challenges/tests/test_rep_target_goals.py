@@ -24,6 +24,7 @@ from challenges.tests.factories import (
     RepTargetGoalFactory,
     make_rep_target_challenge,
 )
+from challenges.views import REP_TARGET_FALLBACK_GOAL_NAME
 
 pytestmark = pytest.mark.django_db
 
@@ -246,6 +247,28 @@ class TestRepTargetGoalSetupView:
         assert participant.has_goal_configured
         challenge.refresh_from_db()
         assert challenge.status == Challenge.Status.ACTIVE
+
+    def test_blank_name_falls_back_instead_of_saving_an_unnamed_goal(self):
+        # The field is no longer prefilled (participants confirmed "My Goal"
+        # unchanged), so a blank submission is now an ordinary case: it must
+        # still save under a name rather than an empty string.
+        challenge = make_rep_target_challenge(lifts=[LIFT])
+        user = UserFactory()
+        participant = ChallengeParticipantFactory(
+            challenge=challenge,
+            user=user,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        )
+        client = Client()
+        client.force_login(user)
+        weight_field, reps_field = rep_target_field_names(0)
+        response = client.post(
+            reverse("challenges:goal-setup", args=[challenge.pk]),
+            {"name": "   ", "action": "save", weight_field: "0", reps_field: "20"},
+        )
+        assert response.status_code == 302
+        participant.refresh_from_db()
+        assert participant.rep_target_goal.name == REP_TARGET_FALLBACK_GOAL_NAME
 
     def test_post_incomplete_reprompts_with_errors(self):
         challenge = make_rep_target_challenge(lifts=[LIFT])
