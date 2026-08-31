@@ -1092,6 +1092,17 @@ class TestStandardsMethodFlow:
         assert resp.context["goal_name"] == "Verified Intermediate"
         assert b'value="Verified Intermediate"' in resp.content
 
+    def test_manual_chart_step_leaves_the_name_blank_for_the_placeholder(
+        self, authed_client, participant, challenge
+    ):
+        """Manual entry has no derivable name, and offering "My Goal" got
+        confirmed unchanged, leaving charts that all read alike. The field's
+        placeholder asks for a descriptive one instead; the default is still
+        applied at save time by CustomGoalForm.clean."""
+        authed_client.post(_url(challenge), {"method": "custom"})
+        resp = authed_client.get(_url(challenge))
+        assert resp.context["goal_name"] == ""
+
     def test_bodyweight_unit_defaults_to_user_preference(
         self, authed_client, participant, challenge, user, settings
     ):

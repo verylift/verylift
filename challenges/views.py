@@ -1563,10 +1563,12 @@ def _goal_setup_chart_step(request, challenge, participant, data, *, step_contex
         else Decimal(str(settings.CHALLENGES_GOAL_SUGGESTION_UPLIFT))
     )
     # Also used to prefill the "Review your chart" step's name field with
-    # default_goal_name (UAT feedback: a FitnessVolt-derived chart landed on
-    # this page with an unhelpful blank name field, even though a sensible
-    # one was already computable -- previously only used as a submit-time
-    # fallback when left blank, never shown up front).
+    # default_goal_name for the standards and history methods (UAT feedback: a
+    # FitnessVolt-derived chart landed on this page with an unhelpful blank
+    # name field, even though a sensible one was already computable --
+    # previously only used as a submit-time fallback when left blank, never
+    # shown up front). See prefilled_name below for why the methods with
+    # nothing to derive are left blank instead.
     method_kwargs = (
         {"tier": data.get("tier"), "population": data.get("population")}
         if method == CustomGoal.SourceMethod.STANDARDS
@@ -1677,11 +1679,25 @@ def _goal_setup_chart_step(request, challenge, participant, data, *, step_contex
             "you save it."
         ).format(percent=f"{float(uplift * 100):g}")
 
+    # Only a *derived* name is worth showing up front (UAT feedback above): a
+    # standards or history chart arrives with a name that describes how it was
+    # built. Manual entry and JSON paste have nothing to derive, and offering
+    # "My Goal" there just got confirmed unchanged, leaving charts that all
+    # read alike -- so their field stays empty and its placeholder asks for
+    # something descriptive, matching Rep Target. Blank is still not an error:
+    # CustomGoalForm.clean falls back to default_goal_name at save time.
+    prefilled_name = (
+        default_goal_name(method, **method_kwargs)
+        if method
+        in (CustomGoal.SourceMethod.STANDARDS, CustomGoal.SourceMethod.HISTORY)
+        else ""
+    )
+
     context = build_custom_goal_context(
         request.user,
         challenge,
         method=method,
-        goal_name=default_goal_name(method, **method_kwargs),
+        goal_name=prefilled_name,
         targets=targets,
         unavailable_lifts=unavailable_lifts,
         assisted_only_lifts=assisted_only_lifts,
