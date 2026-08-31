@@ -247,6 +247,35 @@ class TestRepTargetGoalSetupView:
         challenge.refresh_from_db()
         assert challenge.status == Challenge.Status.ACTIVE
 
+    def test_bodyweight_added_rows_open_at_zero_added_weight(self):
+        # 0 is the added weight for an unweighted set -- the common case for
+        # these lifts, and the only value fillable without guessing. Barbell
+        # rows stay blank: a "0" against a bench press reads as a target of
+        # nothing.
+        challenge = make_rep_target_challenge(lifts=["Chin-up", "Bench Press"])
+        user = UserFactory()
+        ChallengeParticipantFactory(
+            challenge=challenge,
+            user=user,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        )
+        client = Client()
+        client.force_login(user)
+        rows = {
+            lift["name"]: lift
+            for lift in client.get(
+                reverse("challenges:goal-setup", args=[challenge.pk])
+            ).context["lifts"]
+        }
+
+        assert rows["Chin-up"]["weight_value"] == "0"
+        assert rows["Bench Press"]["weight_value"] == ""
+        # Reps stay for the participant to choose, and the prefilled 0 is not
+        # a history suggestion -- marking it as one would flip the saved
+        # goal's provenance to HISTORY.
+        assert rows["Chin-up"]["reps_value"] == ""
+        assert not rows["Chin-up"]["weight_suggested"]
+
     def test_blank_name_is_rejected_rather_than_defaulted(self):
         # The field is neither prefilled nor defaulted at save time any more:
         # a blank (or whitespace-only) name must come back as an error, or
