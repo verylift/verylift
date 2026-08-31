@@ -77,6 +77,15 @@ def _url(challenge):
     return reverse("challenges:goal-setup", args=[challenge.pk])
 
 
+def _grid_rows(html):
+    """{lift name: that row's markup} for the chart step's target grid."""
+    rows = {}
+    for match in re.finditer(r'<tr class="text-content-body(.*?)</tr>', html, re.S):
+        row = re.sub(r"\s+", " ", match.group(1))
+        rows[re.search(r"<span>([^<(]*)", row).group(1).strip()] = row
+    return rows
+
+
 class TestAccess:
     def test_login_required(self, db, challenge):
         resp = Client().get(_url(challenge))
@@ -396,6 +405,27 @@ class TestStaleWizardStepResubmission:
 
 
 class TestCustomMethodFullFlow:
+    def test_grid_marks_bodyweight_added_rows(self, db, user):
+        """The grid's cells are ADDED weight for these lifts (0 means
+        bodyweight alone), which the page said nowhere: build_custom_goal_context
+        has always carried is_bodyweight_added and the template ignored it, so
+        a Chin-up row looked exactly like a Back Squat row."""
+        challenge = make_custom_challenge(
+            lifts=["Chin-up", "Back Squat"], creator=user, status=Challenge.Status.DRAFT
+        )
+        ChallengeParticipantFactory(
+            challenge=challenge,
+            user=user,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        )
+        client = Client()
+        client.force_login(user)
+        client.post(_url(challenge), {"method": "custom"})
+        rows = _grid_rows(client.get(_url(challenge)).content.decode())
+
+        assert "BW +" in rows["Chin-up"]
+        assert "BW +" not in rows["Back Squat"]
+
     def test_confirm_creates_goal_via_grid_with_empty_source_detail(
         self, authed_client, participant, challenge
     ):
@@ -744,7 +774,8 @@ class TestHistoryMethodFlow:
         content = resp.content.decode()
         assert "bg-warning-light" not in content
         assert "border-warning" in content
-        assert 'colspan="11"' in content
+        # 10 rep columns + the lift name + the bodyweight-added affix column.
+        assert 'colspan="12"' in content
 
     def test_cancel_link_confirms_before_discarding(
         self, authed_client, participant, challenge
