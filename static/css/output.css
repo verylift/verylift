@@ -1277,6 +1277,10 @@ body {
   max-width: 72rem;
 }
 
+.max-w-\[28rem\] {
+  max-width: 28rem;
+}
+
 .max-w-\[90\%\] {
   max-width: 90%;
 }
