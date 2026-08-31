@@ -68,7 +68,11 @@
             <tr class="text-content-body border-b border-line-subtle" data-lift-row>
               <td class="py-2 pr-2 sm:pr-4 font-medium text-content-strong">
                 <div class="flex items-center justify-between gap-1.5 w-full">
-                  <span>{{ lift.name }}{% if lift.is_bodyweight_added %} <span class="text-content-muted font-normal">({% trans "BW" %})</span>{% endif %}</span>
+                  {# No "(BW)" suffix here: the row's "BW +" affix already says #}
+                  {# it, right where the value is typed. The read-only tables    #}
+                  {# (detail.html, _participant_chart.html, the goal table) keep #}
+                  {# the suffix -- they have no input to front.                  #}
+                  <span>{{ lift.name }}</span>
                   <button type="button" data-clear-row
                           class="shrink-0 text-content-muted hover:text-danger focus:outline-none"
                           title="{% trans "Clear this row" %}"
