@@ -24,7 +24,6 @@ from challenges.tests.factories import (
     RepTargetGoalFactory,
     make_rep_target_challenge,
 )
-from challenges.views import REP_TARGET_FALLBACK_GOAL_NAME
 
 pytestmark = pytest.mark.django_db
 
@@ -248,10 +247,10 @@ class TestRepTargetGoalSetupView:
         challenge.refresh_from_db()
         assert challenge.status == Challenge.Status.ACTIVE
 
-    def test_blank_name_falls_back_instead_of_saving_an_unnamed_goal(self):
-        # The field is no longer prefilled (participants confirmed "My Goal"
-        # unchanged), so a blank submission is now an ordinary case: it must
-        # still save under a name rather than an empty string.
+    def test_blank_name_is_rejected_rather_than_defaulted(self):
+        # The field is neither prefilled nor defaulted at save time any more:
+        # a blank (or whitespace-only) name must come back as an error, or
+        # every chart ends up named alike.
         challenge = make_rep_target_challenge(lifts=[LIFT])
         user = UserFactory()
         participant = ChallengeParticipantFactory(
@@ -266,9 +265,30 @@ class TestRepTargetGoalSetupView:
             reverse("challenges:goal-setup", args=[challenge.pk]),
             {"name": "   ", "action": "save", weight_field: "0", reps_field: "20"},
         )
-        assert response.status_code == 302
+        assert response.status_code == 200
+        assert response.context["errors"]
         participant.refresh_from_db()
-        assert participant.rep_target_goal.name == REP_TARGET_FALLBACK_GOAL_NAME
+        assert not participant.has_goal_configured
+
+    def test_suggest_does_not_demand_a_name(self):
+        # "Suggest targets" re-renders the same form rather than saving, so the
+        # name requirement must not fire on it -- filling the grid first and
+        # naming the goal last is a normal order to work in.
+        challenge = make_rep_target_challenge(lifts=[LIFT])
+        user = UserFactory()
+        ChallengeParticipantFactory(
+            challenge=challenge,
+            user=user,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        )
+        client = Client()
+        client.force_login(user)
+        response = client.post(
+            reverse("challenges:goal-setup", args=[challenge.pk]),
+            {"name": "", "action": "suggest"},
+        )
+        assert response.status_code == 200
+        assert not response.context["errors"]
 
     def test_post_incomplete_reprompts_with_errors(self):
         challenge = make_rep_target_challenge(lifts=[LIFT])

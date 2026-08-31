@@ -17,7 +17,6 @@ from challenges.custom_goals import (
     unknown_lift_error,
     validate_rep_max_monotonicity,
 )
-from challenges.goal_builders import default_goal_name
 from challenges.lift_presets import CALISTHENICS_LIFT_NAMES, CLASSIC_LIFT_NAMES
 from challenges.models import Challenge, CustomGoal
 from challenges.services import challenge_display_end_of_day
@@ -543,9 +542,13 @@ class CustomGoalForm(forms.Form):
             )
             name = (cleaned_data.get("name") or "").strip()
             if not name:
-                # A goal name is never demanded (TASK-248 plan §4): a sensible
-                # default is used, editable but not required.
-                name = default_goal_name(self.method, **self.method_kwargs)
+                # A blank name used to save silently under
+                # default_goal_name(): charts that all read alike, which is
+                # what the empty-by-default field was meant to stop. Ask for
+                # one instead (TASK-248 plan §4's "never demanded" no longer
+                # applies). default_goal_name still prefills the standards and
+                # history grids, where it describes how the chart was built.
+                errors.append(gettext("Give your goal a name."))
         self.targets = targets
         self.name = name
         self.unknown_lifts = unknown_lifts
