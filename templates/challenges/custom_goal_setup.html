@@ -173,10 +173,10 @@
                 {% for col in rep_range %}
                 {# Centered over the inputs beneath, matching the rep target #}
                 {# grid; only display charts right-align their numbers.      #}
-                <th class="py-2 px-1 font-medium text-center font-mono">
-                  <span class="block">{{ col.points }}pt</span>
-                  <span class="block text-[10px] font-normal text-content-subtle">{{ col.reps }} {% blocktrans count counter=col.reps %}rep{% plural %}reps{% endblocktrans %}</span>
-                </th>
+                {# The rep count used to sit here as a sub-line; it now rides #}
+                {# beside each cell's value, where the thing being entered is #}
+                {# readable in full ("100 lb x 10") without looking up.       #}
+                <th class="py-2 px-1 font-medium text-center font-mono">{{ col.points }}pt</th>
                 {% endfor %}
               </tr>
             </thead>
@@ -213,11 +213,21 @@
                 </td>
                 {% for cell in lift.cells %}
                 <td class="py-1 px-0.5">
-                  <input type="text" inputmode="decimal" name="{{ cell.field }}"
-                         value="{{ cell.value }}"
-                         {% if lift.is_bodyweight_added %}aria-describedby="{{ lift.name|slugify }}-bw"{% endif %}
-                         {% if show_calculator %}data-rep="{{ cell.rep }}" data-source="{% if cell.is_computed %}computed{% else %}typed{% endif %}"{% endif %}
-                         class="w-full min-w-[3.75rem] bg-surface-card text-content-body border border-line rounded px-1 py-1 text-sm text-right font-mono focus:outline-none focus:border-accent">
+                  {# Unit and rep count ride beside the value rather than only #}
+                  {# in the header: a cell reads "100 lb x 10" on its own, so   #}
+                  {# neither the unit nor which column you are in has to be     #}
+                  {# carried in your head while typing across ten of them. The  #}
+                  {# input gives up the width the suffix takes, keeping the     #}
+                  {# column close to what it was.                               #}
+                  <div class="flex items-center gap-0.5">
+                    <input type="text" inputmode="decimal" name="{{ cell.field }}"
+                           value="{{ cell.value }}"
+                           aria-describedby="{% if lift.is_bodyweight_added %}{{ lift.name|slugify }}-bw {% endif %}{{ cell.field }}-suffix"
+                           {% if show_calculator %}data-rep="{{ cell.rep }}" data-source="{% if cell.is_computed %}computed{% else %}typed{% endif %}"{% endif %}
+                           class="w-full min-w-[3rem] bg-surface-card text-content-body border border-line rounded px-1 py-1 text-sm text-right font-mono focus:outline-none focus:border-accent">
+                    <span id="{{ cell.field }}-suffix"
+                          class="shrink-0 text-[10px] font-mono text-content-subtle whitespace-nowrap">{{ display_unit }}&times;{{ cell.rep }}</span>
+                  </div>
                 </td>
                 {% endfor %}
               </tr>

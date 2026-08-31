@@ -1210,8 +1210,8 @@ body {
   min-width: 12rem;
 }
 
-.min-w-\[3\.75rem\] {
-  min-width: 3.75rem;
+.min-w-\[3rem\] {
+  min-width: 3rem;
 }
 
 .min-w-\[7rem\] {
@@ -1419,6 +1419,10 @@ body {
 
 .justify-between {
   justify-content: space-between;
+}
+
+.gap-0\.5 {
+  gap: 0.125rem;
 }
 
 .gap-1 {

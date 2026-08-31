@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-31 21:14+0000\n"
+"POT-Creation-Date: 2026-08-31 21:51+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -646,7 +646,7 @@ msgstr ""
 #: templates/challenges/_summary_card.html:76
 #: templates/challenges/create.html:42 templates/challenges/create.html:76
 #: templates/challenges/create.html:114 templates/challenges/create.html:189
-#: templates/challenges/custom_goal_setup.html:254
+#: templates/challenges/custom_goal_setup.html:264
 #: templates/challenges/goal_setup_inputs.html:147
 #: templates/challenges/history_needed.html:52
 #: templates/challenges/rep_target_goal_setup.html:126
@@ -1648,7 +1648,7 @@ msgstr ""
 #: templates/challenges/_history_needed.html:30
 #: templates/challenges/create.html:72 templates/challenges/create.html:110
 #: templates/challenges/create.html:185
-#: templates/challenges/custom_goal_setup.html:245
+#: templates/challenges/custom_goal_setup.html:255
 #: templates/challenges/goal_setup_inputs.html:141
 #: templates/challenges/history_needed.html:46
 msgid "back"
@@ -1882,7 +1882,6 @@ msgstr "%(points)s pts"
 #: templates/challenges/_rep_target_goal_table.html:48
 #: templates/challenges/_rep_target_summary_card.html:52
 #: templates/challenges/_summary_card.html:47
-#: templates/challenges/custom_goal_setup.html:178
 #: templates/challenges/detail.html:351
 msgid "rep"
 msgid_plural "reps"
@@ -2392,16 +2391,16 @@ msgstr ""
 "introduce el peso añadido sobre tu peso corporal; 0 significa solo peso "
 "corporal"
 
-#: templates/challenges/custom_goal_setup.html:237
+#: templates/challenges/custom_goal_setup.html:247
 msgid "This challenge has no lifts configured."
 msgstr "Este reto no tiene ejercicios configurados."
 
-#: templates/challenges/custom_goal_setup.html:250
+#: templates/challenges/custom_goal_setup.html:260
 #: templates/challenges/rep_target_goal_setup.html:124
 msgid "confirm goal"
 msgstr "confirmar objetivo"
 
-#: templates/challenges/custom_goal_setup.html:253
+#: templates/challenges/custom_goal_setup.html:263
 #: templates/challenges/goal_setup_inputs.html:146
 msgid "Cancel and discard everything entered so far?"
 msgstr "¿Cancelar y descartar todo lo introducido hasta ahora?"
