@@ -163,32 +163,38 @@
         {% endif %}
         {% if lifts %}
         <div class="overflow-x-auto">
-          <table class="text-sm text-left table-auto w-full">
+          {# border-separate, and every rule drawn per cell rather than on the #}
+          {# row: a sticky cell in a border-collapse table loses its borders   #}
+          {# to the cells it scrolls over. Same construction as the chart      #}
+          {# tables on the challenge detail page.                              #}
+          <table class="text-sm text-left w-full border-separate border-spacing-0">
             <thead>
-              <tr class="text-content-muted border-b border-line-subtle">
-                <th class="py-2 pr-4 font-medium">{% trans "Lift" %}</th>
-                {# Unlabelled: the affix beneath it reads as part of each #}
-                {# bodyweight-added row's inputs, not as its own measure.  #}
-                <th class="py-2 pr-1"><span class="sr-only">{% trans "weight basis" %}</span></th>
+              <tr class="text-content-muted">
+                <th class="py-2 pr-4 font-medium sticky left-0 z-20 bg-surface-card border-r border-b border-line-subtle">{% trans "Lift" %}</th>
                 {% for col in rep_range %}
                 {# Centered over the inputs beneath, matching the rep target #}
                 {# grid; only display charts right-align their numbers.      #}
                 {# The rep count used to sit here as a sub-line; it now rides #}
                 {# beside each cell's value, where the thing being entered is #}
                 {# readable in full ("100 lb x 10") without looking up.       #}
-                <th class="py-2 px-1 font-medium text-center font-mono">{{ col.points }}pt</th>
+                <th class="py-2 px-1 font-medium text-center font-mono border-b border-line-subtle">{{ col.points }}pt</th>
                 {% endfor %}
               </tr>
             </thead>
             <tbody>
               {% for lift in lifts %}
-              <tr class="text-content-body {% if not lift.needs_decision %}border-b border-line-subtle{% endif %}"
+              <tr class="text-content-body"
                   {% if show_calculator %}data-lift-row data-lift-name="{{ lift.name }}"{% endif %}>
-                <td class="py-2 pr-4 font-medium text-content-strong align-top {% if lift.needs_decision %}border-l-4 border-warning pl-2{% endif %}">
-                  <div class="flex items-center justify-between gap-1.5 w-full">
-                    {# Bare name: the row's "BW +" affix carries the marker on #}
-                    {# this grid (see rep_target_goal_setup.html).              #}
-                    <span>{{ lift.name }}</span>
+                {# h-14 is the height a row needs when its lift name wraps to #}
+                {# two lines, applied to every row: letting each row size to   #}
+                {# its own name left "Deadlift" short between two taller       #}
+                {# neighbours, and the grid looked ragged. Names still wrap    #}
+                {# rather than widening the column out of the viewport.        #}
+                <td class="h-14 py-2 pr-2 font-medium text-content-strong sticky left-0 z-10 bg-surface-card border-r {% if not lift.needs_decision %}border-b{% endif %} border-line-subtle {% if lift.needs_decision %}border-l-4 border-warning pl-2{% endif %}">
+                  <div class="flex items-center gap-1.5 w-full">
+                    {# Bare name: the "BW +" affix carries the marker on this #}
+                    {# grid (see rep_target_goal_setup.html).                  #}
+                    <span class="grow">{{ lift.name }}</span>
                     {% if show_calculator %}
                     <button type="button" data-clear-row
                             class="shrink-0 text-content-muted hover:text-danger focus:outline-none"
@@ -197,22 +203,22 @@
                       {% icon "trash-2" css_class="h-3.5 w-3.5" %}
                     </button>
                     {% endif %}
+                    {# One "BW +" per row, not per cell: every cell in a       #}
+                    {# bodyweight-added row is ADDED weight (0 means bodyweight #}
+                    {# alone), and ten copies across a 10-column grid cramped   #}
+                    {# it past legibility. It lives at the end of the sticky    #}
+                    {# name cell so it still abuts the first visible input once #}
+                    {# the grid is scrolled.                                    #}
+                    {% if lift.is_bodyweight_added %}
+                    <span id="{{ lift.name|slugify }}-bw" class="shrink-0 text-xs font-normal text-content-muted">
+                      {% trans "BW +" %}
+                      <span class="sr-only">{% trans "enter the weight added on top of your bodyweight; 0 means bodyweight alone" %}</span>
+                    </span>
+                    {% endif %}
                   </div>
                 </td>
-                {# One "BW +" per row rather than per cell: every cell in a #}
-                {# bodyweight-added row is ADDED weight (0 means bodyweight  #}
-                {# alone), and repeating the affix ten times across a        #}
-                {# 10-column grid cramped it past legibility.               #}
-                <td class="py-1 pr-1 align-middle whitespace-nowrap text-xs text-content-muted">
-                  {% if lift.is_bodyweight_added %}
-                  <span id="{{ lift.name|slugify }}-bw">
-                    {% trans "BW +" %}
-                    <span class="sr-only">{% trans "enter the weight added on top of your bodyweight; 0 means bodyweight alone" %}</span>
-                  </span>
-                  {% endif %}
-                </td>
                 {% for cell in lift.cells %}
-                <td class="py-1 px-0.5">
+                <td class="py-1 px-0.5 {% if not lift.needs_decision %}border-b border-line-subtle{% endif %}">
                   {# Unit and rep count ride beside the value rather than only #}
                   {# in the header: a cell reads "100 lb x 10" on its own, so   #}
                   {# neither the unit nor which column you are in has to be     #}
@@ -232,8 +238,8 @@
                 {% endfor %}
               </tr>
               {% if lift.needs_decision %}
-              <tr class="border-b border-line-subtle">
-                <td colspan="{{ rep_range|length|add:2 }}" class="pb-2 pt-0 pl-2 border-l-4 border-warning">
+              <tr>
+                <td colspan="{{ rep_range|length|add:1 }}" class="pb-2 pt-0 pl-2 border-l-4 border-warning border-b border-line-subtle">
                   <p class="text-xs font-normal text-warning-dark">{{ lift.needs_decision_reason }}</p>
                 </td>
               </tr>
