@@ -23,7 +23,7 @@ from challenges.goal_builders import (
     suggest_from_history,
     suggest_from_standards,
 )
-from challenges.models import CustomGoal
+from challenges.models import CustomGoal, RepTargetGoal
 from challenges.tests.factories import make_custom_challenge
 from fitnessvolt.tests.factories import FitnessVoltStandardCacheFactory
 from liftosaur.tests.factories import LiftHistoryFactory
@@ -590,4 +590,17 @@ class TestDefaultGoalName:
         assert name == "Suggested from history"
 
     def test_custom_name(self):
-        assert default_goal_name(CustomGoal.SourceMethod.CUSTOM) == "My Goal"
+        assert default_goal_name(CustomGoal.SourceMethod.CUSTOM) == "Custom Goal"
+
+    def test_json_name(self):
+        assert default_goal_name(CustomGoal.SourceMethod.JSON) == "Custom Goal"
+
+    def test_rep_target_custom_name(self):
+        assert default_goal_name(RepTargetGoal.SourceMethod.CUSTOM) == "Custom Goal"
+
+    def test_rep_target_history_name_with_uplift(self):
+        name = default_goal_name(RepTargetGoal.SourceMethod.HISTORY, uplift=0.05)
+        assert name == "Suggested from history (+5%)"
+
+    def test_accepts_a_plain_string_method(self):
+        assert default_goal_name("custom") == "Custom Goal"

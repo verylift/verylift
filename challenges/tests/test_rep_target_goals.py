@@ -287,13 +287,52 @@ class TestRepTargetGoalSetupView:
         weight_field, reps_field = rep_target_field_names(0)
         response = client.post(
             reverse("challenges:goal-setup", args=[challenge.pk]),
-            {"name": "My Goal", "action": "save", weight_field: "0", reps_field: "20"},
+            {"action": "save", weight_field: "0", reps_field: "20"},
         )
         assert response.status_code == 302
         participant.refresh_from_db()
         assert participant.has_goal_configured
+        assert participant.rep_target_goal.name == "Custom Goal"
         challenge.refresh_from_db()
         assert challenge.status == Challenge.Status.ACTIVE
+
+    def test_leave_and_rejoin_does_not_collide_on_the_shared_default_name(self):
+        """Every manually-built goal is now named "Custom Goal" -- no longer
+        unique by construction. detach_active_rep_target_goal renames the
+        goal a participant leaves behind so a second one saved under the
+        same derived name doesn't hit RepTargetGoal's (participant, name)
+        unique constraint."""
+        challenge = make_rep_target_challenge(lifts=[LIFT])
+        user = UserFactory()
+        participant = ChallengeParticipantFactory(
+            challenge=challenge,
+            user=user,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        )
+        client = Client()
+        client.force_login(user)
+        weight_field, reps_field = rep_target_field_names(0)
+        setup_url = reverse("challenges:goal-setup", args=[challenge.pk])
+        client.post(setup_url, {"action": "save", weight_field: "0", reps_field: "20"})
+        participant.refresh_from_db()
+        first_goal_id = participant.rep_target_goal_id
+        assert first_goal_id is not None
+
+        client.post(reverse("challenges:bail", args=[challenge.pk]))
+        participant.refresh_from_db()
+        assert participant.rep_target_goal_id is None
+        participant.is_bailed = False
+        participant.save(update_fields=["is_bailed"])
+
+        response = client.post(
+            setup_url, {"action": "save", weight_field: "0", reps_field: "20"}
+        )
+        assert response.status_code == 302
+        participant.refresh_from_db()
+        assert participant.rep_target_goal_id is not None
+        assert participant.rep_target_goal_id != first_goal_id
+        assert participant.rep_target_goal.name == "Custom Goal"
+        assert RepTargetGoal.objects.filter(participant=participant).count() == 2
 
     def test_bodyweight_added_rows_open_at_zero_added_weight(self):
         # 0 is the added weight for an unweighted set -- the common case for
@@ -324,49 +363,6 @@ class TestRepTargetGoalSetupView:
         assert rows["Chin-up"]["reps_value"] == ""
         assert not rows["Chin-up"]["weight_suggested"]
 
-    def test_blank_name_is_rejected_rather_than_defaulted(self):
-        # The field is neither prefilled nor defaulted at save time any more:
-        # a blank (or whitespace-only) name must come back as an error, or
-        # every chart ends up named alike.
-        challenge = make_rep_target_challenge(lifts=[LIFT])
-        user = UserFactory()
-        participant = ChallengeParticipantFactory(
-            challenge=challenge,
-            user=user,
-            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
-        )
-        client = Client()
-        client.force_login(user)
-        weight_field, reps_field = rep_target_field_names(0)
-        response = client.post(
-            reverse("challenges:goal-setup", args=[challenge.pk]),
-            {"name": "   ", "action": "save", weight_field: "0", reps_field: "20"},
-        )
-        assert response.status_code == 200
-        assert response.context["errors"]
-        participant.refresh_from_db()
-        assert not participant.has_goal_configured
-
-    def test_suggest_does_not_demand_a_name(self):
-        # "Suggest targets" re-renders the same form rather than saving, so the
-        # name requirement must not fire on it -- filling the grid first and
-        # naming the goal last is a normal order to work in.
-        challenge = make_rep_target_challenge(lifts=[LIFT])
-        user = UserFactory()
-        ChallengeParticipantFactory(
-            challenge=challenge,
-            user=user,
-            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
-        )
-        client = Client()
-        client.force_login(user)
-        response = client.post(
-            reverse("challenges:goal-setup", args=[challenge.pk]),
-            {"name": "", "action": "suggest"},
-        )
-        assert response.status_code == 200
-        assert not response.context["errors"]
-
     def test_post_incomplete_reprompts_with_errors(self):
         challenge = make_rep_target_challenge(lifts=[LIFT])
         user = UserFactory()
@@ -379,32 +375,10 @@ class TestRepTargetGoalSetupView:
         client.force_login(user)
         response = client.post(
             reverse("challenges:goal-setup", args=[challenge.pk]),
-            {"name": "My Goal", "action": "save"},
+            {"action": "save"},
         )
         assert response.status_code == 200
         assert response.context["errors"]
-
-    def test_over_long_name_is_an_error_not_a_crash(self):
-        # The template's maxlength stops honest input at 100; a crafted POST
-        # used to reach RepTargetGoal.objects.create and 500 with DataError.
-        challenge = make_rep_target_challenge(lifts=[LIFT])
-        user = UserFactory()
-        participant = ChallengeParticipantFactory(
-            challenge=challenge,
-            user=user,
-            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
-        )
-        client = Client()
-        client.force_login(user)
-        weight_field, reps_field = rep_target_field_names(0)
-        response = client.post(
-            reverse("challenges:goal-setup", args=[challenge.pk]),
-            {"name": "x" * 101, "action": "save", weight_field: "0", reps_field: "20"},
-        )
-        assert response.status_code == 200
-        assert response.context["errors"]
-        participant.refresh_from_db()
-        assert not participant.has_goal_configured
 
     def test_suggest_pins_typed_values_and_fills_only_blanks(self):
         # A field the participant already filled must survive Suggest
@@ -426,7 +400,7 @@ class TestRepTargetGoalSetupView:
         ):
             response = client.post(
                 reverse("challenges:goal-setup", args=[challenge.pk]),
-                {"name": "My Goal", "action": "suggest", reps_field: "25"},
+                {"action": "suggest", reps_field: "25"},
             )
         assert response.status_code == 200
         row = response.context["lifts"][0]
@@ -458,7 +432,6 @@ class TestRepTargetGoalSetupView:
             response = client.post(
                 reverse("challenges:goal-setup", args=[challenge.pk]),
                 {
-                    "name": "My Goal",
                     "action": "suggest",
                     weight_field: "5",
                     reps_field: "30",
@@ -489,7 +462,6 @@ class TestRepTargetGoalSetupView:
         response = client.post(
             reverse("challenges:goal-setup", args=[challenge.pk]),
             {
-                "name": "My Goal",
                 "action": "save",
                 weight_field: "0",
                 reps_field: "20",
@@ -502,6 +474,7 @@ class TestRepTargetGoalSetupView:
             participant.rep_target_goal.source_method
             == RepTargetGoal.SourceMethod.HISTORY
         )
+        assert participant.rep_target_goal.name == "Suggested from history (+10%)"
 
     def test_suggest_action_prefills_without_saving(self):
         challenge = make_rep_target_challenge(lifts=[LIFT])
@@ -515,7 +488,7 @@ class TestRepTargetGoalSetupView:
         client.force_login(user)
         response = client.post(
             reverse("challenges:goal-setup", args=[challenge.pk]),
-            {"name": "My Goal", "action": "suggest"},
+            {"action": "suggest"},
         )
         assert response.status_code == 200
         participant.refresh_from_db()
@@ -535,7 +508,7 @@ class TestRepTargetGoalSetupView:
         client.force_login(user)
         response = client.post(
             reverse("challenges:goal-setup", args=[challenge.pk]),
-            {"name": "My Goal", "action": "suggest"},
+            {"action": "suggest"},
         )
         content = response.content.decode()
         assert f"No recent history for {LIFT}" in content

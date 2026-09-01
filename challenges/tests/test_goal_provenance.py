@@ -76,7 +76,7 @@ def _user_row(user):
     return dict(User.objects.values().get(pk=user.pk))
 
 
-def _confirm_targets(authed_client, url, name, lift):
+def _confirm_targets(authed_client, url, lift):
     """Confirm the chart step via the grid -- not JSON, which is its own
     top-level method (a non-JSON submission ignores targets_json; see
     test_goal_setup_view's provenance-mismatch regression test). Every
@@ -84,7 +84,7 @@ def _confirm_targets(authed_client, url, name, lift):
     index 0."""
     del lift  # kept for call-site readability; grid position is always 0
     fields = {grid_field_name(0, rep): "100" for rep in range(1, 11)}
-    return authed_client.post(url, {"name": name, **fields})
+    return authed_client.post(url, fields)
 
 
 class TestNoUserFieldChanged:
@@ -98,7 +98,7 @@ class TestNoUserFieldChanged:
         before = _user_row(user)
         url = _url(challenge)
         authed_client.post(url, {"method": "custom"})
-        resp = _confirm_targets(authed_client, url, "Custom Goal", "Back Squat")
+        resp = _confirm_targets(authed_client, url, "Back Squat")
         assert resp.status_code == 302
         assert _user_row(user) == before
 
@@ -118,7 +118,7 @@ class TestNoUserFieldChanged:
         authed_client.post(url, {"method": "history"})
         # Inputs (rounding choice) always runs for history now.
         authed_client.post(url, {"rounding_increment": "kg:2.5"})
-        resp = _confirm_targets(authed_client, url, "History Goal", "Back Squat")
+        resp = _confirm_targets(authed_client, url, "Back Squat")
         assert resp.status_code == 302
         assert _user_row(user) == before
 
@@ -145,7 +145,7 @@ class TestNoUserFieldChanged:
                 "tier": "Intermediate",
             },
         )
-        resp = _confirm_targets(authed_client, url, "Standards Goal", "Back Squat")
+        resp = _confirm_targets(authed_client, url, "Back Squat")
         assert resp.status_code == 302
         # The submitted sex/bodyweight never touch User -- the row is
         # bit-for-bit identical to before the wizard ran.
@@ -175,7 +175,7 @@ class TestStandardsProvenanceExact:
                 "tier": "Intermediate",
             },
         )
-        resp = _confirm_targets(authed_client, url, "Standards Goal", "Back Squat")
+        resp = _confirm_targets(authed_client, url, "Back Squat")
         assert resp.status_code == 302
 
         participant.refresh_from_db()
@@ -205,7 +205,7 @@ class TestHistoryAndCustomCarryNoSexOrBodyweight:
         authed_client.post(url, {"method": "history"})
         # Inputs (rounding choice) always runs for history now.
         authed_client.post(url, {"rounding_increment": "kg:2.5"})
-        resp = _confirm_targets(authed_client, url, "History Goal", "Back Squat")
+        resp = _confirm_targets(authed_client, url, "Back Squat")
         assert resp.status_code == 302
 
         participant.refresh_from_db()
@@ -222,7 +222,7 @@ class TestHistoryAndCustomCarryNoSexOrBodyweight:
     def test_custom_source_detail_is_empty(self, authed_client, participant, challenge):
         url = _url(challenge)
         authed_client.post(url, {"method": "custom"})
-        resp = _confirm_targets(authed_client, url, "Custom Goal", "Back Squat")
+        resp = _confirm_targets(authed_client, url, "Back Squat")
         assert resp.status_code == 302
 
         participant.refresh_from_db()
@@ -243,7 +243,7 @@ class TestSessionClearedAfterCompletion:
         # .keys() is required here, not the usual dict-membership idiom.
         assert any("goal_setup" in key for key in session.keys())  # noqa: SIM118
 
-        resp = _confirm_targets(authed_client, url, "Custom Goal", "Back Squat")
+        resp = _confirm_targets(authed_client, url, "Back Squat")
         assert resp.status_code == 302
 
         session = authed_client.session

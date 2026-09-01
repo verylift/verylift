@@ -8,16 +8,17 @@ funnel through the same validation vocabulary and completeness check here so
 scoring only ever sees a complete, kg-normalised table.
 
 JSON payload spec (weights in the payload's ``unit``, defaulting to the
-participant's display unit). ``name`` is required — the JSON path has no
-separate name form field, so the payload must be self-contained::
+participant's display unit)::
 
     {
-      "name": "Spring targets",
       "unit": "lb",
       "targets": {
         "Bench Press": {"1": 225, "2": 215, ..., "10": 155}
       }
     }
+
+A stray "name" key is tolerated and ignored — goals are no longer named by
+the participant (see :func:`challenges.goal_builders.default_goal_name`).
 
 For bodyweight-added lifts (Chin-up/Pull-up/Dip — flagged via
 ``liftosaur.Lift.is_bodyweight_added``) the target is the ADDED weight
@@ -118,28 +119,27 @@ def _to_kg(raw, unit: str, *, allow_non_positive: bool = False) -> Decimal | Non
 
 def parse_custom_goal_json(
     payload_text: str, challenge, default_unit: str
-) -> tuple[str, dict[str, dict[int, Decimal]], list[str], list[str]]:
-    """Parse a pasted JSON goal payload into a name and a ``{lift: {rep: kg}}`` table.
+) -> tuple[dict[str, dict[int, Decimal]], list[str], list[str]]:
+    """Parse a pasted JSON goal payload into a ``{lift: {rep: kg}}`` table.
 
-    Returns ``(name, targets, errors, unknown_lifts)``: the payload's goal
-    name, whatever cells parsed cleanly, a list of human-readable error
-    messages, and a separate list of lift names present in the payload but
-    not configured for this challenge. Unknown lift names are deliberately
-    NOT folded into ``errors`` — TASK-314 lets the form/view decide whether
-    they're fatal (blocked outright) or skippable-with-acknowledgment,
-    unlike every other problem here, which is always fatal. Missing rep
-    counts are NOT reported here — completeness is a separate concern
-    (:func:`custom_goal_is_complete`) shared with the grid path — but malformed
-    JSON, a missing/blank name, a mis-shaped lift, a bad unit, and
-    non-numeric weights all surface as errors. Non-positive weights are rejected
-    too, except for bodyweight-added lifts whose targets are added weight (0 =
-    bodyweight-only, negative = machine-assisted).
+    Returns ``(targets, errors, unknown_lifts)``: whatever cells parsed
+    cleanly, a list of human-readable error messages, and a separate list of
+    lift names present in the payload but not configured for this challenge.
+    Unknown lift names are deliberately NOT folded into ``errors`` —
+    TASK-314 lets the form/view decide whether they're fatal (blocked
+    outright) or skippable-with-acknowledgment, unlike every other problem
+    here, which is always fatal. Missing rep counts are NOT reported here —
+    completeness is a separate concern (:func:`custom_goal_is_complete`)
+    shared with the grid path — but malformed JSON, a mis-shaped lift, a bad
+    unit, and non-numeric weights all surface as errors. Non-positive weights
+    are rejected too, except for bodyweight-added lifts whose targets are
+    added weight (0 = bodyweight-only, negative = machine-assisted). A stray
+    "name" key in the payload is ignored, not validated.
     """
     try:
         data = json.loads(payload_text)
     except (json.JSONDecodeError, TypeError, ValueError):
         return (
-            "",
             {},
             [gettext("Could not parse JSON. Please paste a valid JSON object.")],
             [],
@@ -147,18 +147,12 @@ def parse_custom_goal_json(
 
     if not isinstance(data, dict):
         return (
-            "",
             {},
-            [gettext('JSON payload must be an object with "name" and "targets" keys.')],
+            [gettext('JSON payload must be an object with a "targets" key.')],
             [],
         )
 
     errors: list[str] = []
-    raw_name = data.get("name")
-    name = raw_name.strip() if isinstance(raw_name, str) else ""
-    if not name:
-        errors.append(gettext('JSON payload must include a non-empty "name" key.'))
-
     unit = data.get("unit", default_unit)
     if unit not in (KG, LB):
         errors.append(
@@ -174,7 +168,7 @@ def parse_custom_goal_json(
                 "rep-max weights."
             )
         )
-        return name, {}, errors, []
+        return {}, errors, []
 
     configured = covered_lift_names(challenge)
     bw_added = _bodyweight_added_lift_names(configured)
@@ -212,7 +206,7 @@ def parse_custom_goal_json(
             lift_targets[rep] = weight_kg
         if lift_targets:
             targets[lift_name] = lift_targets
-    return name, targets, errors, unknown_lifts
+    return targets, errors, unknown_lifts
 
 
 def parse_custom_goal_grid(

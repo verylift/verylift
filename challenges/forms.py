@@ -459,19 +459,18 @@ class InviteLinkOptionsForm(forms.Form):
 
 
 class CustomGoalForm(forms.Form):
-    """Goal name plus a target table sourced from JSON paste OR manual grid.
+    """A target table sourced from JSON paste OR manual grid.
 
     Which path is parsed is keyed off ``method``: JSON parses
     ``targets_json``, every other method (standards/history/manual) parses
     the grid fields — the two are peer top-level goal-setup methods, not a
-    toggle within one screen (TASK-306). The name field is only
-    rendered/required for the grid path — a JSON submission carries its own
-    required top-level "name" key instead, so ``self.name`` is resolved from
-    whichever path was used. Either way the parsed ``{lift: {rep: kg}}`` table
-    is exposed on ``self.targets`` so a failed submit can re-render the grid
-    prefilled with whatever parsed cleanly, and completeness (every configured
-    lift × reps 1–10) plus rep-max monotonicity are enforced before the form
-    validates.
+    toggle within one screen (TASK-306). The parsed ``{lift: {rep: kg}}``
+    table is exposed on ``self.targets`` so a failed submit can re-render the
+    grid prefilled with whatever parsed cleanly, and completeness (every
+    configured lift × reps 1–10) plus rep-max monotonicity are enforced
+    before the form validates. Goal names are no longer participant-typed —
+    the view derives one at save time via
+    :func:`challenges.goal_builders.default_goal_name`.
 
     JSON-pasted lift names not configured for the challenge (TASK-314) are an
     acknowledge-and-proceed case rather than an always-fatal one: when they're
@@ -485,14 +484,6 @@ class CustomGoalForm(forms.Form):
     the unknown-lift complaint, never a real one.
     """
 
-    name = forms.CharField(
-        label=_("goal name"),
-        max_length=100,
-        required=False,
-        widget=forms.TextInput(
-            attrs={"class": _INPUT_CSS, "placeholder": _("e.g. My Goals")}
-        ),
-    )
     targets_json = forms.CharField(
         label=_("targets JSON"),
         required=False,
@@ -515,7 +506,6 @@ class CustomGoalForm(forms.Form):
         self.method = method
         self.method_kwargs = method_kwargs or {}
         self.targets: dict = {}
-        self.name = ""
         self.unknown_lifts: list[str] = []
 
     def clean(self):
@@ -533,24 +523,14 @@ class CustomGoalForm(forms.Form):
         )
         unknown_lifts: list[str] = []
         if payload:
-            name, targets, errors, unknown_lifts = parse_custom_goal_json(
+            targets, errors, unknown_lifts = parse_custom_goal_json(
                 payload, self.challenge, self.unit
             )
         else:
             targets, errors = parse_custom_goal_grid(
                 self.data, self.challenge, self.unit
             )
-            name = (cleaned_data.get("name") or "").strip()
-            if not name:
-                # A blank name used to save silently under
-                # default_goal_name(): charts that all read alike, which is
-                # what the empty-by-default field was meant to stop. Ask for
-                # one instead (TASK-248 plan §4's "never demanded" no longer
-                # applies). default_goal_name still prefills the standards and
-                # history grids, where it describes how the chart was built.
-                errors.append(gettext("Give your goal a name."))
         self.targets = targets
-        self.name = name
         self.unknown_lifts = unknown_lifts
 
         other_errors = (

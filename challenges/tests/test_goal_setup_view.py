@@ -405,17 +405,6 @@ class TestStaleWizardStepResubmission:
 
 
 class TestCustomMethodFullFlow:
-    def test_manual_chart_step_leaves_the_name_blank_for_the_placeholder(
-        self, authed_client, participant, challenge
-    ):
-        """Manual entry has no derivable name, and offering "My Goal" got
-        confirmed unchanged, leaving charts that all read alike. The field's
-        placeholder asks for a descriptive one instead; a blank one is
-        rejected on save (CustomGoalForm.clean) rather than defaulted."""
-        authed_client.post(_url(challenge), {"method": "custom"})
-        resp = authed_client.get(_url(challenge))
-        assert resp.context["goal_name"] == ""
-
     def test_grid_marks_bodyweight_added_rows(self, db, user):
         """The grid's cells are ADDED weight for these lifts (0 means
         bodyweight alone), which the page said nowhere: build_custom_goal_context
@@ -444,10 +433,7 @@ class TestCustomMethodFullFlow:
         authed_client.post(url, {"method": "custom"})
         resp = authed_client.post(
             url,
-            {
-                "name": "My Custom Goal",
-                **{grid_field_name(0, r): "100" for r in range(1, 11)},
-            },
+            {grid_field_name(0, r): "100" for r in range(1, 11)},
         )
         assert resp.status_code == 302
         assert resp.url == f"/challenges/{challenge.pk}/"
@@ -455,12 +441,45 @@ class TestCustomMethodFullFlow:
         participant.refresh_from_db()
         goal = participant.custom_goal
         assert goal is not None
+        assert goal.name == "Custom Goal"
         assert goal.source_method == CustomGoal.SourceMethod.CUSTOM
         assert goal.source_detail == {}
         assert goal.targets.count() == 10
 
         challenge.refresh_from_db()
         assert challenge.status == Challenge.Status.ACTIVE
+
+    def test_leave_and_rejoin_does_not_collide_on_the_shared_default_name(
+        self, authed_client, participant, challenge
+    ):
+        """Every manually-built goal is now named "Custom Goal" -- no longer
+        unique by construction. detach_active_goal renames the goal a
+        participant leaves behind so a second one saved under the same
+        derived name doesn't hit CustomGoal's (participant, name) unique
+        constraint."""
+        url = _url(challenge)
+        authed_client.post(url, {"method": "custom"})
+        authed_client.post(url, {grid_field_name(0, r): "100" for r in range(1, 11)})
+        participant.refresh_from_db()
+        first_goal_id = participant.custom_goal_id
+        assert first_goal_id is not None
+
+        authed_client.post(reverse("challenges:bail", args=[challenge.pk]))
+        participant.refresh_from_db()
+        assert participant.custom_goal_id is None
+        participant.is_bailed = False
+        participant.save(update_fields=["is_bailed"])
+
+        authed_client.post(url, {"method": "custom"})
+        resp = authed_client.post(
+            url, {grid_field_name(0, r): "100" for r in range(1, 11)}
+        )
+        assert resp.status_code == 302
+        participant.refresh_from_db()
+        assert participant.custom_goal_id is not None
+        assert participant.custom_goal_id != first_goal_id
+        assert participant.custom_goal.name == "Custom Goal"
+        assert CustomGoal.objects.filter(participant=participant).count() == 2
 
     def test_failed_submit_echoes_computed_fields_back(
         self, authed_client, participant, challenge
@@ -477,7 +496,6 @@ class TestCustomMethodFullFlow:
         resp = authed_client.post(
             url,
             {
-                "name": "My Custom Goal",
                 "computed_fields": computed_field,
                 **{grid_field_name(0, r): weights[r] for r in range(1, 11)},
             },
@@ -530,7 +548,6 @@ class TestJsonMethodFullFlow:
             {
                 "targets_json": json.dumps(
                     {
-                        "name": "My JSON Goal",
                         "unit": "kg",
                         "targets": {"Back Squat": {str(r): 100 for r in range(1, 11)}},
                     }
@@ -543,7 +560,7 @@ class TestJsonMethodFullFlow:
         participant.refresh_from_db()
         goal = participant.custom_goal
         assert goal is not None
-        assert goal.name == "My JSON Goal"
+        assert goal.name == "Custom Goal"
         assert goal.source_method == CustomGoal.SourceMethod.JSON
         assert goal.source_detail == {}
         assert goal.targets.count() == 10
@@ -597,15 +614,28 @@ class TestHistoryMethodFlow:
         assert b'id="id_uplift_percent"' in resp.content
         assert b'id="id_rounding_increment"' in resp.content
 
-    def test_chart_step_prefills_name_from_uplift(
-        self, authed_client, participant, challenge
+    def test_saved_goal_name_reflects_the_chosen_uplift(
+        self, authed_client, participant, challenge, user
     ):
+        LiftHistoryFactory(
+            user=user,
+            lift="Back Squat",
+            performed_at=timezone.now().date(),
+            reps=1,
+            weight_kg=Decimal("100.00"),
+        )
         url = _url(challenge)
         authed_client.post(url, {"method": "history"})
         authed_client.post(url, {"uplift_percent": "15", "rounding_increment": "none"})
         resp = authed_client.get(url)
-        assert resp.context["goal_name"] == "Suggested from history (+15%)"
-        assert b"Suggested from history (+15%)" in resp.content
+        lift_ctx = next(
+            lift for lift in resp.context["lifts"] if lift["name"] == "Back Squat"
+        )
+        grid_fields = {cell["field"]: cell["value"] for cell in lift_ctx["cells"]}
+        resp = authed_client.post(url, grid_fields)
+        assert resp.status_code == 302
+        participant.refresh_from_db()
+        assert participant.custom_goal.name == "Suggested from history (+15%)"
 
     def test_custom_uplift_actually_changes_suggested_targets(
         self, authed_client, participant, challenge, user
@@ -701,7 +731,7 @@ class TestHistoryMethodFlow:
                 assert Decimal(str(cell["value"])) % Decimal("2.5") == 0
 
         grid_fields = {cell["field"]: cell["value"] for cell in lift_ctx["cells"]}
-        resp = authed_client.post(url, {"name": "History Goal", **grid_fields})
+        resp = authed_client.post(url, grid_fields)
         assert resp.status_code == 302
 
         participant.refresh_from_db()
@@ -738,7 +768,7 @@ class TestHistoryMethodFlow:
             lift for lift in resp.context["lifts"] if lift["name"] == "Back Squat"
         )
         grid_fields = {cell["field"]: cell["value"] for cell in lift_ctx["cells"]}
-        resp = authed_client.post(url, {"name": "History Goal", **grid_fields})
+        resp = authed_client.post(url, grid_fields)
         assert resp.status_code == 302
         participant.refresh_from_db()
         assert participant.custom_goal.source_detail["rounding_amount"] is None
@@ -1104,36 +1134,6 @@ class TestStandardsMethodFlow:
         assert 'id="id_population"' in content
         assert 'id="id_tier"' in content
 
-    def test_chart_step_prefills_name_from_population_and_tier(
-        self, authed_client, participant, challenge, settings
-    ):
-        """UAT feedback: the "Review your chart" page's name field showed up
-        blank even though a sensible default was already computable --
-        default_goal_name was only ever used as a submit-time fallback, never
-        shown up front."""
-        settings.FITNESSVOLT_ENABLED = True
-        FitnessVoltStandardCacheFactory(
-            population="verified",
-            sex="M",
-            lift_slug="squat",
-            weight_class_kg=Decimal("80"),
-            source_snapshot_version="2026-06-09",
-        )
-        url = _url(challenge)
-        authed_client.post(url, {"method": "standards"})
-        authed_client.post(
-            url,
-            {
-                "bodyweight": "80",
-                "sex": "M",
-                "population": "verified",
-                "tier": "Intermediate",
-            },
-        )
-        resp = authed_client.get(url)
-        assert resp.context["goal_name"] == "Verified Intermediate"
-        assert b'value="Verified Intermediate"' in resp.content
-
     def test_bodyweight_unit_defaults_to_user_preference(
         self, authed_client, participant, challenge, user, settings
     ):
@@ -1223,11 +1223,12 @@ class TestStandardsMethodFlow:
         # which is CUSTOM-only precisely so a submission can't diverge from
         # what source_detail below claims produced it.
         grid_fields = {cell["field"]: cell["value"] for cell in lift_ctx["cells"]}
-        resp = authed_client.post(url, {"name": "Standards Goal", **grid_fields})
+        resp = authed_client.post(url, grid_fields)
         assert resp.status_code == 302
 
         participant.refresh_from_db()
         goal = participant.custom_goal
+        assert goal.name == "Verified Intermediate"
         assert goal.source_method == CustomGoal.SourceMethod.STANDARDS
         assert goal.source_detail == {
             "population": "verified",
@@ -1277,11 +1278,9 @@ class TestStandardsMethodFlow:
         resp = authed_client.post(
             url,
             {
-                "name": "Standards Goal",
                 **grid_fields,
                 "targets_json": json.dumps(
                     {
-                        "name": "Sneaky JSON Goal",
                         "unit": "kg",
                         "targets": {"Back Squat": {str(r): 999 for r in range(1, 11)}},
                     }
@@ -1292,7 +1291,7 @@ class TestStandardsMethodFlow:
 
         participant.refresh_from_db()
         goal = participant.custom_goal
-        assert goal.name == "Standards Goal"
+        assert goal.name == "Verified Intermediate"
         assert goal.source_method == CustomGoal.SourceMethod.STANDARDS
         assert all(
             target.target_weight != Decimal("999") for target in goal.targets.all()
@@ -1369,7 +1368,6 @@ class TestBackfillScoring:
             {
                 "targets_json": json.dumps(
                     {
-                        "name": "Goal",
                         "unit": "kg",
                         "targets": {"Back Squat": {str(r): 100 for r in range(1, 11)}},
                     }
