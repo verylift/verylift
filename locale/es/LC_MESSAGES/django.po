@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: very lift\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-31 23:23+0000\n"
+"POT-Creation-Date: 2026-09-01 19:22+0000\n"
 "PO-Revision-Date: 2026-07-17 23:50+0000\n"
 "Last-Translator: very lift contributors\n"
 "Language-Team: Spanish\n"
@@ -445,17 +445,17 @@ msgstr "Entrada manual"
 msgid "Paste JSON"
 msgstr "Pegar JSON"
 
-#: challenges/rep_target_goals.py:72
+#: challenges/rep_target_goals.py:103
 #, python-format
 msgid "\"%(lift_name)s\" target weight must be a number."
 msgstr "El peso objetivo de \"%(lift_name)s\" debe ser un número."
 
-#: challenges/rep_target_goals.py:74
+#: challenges/rep_target_goals.py:105
 #, python-format
 msgid "\"%(lift_name)s\" target weight must be a positive number."
 msgstr "El peso objetivo de \"%(lift_name)s\" debe ser un número positivo."
 
-#: challenges/rep_target_goals.py:82
+#: challenges/rep_target_goals.py:113
 #, python-format
 msgid ""
 "\"%(lift_name)s\" target reps must be a whole number between 1 and "
@@ -464,7 +464,7 @@ msgstr ""
 "Las repeticiones objetivo de \"%(lift_name)s\" deben ser un número entero "
 "entre 1 y %(max_reps)s."
 
-#: challenges/rep_target_goals.py:148
+#: challenges/rep_target_goals.py:191
 #, python-format
 msgid "\"%(lift_name)s\" is missing a target."
 msgstr "A \"%(lift_name)s\" le falta un objetivo."
@@ -645,10 +645,10 @@ msgstr ""
 #: templates/challenges/_summary_card.html:76
 #: templates/challenges/create.html:42 templates/challenges/create.html:76
 #: templates/challenges/create.html:114 templates/challenges/create.html:189
-#: templates/challenges/custom_goal_setup.html:300
+#: templates/challenges/custom_goal_setup.html:311
 #: templates/challenges/goal_setup_inputs.html:147
 #: templates/challenges/history_needed.html:52
-#: templates/challenges/rep_target_goal_setup.html:163
+#: templates/challenges/rep_target_goal_setup.html:169
 msgid "cancel"
 msgstr "cancelar"
 
@@ -1647,7 +1647,7 @@ msgstr ""
 #: templates/challenges/_history_needed.html:30
 #: templates/challenges/create.html:72 templates/challenges/create.html:110
 #: templates/challenges/create.html:185
-#: templates/challenges/custom_goal_setup.html:291
+#: templates/challenges/custom_goal_setup.html:302
 #: templates/challenges/goal_setup_inputs.html:141
 #: templates/challenges/history_needed.html:46
 msgid "back"
@@ -1877,11 +1877,9 @@ msgid "%(points)s pts"
 msgstr "%(points)s pts"
 
 #: templates/challenges/_participant_chart.html:44
-#: templates/challenges/_participant_chart.html:67
 #: templates/challenges/_rep_target_goal_table.html:48
 #: templates/challenges/_rep_target_summary_card.html:52
 #: templates/challenges/_summary_card.html:47
-#: templates/challenges/detail.html:351
 msgid "rep"
 msgid_plural "reps"
 msgstr[0] "repetición"
@@ -1904,11 +1902,18 @@ msgstr ""
 
 #: templates/challenges/_participant_chart.html:63
 #: templates/challenges/_rep_target_goal_table.html:22
-#: templates/challenges/custom_goal_setup.html:193
+#: templates/challenges/custom_goal_setup.html:195
 #: templates/challenges/detail.html:174 templates/challenges/detail.html:347
-#: templates/challenges/rep_target_goal_setup.html:85
+#: templates/challenges/rep_target_goal_setup.html:86
 msgid "Lift"
 msgstr "Ejercicio"
+
+#: templates/challenges/_participant_chart.html:67
+#: templates/challenges/custom_goal_setup.html:201
+#: templates/challenges/detail.html:351
+#, python-format
+msgid "%(reps)s RM"
+msgstr ""
 
 #: templates/challenges/_participant_chart.html:76
 #: templates/challenges/_rep_target_goal_table.html:33
@@ -1971,7 +1976,7 @@ msgid "for your rep target goal."
 msgstr "para tu objetivo de repeticiones."
 
 #: templates/challenges/_rep_target_goal_table.html:23
-#: templates/challenges/rep_target_goal_setup.html:88
+#: templates/challenges/rep_target_goal_setup.html:89
 msgid "Weight"
 msgstr "Peso"
 
@@ -2185,7 +2190,7 @@ msgid "select all"
 msgstr "seleccionar todo"
 
 #: templates/challenges/create.html:146
-#: templates/challenges/rep_target_goal_setup.html:157
+#: templates/challenges/rep_target_goal_setup.html:163
 msgid "clear all"
 msgstr "borrar todo"
 
@@ -2329,12 +2334,73 @@ msgstr "exacto"
 #: templates/challenges/custom_goal_setup.html:153
 msgid ""
 "\n"
-"              Clicking compute fills in blank cells for rows that have at\n"
-"              least one goal already entered, rounded to the chosen\n"
-"              precision. Suggestions blend the Epley, Brzycki, Lander,\n"
-"              Lombardi, and Marzagao formulas, and assume each entered\n"
-"              weight reflects a true near-maximal effort.\n"
+"              Enter at least one weight in a row, pick a rounding, then hit\n"
+"              compute to fill in that row's blank cells. Anything you've\n"
+"              already typed is left alone.\n"
 "              "
+msgstr ""
+
+#: templates/challenges/custom_goal_setup.html:163
+msgid ""
+"Compute skipped these lifts because their pinned weights increase with reps "
+"— fix the pinned values first: "
+msgstr ""
+"Calcular omitió estos levantamientos porque sus pesos fijados aumentan con "
+"las repeticiones — corrige los valores fijados primero: "
+
+#: templates/challenges/custom_goal_setup.html:193
+#: templates/challenges/custom_goal_setup.html:222
+#: templates/challenges/custom_goal_setup.html:223
+#: templates/challenges/rep_target_goal_setup.html:84
+#: templates/challenges/rep_target_goal_setup.html:107
+#: templates/challenges/rep_target_goal_setup.html:108
+msgid "Clear this row"
+msgstr "Borrar esta fila"
+
+#: templates/challenges/custom_goal_setup.html:241
+#: templates/challenges/rep_target_goal_setup.html:124
+msgid "BW +"
+msgstr "PC +"
+
+#: templates/challenges/custom_goal_setup.html:242
+#: templates/challenges/rep_target_goal_setup.html:125
+msgid ""
+"enter the weight added on top of your bodyweight; 0 means bodyweight alone"
+msgstr ""
+"introduce el peso añadido sobre tu peso corporal; 0 significa solo peso "
+"corporal"
+
+#: templates/challenges/custom_goal_setup.html:294
+msgid "This challenge has no lifts configured."
+msgstr "Este reto no tiene ejercicios configurados."
+
+#: templates/challenges/custom_goal_setup.html:307
+#: templates/challenges/rep_target_goal_setup.html:167
+msgid "confirm goal"
+msgstr "confirmar objetivo"
+
+#: templates/challenges/custom_goal_setup.html:310
+#: templates/challenges/goal_setup_inputs.html:146
+msgid "Cancel and discard everything entered so far?"
+msgstr "¿Cancelar y descartar todo lo introducido hasta ahora?"
+
+#: templates/challenges/custom_goal_setup.html:317
+#, fuzzy
+#| msgid ""
+#| "\n"
+#| "              Clicking compute fills in blank cells for rows that have "
+#| "at\n"
+#| "              least one goal already entered, rounded to the chosen\n"
+#| "              precision. Suggestions blend the Epley, Brzycki, Lander,\n"
+#| "              Lombardi, and Marzagao formulas, and assume each entered\n"
+#| "              weight reflects a true near-maximal effort.\n"
+#| "              "
+msgid ""
+"\n"
+"      Compute's suggestions blend the Epley, Brzycki, Lander, Lombardi, and\n"
+"      Marzagao formulas, and assume each entered weight reflects a true\n"
+"      near-maximal effort.\n"
+"      "
 msgstr ""
 "\n"
 "              Al hacer clic en Calcular se rellenan las celdas vacías de "
@@ -2356,50 +2422,6 @@ msgstr ""
 "              Epley para estimar entre tus pesos ingresados y más allá de "
 "ellos.\n"
 "              "
-
-#: templates/challenges/custom_goal_setup.html:165
-msgid ""
-"Compute skipped these lifts because their pinned weights increase with reps "
-"— fix the pinned values first: "
-msgstr ""
-"Calcular omitió estos levantamientos porque sus pesos fijados aumentan con "
-"las repeticiones — corrige los valores fijados primero: "
-
-#: templates/challenges/custom_goal_setup.html:191
-#: templates/challenges/custom_goal_setup.html:220
-#: templates/challenges/custom_goal_setup.html:221
-#: templates/challenges/rep_target_goal_setup.html:83
-#: templates/challenges/rep_target_goal_setup.html:110
-#: templates/challenges/rep_target_goal_setup.html:111
-msgid "Clear this row"
-msgstr "Borrar esta fila"
-
-#: templates/challenges/custom_goal_setup.html:239
-#: templates/challenges/rep_target_goal_setup.html:127
-msgid "BW +"
-msgstr "PC +"
-
-#: templates/challenges/custom_goal_setup.html:240
-#: templates/challenges/rep_target_goal_setup.html:128
-msgid ""
-"enter the weight added on top of your bodyweight; 0 means bodyweight alone"
-msgstr ""
-"introduce el peso añadido sobre tu peso corporal; 0 significa solo peso "
-"corporal"
-
-#: templates/challenges/custom_goal_setup.html:283
-msgid "This challenge has no lifts configured."
-msgstr "Este reto no tiene ejercicios configurados."
-
-#: templates/challenges/custom_goal_setup.html:296
-#: templates/challenges/rep_target_goal_setup.html:161
-msgid "confirm goal"
-msgstr "confirmar objetivo"
-
-#: templates/challenges/custom_goal_setup.html:299
-#: templates/challenges/goal_setup_inputs.html:146
-msgid "Cancel and discard everything entered so far?"
-msgstr "¿Cancelar y descartar todo lo introducido hasta ahora?"
 
 #: templates/challenges/detail.html:28 templates/challenges/find.html:33
 #: templates/challenges/find.html:130
@@ -2576,7 +2598,9 @@ msgid " pt target"
 msgstr " pt objetivo"
 
 #: templates/challenges/detail.html:522
-msgid "RM target"
+#, fuzzy
+#| msgid "RM target"
+msgid " RM target"
 msgstr "Objetivo RM"
 
 #: templates/challenges/detail.html:531 templates/dashboard.html:209
@@ -3131,7 +3155,7 @@ msgstr ""
 "            de tu mejor marca. Se conserva todo lo que ya hayas escrito.\n"
 "            "
 
-#: templates/challenges/rep_target_goal_setup.html:89
+#: templates/challenges/rep_target_goal_setup.html:90
 msgid "Reps"
 msgstr "Reps"
 
