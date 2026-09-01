@@ -622,6 +622,28 @@ body {
   margin: 0;
 }
 
+/* Both goal-setup grids pin their first two columns: a thin clear-row
+     column at left:0, then the lift name immediately right of it. The lift
+     column's `left` offset has to equal the clear column's width exactly --
+     a pixel out either way and the two overlap while the grid is scrolled --
+     so both come from this one number rather than from a `w-6` in one
+     template and a `left-6` in another, four hand-matched values in two
+     files. Tuned on a 390px viewport: wide enough for the trash icon's tap
+     target, narrow enough to leave the lift name its 9rem. */
+
+.goal-grid {
+  --goal-grid-clear-w: 1.5rem;
+}
+
+.goal-grid-clear-col {
+  width: var(--goal-grid-clear-w);
+  min-width: var(--goal-grid-clear-w);
+}
+
+.goal-grid-lift-col {
+  left: var(--goal-grid-clear-w);
+}
+
 .docs-content h2 {
   margin-top: 1.5rem;
   margin-bottom: 0.5rem;
@@ -844,10 +866,6 @@ body {
 
 .left-4 {
   left: 1rem;
-}
-
-.left-6 {
-  left: 1.5rem;
 }
 
 .right-0 {
@@ -1233,10 +1251,6 @@ body {
   min-width: 1.1rem;
 }
 
-.min-w-\[1\.5rem\] {
-  min-width: 1.5rem;
-}
-
 .min-w-\[1\.6rem\] {
   min-width: 1.6rem;
 }
@@ -1275,10 +1289,6 @@ body {
 
 .max-w-6xl {
   max-width: 72rem;
-}
-
-.max-w-\[28rem\] {
-  max-width: 28rem;
 }
 
 .max-w-\[90\%\] {
@@ -1655,14 +1665,18 @@ body {
   border-color: var(--surface-card);
 }
 
-.border-warning {
-  --tw-border-opacity: 1;
-  border-color: rgb(202 138 4 / var(--tw-border-opacity, 1));
-}
-
 .border-warning-light {
   --tw-border-opacity: 1;
   border-color: rgb(254 249 195 / var(--tw-border-opacity, 1));
+}
+
+.border-b-line-subtle {
+  border-bottom-color: var(--border-subtle);
+}
+
+.border-l-warning {
+  --tw-border-opacity: 1;
+  border-left-color: rgb(202 138 4 / var(--tw-border-opacity, 1));
 }
 
 .border-t-accent {

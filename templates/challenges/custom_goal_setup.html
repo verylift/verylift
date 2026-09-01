@@ -1,5 +1,5 @@
 {% extends "base/wizard.html" %}
-{% load static i18n icons %}
+{% load static i18n l10n icons %}
 
 {% block title %}{% blocktrans with name=challenge.name %}Set Your Goal — {{ name }}{% endblocktrans %}{% endblock %}
 
@@ -175,7 +175,7 @@
           {# column inside the container, which lets it override the lift        #}
           {# column's width. Sizing to content instead makes that width real and #}
           {# lets the grid scroll under the pinned column.                       #}
-          <table class="text-sm text-left min-w-full border-separate border-spacing-0">
+          <table class="goal-grid text-sm text-left min-w-full border-separate border-spacing-0">
             <thead>
               <tr class="text-content-muted">
                 {# w-[9rem] in both modes, and explicit because auto layout would #}
@@ -183,14 +183,18 @@
                 {# other column here is nowrap, so the name is the only one     #}
                 {# that can be squeezed. The grid scrolls under the pinned      #}
                 {# column when that costs it width.                            #}
-                {# Clear-row gets its own thin column, pinned left of the name. #}
-                {# Its width is fixed (w-6) precisely so the lift column can be  #}
-                {# pinned at exactly that offset (left-6) -- the two numbers      #}
-                {# must stay in step or the columns overlap while scrolling.      #}
-                <th class="w-6 min-w-[1.5rem] sticky left-0 z-20 bg-surface border-b border-line-subtle">
-                  <span class="sr-only">{% trans "Clear this row" %}</span>
+                {# Clear-row gets its own thin column, pinned left of the name; #}
+                {# its width and the lift column's matching offset both come from #}
+                {# --goal-grid-clear-w (static/css/input.css), so the pair cannot  #}
+                {# drift apart and overlap while scrolling.                        #}
+                {# The header names an action only the manual-entry grid offers:   #}
+                {# show_calculator is what puts a clear button in each row, so     #}
+                {# without this guard the standards and history charts announce    #}
+                {# "Clear this row" over a column with no button in it.            #}
+                <th class="goal-grid-clear-col sticky left-0 z-20 bg-surface border-b border-line-subtle">
+                  {% if show_calculator %}<span class="sr-only">{% trans "Clear this row" %}</span>{% endif %}
                 </th>
-                <th class="w-[9rem] min-w-[9rem] py-2 pr-4 font-medium sticky left-6 z-20 bg-surface border-b border-line-subtle">{% trans "Lift" %}</th>
+                <th class="goal-grid-lift-col w-[9rem] min-w-[9rem] py-2 pr-4 font-medium sticky z-20 bg-surface border-b border-line-subtle">{% trans "Lift" %}</th>
                 {% for col in rep_range %}
                 {# Centered over the inputs beneath, matching the rep target #}
                 {# grid; only display charts right-align their numbers.      #}
@@ -213,7 +217,7 @@
                 {# The needs-decision marker rides on this column now, since it #}
                 {# is the leftmost one -- a warning rule between the icon and    #}
                 {# the name would read as separating them.                      #}
-                <td class="h-14 sticky left-0 z-10 bg-surface {% if not lift.needs_decision %}border-b{% endif %} border-line-subtle {% if lift.needs_decision %}border-l-4 border-warning{% endif %}">
+                <td class="goal-grid-clear-col h-14 sticky left-0 z-10 bg-surface {% if not lift.needs_decision %}border-b border-b-line-subtle{% endif %} {% if lift.needs_decision %}border-l-4 border-l-warning{% endif %}">
                   {% if show_calculator %}
                   <button type="button" data-clear-row
                           class="mx-auto block text-content-muted hover:text-danger focus:outline-none"
@@ -223,7 +227,7 @@
                   </button>
                   {% endif %}
                 </td>
-                <td class="h-14 py-2 pr-3 font-medium text-content-strong sticky left-6 z-10 bg-surface {% if not lift.needs_decision %}border-b{% endif %} border-line-subtle">
+                <td class="goal-grid-lift-col h-14 py-2 pr-3 font-medium text-content-strong sticky z-10 bg-surface {% if not lift.needs_decision %}border-b border-b-line-subtle{% endif %}">
                   <div class="flex items-center gap-1.5 w-full">
                     {# Bare name: the "BW +" affix carries the marker on this #}
                     {# grid (see rep_target_goal_setup.html).                  #}
@@ -235,7 +239,7 @@
                     {# name cell so it still abuts the first visible input once #}
                     {# the grid is scrolled.                                    #}
                     {% if lift.is_bodyweight_added %}
-                    <span id="{{ lift.name|slugify }}-bw" class="shrink-0 text-[10px] font-normal text-content-muted">
+                    <span id="{{ lift.cells.0.field }}-bw" class="shrink-0 text-[10px] font-normal text-content-muted">
                       {% trans "BW +" %}
                       <span class="sr-only">{% trans "enter the weight added on top of your bodyweight; 0 means bodyweight alone" %}</span>
                     </span>
@@ -257,8 +261,8 @@
                     {# The server parses the raw string either way, and the      #}
                     {# Compute JS reads these with parseFloat.                   #}
                     <input type="number" step="any" inputmode="decimal" name="{{ cell.field }}"
-                           value="{{ cell.value }}"
-                           aria-describedby="{% if lift.is_bodyweight_added %}{{ lift.name|slugify }}-bw {% endif %}{{ cell.field }}-suffix"
+                           value="{{ cell.value|unlocalize }}"
+                           aria-describedby="{% if lift.is_bodyweight_added %}{{ lift.cells.0.field }}-bw {% endif %}{{ cell.field }}-suffix"
                            {% if show_calculator %}data-rep="{{ cell.rep }}" data-source="{% if cell.is_computed %}computed{% else %}typed{% endif %}"{% endif %}
                            class="no-spinner w-full min-w-[3rem] bg-surface-card text-content-body border border-line rounded px-1 py-1 text-sm text-right font-mono focus:outline-none focus:border-accent">
                     <span id="{{ cell.field }}-suffix"
@@ -269,7 +273,7 @@
               </tr>
               {% if lift.needs_decision %}
               <tr>
-                <td colspan="{{ rep_range|length|add:2 }}" class="pb-2 pt-0 pl-2 border-l-4 border-warning border-b border-line-subtle">
+                <td colspan="{{ rep_range|length|add:2 }}" class="pb-2 pt-0 pl-2 border-l-4 border-l-warning border-b border-b-line-subtle">
                   <p class="text-xs font-normal text-warning-dark">{{ lift.needs_decision_reason }}</p>
                 </td>
               </tr>
