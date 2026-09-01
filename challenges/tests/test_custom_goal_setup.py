@@ -75,12 +75,9 @@ def authed_client(user):
     return client
 
 
-def full_json(unit="kg", weights=None, name="My Goal"):
+def full_json(unit="kg", weights=None):
     weights = weights or {str(rep): 100 - rep for rep in range(1, 11)}
-    payload = {"unit": unit, "targets": {LIFT: weights}}
-    if name is not None:
-        payload["name"] = name
-    return json.dumps(payload)
+    return json.dumps({"unit": unit, "targets": {LIFT: weights}})
 
 
 def grid_post(index=0, weights=None):
@@ -90,54 +87,43 @@ def grid_post(index=0, weights=None):
 
 class TestParseJson:
     def test_kg_payload_stored_as_kg(self, challenge):
-        name, targets, errors, *_ = parse_custom_goal_json(
-            full_json("kg"), challenge, "kg"
-        )
+        targets, errors, *_ = parse_custom_goal_json(full_json("kg"), challenge, "kg")
         assert errors == []
-        assert name == "My Goal"
         assert targets[LIFT][1] == Decimal("99.00")
         assert set(targets[LIFT]) == set(range(1, 11))
 
-    def test_lb_payload_converted_to_kg(self, challenge):
+    def test_stray_name_key_is_ignored(self, challenge):
         payload = json.dumps(
-            {"name": "Goal", "unit": "lb", "targets": {LIFT: {"1": 100}}}
+            {"name": "Spring targets", "unit": "kg", "targets": {LIFT: {"1": 100}}}
         )
-        _name, targets, errors, *_ = parse_custom_goal_json(payload, challenge, "kg")
+        targets, errors, *_ = parse_custom_goal_json(payload, challenge, "kg")
+        assert errors == []
+        assert targets[LIFT][1] == Decimal("100.00")
+
+    def test_lb_payload_converted_to_kg(self, challenge):
+        payload = json.dumps({"unit": "lb", "targets": {LIFT: {"1": 100}}})
+        targets, errors, *_ = parse_custom_goal_json(payload, challenge, "kg")
         assert errors == []
         # 100 lb ≈ 45.36 kg
         assert targets[LIFT][1] == Decimal("45.36")
 
     def test_unit_defaults_to_participant_unit(self, challenge):
-        payload = json.dumps({"name": "Goal", "targets": {LIFT: {"1": 100}}})
-        _name, targets, errors, *_ = parse_custom_goal_json(payload, challenge, "lb")
+        payload = json.dumps({"targets": {LIFT: {"1": 100}}})
+        targets, errors, *_ = parse_custom_goal_json(payload, challenge, "lb")
         assert errors == []
         assert targets[LIFT][1] == Decimal("45.36")
 
     def test_malformed_json_reports_error(self, challenge):
-        _name, targets, errors, *_ = parse_custom_goal_json(
-            "{not json", challenge, "kg"
-        )
+        targets, errors, *_ = parse_custom_goal_json("{not json", challenge, "kg")
         assert targets == {}
         assert any("valid JSON" in e for e in errors)
-
-    def test_missing_name_reported(self, challenge):
-        payload = json.dumps({"targets": {LIFT: {"1": 100}}})
-        name, _targets, errors, *_ = parse_custom_goal_json(payload, challenge, "kg")
-        assert name == ""
-        assert any('"name"' in e for e in errors)
-
-    def test_blank_name_reported(self, challenge):
-        payload = json.dumps({"name": "   ", "targets": {LIFT: {"1": 100}}})
-        name, _targets, errors, *_ = parse_custom_goal_json(payload, challenge, "kg")
-        assert name == ""
-        assert any('"name"' in e for e in errors)
 
     def test_unknown_lift_reported(self, challenge):
         # Unknown lift names are excluded from targets and errors, and
         # surfaced instead as a distinct list — the caller (CustomGoalForm)
         # decides whether that's fatal or skippable-with-acknowledgment.
-        payload = json.dumps({"name": "Goal", "targets": {"Overhead Press": {"1": 50}}})
-        _name, targets, errors, unknown_lifts = parse_custom_goal_json(
+        payload = json.dumps({"targets": {"Overhead Press": {"1": 50}}})
+        targets, errors, unknown_lifts = parse_custom_goal_json(
             payload, challenge, "kg"
         )
         assert errors == []
@@ -145,44 +131,38 @@ class TestParseJson:
         assert unknown_lifts == ["Overhead Press"]
 
     def test_non_positive_weight_reported(self, challenge):
-        payload = json.dumps(
-            {"name": "Goal", "targets": {LIFT: {"1": 0, "2": -5, "3": "abc"}}}
-        )
-        _name, targets, errors, *_ = parse_custom_goal_json(payload, challenge, "kg")
+        payload = json.dumps({"targets": {LIFT: {"1": 0, "2": -5, "3": "abc"}}})
+        targets, errors, *_ = parse_custom_goal_json(payload, challenge, "kg")
         assert len([e for e in errors if "positive number" in e]) == 3
         assert 1 not in targets.get(LIFT, {})
 
     def test_bad_unit_reported_and_falls_back(self, challenge):
-        payload = json.dumps(
-            {"name": "Goal", "unit": "stone", "targets": {LIFT: {"1": 100}}}
-        )
-        _name, targets, errors, *_ = parse_custom_goal_json(payload, challenge, "kg")
+        payload = json.dumps({"unit": "stone", "targets": {LIFT: {"1": 100}}})
+        targets, errors, *_ = parse_custom_goal_json(payload, challenge, "kg")
         assert any("Unknown unit" in e for e in errors)
         assert targets[LIFT][1] == Decimal("100.00")
 
     def test_top_level_non_object_reported(self, challenge):
-        _name, targets, errors, *_ = parse_custom_goal_json(
-            "[1, 2, 3]", challenge, "kg"
-        )
+        targets, errors, *_ = parse_custom_goal_json("[1, 2, 3]", challenge, "kg")
         assert targets == {}
         assert any('"targets"' in e for e in errors)
 
     def test_targets_not_an_object_reported(self, challenge):
-        payload = json.dumps({"name": "Goal", "targets": "everything"})
-        _name, targets, errors, *_ = parse_custom_goal_json(payload, challenge, "kg")
+        payload = json.dumps({"targets": "everything"})
+        targets, errors, *_ = parse_custom_goal_json(payload, challenge, "kg")
         assert targets == {}
         assert any("mapping lift names" in e for e in errors)
 
     def test_lift_cells_not_an_object_reported(self, challenge):
-        payload = json.dumps({"name": "Goal", "targets": {LIFT: 100}})
-        _name, _targets, errors, *_ = parse_custom_goal_json(payload, challenge, "kg")
+        payload = json.dumps({"targets": {LIFT: 100}})
+        _targets, errors, *_ = parse_custom_goal_json(payload, challenge, "kg")
         assert any("object of rep count to weight" in e for e in errors)
 
 
 class TestCompleteness:
     def test_missing_rep_counts_reported(self, challenge):
-        _name, targets, _errors, *_ = parse_custom_goal_json(
-            json.dumps({"name": "Goal", "targets": {LIFT: {"1": 100, "2": 95}}}),
+        targets, _errors, *_ = parse_custom_goal_json(
+            json.dumps({"targets": {LIFT: {"1": 100, "2": 95}}}),
             challenge,
             "kg",
         )
@@ -195,9 +175,7 @@ class TestCompleteness:
         assert any(LIFT in e for e in missing)
 
     def test_complete_table_has_no_errors(self, challenge):
-        _name, targets, _errors, *_ = parse_custom_goal_json(
-            full_json(), challenge, "kg"
-        )
+        targets, _errors, *_ = parse_custom_goal_json(full_json(), challenge, "kg")
         assert custom_goal_is_complete(targets, challenge) == []
 
 
@@ -259,7 +237,7 @@ class TestParseGrid:
 
 class TestSaveCustomGoal:
     def test_creates_goal_and_points_participant_at_it(self, participant, challenge):
-        _name, targets, _, *_ = parse_custom_goal_json(full_json(), challenge, "kg")
+        targets, _, *_ = parse_custom_goal_json(full_json(), challenge, "kg")
         goal = save_custom_goal(participant, "My Goal", targets)
         participant.refresh_from_db()
         assert participant.custom_goal_id == goal.id
@@ -268,10 +246,10 @@ class TestSaveCustomGoal:
     def test_second_save_raises_chart_is_locked(self, participant, challenge):
         # AC#4: charts are locked once a participant joins and saves a goal —
         # a second save_custom_goal call must not silently overwrite it.
-        _name, targets, _, *_ = parse_custom_goal_json(full_json(), challenge, "kg")
+        targets, _, *_ = parse_custom_goal_json(full_json(), challenge, "kg")
         goal = save_custom_goal(participant, "My Goal", targets)
 
-        _name, new_targets, _, *_ = parse_custom_goal_json(
+        new_targets, _, *_ = parse_custom_goal_json(
             full_json(weights={str(rep): 200 for rep in range(1, 11)}),
             challenge,
             "kg",
@@ -292,7 +270,7 @@ class TestDetachActiveGoal:
     def test_clears_the_pointer_and_renames_without_deleting(
         self, participant, challenge
     ):
-        _name, targets, _, *_ = parse_custom_goal_json(full_json(), challenge, "kg")
+        targets, _, *_ = parse_custom_goal_json(full_json(), challenge, "kg")
         goal = save_custom_goal(participant, "My Goal", targets)
 
         detach_active_goal(participant)
@@ -308,14 +286,14 @@ class TestDetachActiveGoal:
         # Regression: CustomGoal has a unique constraint on (participant,
         # name) -- without renaming the detached goal, a second goal reusing
         # the same name for the same participant raises IntegrityError.
-        _name, targets, _, *_ = parse_custom_goal_json(full_json(), challenge, "kg")
+        targets, _, *_ = parse_custom_goal_json(full_json(), challenge, "kg")
         save_custom_goal(participant, "My Goal", targets)
 
         detach_active_goal(participant)
         participant.save(update_fields=["custom_goal"])
         participant.refresh_from_db()
 
-        _name, targets, _, *_ = parse_custom_goal_json(full_json(), challenge, "kg")
+        targets, _, *_ = parse_custom_goal_json(full_json(), challenge, "kg")
         new_goal = save_custom_goal(participant, "My Goal", targets)
 
         participant.refresh_from_db()
@@ -325,7 +303,7 @@ class TestDetachActiveGoal:
     def test_max_length_name_survives_the_rename(self, participant, challenge):
         # Regression: appending " [uuid]" to a 62+ char goal name overflowed
         # name's max_length=100 and 500'd the leave/bail path.
-        _name, targets, _, *_ = parse_custom_goal_json(full_json(), challenge, "kg")
+        targets, _, *_ = parse_custom_goal_json(full_json(), challenge, "kg")
         goal = save_custom_goal(participant, "x" * 100, targets)
 
         detach_active_goal(participant)
@@ -350,41 +328,13 @@ def test_grid_columns_render_10rm_to_1rm_left_to_right(user, challenge):
 
 
 class TestCustomGoalFormBannerErrors:
-    def test_json_missing_name_produces_banner_error(self, challenge):
-        """A JSON submission with no "name" key reports a non-field error, since
-        the JSON view has no separate name form field to attach it to."""
-        form = CustomGoalForm(
-            {"targets_json": full_json(name=None)},
-            challenge=challenge,
-            unit="kg",
-            method=CustomGoal.SourceMethod.JSON,
-        )
-        assert not form.is_valid()
-        banner_errors = form.banner_errors()
-        assert any('"name"' in e for e in banner_errors)
-        assert not any("Goal name:" in e for e in banner_errors)
-
-    def test_grid_blank_name_is_asked_for_in_the_banner(self, challenge):
-        """A blank name on the grid path used to fall back to a per-method
-        default; it is now reported in the banner like any other problem, and
-        (like the JSON path's name error) not as a "Goal name:" field error --
-        the field is still required=False, the demand is made in clean()."""
-        form = CustomGoalForm(
-            {"name": "", **grid_post()},
-            challenge=challenge,
-            unit="kg",
-        )
-        assert not form.is_valid()
-        assert "Give your goal a name." in form.banner_errors()
-        assert not any("Goal name:" in e for e in form.banner_errors())
-
     def test_non_monotonic_grid_rejected(self, challenge):
         """A grid submission whose 5RM is heavier than its 4RM is rejected —
         rep-max monotonicity is enforced uniformly regardless of source."""
         weights = {rep: 100 - rep for rep in range(1, 11)}
         weights[5] = 500
         form = CustomGoalForm(
-            {"name": "Spring", **grid_post(weights=weights)},
+            grid_post(weights=weights),
             challenge=challenge,
             unit="kg",
         )
@@ -503,12 +453,12 @@ class TestSetupView:
         self, authed_client, participant, challenge
     ):
         self._goto_json_step(authed_client, challenge)
-        data = {"targets_json": full_json(name="Spring")}
+        data = {"targets_json": full_json()}
         response = authed_client.post(self._url(challenge), data)
         assert response.status_code == 302
         participant.refresh_from_db()
         assert participant.custom_goal_id is not None
-        assert participant.custom_goal.name == "Spring"
+        assert participant.custom_goal.name == "Custom Goal"
         assert participant.custom_goal.source_method == CustomGoal.SourceMethod.JSON
         challenge.refresh_from_db()
         assert challenge.status == Challenge.Status.ACTIVE
@@ -577,20 +527,18 @@ class TestSetupView:
 
     def test_post_via_grid_saves_goal(self, authed_client, participant, challenge):
         self._goto_chart_step(authed_client, challenge)
-        data = {"name": "Spring", **grid_post()}
-        response = authed_client.post(self._url(challenge), data)
+        response = authed_client.post(self._url(challenge), grid_post())
         assert response.status_code == 302
         participant.refresh_from_db()
         assert participant.custom_goal_id is not None
+        assert participant.custom_goal.name == "Custom Goal"
 
     def test_incomplete_submission_rerenders_with_errors_and_values(
         self, authed_client, participant, challenge
     ):
         self._goto_chart_step(authed_client, challenge)
         partial = {grid_field_name(0, 1): "80", grid_field_name(0, 2): "78"}
-        response = authed_client.post(
-            self._url(challenge), {"name": "Spring", **partial}
-        )
+        response = authed_client.post(self._url(challenge), partial)
         assert response.status_code == 200
         assert participant.custom_goal is None or participant.custom_goal_id is None
         content = response.content.decode()
@@ -599,42 +547,10 @@ class TestSetupView:
         # A whole weight keeps no trailing ".0" (accounts.units.trim_whole_weight).
         assert 'value="80"' in content
 
-    def test_grid_blank_name_is_rejected_rather_than_defaulted(
-        self, authed_client, participant, challenge
-    ):
-        """An empty name used to save under default_goal_name(); it now comes
-        back as an error, so charts can't all end up named "My Goal"."""
-        self._goto_chart_step(authed_client, challenge)
-        response = authed_client.post(
-            self._url(challenge),
-            {"name": "   ", **grid_post()},
-        )
-        assert response.status_code == 200
-        assert "Give your goal a name." in response.context["errors"]
-        participant.refresh_from_db()
-        assert participant.custom_goal_id is None
-
-    def test_json_missing_name_shows_banner_error(
-        self, authed_client, participant, challenge
-    ):
-        """A JSON submission with no "name" key shows a banner error and saves
-        nothing — the JSON view has no separate name form field."""
-        self._goto_json_step(authed_client, challenge)
-        response = authed_client.post(
-            self._url(challenge),
-            {"targets_json": full_json(name=None)},
-        )
-        assert response.status_code == 200
-        participant.refresh_from_db()
-        assert participant.custom_goal_id is None
-        content = response.content.decode()
-        assert "&quot;name&quot;" in content or '"name"' in content
-        assert "Goal name:" not in content
-
     def test_completed_goal_redirects_away_from_setup(
         self, authed_client, participant, challenge
     ):
-        _name, targets, _, *_ = parse_custom_goal_json(full_json(), challenge, "kg")
+        targets, _, *_ = parse_custom_goal_json(full_json(), challenge, "kg")
         save_custom_goal(participant, "Done", targets)
         response = authed_client.get(self._url(challenge))
         assert response.status_code == 302
@@ -653,7 +569,7 @@ class TestChartLocking:
     def test_setup_get_after_goal_configured_redirects_without_editing(
         self, authed_client, participant, challenge
     ):
-        _name, targets, _, *_ = parse_custom_goal_json(
+        targets, _, *_ = parse_custom_goal_json(
             full_json(weights={str(rep): 123 for rep in range(1, 11)}),
             challenge,
             "kg",
@@ -690,12 +606,12 @@ class TestBodyweightAddedTargets:
     """
 
     def _bw_json(self, weights):
-        return json.dumps({"name": "Goal", "unit": "kg", "targets": {BW_LIFT: weights}})
+        return json.dumps({"unit": "kg", "targets": {BW_LIFT: weights}})
 
     def test_json_accepts_zero_and_negative(self, bw_challenge):
         weights = {"1": 20, "2": 15, "3": 10, "4": 5, "5": 0}
         weights.update({str(rep): -5 * (rep - 5) for rep in range(6, 11)})
-        _name, targets, errors, *_ = parse_custom_goal_json(
+        targets, errors, *_ = parse_custom_goal_json(
             self._bw_json(weights), bw_challenge, "kg"
         )
         assert errors == []
@@ -711,7 +627,7 @@ class TestBodyweightAddedTargets:
         assert targets[BW_LIFT][1] == Decimal("-5.00")
 
     def test_json_non_numeric_reports_number_error(self, bw_challenge):
-        _name, targets, errors, *_ = parse_custom_goal_json(
+        targets, errors, *_ = parse_custom_goal_json(
             self._bw_json({"1": "abc"}), bw_challenge, "kg"
         )
         assert any("must be a number." in e for e in errors)
@@ -719,15 +635,15 @@ class TestBodyweightAddedTargets:
         assert 1 not in targets.get(BW_LIFT, {})
 
     def test_non_bodyweight_lift_still_rejects_non_positive(self, challenge):
-        payload = json.dumps({"name": "Goal", "targets": {LIFT: {"1": 0, "2": -5}}})
-        _name, _targets, errors, *_ = parse_custom_goal_json(payload, challenge, "kg")
+        payload = json.dumps({"targets": {LIFT: {"1": 0, "2": -5}}})
+        _targets, errors, *_ = parse_custom_goal_json(payload, challenge, "kg")
         assert len([e for e in errors if "positive number" in e]) == 2
 
     def test_saving_zero_and_negative_targets_persists(
         self, bw_participant, bw_challenge
     ):
         weights = {str(rep): (rep - 5) for rep in range(1, 11)}
-        _name, targets, errors, *_ = parse_custom_goal_json(
+        targets, errors, *_ = parse_custom_goal_json(
             self._bw_json(weights), bw_challenge, "kg"
         )
         assert errors == []

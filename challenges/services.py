@@ -2329,7 +2329,6 @@ def build_custom_goal_context(
     challenge,
     *,
     method=CustomGoal.SourceMethod.CUSTOM,
-    goal_name="",
     targets_json="",
     targets=None,
     errors=None,
@@ -2439,7 +2438,6 @@ def build_custom_goal_context(
             {"reps": n, "points": points_for_rep_count(n)} for n in range(10, 0, -1)
         ],
         "lifts": lifts,
-        "goal_name": goal_name,
         "targets_json": targets_json,
         "llm_prompt": _custom_goal_llm_prompt(challenge, lifts, unit),
         "errors": errors or [],
@@ -2455,7 +2453,6 @@ def build_rep_target_goal_context(
     user,
     challenge,
     *,
-    goal_name="",
     targets=None,
     field_values=None,
     suggested_fields=None,
@@ -2526,7 +2523,6 @@ def build_rep_target_goal_context(
         "challenge": challenge,
         "display_unit": unit,
         "lifts": lifts,
-        "goal_name": goal_name,
         "suggested_fields": ",".join(sorted(suggested_fields)),
         "errors": errors or [],
         "source_note": source_note,
@@ -2541,7 +2537,6 @@ def _custom_goal_llm_prompt(challenge, lifts, unit) -> str:
     """
     names = [lift["name"] for lift in lifts]
     skeleton = {
-        "name": "Spring targets",
         "unit": unit,
         "targets": {name: {str(rep): 0 for rep in range(1, 11)} for name in names},
     }
@@ -2566,8 +2561,7 @@ def _custom_goal_llm_prompt(challenge, lifts, unit) -> str:
             "The challenge uses these lifts:",
             *lift_lines,
             "",
-            'Please ask me for a short name/label for this goal (e.g. "Spring '
-            'targets") and my target weight at each rep count from 1 to 10 for '
+            "Please ask me for my target weight at each rep count from 1 to 10 for "
             "every lift above (the most weight I expect to lift for that number of "
             f"reps). All weights are in {unit}.",
             "",
@@ -2577,7 +2571,6 @@ def _custom_goal_llm_prompt(challenge, lifts, unit) -> str:
             json.dumps(skeleton, indent=2),
             "",
             "Requirements:",
-            '- Include a "name" key with the goal\'s short name/label.',
             "- Include every lift listed above, spelled exactly as shown.",
             '- Include all ten rep counts ("1" through "10") for each lift; missing '
             "entries are rejected.",

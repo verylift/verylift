@@ -82,7 +82,7 @@
         </div>
         <textarea name="targets_json" rows="6"
                   class="w-full min-h-[55vh] bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm font-mono focus:outline-none focus:border-accent"
-                  placeholder='{&#10;  "name": "Spring targets",&#10;  "unit": "{{ display_unit }}",&#10;  "targets": {&#10;    "Bench Press": {"1": 100, "2": 95, "...": "...", "10": 70}&#10;  }&#10;}'>{{ targets_json }}</textarea>
+                  placeholder='{&#10;  "unit": "{{ display_unit }}",&#10;  "targets": {&#10;    "Bench Press": {"1": 100, "2": 95, "...": "...", "10": 70}&#10;  }&#10;}'>{{ targets_json }}</textarea>
         {% if unknown_lifts %}
         <div class="mt-3 px-4 py-3 rounded bg-warning-light text-warning-dark text-sm">
           <p class="font-medium mb-1">
@@ -110,14 +110,6 @@
       {# the screen, every cell carries its own unit, and Rep Target's        #}
       {# equivalent form has no section heading either.                       #}
       <section class="mb-6" data-input-panel="grid">
-        <div class="mb-6 max-w-sm">
-          <label for="id_goal_name" class="block text-sm font-medium text-content-body mb-1">
-            {% trans "goal name" %}
-          </label>
-          <input type="text" name="name" id="id_goal_name" value="{{ goal_name }}"
-                 placeholder="{% trans 'e.g. My Goals' %}"
-                 class="w-full bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent">
-        </div>
         {% if show_calculator and lifts %}
         {# Compute and its rounding control stay side by side at every width -- #}
         {# they are one action and its one parameter, and stacking them on a    #}

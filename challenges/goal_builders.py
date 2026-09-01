@@ -16,7 +16,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import ROUND_CEILING, ROUND_HALF_UP, Decimal
 
 from accounts.units import from_display_weight, to_display_weight
-from challenges.models import CustomGoal
+from challenges.models import CustomGoal, RepTargetGoal
 from challenges.rep_target_goals import MAX_TARGET_REPS
 from challenges.standards import covered_lift_names
 from fitnessvolt import services as fitnessvolt_services
@@ -455,20 +455,29 @@ def suggest_rep_targets_from_history(
 
 
 def default_goal_name(method, *, tier=None, population=None, uplift=None) -> str:
-    """A CustomGoal.name derived from how the chart was built.
+    """The server-derived name every goal is saved under.
 
-    Only STANDARDS and HISTORY reach this now, as the chart step's prefill
-    (challenges.views._goal_setup_chart_step): those names describe the
-    method that produced the chart and are worth showing up front. CUSTOM and
-    JSON have nothing to derive, so their field is served empty and a blank
-    one is rejected on save rather than defaulted -- which is why the trailing
-    "My Goal" is a total-function fallback here, not a name any goal-setup
-    path can still be saved under.
+    Goal names are no longer typed by participants: this is the
+    single source of every ``CustomGoal.name``/``RepTargetGoal.name``, called
+    for both goal types at save time. ``method`` is compared by ``.value``
+    rather than identity/equality against one model's ``SourceMethod``, since
+    ``CustomGoal.SourceMethod`` and ``RepTargetGoal.SourceMethod`` are
+    separate ``TextChoices`` classes that happen to share the CUSTOM/HISTORY
+    string values -- a plain string is accepted too, so callers don't need to
+    know which enum to reach for.
+
+    STANDARDS (CustomGoal only) names the chart after the tier and population
+    it was built from; HISTORY names it after the uplift it suggested from.
+    Everything else (CUSTOM manual entry, JSON paste, and any RepTargetGoal
+    not built from history) is "Custom Goal" -- collisions this creates
+    within one participant are handled by detach_active_goal/
+    detach_active_rep_target_goal renaming the old goal before a rejoin.
     """
-    if method == CustomGoal.SourceMethod.STANDARDS and population and tier:
+    method_value = method.value if hasattr(method, "value") else method
+    if method_value == CustomGoal.SourceMethod.STANDARDS.value and population and tier:
         return f"{population.capitalize()} {tier}"
-    if method == CustomGoal.SourceMethod.HISTORY:
+    if method_value == RepTargetGoal.SourceMethod.HISTORY.value:
         if uplift is not None:
             return f"Suggested from history (+{Decimal(str(uplift)) * 100:.0f}%)"
         return "Suggested from history"
-    return "My Goal"
+    return "Custom Goal"

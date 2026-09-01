@@ -41,15 +41,6 @@
       {# same job as Classic's computed_fields input.                       #}
       <input type="hidden" name="suggested_fields" data-suggested-fields-input value="{{ suggested_fields }}">
 
-      <div class="mb-6">
-        <label for="id_goal_name" class="block text-sm font-medium text-content-body mb-1">
-          {% trans "goal name" %}
-        </label>
-        <input id="id_goal_name" type="text" name="name" value="{{ goal_name }}" maxlength="100"
-               placeholder="{% trans 'e.g. My Goals' %}"
-               class="w-full bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent">
-      </div>
-
       <div class="mb-4 flex flex-wrap items-stretch gap-3">
         <div class="flex flex-1 items-center justify-center border border-line-subtle rounded px-3 py-2 bg-surface-sunken/40">
           <button type="submit" name="action" value="suggest"

@@ -1044,11 +1044,6 @@ def _rep_target_goal_setup_view(request, challenge, participant):
 
     if request.method == "POST":
         targets, errors = parse_rep_target_grid(request.POST, challenge, unit)
-        # Kept raw (blank stays blank) so a re-render echoes what the
-        # participant actually typed and the placeholder keeps prompting for a
-        # descriptive name. Required on save, checked below -- but NOT on the
-        # "suggest" path, which is a convenience re-render, not a save.
-        goal_name = (request.POST.get("name") or "").strip()
 
         if request.POST.get("action") == "suggest":
             suggested, no_history_lifts = suggest_rep_targets_from_history(
@@ -1084,7 +1079,6 @@ def _rep_target_goal_setup_view(request, challenge, participant):
             context = build_rep_target_goal_context(
                 request.user,
                 challenge,
-                goal_name=goal_name,
                 field_values=field_values,
                 suggested_fields=suggested_fields,
                 source_note=gettext(
@@ -1095,17 +1089,6 @@ def _rep_target_goal_setup_view(request, challenge, participant):
             )
             return render(request, "challenges/rep_target_goal_setup.html", context)
 
-        if not goal_name:
-            # A blank name used to save silently as "My Goal", which is what
-            # the empty-by-default field was meant to stop -- ask for one
-            # instead. Same rule and wording as Classic
-            # (challenges.forms.CustomGoalForm.clean).
-            errors.append(gettext("Give your goal a name."))
-        # The template caps the input at 100 (RepTargetGoal.name's
-        # max_length), so this only trips on a crafted POST -- without it the
-        # save is a DataError 500.
-        if len(goal_name) > 100:
-            errors.append(gettext("Goal name must be 100 characters or fewer."))
         other_errors = errors + rep_target_goal_is_complete(targets, challenge)
         if other_errors:
             # Echo the raw per-field input back (not just the rows that
@@ -1116,7 +1099,6 @@ def _rep_target_goal_setup_view(request, challenge, participant):
             context = build_rep_target_goal_context(
                 request.user,
                 challenge,
-                goal_name=goal_name,
                 field_values=field_values,
                 suggested_fields=suggested_fields,
                 errors=other_errors,
@@ -1130,6 +1112,12 @@ def _rep_target_goal_setup_view(request, challenge, participant):
             if parse_suggested_fields(request.POST)
             else RepTargetGoal.SourceMethod.CUSTOM
         )
+        goal_name = default_goal_name(
+            source_method,
+            uplift=settings.CHALLENGES_GOAL_SUGGESTION_UPLIFT
+            if source_method == RepTargetGoal.SourceMethod.HISTORY
+            else None,
+        )
         save_rep_target_goal(
             participant,
             goal_name,
@@ -1142,11 +1130,7 @@ def _rep_target_goal_setup_view(request, challenge, participant):
         activate_draft_for_creator(challenge, request.user)
         return redirect(f"/challenges/{challenge.pk}/")
 
-    # Deliberately unprefilled: "My Goal" as a starting value was simply
-    # confirmed as-is, leaving charts that all read alike. The field's
-    # placeholder asks for something descriptive instead, and a blank one is
-    # rejected on save rather than defaulted.
-    context = build_rep_target_goal_context(request.user, challenge, goal_name="")
+    context = build_rep_target_goal_context(request.user, challenge)
     return render(request, "challenges/rep_target_goal_setup.html", context)
 
 
@@ -1564,13 +1548,8 @@ def _goal_setup_chart_step(request, challenge, participant, data, *, step_contex
         if raw_uplift
         else Decimal(str(settings.CHALLENGES_GOAL_SUGGESTION_UPLIFT))
     )
-    # Also used to prefill the "Review your chart" step's name field with
-    # default_goal_name for the standards and history methods (UAT feedback: a
-    # FitnessVolt-derived chart landed on this page with an unhelpful blank
-    # name field, even though a sensible one was already computable --
-    # previously only used as a submit-time fallback when left blank, never
-    # shown up front). See prefilled_name below for why the methods with
-    # nothing to derive are left blank instead.
+    # Fed to default_goal_name() at save time below, so the saved goal's name
+    # describes how its chart was built (standards tier, or history uplift).
     method_kwargs = (
         {"tier": data.get("tier"), "population": data.get("population")}
         if method == CustomGoal.SourceMethod.STANDARDS
@@ -1609,7 +1588,7 @@ def _goal_setup_chart_step(request, challenge, participant, data, *, step_contex
                 source_detail = {}
             save_custom_goal(
                 participant,
-                form.name,
+                default_goal_name(method, **method_kwargs),
                 form.targets,
                 source_method=method,
                 source_detail=source_detail,
@@ -1630,7 +1609,6 @@ def _goal_setup_chart_step(request, challenge, participant, data, *, step_contex
             request.user,
             challenge,
             method=method,
-            goal_name=form.data.get("name", ""),
             targets_json=form.data.get("targets_json", ""),
             targets=form.targets,
             errors=form.banner_errors(),
@@ -1681,25 +1659,10 @@ def _goal_setup_chart_step(request, challenge, participant, data, *, step_contex
             "you save it."
         ).format(percent=f"{float(uplift * 100):g}")
 
-    # Only a *derived* name is worth showing up front (UAT feedback above): a
-    # standards or history chart arrives with a name that describes how it was
-    # built. Manual entry and JSON paste have nothing to derive, and offering
-    # "My Goal" there just got confirmed unchanged, leaving charts that all
-    # read alike -- so their field stays empty and its placeholder asks for
-    # something descriptive, matching Rep Target -- and blank is now an error
-    # rather than a silent default (CustomGoalForm.clean).
-    prefilled_name = (
-        default_goal_name(method, **method_kwargs)
-        if method
-        in (CustomGoal.SourceMethod.STANDARDS, CustomGoal.SourceMethod.HISTORY)
-        else ""
-    )
-
     context = build_custom_goal_context(
         request.user,
         challenge,
         method=method,
-        goal_name=prefilled_name,
         targets=targets,
         unavailable_lifts=unavailable_lifts,
         assisted_only_lifts=assisted_only_lifts,
