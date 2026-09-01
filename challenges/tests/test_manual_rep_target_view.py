@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.tests.factories import UserFactory
-from challenges.models import ChallengeParticipant
+from challenges.models import Challenge, ChallengeParticipant
 from challenges.tests.factories import (
     ChallengeParticipantFactory,
     RepTargetGoalFactory,
@@ -211,4 +211,34 @@ class TestManualRepTargetViewSuccess:
         assert response.status_code == 400
         assert not LiftHistory.objects.filter(
             user=user, lift=LIFT, performed_at=date(2025, 6, 2)
+        ).exists()
+
+
+class TestManualRepTargetViewTerminalChallenge:
+    """The REP_TARGET sibling of TestManualLiftViewTerminalChallenge: a
+    finished challenge takes no self-reported sets, and nothing is written
+    before the refusal."""
+
+    @pytest.mark.parametrize(
+        "status", [Challenge.Status.COMPLETED, Challenge.Status.CANCELLED]
+    )
+    def test_rejected_without_writing_history(
+        self, user, challenge, participant_with_goal, status
+    ):
+        challenge.status = status
+        challenge.save(update_fields=["status"])
+        client = Client()
+        client.force_login(user)
+
+        response = _post(
+            client,
+            challenge,
+            {"lift": LIFT, "rep_count": "10", "performed_at": "2025-06-01"},
+            **HX,
+        )
+
+        assert response.status_code == 400
+        assert not LiftHistory.objects.filter(user=user, lift=LIFT).exists()
+        assert not PointEarnEvent.objects.filter(
+            user=user, challenge=challenge
         ).exists()

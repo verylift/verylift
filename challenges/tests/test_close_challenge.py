@@ -119,8 +119,14 @@ class TestCloseChallenge:
         assert notified_users == {active.user.pk, bailed.user.pk}
         assert declined.user.pk not in notified_users
 
-    def test_already_completed_is_noop(self):
-        challenge = ChallengeFactory(status=Challenge.Status.COMPLETED)
+    @pytest.mark.parametrize(
+        "status", [Challenge.Status.COMPLETED, Challenge.Status.CANCELLED]
+    )
+    def test_terminal_challenge_is_noop(self, status):
+        """A cancelled challenge must not be closable: flipping it to COMPLETED
+        would resurrect a voided challenge and fire challenge_closed
+        notifications for it."""
+        challenge = ChallengeFactory(status=status)
         _accepted(challenge)
 
         with (
@@ -132,3 +138,5 @@ class TestCloseChallenge:
         mock_sync.assert_not_called()
         mock_score.assert_not_called()
         assert Notification.objects.count() == 0
+        challenge.refresh_from_db()
+        assert challenge.status == status

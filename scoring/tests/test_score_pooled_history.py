@@ -147,6 +147,34 @@ class TestScorePooledHistory:
         assert summary == ScoringSummary()
         assert not PointEarnEvent.objects.filter(user=stranger).exists()
 
+    @pytest.mark.parametrize(
+        "status", [Challenge.Status.COMPLETED, Challenge.Status.CANCELLED]
+    )
+    def test_terminal_challenge_evaluates_nothing(self, status):
+        """A terminal challenge's ledger is locked, so the pool is never walked.
+
+        process_scored_set would refuse each set anyway; asserting on
+        sets_evaluated is what pins the earlier bail-out, which is what keeps
+        every detail-page open on a finished challenge from re-walking the pool
+        and re-snapshotting the leaderboard for a ledger that cannot change.
+        """
+        user, challenge, _ = make_setup()
+        LiftHistoryFactory(
+            user=user,
+            lift=LIFT,
+            performed_at=date(2025, 6, 1),
+            reps=1,
+            weight_kg=Decimal("100.00"),
+        )
+        challenge.status = status
+        challenge.save(update_fields=["status"])
+
+        summary = score_pooled_history(user=user, challenge=challenge)
+
+        assert summary.sets_evaluated == 0
+        assert summary.new_point_events == 0
+        assert not PointEarnEvent.objects.filter(challenge=challenge).exists()
+
     def test_no_api_call_involved(self):
         """score_pooled_history writes no LiftosaurSyncLog (local-DB only)."""
         from liftosaur.models import LiftosaurSyncLog

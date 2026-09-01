@@ -44,7 +44,10 @@ before it's completed.
   nothing to show for it.
 
 Once a challenge is completed or cancelled, nothing more gets scored — the
-results are frozen.
+results are frozen. The detail page becomes fully read-only: your
+"Your Performance" cards still show where you finished, but the button for
+logging a set by hand is gone, and later workouts (from a tracker or entered
+by hand) never touch that challenge's standings again.
 
 ## Creating a challenge
 
@@ -182,7 +185,8 @@ from before they were even asked to join.
 If you need to step away from a challenge partway through, you can
 **bail** out. Doing so locks in your points as they stand — nothing further
 gets scored for you after that, and you drop off the live leaderboard and
-points chart. You can't bail from a challenge that has already completed.
+points chart. You can't bail from a challenge that has already completed or
+been cancelled — there's nothing left to freeze.
 
 ## Removing a participant
 
@@ -208,7 +212,8 @@ When a challenge closes:
 3. Everyone who was part of the challenge — including anyone who bailed
    earlier — gets notified that it's wrapped up.
 
-Closing an already-completed challenge doesn't do anything further.
+Closing a challenge that has already completed — or one that was
+cancelled — doesn't do anything further.
 
 ## Cancelling a challenge
 

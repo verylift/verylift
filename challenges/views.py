@@ -1858,6 +1858,12 @@ def challenge_detail_view(request, pk):
         "recent_activity": recent_activity,
         "personal_data": personal_data,
         "is_rep_target_mode": challenge.mode == Challenge.Mode.REP_TARGET,
+        # A terminal challenge is fully read-only: the summary cards drop their
+        # self-report face and the flip affordance with it. Matches the server
+        # guard in manual_lift_view/manual_rep_target_view exactly. Bailed
+        # participants need no separate flag -- bailing detaches the goal, so
+        # build_personal_data returns None and no cards render at all.
+        "can_self_report": not is_locked,
         "last_synced_at": last_synced_at(request.user),
         "mobile_header_title": challenge.name,
     }
@@ -1932,8 +1938,25 @@ def manual_lift_view(request, pk):
     success path always means the lift's best moved. The carousel disables
     those entries anyway, so the 400 below is for a stale card or a hand-made
     request, not a route the UI can walk into.
+
+    A COMPLETED/CANCELLED challenge is read-only: the detail page stops
+    rendering the self-report card entirely (``can_self_report``), so a POST
+    here means a page that was already open when the challenge closed, or a
+    hand-made request. It is rejected before any write -- without this guard
+    the LiftHistory row was still written and then scored nothing (the ledger
+    lock in ``scoring.services.process_scored_set``), reporting a bogus
+    "Logged 0 points" back to the lifter.
     """
     challenge, participant = _require_challenge_member(request, pk)
+
+    response = _terminal_status_response(
+        request,
+        challenge,
+        gettext("This challenge has ended; no further sets can be logged."),
+        action="self-report a lift in",
+    )
+    if response is not None:
+        return response
 
     if not participant.has_goal_configured:
         raise PermissionDenied
@@ -1992,6 +2015,7 @@ def manual_lift_view(request, pk):
         "display_unit": personal_data["display_unit"],
         "challenge": challenge,
         "start_rep_count": rep_count,
+        "can_self_report": True,
         "oob_messages": True,
     }
     return render(request, "challenges/_summary_card.html", context)
@@ -2010,8 +2034,19 @@ def manual_rep_target_view(request, pk):
     difference: Rep Target's carousel varies reps, not weight, so there is no
     weight field here -- ``submit_manual_rep_target_set`` always logs at the
     goal's own fixed ``target_weight``.
+
+    Same read-only guard on a COMPLETED/CANCELLED challenge as Classic.
     """
     challenge, participant = _require_challenge_member(request, pk)
+
+    response = _terminal_status_response(
+        request,
+        challenge,
+        gettext("This challenge has ended; no further sets can be logged."),
+        action="self-report a rep target set in",
+    )
+    if response is not None:
+        return response
 
     if not participant.has_goal_configured:
         raise PermissionDenied
@@ -2072,6 +2107,7 @@ def manual_rep_target_view(request, pk):
         "display_unit": personal_data["display_unit"],
         "challenge": challenge,
         "start_rep_count": rep_count,
+        "can_self_report": True,
         "oob_messages": True,
     }
     return render(request, "challenges/_rep_target_summary_card.html", context)
@@ -2126,10 +2162,14 @@ def bail_view(request, pk):
     participant = _get_own_participant(request, pk)
     challenge = participant.challenge
 
-    if challenge.status == Challenge.Status.COMPLETED:
+    # is_terminal, not status == COMPLETED: a CANCELLED challenge is equally
+    # read-only, and bailing from one would still detach the participant's
+    # locked goal and stamp bailed_at on a dead challenge's row.
+    if challenge.is_terminal:
         logger.warning(
-            "User %s tried to bail from completed challenge %s",
+            "User %s tried to bail from %s challenge %s",
             request.user.id,
+            challenge.status,
             pk,
         )
         return HttpResponseBadRequest(gettext("This challenge has already ended."))

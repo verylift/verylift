@@ -337,8 +337,22 @@ def score_pooled_history(*, user, challenge) -> ScoringSummary:
 
     Returns a ScoringSummary of how many pooled sets were evaluated and how many
     new PointEarnEvents were created.
+
+    A COMPLETED/CANCELLED challenge returns an empty summary without touching
+    the pool. process_scored_set's own ledger lock already makes every set a
+    no-op, but reaching it row by row is not free: a terminal challenge's
+    unscored rows never get an audit row either, so they stay unscored
+    forever and the loop re-snapshots the leaderboard on every detail-page
+    open, for a ledger that cannot change. close_challenge deliberately runs
+    its final sync/score BEFORE flipping the status, so nothing is lost here.
     """
     summary = ScoringSummary()
+
+    if challenge.status in (
+        Challenge.Status.COMPLETED,
+        Challenge.Status.CANCELLED,
+    ):
+        return summary
 
     participant = ChallengeParticipant.objects.filter(
         user=user, challenge=challenge

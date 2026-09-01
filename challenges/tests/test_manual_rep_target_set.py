@@ -17,6 +17,7 @@ from unittest.mock import patch
 import pytest
 from django.db import IntegrityError
 
+from challenges.models import Challenge
 from challenges.services import submit_manual_rep_target_set
 from liftosaur.models import LiftHistory, LiftSource
 from liftosaur.tests.factories import LiftHistoryFactory
@@ -278,3 +279,26 @@ class TestSubmitManualRepTargetSet:
         assert manual_result is not None
         _history_row, manual_points = manual_result
         assert manual_points == synced_event.points_earned
+
+    @pytest.mark.parametrize(
+        "status", [Challenge.Status.COMPLETED, Challenge.Status.CANCELLED]
+    )
+    def test_returns_none_on_a_terminal_challenge(self, setup, status):
+        """Same read-only guard as submit_manual_lift: nothing is written
+        before the refusal, so a finished challenge never gains a
+        LiftHistory row that can no longer score."""
+        user, challenge, participant = setup
+        challenge.status = status
+        challenge.save(update_fields=["status"])
+
+        result = submit_manual_rep_target_set(
+            user=user,
+            challenge=challenge,
+            participant=participant,
+            lift=LIFT,
+            rep_count=10,
+            performed_at=PERFORMED_AT,
+        )
+
+        assert result is None
+        assert not LiftHistory.objects.filter(user=user, lift=LIFT).exists()

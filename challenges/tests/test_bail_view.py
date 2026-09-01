@@ -139,8 +139,14 @@ class TestBail:
         url = reverse("challenges:bail", args=[participant.challenge.pk])
         assert member_client.post(url).status_code == 400
 
-    def test_bail_on_completed_challenge_gets_400(self, member_client, member):
-        challenge = ChallengeFactory(status=Challenge.Status.COMPLETED)
+    @pytest.mark.parametrize(
+        "status", [Challenge.Status.COMPLETED, Challenge.Status.CANCELLED]
+    )
+    def test_bail_on_terminal_challenge_gets_400(self, member_client, member, status):
+        """Cancelled counts as much as completed: bailing writes bailed_at and
+        detaches the participant's locked goal, and neither belongs on a
+        challenge that is already over."""
+        challenge = ChallengeFactory(status=status)
         participant = ChallengeParticipantFactory(
             challenge=challenge,
             user=member,

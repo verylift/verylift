@@ -328,9 +328,9 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
           {% for card in personal_data.summary_cards %}
           {% if is_rep_target_mode %}
-          {% include "challenges/_rep_target_summary_card.html" with card=card display_unit=personal_data.display_unit challenge=challenge %}
+          {% include "challenges/_rep_target_summary_card.html" with card=card display_unit=personal_data.display_unit challenge=challenge can_self_report=can_self_report %}
           {% else %}
-          {% include "challenges/_summary_card.html" with card=card display_unit=personal_data.display_unit challenge=challenge %}
+          {% include "challenges/_summary_card.html" with card=card display_unit=personal_data.display_unit challenge=challenge can_self_report=can_self_report %}
           {% endif %}
           {% endfor %}
         </div>
@@ -373,6 +373,7 @@
         {% endif %}
       </div>
     </section>
+    {% if can_self_report %}
     <style>
       /* Self-report flip card (TASK-25). Front/back are both always in the
          DOM; is-flipped on .flip-card is the only thing that decides which
@@ -593,7 +594,8 @@
       // response.
       document.body.addEventListener("htmx:afterSettle", initManualLiftCards);
     </script>
-    {% endif %}
+    {% endif %}{# can_self_report: no flip card, no flip CSS/JS #}
+    {% endif %}{# personal_data #}
 
     <section class="bg-surface-card border border-line-subtle rounded p-6 mb-6">
       <div class="flex flex-col items-start gap-3">
@@ -604,7 +606,7 @@
           {% trans "manage challenge" %}
         </a>
         {% endif %}
-        {% if challenge.status != "completed" and not participant.is_bailed %}
+        {% if not challenge.is_terminal and not participant.is_bailed %}
         <a
           href="{% url 'challenges:bail' challenge.pk %}"
           class="border border-danger text-danger text-sm font-medium px-4 py-2 rounded hover:bg-danger-light">

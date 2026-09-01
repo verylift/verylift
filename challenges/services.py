@@ -136,7 +136,22 @@ def submit_manual_lift(
     scored, for the caller to report back. Because a set that cannot raise the
     participant's score is refused above, a successful return always means the
     lift's current best moved.
+
+    Refuses outright on a COMPLETED/CANCELLED challenge. The ledger lock in
+    ``scoring.services.process_scored_set`` already stops the set from
+    scoring, but that is downstream of the ``LiftHistory`` write -- so without
+    this guard a self-report against a finished challenge still persisted a
+    row and then reported zero points earned.
     """
+    if challenge.is_terminal:
+        logger.warning(
+            "Manual lift self-report rejected for user %s: challenge %s is %s",
+            user.id,
+            challenge.pk,
+            challenge.status,
+        )
+        return None
+
     if not participant.has_goal_configured:
         logger.warning(
             "Manual lift self-report rejected for user %s: no goal configured "
@@ -278,7 +293,18 @@ def submit_manual_rep_target_set(
     stale card or a hand-made request, not a route the UI can walk into.
 
     Returns ``(history_row, points_earned)``, mirroring ``submit_manual_lift``.
+    Also refuses outright on a COMPLETED/CANCELLED challenge, for the same
+    reason ``submit_manual_lift`` does.
     """
+    if challenge.is_terminal:
+        logger.warning(
+            "Manual rep target self-report rejected for user %s: challenge %s is %s",
+            user.id,
+            challenge.pk,
+            challenge.status,
+        )
+        return None
+
     if participant.rep_target_goal_id is None:
         logger.warning(
             "Manual rep target self-report rejected for user %s: no goal "
@@ -918,10 +944,15 @@ def close_challenge(challenge) -> None:
     3. Create a challenge_closed Notification for every accepted participant,
        including bailed ones — they were part of the challenge.
 
-    Idempotent: returns immediately if the challenge is already completed.
+    Idempotent: returns immediately if the challenge is already in a terminal
+    status. CANCELLED counts -- closing a cancelled challenge would otherwise
+    resurrect it as COMPLETED and fire challenge_closed notifications for a
+    challenge that was voided.
     """
-    if challenge.status == Challenge.Status.COMPLETED:
-        logger.info("close_challenge: %s already completed; no-op", challenge.id)
+    if challenge.is_terminal:
+        logger.info(
+            "close_challenge: %s already %s; no-op", challenge.id, challenge.status
+        )
         return
 
     active_participants = ChallengeParticipant.objects.filter(
