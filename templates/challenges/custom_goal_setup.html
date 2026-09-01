@@ -260,6 +260,16 @@
                     {# on a phone, did not reliably bring up the numeric keypad. #}
                     {# The server parses the raw string either way, and the      #}
                     {# Compute JS reads these with parseFloat.                   #}
+                    {# unlocalize, and it must stay: an input[type=number] value has to #}
+                    {# be a valid floating-point literal, so the comma Django would        #}
+                    {# render under es is discarded by the browser and rejected by _to_kg  #}
+                    {# on the way back. Everything inside the grid is machine-format --    #}
+                    {# this value, Compute's round2().toString() write-back, and what is   #}
+                    {# submitted. Only the read-only chart tables localize, so a Spanish   #}
+                    {# participant can see 205.5 here beside 205,5 there; which separator  #}
+                    {# a number input DISPLAYS is the browser's own locale, not the page's,#}
+                    {# and buying the comma back means type=text and a parser that has to  #}
+                    {# guess at "1,500". Deliberate trade: keep the numeric keypad.        #}
                     <input type="number" step="any" inputmode="decimal" name="{{ cell.field }}"
                            value="{{ cell.value|unlocalize }}"
                            aria-describedby="{% if lift.is_bodyweight_added %}{{ lift.cells.0.field }}-bw {% endif %}{{ cell.field }}-suffix"

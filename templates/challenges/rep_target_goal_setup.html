@@ -129,6 +129,16 @@
               </td>
               {# Unit sits beside the field rather than in the header: which #}
               {# unit you are typing matters most at the moment you type.    #}
+              {# unlocalize, and it must stay: an input[type=number] value has to #}
+              {# be a valid floating-point literal, so the comma Django would        #}
+              {# render under es is discarded by the browser and rejected by _to_kg  #}
+              {# on the way back. Everything inside the grid is machine-format --    #}
+              {# this value, Compute's round2().toString() write-back, and what is   #}
+              {# submitted. Only the read-only chart tables localize, so a Spanish   #}
+              {# participant can see 205.5 here beside 205,5 there; which separator  #}
+              {# a number input DISPLAYS is the browser's own locale, not the page's,#}
+              {# and buying the comma back means type=text and a parser that has to  #}
+              {# guess at "1,500". Deliberate trade: keep the numeric keypad.        #}
               <td class="py-2 pl-2 pr-1 sm:px-3 text-center whitespace-nowrap border-b border-line-subtle">
                 <input type="number" step="any" inputmode="decimal" name="{{ lift.weight_field }}" value="{{ lift.weight_value|unlocalize }}"
                        aria-describedby="{% if lift.is_bodyweight_added %}{{ lift.weight_field }}-bw {% endif %}{{ lift.weight_field }}-unit"
