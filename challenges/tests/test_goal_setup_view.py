@@ -405,6 +405,17 @@ class TestStaleWizardStepResubmission:
 
 
 class TestCustomMethodFullFlow:
+    def test_manual_chart_step_leaves_the_name_blank_for_the_placeholder(
+        self, authed_client, participant, challenge
+    ):
+        """Manual entry has no derivable name, and offering "My Goal" got
+        confirmed unchanged, leaving charts that all read alike. The field's
+        placeholder asks for a descriptive one instead; a blank one is
+        rejected on save (CustomGoalForm.clean) rather than defaulted."""
+        authed_client.post(_url(challenge), {"method": "custom"})
+        resp = authed_client.get(_url(challenge))
+        assert resp.context["goal_name"] == ""
+
     def test_grid_marks_bodyweight_added_rows(self, db, user):
         """The grid's cells are ADDED weight for these lifts (0 means
         bodyweight alone), which the page said nowhere: build_custom_goal_context
@@ -773,7 +784,7 @@ class TestHistoryMethodFlow:
         resp = authed_client.get(url)
         content = resp.content.decode()
         assert "bg-warning-light" not in content
-        assert "border-warning" in content
+        assert "border-l-warning" in content
         # 10 rep columns + the two pinned ones (clear-row, lift name).
         assert 'colspan="12"' in content
 
@@ -1122,17 +1133,6 @@ class TestStandardsMethodFlow:
         resp = authed_client.get(url)
         assert resp.context["goal_name"] == "Verified Intermediate"
         assert b'value="Verified Intermediate"' in resp.content
-
-    def test_manual_chart_step_leaves_the_name_blank_for_the_placeholder(
-        self, authed_client, participant, challenge
-    ):
-        """Manual entry has no derivable name, and offering "My Goal" got
-        confirmed unchanged, leaving charts that all read alike. The field's
-        placeholder asks for a descriptive one instead; the default is still
-        applied at save time by CustomGoalForm.clean."""
-        authed_client.post(_url(challenge), {"method": "custom"})
-        resp = authed_client.get(_url(challenge))
-        assert resp.context["goal_name"] == ""
 
     def test_bodyweight_unit_defaults_to_user_preference(
         self, authed_client, participant, challenge, user, settings

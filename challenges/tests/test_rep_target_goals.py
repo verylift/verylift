@@ -70,7 +70,7 @@ class TestParseRepTargetGrid:
         assert errors == []
         assert targets == {"Pull-up": (Decimal("0"), 5)}
 
-    @pytest.mark.parametrize("raw_reps", ["0", "1000", "abc", ""])
+    @pytest.mark.parametrize("raw_reps", ["0", "1000", "abc"])
     def test_invalid_rep_count_rejected(self, raw_reps):
         challenge = make_rep_target_challenge(lifts=[LIFT])
         weight_field, reps_field = rep_target_field_names(0)
@@ -79,6 +79,37 @@ class TestParseRepTargetGrid:
         )
         assert LIFT not in targets
         assert errors
+
+    def test_untouched_bodyweight_row_reads_as_missing_not_as_a_bad_rep_count(
+        self,
+    ):
+        # A bodyweight-added row is served with 0 already in the weight box, so
+        # a participant who skips it posts "0" and no reps. That is not a
+        # half-filled row: without the untouched-row check it parsed as one and
+        # complained that the rep count "must be a whole number between 1 and
+        # 999" -- about a field they never touched -- instead of the plain
+        # missing-target error every other skipped row gets.
+        challenge = make_rep_target_challenge(lifts=["Pull-up"])
+        weight_field, reps_field = rep_target_field_names(0)
+        targets, errors = parse_rep_target_grid(
+            {weight_field: "0", reps_field: ""}, challenge, "kg"
+        )
+        assert targets == {}
+        assert errors == []
+        assert rep_target_goal_is_complete(targets, challenge) == [
+            '"Pull-up" is missing a target.'
+        ]
+
+    def test_bodyweight_row_with_reps_typed_still_parses_its_zero_weight(self):
+        # The untouched-row check keys off the rep box, so a deliberate
+        # "bodyweight alone, 12 reps" must survive it.
+        challenge = make_rep_target_challenge(lifts=["Pull-up"])
+        weight_field, reps_field = rep_target_field_names(0)
+        targets, errors = parse_rep_target_grid(
+            {weight_field: "0", reps_field: "12"}, challenge, "kg"
+        )
+        assert errors == []
+        assert targets == {"Pull-up": (Decimal("0"), 12)}
 
     @pytest.mark.parametrize("raw_weight", ["NaN", "Infinity", "-Infinity"])
     def test_non_finite_weight_is_an_error_not_a_crash(self, raw_weight):
@@ -113,6 +144,23 @@ class TestMergeSuggestedFields:
         assert values[pu_weight] == "0"
         assert values[pu_reps] == "25"
         assert suggested_fields == {dip_reps, pu_weight}
+
+    def test_untouched_bodyweight_zero_does_not_pin_against_a_suggestion(self):
+        # The weight box arrives holding the served 0, not an answer. Pinning
+        # it left Suggest filling only the reps, so one row came back with its
+        # reps styled as suggested and its weight styled as typed.
+        challenge = make_rep_target_challenge(lifts=["Pull-up"])
+        weight_field, reps_field = rep_target_field_names(0)
+
+        values, suggested_fields = merge_suggested_fields(
+            {weight_field: "0", reps_field: ""},
+            {"Pull-up": (Decimal("0"), 18)},
+            challenge,
+            "kg",
+        )
+
+        assert values == {weight_field: "0", reps_field: "18"}
+        assert suggested_fields == {weight_field, reps_field}
 
     def test_lift_without_suggestion_or_input_stays_blank(self):
         challenge = make_rep_target_challenge(lifts=[LIFT])
