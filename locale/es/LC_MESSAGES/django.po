@@ -250,8 +250,8 @@ msgid "Could not parse JSON. Please paste a valid JSON object."
 msgstr "No se pudo analizar el JSON. Pega un objeto JSON válido."
 
 #: challenges/custom_goals.py:152
-msgid "JSON payload must be an object with \"name\" and \"targets\" keys."
-msgstr "El JSON debe ser un objeto con las claves \"name\" y \"targets\"."
+msgid "JSON payload must be an object with a \"targets\" key."
+msgstr "El JSON debe ser un objeto con una clave \"targets\"."
 
 #: challenges/custom_goals.py:160
 msgid "JSON payload must include a non-empty \"name\" key."
