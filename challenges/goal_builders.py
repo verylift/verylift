@@ -455,7 +455,16 @@ def suggest_rep_targets_from_history(
 
 
 def default_goal_name(method, *, tier=None, population=None, uplift=None) -> str:
-    """A sensible, never-demanded default CustomGoal.name for each method."""
+    """A CustomGoal.name derived from how the chart was built.
+
+    Only STANDARDS and HISTORY reach this now, as the chart step's prefill
+    (challenges.views._goal_setup_chart_step): those names describe the
+    method that produced the chart and are worth showing up front. CUSTOM and
+    JSON have nothing to derive, so their field is served empty and a blank
+    one is rejected on save rather than defaulted -- which is why the trailing
+    "My Goal" is a total-function fallback here, not a name any goal-setup
+    path can still be saved under.
+    """
     if method == CustomGoal.SourceMethod.STANDARDS and population and tier:
         return f"{population.capitalize()} {tier}"
     if method == CustomGoal.SourceMethod.HISTORY:

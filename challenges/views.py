@@ -1686,8 +1686,8 @@ def _goal_setup_chart_step(request, challenge, participant, data, *, step_contex
     # built. Manual entry and JSON paste have nothing to derive, and offering
     # "My Goal" there just got confirmed unchanged, leaving charts that all
     # read alike -- so their field stays empty and its placeholder asks for
-    # something descriptive, matching Rep Target. Blank is still not an error:
-    # CustomGoalForm.clean falls back to default_goal_name at save time.
+    # something descriptive, matching Rep Target -- and blank is now an error
+    # rather than a silent default (CustomGoalForm.clean).
     prefilled_name = (
         default_goal_name(method, **method_kwargs)
         if method

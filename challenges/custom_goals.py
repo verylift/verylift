@@ -393,8 +393,9 @@ def detach_active_goal(participant) -> None:
     Also renames the detached goal to free up its name: CustomGoal has a
     unique constraint on (participant, name), and that same participant row
     persists across a leave/rejoin cycle, so without this a rejoining user
-    who picks the same goal name again (e.g. the "My Goal" default) hits an
-    IntegrityError against their own archived goal. Appending the goal's own
+    who types the same goal name again (or takes the same derived one, e.g.
+    "Verified Intermediate") hits an IntegrityError against their own
+    archived goal. Appending the goal's own
     id is guaranteed collision-free and permanent; nothing currently surfaces
     a detached goal's name anywhere, so the ugly suffix is invisible.
     No-op if the participant never finished goal setup.
