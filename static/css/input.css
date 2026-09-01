@@ -156,6 +156,41 @@
    (not installed; its default palette wouldn't match this system).
    =========================================================================== */
 @layer components {
+  /* Number inputs whose spinner arrows cost more than they are worth: the
+     goal-setup grids are tight enough on a phone that the ~16px of interior
+     the arrows occupy is the difference between fitting and scrolling, and
+     nobody sets a rep target by clicking up-arrow ten times. Firefox needs
+     the appearance reset on the input itself; WebKit needs the two
+     pseudo-elements. */
+  .no-spinner {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+  .no-spinner::-webkit-outer-spin-button,
+  .no-spinner::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  /* Both goal-setup grids pin their first two columns: a thin clear-row
+     column at left:0, then the lift name immediately right of it. The lift
+     column's `left` offset has to equal the clear column's width exactly --
+     a pixel out either way and the two overlap while the grid is scrolled --
+     so both come from this one number rather than from a `w-6` in one
+     template and a `left-6` in another, four hand-matched values in two
+     files. Tuned on a 390px viewport: wide enough for the trash icon's tap
+     target, narrow enough to leave the lift name its 9rem. */
+  .goal-grid {
+    --goal-grid-clear-w: 1.5rem;
+  }
+  .goal-grid-clear-col {
+    width: var(--goal-grid-clear-w);
+    min-width: var(--goal-grid-clear-w);
+  }
+  .goal-grid-lift-col {
+    left: var(--goal-grid-clear-w);
+  }
+
   .docs-content h2 {
     @apply text-base font-semibold text-content-strong mt-6 mb-2;
   }

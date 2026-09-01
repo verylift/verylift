@@ -1,9 +1,9 @@
 {% extends "base/wizard.html" %}
-{% load i18n icons %}
+{% load i18n l10n icons %}
 
 {% block title %}{% blocktrans with name=challenge.name %}Set Your Goal — {{ name }}{% endblocktrans %}{% endblock %}
 
-{% block wizard_width %}max-w-4xl{% endblock %}
+{% block wizard_width %}max-w-md{% endblock %}
 
 {% block wizard_body %}
     <h1 class="text-2xl font-bold text-content-strong mb-2">
@@ -46,50 +46,110 @@
           {% trans "goal name" %}
         </label>
         <input id="id_goal_name" type="text" name="name" value="{{ goal_name }}" maxlength="100"
-               placeholder="{% trans 'e.g. Calisthenics goals' %}"
+               placeholder="{% trans 'e.g. My Goals' %}"
                class="w-full bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent">
       </div>
 
+      <div class="mb-4 flex flex-wrap items-stretch gap-3">
+        <div class="flex flex-1 items-center justify-center border border-line-subtle rounded px-3 py-2 bg-surface-sunken/40">
+          <button type="submit" name="action" value="suggest"
+                  class="w-full bg-surface-card text-accent text-sm font-semibold px-5 py-2 rounded border-2 border-accent hover:bg-accent hover:text-accent-on focus:outline-none focus:ring-2 focus:ring-accent">
+            {% trans "suggest" %}
+          </button>
+        </div>
+        {# flex-1 against flex-[2]: the action takes a third of the row and the #}
+        {# explanation two thirds, sharing one line at every width.             #}
+        <div class="flex flex-[2] min-w-0 items-center border border-line-subtle rounded px-3 py-2 bg-surface-sunken/40">
+          <p class="text-xs text-content-muted">
+            {% blocktrans %}
+            Fills blank rows from your recent history, uplifted a little past
+            your best. Anything you have already typed is kept.
+            {% endblocktrans %}
+          </p>
+        </div>
+      </div>
+
       <div class="overflow-x-auto mb-6">
-        <table class="text-sm text-left w-full border-separate border-spacing-0">
+        <table class="goal-grid text-sm text-left min-w-full border-separate border-spacing-0">
           <thead>
             <tr class="text-content-muted">
-              {# w-full parks the leftover width here so the input columns #}
-              {# size to their fields rather than being stretched.         #}
-              <th class="py-2 pr-2 sm:pr-4 font-medium w-full">{% trans "Lift" %}</th>
+              {# w-[9rem], the same width Classic's lift column takes, so the two #}
+              {# modes of this screen line up rather than each sizing to its   #}
+              {# own column count.                                            #}
+              {# Clear-row in its own thin pinned column. Its width and the #}
+              {# lift column's matching offset both come from --goal-grid-clear-w #}
+              {# (static/css/input.css), so the pair cannot drift apart and       #}
+              {# overlap while scrolling.                                          #}
+              <th class="goal-grid-clear-col sticky left-0 z-20 bg-surface border-b border-line-subtle">
+                <span class="sr-only">{% trans "Clear this row" %}</span>
+              </th>
+              <th class="goal-grid-lift-col w-[9rem] min-w-[9rem] py-2 pr-2 sm:pr-4 font-medium sticky z-20 bg-surface border-b border-line-subtle">{% trans "Lift" %}</th>
               {# Every column but Lift is centered over its inputs, so the #}
               {# label reads as belonging to the field beneath it.         #}
-              <th class="py-2 pl-2 pr-1 sm:px-3 font-medium text-center">{% trans "Weight" %}</th>
-              <th class="py-2 pl-1 pr-2 sm:px-3 font-medium text-center">{% trans "Reps" %}</th>
+              <th class="py-2 pl-2 pr-1 sm:px-3 font-medium text-center border-b border-line-subtle">{% trans "Weight" %}</th>
+              <th class="py-2 pl-1 pr-2 sm:px-3 font-medium text-center border-b border-line-subtle">{% trans "Reps" %}</th>
             </tr>
           </thead>
           <tbody>
             {% for lift in lifts %}
-            <tr class="text-content-body border-b border-line-subtle" data-lift-row>
-              <td class="py-2 pr-2 sm:pr-4 font-medium text-content-strong">
-                <div class="flex items-center justify-between gap-1.5 w-full">
-                  <span>{{ lift.name }}{% if lift.is_bodyweight_added %} <span class="text-content-muted font-normal">({% trans "BW" %})</span>{% endif %}</span>
-                  <button type="button" data-clear-row
-                          class="shrink-0 text-content-muted hover:text-danger focus:outline-none"
-                          title="{% trans "Clear this row" %}"
-                          aria-label="{% trans "Clear this row" %}">
-                    {% icon "trash-2" css_class="h-3.5 w-3.5" %}
-                  </button>
+            {# Same construction as Classic's grid: the lift name pinned left #}
+            {# (which is why every rule is drawn per cell -- a sticky cell in  #}
+            {# a border-collapse table loses its borders), clear-row leading   #}
+            {# the name so it sits at a fixed x on every row, and one row      #}
+            {# height for all rows, the height a two-line name needs.          #}
+            <tr class="text-content-body" data-lift-row>
+              {# bg-surface, not bg-surface-card: this grid sits straight on #}
+              {# the page, so a card-coloured sticky cell read as a highlighted #}
+              {# column. It only needs to be opaque enough to scroll under.     #}
+              <td class="goal-grid-clear-col h-14 sticky left-0 z-10 bg-surface border-b border-line-subtle">
+                <button type="button" data-clear-row
+                        class="mx-auto block text-content-muted hover:text-danger focus:outline-none"
+                        title="{% trans "Clear this row" %}"
+                        aria-label="{% trans "Clear this row" %}">
+                  {% icon "trash-2" css_class="h-3.5 w-3.5" %}
+                </button>
+              </td>
+              <td class="goal-grid-lift-col h-14 py-2 pr-2 sm:pr-4 font-medium text-content-strong sticky z-10 bg-surface border-b border-line-subtle">
+                <div class="flex items-center gap-1.5 w-full">
+                  {# No "(BW)" suffix here: the "BW +" affix already says it. #}
+                  {# The read-only tables (detail.html, _participant_chart.html, #}
+                  {# the goal table) keep the suffix -- they have no input to    #}
+                  {# front.                                                      #}
+                  <span class="grow min-w-0">{{ lift.name }}</span>
+                  {# Same place as Classic's: the end of the sticky name cell,   #}
+                  {# where it stays put as the grid scrolls and reads straight   #}
+                  {# into the weight field beside it.                            #}
+                  {% if lift.is_bodyweight_added %}
+                  <span id="{{ lift.weight_field }}-bw" class="shrink-0 text-[10px] font-normal text-content-muted">
+                    {% trans "BW +" %}
+                    <span class="sr-only">{% trans "enter the weight added on top of your bodyweight; 0 means bodyweight alone" %}</span>
+                  </span>
+                  {% endif %}
                 </div>
               </td>
               {# Unit sits beside the field rather than in the header: which #}
               {# unit you are typing matters most at the moment you type.    #}
-              <td class="py-2 pl-2 pr-1 sm:px-3 text-right whitespace-nowrap">
-                <input type="number" step="any" inputmode="decimal" name="{{ lift.weight_field }}" value="{{ lift.weight_value }}"
-                       aria-describedby="{{ lift.weight_field }}-unit"
+              {# unlocalize, and it must stay: an input[type=number] value has to #}
+              {# be a valid floating-point literal, so the comma Django would        #}
+              {# render under es is discarded by the browser and rejected by _to_kg  #}
+              {# on the way back. Everything inside the grid is machine-format --    #}
+              {# this value, Compute's round2().toString() write-back, and what is   #}
+              {# submitted. Only the read-only chart tables localize, so a Spanish   #}
+              {# participant can see 205.5 here beside 205,5 there; which separator  #}
+              {# a number input DISPLAYS is the browser's own locale, not the page's,#}
+              {# and buying the comma back means type=text and a parser that has to  #}
+              {# guess at "1,500". Deliberate trade: keep the numeric keypad.        #}
+              <td class="py-2 pl-2 pr-1 sm:px-3 text-center whitespace-nowrap border-b border-line-subtle">
+                <input type="number" step="any" inputmode="decimal" name="{{ lift.weight_field }}" value="{{ lift.weight_value|unlocalize }}"
+                       aria-describedby="{% if lift.is_bodyweight_added %}{{ lift.weight_field }}-bw {% endif %}{{ lift.weight_field }}-unit"
                        {% if lift.weight_suggested %}data-suggested="1"{% endif %}
-                       class="w-16 sm:w-24 border border-line rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:border-accent {% if lift.weight_suggested %}text-content-muted bg-surface-sunken{% else %}bg-surface-card text-content-body{% endif %}">
+                       class="no-spinner w-14 sm:w-24 border border-line rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:border-accent {% if lift.weight_suggested %}text-content-muted bg-surface-sunken{% else %}bg-surface-card text-content-body{% endif %}">
                 <span id="{{ lift.weight_field }}-unit" class="ml-1 text-xs text-content-muted">{{ display_unit }}</span>
               </td>
-              <td class="py-2 pl-1 pr-2 sm:px-3">
+              <td class="py-2 pl-1 pr-2 sm:px-3 text-center border-b border-line-subtle">
                 <input type="number" min="1" max="999" name="{{ lift.reps_field }}" value="{{ lift.reps_value }}"
                        {% if lift.reps_suggested %}data-suggested="1"{% endif %}
-                       class="w-16 sm:w-24 border border-line rounded px-2 py-1.5 text-sm focus:outline-none focus:border-accent {% if lift.reps_suggested %}text-content-muted bg-surface-sunken{% else %}bg-surface-card text-content-body{% endif %}">
+                       class="no-spinner w-14 sm:w-24 border border-line rounded px-2 py-1.5 text-sm focus:outline-none focus:border-accent {% if lift.reps_suggested %}text-content-muted bg-surface-sunken{% else %}bg-surface-card text-content-body{% endif %}">
               </td>
             </tr>
             {% endfor %}
@@ -98,10 +158,6 @@
       </div>
 
       <div class="flex items-center gap-4">
-        <button type="submit" name="action" value="suggest"
-                class="text-sm font-medium px-4 py-2 rounded border border-line-subtle text-content-body hover:bg-surface-sunken">
-          {% trans "suggest targets" %}
-        </button>
         <button type="button" data-clear-all
                 class="text-sm font-medium px-4 py-2 rounded border border-line-subtle text-content-muted hover:text-danger hover:bg-surface-sunken">
           {% trans "clear all" %}

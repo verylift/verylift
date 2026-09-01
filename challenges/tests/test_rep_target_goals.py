@@ -70,7 +70,7 @@ class TestParseRepTargetGrid:
         assert errors == []
         assert targets == {"Pull-up": (Decimal("0"), 5)}
 
-    @pytest.mark.parametrize("raw_reps", ["0", "1000", "abc", ""])
+    @pytest.mark.parametrize("raw_reps", ["0", "1000", "abc"])
     def test_invalid_rep_count_rejected(self, raw_reps):
         challenge = make_rep_target_challenge(lifts=[LIFT])
         weight_field, reps_field = rep_target_field_names(0)
@@ -79,6 +79,37 @@ class TestParseRepTargetGrid:
         )
         assert LIFT not in targets
         assert errors
+
+    def test_untouched_bodyweight_row_reads_as_missing_not_as_a_bad_rep_count(
+        self,
+    ):
+        # A bodyweight-added row is served with 0 already in the weight box, so
+        # a participant who skips it posts "0" and no reps. That is not a
+        # half-filled row: without the untouched-row check it parsed as one and
+        # complained that the rep count "must be a whole number between 1 and
+        # 999" -- about a field they never touched -- instead of the plain
+        # missing-target error every other skipped row gets.
+        challenge = make_rep_target_challenge(lifts=["Pull-up"])
+        weight_field, reps_field = rep_target_field_names(0)
+        targets, errors = parse_rep_target_grid(
+            {weight_field: "0", reps_field: ""}, challenge, "kg"
+        )
+        assert targets == {}
+        assert errors == []
+        assert rep_target_goal_is_complete(targets, challenge) == [
+            '"Pull-up" is missing a target.'
+        ]
+
+    def test_bodyweight_row_with_reps_typed_still_parses_its_zero_weight(self):
+        # The untouched-row check keys off the rep box, so a deliberate
+        # "bodyweight alone, 12 reps" must survive it.
+        challenge = make_rep_target_challenge(lifts=["Pull-up"])
+        weight_field, reps_field = rep_target_field_names(0)
+        targets, errors = parse_rep_target_grid(
+            {weight_field: "0", reps_field: "12"}, challenge, "kg"
+        )
+        assert errors == []
+        assert targets == {"Pull-up": (Decimal("0"), 12)}
 
     @pytest.mark.parametrize("raw_weight", ["NaN", "Infinity", "-Infinity"])
     def test_non_finite_weight_is_an_error_not_a_crash(self, raw_weight):
@@ -113,6 +144,23 @@ class TestMergeSuggestedFields:
         assert values[pu_weight] == "0"
         assert values[pu_reps] == "25"
         assert suggested_fields == {dip_reps, pu_weight}
+
+    def test_untouched_bodyweight_zero_does_not_pin_against_a_suggestion(self):
+        # The weight box arrives holding the served 0, not an answer. Pinning
+        # it left Suggest filling only the reps, so one row came back with its
+        # reps styled as suggested and its weight styled as typed.
+        challenge = make_rep_target_challenge(lifts=["Pull-up"])
+        weight_field, reps_field = rep_target_field_names(0)
+
+        values, suggested_fields = merge_suggested_fields(
+            {weight_field: "0", reps_field: ""},
+            {"Pull-up": (Decimal("0"), 18)},
+            challenge,
+            "kg",
+        )
+
+        assert values == {weight_field: "0", reps_field: "18"}
+        assert suggested_fields == {weight_field, reps_field}
 
     def test_lift_without_suggestion_or_input_stays_blank(self):
         challenge = make_rep_target_challenge(lifts=[LIFT])
@@ -246,6 +294,78 @@ class TestRepTargetGoalSetupView:
         assert participant.has_goal_configured
         challenge.refresh_from_db()
         assert challenge.status == Challenge.Status.ACTIVE
+
+    def test_bodyweight_added_rows_open_at_zero_added_weight(self):
+        # 0 is the added weight for an unweighted set -- the common case for
+        # these lifts, and the only value fillable without guessing. Barbell
+        # rows stay blank: a "0" against a bench press reads as a target of
+        # nothing.
+        challenge = make_rep_target_challenge(lifts=["Chin-up", "Bench Press"])
+        user = UserFactory()
+        ChallengeParticipantFactory(
+            challenge=challenge,
+            user=user,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        )
+        client = Client()
+        client.force_login(user)
+        rows = {
+            lift["name"]: lift
+            for lift in client.get(
+                reverse("challenges:goal-setup", args=[challenge.pk])
+            ).context["lifts"]
+        }
+
+        assert rows["Chin-up"]["weight_value"] == "0"
+        assert rows["Bench Press"]["weight_value"] == ""
+        # Reps stay for the participant to choose, and the prefilled 0 is not
+        # a history suggestion -- marking it as one would flip the saved
+        # goal's provenance to HISTORY.
+        assert rows["Chin-up"]["reps_value"] == ""
+        assert not rows["Chin-up"]["weight_suggested"]
+
+    def test_blank_name_is_rejected_rather_than_defaulted(self):
+        # The field is neither prefilled nor defaulted at save time any more:
+        # a blank (or whitespace-only) name must come back as an error, or
+        # every chart ends up named alike.
+        challenge = make_rep_target_challenge(lifts=[LIFT])
+        user = UserFactory()
+        participant = ChallengeParticipantFactory(
+            challenge=challenge,
+            user=user,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        )
+        client = Client()
+        client.force_login(user)
+        weight_field, reps_field = rep_target_field_names(0)
+        response = client.post(
+            reverse("challenges:goal-setup", args=[challenge.pk]),
+            {"name": "   ", "action": "save", weight_field: "0", reps_field: "20"},
+        )
+        assert response.status_code == 200
+        assert response.context["errors"]
+        participant.refresh_from_db()
+        assert not participant.has_goal_configured
+
+    def test_suggest_does_not_demand_a_name(self):
+        # "Suggest targets" re-renders the same form rather than saving, so the
+        # name requirement must not fire on it -- filling the grid first and
+        # naming the goal last is a normal order to work in.
+        challenge = make_rep_target_challenge(lifts=[LIFT])
+        user = UserFactory()
+        ChallengeParticipantFactory(
+            challenge=challenge,
+            user=user,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        )
+        client = Client()
+        client.force_login(user)
+        response = client.post(
+            reverse("challenges:goal-setup", args=[challenge.pk]),
+            {"name": "", "action": "suggest"},
+        )
+        assert response.status_code == 200
+        assert not response.context["errors"]
 
     def test_post_incomplete_reprompts_with_errors(self):
         challenge = make_rep_target_challenge(lifts=[LIFT])

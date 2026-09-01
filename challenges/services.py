@@ -2476,11 +2476,17 @@ def build_rep_target_goal_context(
     is surfaced via a toast in the view, not a per-row flag here -- an
     inline grid row broke the grid's spacing (UAT feedback).
 
-    Every row starts empty unless ``targets`` fills it. Bodyweight-added
-    lifts briefly defaulted to 0 weight and 10 reps, but a challenge mixing
-    them with barbell lifts then opened showing "0" against a bench press,
-    which reads as a suggestion nobody asked for. Prefilling is
-    "Suggest targets"' job alone.
+    Rows start empty unless ``targets`` fills them, with one exception: a
+    bodyweight-added lift's weight opens at 0. An earlier attempt at this
+    defaulted 0 weight and 10 reps for *every* row, so a challenge mixing
+    those lifts with barbell ones opened showing "0" against a bench press --
+    a suggestion nobody asked for. Scoped to the lifts where 0 is the
+    meaningful default, and read beside the row's "BW +" affix, it says
+    "unweighted" rather than "target: nothing". Reps are still left blank
+    (10 was a guess), and the value is deliberately NOT added to
+    ``suggested_fields``: that set means "the history suggester filled this",
+    round-trips through the hidden input, and decides whether the saved goal
+    records HISTORY or CUSTOM provenance.
     """
     unit = user.unit_preference
     targets = targets or {}
@@ -2495,7 +2501,12 @@ def build_rep_target_goal_context(
             reps_value = field_values.get(reps_field, "")
         else:
             weight_kg, reps = targets.get(lift, (None, None))
-            weight_value = ""
+            # Bodyweight-added lifts open at 0 -- the added weight for an
+            # unweighted set, and by far the common case for them. It is the
+            # one value that can be filled in without guessing at anything
+            # about the participant, and beside the row's "BW +" affix it
+            # reads as "BW + 0", not as a target of zero.
+            weight_value = "0" if lift in bw_added_lifts else ""
             if weight_kg is not None:
                 weight_value, _ = to_display_weight(weight_kg, unit)
             reps_value = reps if reps is not None else ""

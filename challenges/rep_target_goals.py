@@ -43,16 +43,45 @@ def _reps_to_int(raw) -> int | None:
     return value
 
 
+def _is_untouched_row(
+    raw_weight: str, raw_reps: str, *, is_bodyweight_added: bool
+) -> bool:
+    """Is this grid row still exactly as the page served it?
+
+    A row the participant has not reached is blank -- except on a
+    bodyweight-added lift, whose weight is served prefilled at 0 (see
+    :func:`challenges.services.build_rep_target_goal_context`). That prefill
+    is a starting point, not an answer, so a bodyweight row holding 0 and no
+    reps has to count as untouched too. Without this the row parses as
+    half-filled and the participant is told their rep count "must be a whole
+    number between 1 and 999" -- a complaint about a field they never typed
+    in -- instead of the plain "is missing a target" every other skipped row
+    gets, and "Suggest targets" pins the 0 as if they had chosen it.
+    """
+    if raw_reps:
+        return False
+    if not raw_weight:
+        return True
+    if not is_bodyweight_added:
+        return False
+    try:
+        return Decimal(raw_weight) == 0
+    except (ArithmeticError, ValueError):
+        return False
+
+
 def parse_rep_target_grid(
     post_data, challenge, unit: str
 ) -> tuple[dict[str, tuple[Decimal, int]], list[str]]:
     """Parse manual-grid POST fields into a ``{lift: (target_weight_kg, target_reps)}``
     table.
 
-    Blank rows are left out (completeness is checked separately by
-    :func:`rep_target_goal_is_complete`); a non-numeric weight, a non-positive
-    weight (except for bodyweight-added lifts, whose targets are added
-    weight), or a rep count outside 1..MAX_TARGET_REPS all surface as errors.
+    Untouched rows are left out (completeness is checked separately by
+    :func:`rep_target_goal_is_complete`, so they still come back as "missing a
+    target" -- see :func:`_is_untouched_row` for what counts as untouched); a
+    non-numeric weight, a non-positive weight (except for bodyweight-added
+    lifts, whose targets are added weight), or a rep count outside
+    1..MAX_TARGET_REPS all surface as errors.
     """
     errors: list[str] = []
     targets: dict[str, tuple[Decimal, int]] = {}
@@ -62,10 +91,12 @@ def parse_rep_target_grid(
         weight_field, reps_field = rep_target_field_names(lift_index)
         raw_weight = (post_data.get(weight_field) or "").strip()
         raw_reps = (post_data.get(reps_field) or "").strip()
-        if not raw_weight and not raw_reps:
+        allow_non_positive = lift_name in bw_added
+        if _is_untouched_row(
+            raw_weight, raw_reps, is_bodyweight_added=allow_non_positive
+        ):
             continue
 
-        allow_non_positive = lift_name in bw_added
         weight_kg = _to_kg(raw_weight, unit, allow_non_positive=allow_non_positive)
         if weight_kg is None:
             message = (
@@ -101,6 +132,12 @@ def merge_suggested_fields(
     Classic's Compute button (custom_goal_setup.html), which fills blank
     cells and treats non-blank ones as anchors.
 
+    A bodyweight-added row still holding its served 0 with no reps counts as
+    blank here (:func:`_is_untouched_row`), not as a pinned answer. Otherwise
+    Suggest would fill that row's reps and leave its weight alone, and the
+    two cells of one row would come back styled differently -- reps muted as
+    suggested, weight plain as typed -- over a 0 the participant never chose.
+
     Returns ``({field_name: display_value}, suggested_field_names)`` --
     display-unit strings ready to re-render the grid, plus the set of fields
     the suggestion (rather than the participant) filled, for the template's
@@ -108,11 +145,17 @@ def merge_suggested_fields(
     """
     values: dict[str, str] = {}
     suggested_fields: set[str] = set()
-    for lift_index, lift_name in enumerate(sorted(covered_lift_names(challenge))):
+    configured = covered_lift_names(challenge)
+    bw_added = _bodyweight_added_lift_names(configured)
+    for lift_index, lift_name in enumerate(sorted(configured)):
         weight_field, reps_field = rep_target_field_names(lift_index)
         weight_kg, reps = (suggested or {}).get(lift_name, (None, None))
         raw_weight = (post_data.get(weight_field) or "").strip()
         raw_reps = (post_data.get(reps_field) or "").strip()
+        if _is_untouched_row(
+            raw_weight, raw_reps, is_bodyweight_added=lift_name in bw_added
+        ):
+            raw_weight = ""
         if raw_weight:
             values[weight_field] = raw_weight
         elif weight_kg is not None:

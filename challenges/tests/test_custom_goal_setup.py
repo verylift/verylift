@@ -364,17 +364,18 @@ class TestCustomGoalFormBannerErrors:
         assert any('"name"' in e for e in banner_errors)
         assert not any("Goal name:" in e for e in banner_errors)
 
-    def test_grid_blank_name_defaults_instead_of_erroring(self, challenge):
-        """A goal name is never demanded (TASK-248 plan §4): a blank name on
-        the grid path silently falls back to a sensible per-method default,
-        rather than reporting a field error."""
+    def test_grid_blank_name_is_asked_for_in_the_banner(self, challenge):
+        """A blank name on the grid path used to fall back to a per-method
+        default; it is now reported in the banner like any other problem, and
+        (like the JSON path's name error) not as a "Goal name:" field error --
+        the field is still required=False, the demand is made in clean()."""
         form = CustomGoalForm(
             {"name": "", **grid_post()},
             challenge=challenge,
             unit="kg",
         )
-        assert form.is_valid()
-        assert form.name == "My Goal"
+        assert not form.is_valid()
+        assert "Give your goal a name." in form.banner_errors()
         assert not any("Goal name:" in e for e in form.banner_errors())
 
     def test_non_monotonic_grid_rejected(self, challenge):
@@ -598,21 +599,20 @@ class TestSetupView:
         # A whole weight keeps no trailing ".0" (accounts.units.trim_whole_weight).
         assert 'value="80"' in content
 
-    def test_grid_blank_name_defaults_and_saves(
+    def test_grid_blank_name_is_rejected_rather_than_defaulted(
         self, authed_client, participant, challenge
     ):
-        """Empty name on a grid submission saves with the per-method default
-        name rather than erroring (TASK-248 plan §4: a name is never
-        demanded)."""
+        """An empty name used to save under default_goal_name(); it now comes
+        back as an error, so charts can't all end up named "My Goal"."""
         self._goto_chart_step(authed_client, challenge)
         response = authed_client.post(
             self._url(challenge),
-            {"name": "", **grid_post()},
+            {"name": "   ", **grid_post()},
         )
-        assert response.status_code == 302
+        assert response.status_code == 200
+        assert "Give your goal a name." in response.context["errors"]
         participant.refresh_from_db()
-        assert participant.custom_goal_id is not None
-        assert participant.custom_goal.name == "My Goal"
+        assert participant.custom_goal_id is None
 
     def test_json_missing_name_shows_banner_error(
         self, authed_client, participant, challenge
