@@ -151,11 +151,9 @@
           <div class="flex items-center w-full sm:w-auto sm:flex-1 sm:min-w-[12rem] border border-line-subtle rounded px-3 py-2 bg-surface-sunken/40">
             <p class="text-xs text-content-muted">
               {% blocktrans %}
-              Clicking compute fills in blank cells for rows that have at
-              least one goal already entered, rounded to the chosen
-              precision. Suggestions blend the Epley, Brzycki, Lander,
-              Lombardi, and Marzagao formulas, and assume each entered
-              weight reflects a true near-maximal effort.
+              Enter at least one weight in a row, pick a rounding, then hit
+              compute to fill in that row's blank cells. Anything you've
+              already typed is left alone.
               {% endblocktrans %}
             </p>
           </div>
@@ -198,10 +196,10 @@
                 {% for col in rep_range %}
                 {# Centered over the inputs beneath, matching the rep target #}
                 {# grid; only display charts right-align their numbers.      #}
-                {# The rep count used to sit here as a sub-line; it now rides #}
-                {# beside each cell's value, where the thing being entered is #}
-                {# readable in full ("100 lb x 10") without looking up.       #}
-                <th class="py-2 px-1 font-medium text-center font-mono border-b border-line-subtle">{{ col.points }}pt</th>
+                <th class="py-2 px-1 font-medium text-center font-mono border-b border-line-subtle">
+                  <span class="block">{{ col.points }}pt</span>
+                  <span class="block text-[10px] font-normal text-content-subtle">{% blocktrans with reps=col.reps %}{{ reps }} RM{% endblocktrans %}</span>
+                </th>
                 {% endfor %}
               </tr>
             </thead>
@@ -248,12 +246,11 @@
                 </td>
                 {% for cell in lift.cells %}
                 <td class="py-1 px-0.5 {% if not lift.needs_decision %}border-b border-line-subtle{% endif %}">
-                  {# Unit and rep count ride beside the value rather than only #}
-                  {# in the header: a cell reads "100 lb x 10" on its own, so   #}
-                  {# neither the unit nor which column you are in has to be     #}
-                  {# carried in your head while typing across ten of them. The  #}
-                  {# input gives up the width the suffix takes, keeping the     #}
-                  {# column close to what it was.                               #}
+                  {# Unit rides beside the value rather than only in a page-level #}
+                  {# sentence: a cell reads "100 lb" on its own, so the unit       #}
+                  {# doesn't have to be carried in your head while typing across   #}
+                  {# ten of them. The rep count lives in the column header above    #}
+                  {# instead, since it's the same for every cell in the column.     #}
                   <div class="flex items-center gap-0.5">
                     {# type=number (spinners suppressed, as in Rep Target): a #}
                     {# text input let letters be typed into a weight cell and,  #}
@@ -276,7 +273,7 @@
                            {% if show_calculator %}data-rep="{{ cell.rep }}" data-source="{% if cell.is_computed %}computed{% else %}typed{% endif %}"{% endif %}
                            class="no-spinner w-full min-w-[3rem] bg-surface-card text-content-body border border-line rounded px-1 py-1 text-sm text-right font-mono focus:outline-none focus:border-accent">
                     <span id="{{ cell.field }}-suffix"
-                          class="shrink-0 text-[10px] font-mono text-content-subtle whitespace-nowrap">{{ display_unit }}&times;{{ cell.rep }}</span>
+                          class="shrink-0 text-[10px] font-mono text-content-subtle whitespace-nowrap">{{ display_unit }}</span>
                   </div>
                 </td>
                 {% endfor %}
@@ -314,6 +311,16 @@
            class="text-sm text-content-muted hover:text-content-strong">{% trans "cancel" %}</a>
       </div>
     </form>
+
+    {% if show_calculator %}
+    <p class="text-xs text-content-muted mt-6">
+      {% blocktrans %}
+      Compute's suggestions blend the Epley, Brzycki, Lander, Lombardi, and
+      Marzagao formulas, and assume each entered weight reflects a true
+      near-maximal effort.
+      {% endblocktrans %}
+    </p>
+    {% endif %}
 {% endblock %}
 
 {% block after_main %}
