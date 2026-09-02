@@ -649,6 +649,71 @@ def build_points_by_lift(challenge) -> dict:
     return {"labels": lifts, "datasets": datasets}
 
 
+def iter_scoring_sessions(challenge, *, include_departed: bool):
+    """Every lifting session in a challenge that actually raised someone's total.
+
+    Yields ``(PointEarnEvent, points_delta)`` newest-first, where the event is
+    the best-scoring set of that (lifter, lift, day) session and ``points_delta``
+    is what the session did to the lifter's total: its points minus the best
+    they already held in that lift from any *earlier* day. Sessions worth zero
+    or less are dropped -- a lifter's total never falls, so a set that failed to
+    beat what they already held changed nothing and is not an achievement.
+
+    Shared by two callers that want the same "what moved" rule but a different
+    cast. ``include_departed=False`` (the detail page's Recent Activity feed)
+    hides bailed participants and deleted accounts, matching the leaderboard
+    beside it. ``include_departed=True`` (the owner's Settings activity log)
+    keeps them: that surface is a history of what happened, and a lifter's
+    scoring should not vanish from it retroactively because they later left.
+
+    Sessions are collapsed per (lifter, lift, day) because a session often has
+    several sets on the same lift as the lifter works up, and only the
+    best-scoring one is the achievement. Zero-point rows (sub-threshold audit
+    rows from _persist_no_points) are dropped in SQL -- they can never raise a
+    total, so they can never qualify anyway.
+    """
+    events = PointEarnEvent.objects.filter(challenge=challenge).exclude(points_earned=0)
+    if not include_departed:
+        bailed_user_ids = ChallengeParticipant.objects.filter(
+            challenge=challenge, is_bailed=True
+        ).values_list("user_id", flat=True)
+        events = events.filter(user__is_active=True).exclude(user__in=bailed_user_ids)
+    events = list(events.select_related("user").order_by("-performed_at", "-synced_at"))
+
+    scored_days_by_slot: dict[tuple, list[tuple]] = {}
+    for event in events:
+        scored_days_by_slot.setdefault((event.user_id, event.lift), []).append(
+            (event.performed_at, event.points_earned)
+        )
+
+    best_by_session: dict[tuple, PointEarnEvent] = {}
+    session_order: list[tuple] = []
+    for event in events:
+        session_key = (event.user_id, event.lift, event.performed_at)
+        best = best_by_session.get(session_key)
+        if best is None:
+            best_by_session[session_key] = event
+            session_order.append(session_key)
+        elif event.points_earned > best.points_earned:
+            best_by_session[session_key] = event
+
+    sessions = []
+    for session_key in session_order:
+        event = best_by_session[session_key]
+        prior_best = max(
+            (
+                points
+                for day, points in scored_days_by_slot[(event.user_id, event.lift)]
+                if day < event.performed_at
+            ),
+            default=0,
+        )
+        points_delta = event.points_earned - prior_best
+        if points_delta > 0:
+            sessions.append((event, points_delta))
+    return sessions
+
+
 def build_recent_scoring_activity(challenge, viewing_user, limit: int = 5) -> list:
     """Build a bounded, most-recent-first feed of the most significant scoring events.
 
@@ -710,58 +775,15 @@ def build_recent_scoring_activity(challenge, viewing_user, limit: int = 5) -> li
     Dict shape: {'name': str, 'lift': str, 'weight': Decimal, 'unit': str,
     'reps': int, 'points_earned': int, 'points_delta': int, 'date': date}.
     """
-    bailed_user_ids = ChallengeParticipant.objects.filter(
-        challenge=challenge, is_bailed=True
-    ).values_list("user_id", flat=True)
-
-    events = list(
-        PointEarnEvent.objects.filter(challenge=challenge, user__is_active=True)
-        .exclude(user__in=bailed_user_ids)
-        .exclude(points_earned=0)
-        .select_related("user")
-        .order_by("-performed_at", "-synced_at")
-    )
-
-    scored_days_by_slot: dict[tuple, list[tuple]] = {}
-    for event in events:
-        scored_days_by_slot.setdefault((event.user_id, event.lift), []).append(
-            (event.performed_at, event.points_earned)
-        )
-
-    best_by_session: dict[tuple, PointEarnEvent] = {}
-    session_order: list[tuple] = []
-    for event in events:
-        session_key = (event.user_id, event.lift, event.performed_at)
-        best = best_by_session.get(session_key)
-        if best is None:
-            best_by_session[session_key] = event
-            session_order.append(session_key)
-        elif event.points_earned > best.points_earned:
-            best_by_session[session_key] = event
-
     unit = viewing_user.unit_preference
     activity = []
-    for session_key in session_order:
+    for event, points_delta in iter_scoring_sessions(challenge, include_departed=False):
         if len(activity) == limit:
             break
-        event = best_by_session[session_key]
-        prior_best = max(
-            (
-                points
-                for day, points in scored_days_by_slot[(event.user_id, event.lift)]
-                if day < event.performed_at
-            ),
-            default=0,
-        )
-        points_delta = event.points_earned - prior_best
-        if points_delta <= 0:
-            continue
-        user = event.user
-        name = user.effective_display_name
         weight, _ = to_display_weight(event.weight, unit)
         activity.append(
             {
-                "name": name,
+                "name": event.user.effective_display_name,
                 "lift": event.lift,
                 "weight": weight,
                 "unit": unit,

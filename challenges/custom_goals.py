@@ -35,7 +35,8 @@ from django.db import transaction
 from django.utils.translation import gettext
 
 from accounts.units import KG, LB, from_display_weight
-from challenges.models import CustomGoal, CustomGoalTarget
+from challenges.events import record_challenge_event
+from challenges.models import ChallengeEvent, CustomGoal, CustomGoalTarget
 from challenges.standards import covered_lift_names
 from liftosaur.models import Lift
 
@@ -363,6 +364,11 @@ def save_custom_goal(
 
         participant.custom_goal = goal
         participant.save(update_fields=["custom_goal"])
+        record_challenge_event(
+            participant.challenge,
+            ChallengeEvent.EventType.GOAL_LOCKED,
+            actor=participant.user,
+        )
 
     logger.info(
         "User %s saved custom goal %s (%s lift(s)) for challenge %s",

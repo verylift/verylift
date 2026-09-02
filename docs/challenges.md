@@ -197,6 +197,24 @@ frozen where they stand and their past entries stay on the leaderboard.
 Removal is **permanent** — a removed participant can't rejoin, and the
 challenge's invite link won't let them back in either.
 
+## The activity log
+
+The **Settings** page keeps an activity log below the participant list. The
+list is who is in the challenge now; the log is how it got that way — joins,
+departures, removals, ownership handovers, renames (with the old name, which
+survives nowhere else), goals being locked in, scoring, and the challenge
+being closed or cancelled.
+
+Two things worth knowing about it:
+
+- **Scoring entries go back to the beginning**, because they are read from the
+  scoring history that already existed. Everything else — joins, departures,
+  renames — only appears from the point the log was added, since nothing was
+  recording those before. Older challenges will look thin at the bottom.
+- **Deleted accounts are never named.** Their entries read "a deleted account
+  left" rather than showing the placeholder name, so the log can explain what
+  happened without putting a stranger's name back on the page.
+
 ## Deleted accounts
 
 If someone deletes their very lift account, they disappear from every
@@ -205,8 +223,10 @@ bars in points-by-lift, and nothing in recent activity. Everyone still
 playing is re-ranked without them, so a runner-up can move up a place.
 
 Their scoring history isn't erased from the database — it just isn't shown to
-anyone any more. See [Leaving a challenge](#leaving-a-challenge) for the
-milder version of this, where you stay listed but stop scoring.
+anyone any more. The owner's [activity log](#the-activity-log) still records
+what they did, but as "a deleted account", never under a name. See
+[Leaving a challenge](#leaving-a-challenge) for the milder version of this,
+where you stay listed but stop scoring.
 
 ## Closing a challenge
 

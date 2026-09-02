@@ -433,9 +433,13 @@ class TestParticipantsSectionVisibility:
             for t in response.templates
         )
 
-    def test_deactivated_participant_shown_with_deleted_suffix(
+    def test_deactivated_participant_not_listed(
         self, configured_creator_challenge, mock_sync
     ):
+        """The roster is who is here now. A deleted account used to sit in it
+        under its pseudonym as a row whose only enabled action was Remove --
+        something already done to it. What became of them belongs in the
+        activity log instead, which names nobody."""
         challenge = configured_creator_challenge
         gone = UserFactory(display_name="Gone User", is_active=False)
         ChallengeParticipantFactory(
@@ -449,8 +453,9 @@ class TestParticipantsSectionVisibility:
 
         response = c.get(url)
 
-        content = response.content.decode()
-        assert "Gone User (deleted)" in content
+        names = {row["name"] for row in response.context["participant_rows"]}
+        assert "Gone User" not in names
+        assert "Gone User" not in response.content.decode()
 
     def test_non_creator_does_not_see_participants_section(
         self, configured_creator_challenge, mock_sync

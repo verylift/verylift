@@ -26,8 +26,10 @@ from challenges.custom_goals import (
     detach_active_goal,
     grid_field_name,
 )
+from challenges.events import record_challenge_event
 from challenges.models import (
     Challenge,
+    ChallengeEvent,
     ChallengeInviteLink,
     ChallengeLift,
     ChallengeParticipant,
@@ -815,10 +817,20 @@ def remove_participant(participant) -> None:
                 "rep_target_goal",
             ]
         )
-        Notification.objects.create(
-            user=participant.user,
-            event_type=Notification.EventType.REMOVED_FROM_CHALLENGE,
-            challenge=participant.challenge,
+        # No notification for a deactivated (self-serve-deleted) account:
+        # is_active=False blocks login, so the row could never be read. The
+        # removal itself still happens -- the scoring freeze and the flag are
+        # what the caller asked for, and neither depends on anyone reading it.
+        if participant.user.is_active:
+            Notification.objects.create(
+                user=participant.user,
+                event_type=Notification.EventType.REMOVED_FROM_CHALLENGE,
+                challenge=participant.challenge,
+            )
+        record_challenge_event(
+            participant.challenge,
+            ChallengeEvent.EventType.REMOVED,
+            actor=participant.user,
         )
     logger.info(
         "Removed participant %s (user %s) from challenge %s",
@@ -846,6 +858,11 @@ def transfer_ownership(challenge, new_owner) -> None:
             user=new_owner,
             event_type=Notification.EventType.OWNERSHIP_TRANSFERRED,
             challenge=challenge,
+        )
+        record_challenge_event(
+            challenge,
+            ChallengeEvent.EventType.OWNERSHIP_TRANSFERRED,
+            actor=new_owner,
         )
     logger.info(
         "Challenge %s ownership transferred from %s to %s",
@@ -961,7 +978,9 @@ def close_challenge(challenge) -> None:
     2. Flip the challenge to completed and save — this is the ledger lock that
        makes process_scored_set() a no-op.
     3. Create a challenge_closed Notification for every accepted participant,
-       including bailed ones — they were part of the challenge.
+       including bailed ones -- they were part of the challenge. Deactivated
+       (self-serve-deleted) accounts are the one exclusion: ``is_active=False``
+       blocks login, so the row could never be read.
 
     Idempotent: returns immediately if the challenge is already in a terminal
     status. CANCELLED counts -- closing a cancelled challenge would otherwise
@@ -992,11 +1011,13 @@ def close_challenge(challenge) -> None:
 
     challenge.status = Challenge.Status.COMPLETED
     challenge.save(update_fields=["status"])
+    record_challenge_event(challenge, ChallengeEvent.EventType.CLOSED)
     logger.info("Challenge %s closed", challenge.id)
 
     accepted_participants = ChallengeParticipant.objects.filter(
         challenge=challenge,
         invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        user__is_active=True,
     ).select_related("user")
 
     for participant in accepted_participants:

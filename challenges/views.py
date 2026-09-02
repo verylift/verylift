@@ -25,6 +25,7 @@ from accounts.forms import HevyKeyForm, LiftosaurKeyForm, WgerCredentialsForm
 from accounts.ratelimit import client_ip
 from accounts.units import to_display_weight
 from challenges.custom_goals import detach_active_goal, save_custom_goal
+from challenges.events import build_challenge_event_log, record_challenge_event
 from challenges.forms import (
     CreateChallengeDatesForm,
     CreateChallengeLiftsForm,
@@ -47,6 +48,7 @@ from challenges.goal_builders import (
 )
 from challenges.models import (
     Challenge,
+    ChallengeEvent,
     ChallengeParticipant,
     CustomGoal,
     RepTargetGoal,
@@ -319,13 +321,17 @@ def _history_needed_response(
 def _notify_user_joined(challenge, joining_user):
     """Notify every other accepted, non-bailed participant that a user joined.
 
-    The joining user does not notify themselves.
+    The joining user does not notify themselves. Deactivated (self-serve-
+    deleted) accounts are skipped: ``is_active=False`` blocks login, so a row
+    written for one can never be read by anyone -- it is dead data on a table
+    every other user's unread count scans.
     """
     others = (
         ChallengeParticipant.objects.filter(
             challenge=challenge,
             invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
             is_bailed=False,
+            user__is_active=True,
         )
         .exclude(user=joining_user)
         .select_related("user")
@@ -782,6 +788,9 @@ def _join_challenge_via_link(request, challenge, link):
     )
     logger.info(
         "User %s joined challenge %s via invite link", request.user.id, challenge.pk
+    )
+    record_challenge_event(
+        challenge, ChallengeEvent.EventType.JOINED, actor=request.user
     )
     _notify_user_joined(challenge, request.user)
     record_invite_link_use(link)
@@ -2195,6 +2204,9 @@ def bail_view(request, pk):
         participant.save(
             update_fields=["is_bailed", "bailed_at", "custom_goal", "rep_target_goal"]
         )
+        record_challenge_event(
+            challenge, ChallengeEvent.EventType.LEFT, actor=request.user
+        )
         logger.info("User %s bailed from challenge %s", request.user.id, pk)
         messages.success(request, gettext("You have left the challenge."))
         return redirect("challenges:dashboard")
@@ -2343,12 +2355,15 @@ def _participants_section_context(challenge):
     rows can still appear (nothing creates them any more, but old rows survive),
     which is why this builds its own list rather than reusing the detail view's
     accepted-only ``others`` queryset. Deactivated (self-serve-deleted) users
-    are still listed here, under their generated pseudonym with a "(deleted)"
-    suffix (User.effective_display_name) -- deliberately NOT matching the
-    leaderboard, which drops them entirely. This is a creator-only moderation
-    surface: the owner still has a row to act on (remove, or rule out as an
-    ownership-transfer target), and a row that vanished while its participation
-    persisted would be worse than a labelled one.
+    are dropped too, matching every other surface -- an anonymized row was only
+    ever an "unexplained stranger" the owner could not act on usefully (its
+    only enabled action was Remove, which does nothing a deleted account has
+    not already had done to it). What became of them is in ``event_log``
+    instead, which says "a deleted account left" without naming anyone.
+
+    ``event_log`` is the merged activity log (see
+    ``challenges.events.build_challenge_event_log``) -- the roster is who is
+    here now, the log is how it got that way.
 
     ``can_remove``/``can_become_owner`` gate the accepted-participant actions.
 
@@ -2378,12 +2393,13 @@ def _participants_section_context(challenge):
             ),
         }
         for row in rows
-        if not row.is_bailed
+        if not row.is_bailed and row.user.is_active
     ]
     link = current_invite_link(challenge)
     return {
         "challenge": challenge,
         "participant_rows": participant_rows,
+        "event_log": build_challenge_event_log(challenge),
         "is_locked": challenge.is_terminal,
         "invite_link_locked": (
             challenge.is_terminal or timezone.now() >= challenge_end_instant(challenge)
@@ -2549,8 +2565,18 @@ def rename_challenge_view(request, pk):
     if request.method == "POST":
         form = RenameChallengeForm(request.POST)
         if form.is_valid():
+            # Captured before the overwrite: the log is the only place the old
+            # name survives at all.
+            previous_name = challenge.name
             challenge.name = form.cleaned_data["name"]
             challenge.save(update_fields=["name"])
+            record_challenge_event(
+                challenge,
+                ChallengeEvent.EventType.RENAMED,
+                actor=request.user,
+                previous_name=previous_name,
+                new_name=challenge.name,
+            )
             logger.info("User %s renamed challenge %s", request.user.id, pk)
             messages.success(request, gettext("Challenge name updated."))
             if not is_htmx(request):
@@ -2934,6 +2960,9 @@ def cancel_challenge_view(request, pk):
     if request.method == "POST":
         challenge.status = Challenge.Status.CANCELLED
         challenge.save(update_fields=["status"])
+        record_challenge_event(
+            challenge, ChallengeEvent.EventType.CANCELLED, actor=request.user
+        )
         logger.info("User %s cancelled challenge %s", request.user.id, pk)
         messages.success(request, gettext("Challenge cancelled."))
         return redirect("challenges:dashboard")

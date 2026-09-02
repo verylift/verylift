@@ -17,7 +17,8 @@ from django.utils.translation import gettext
 
 from accounts.units import to_display_weight
 from challenges.custom_goals import _bodyweight_added_lift_names, _to_kg
-from challenges.models import RepTargetGoal, RepTargetGoalTarget
+from challenges.events import record_challenge_event
+from challenges.models import ChallengeEvent, RepTargetGoal, RepTargetGoalTarget
 from challenges.standards import covered_lift_names
 
 logger = logging.getLogger(__name__)
@@ -237,6 +238,11 @@ def save_rep_target_goal(
 
         participant.rep_target_goal = goal
         participant.save(update_fields=["rep_target_goal"])
+        record_challenge_event(
+            participant.challenge,
+            ChallengeEvent.EventType.GOAL_LOCKED,
+            actor=participant.user,
+        )
 
     logger.info(
         "User %s saved rep target goal %s (%s lift(s)) for challenge %s",

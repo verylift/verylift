@@ -176,6 +176,78 @@ class ChallengeInviteLink(models.Model):
         return self.revoked_at is None and not self.is_expired and not self.is_exhausted
 
 
+class ChallengeEvent(models.Model):
+    """One thing that happened to a challenge, for the owner's activity log.
+
+    An append-only history: nothing edits or deletes a row once written, and
+    the log is the only record of membership changes that leave no other trace
+    (a bail clears the participant's goal but stamps only a timestamp; a rename
+    overwrites the old name outright).
+
+    NEVER store a person's name, email, or any other identifying string in
+    ``metadata``. The actor is referenced only by FK and resolved to a display
+    name at read time, so a participant who later deletes their account is
+    rendered under a neutral placeholder rather than the name they had when the
+    event happened -- a snapshot here would quietly defeat
+    ``accounts.services.anonymize_account``, which exists to make the old name
+    unrecoverable. ``metadata`` is for the non-personal specifics of an event:
+    a challenge's old and new name on a rename, a lift and a point delta on a
+    scoring entry.
+
+    Scoring entries are deliberately NOT stored here. They are derived at read
+    time from the ``PointEarnEvent`` rows that already exist
+    (``challenges.services.build_challenge_event_log``), which keeps one
+    scoring truth rather than two that can disagree, and means the log shows a
+    challenge's whole scoring history rather than only what happened after this
+    model was added.
+
+    ``actor`` is SET_NULL rather than the PROTECT this codebase uses for
+    participation and scoring rows: an audit trail must never be the thing that
+    blocks removing a user row, and a null actor already renders the same way a
+    deleted one does.
+    """
+
+    class EventType(models.TextChoices):
+        JOINED = "joined", _("Joined")
+        LEFT = "left", _("Left")
+        REMOVED = "removed", _("Removed")
+        OWNERSHIP_TRANSFERRED = "ownership_transferred", _("Ownership transferred")
+        RENAMED = "renamed", _("Renamed")
+        GOAL_LOCKED = "goal_locked", _("Goal locked")
+        CLOSED = "closed", _("Closed")
+        CANCELLED = "cancelled", _("Cancelled")
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    challenge = models.ForeignKey(
+        Challenge,
+        on_delete=models.CASCADE,
+        related_name="events",
+    )
+    event_type = models.CharField(max_length=30, choices=EventType.choices)
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="challenge_events",
+    )
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "challenges_challengeevent"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(
+                fields=["challenge", "-created_at"],
+                name="challengeevent_log_idx",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.event_type} on {self.challenge}"
+
+
 class ChallengeLift(models.Model):
     """A single lift a CUSTOM challenge is scored on.
 
