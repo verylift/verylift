@@ -876,6 +876,30 @@ class TestSelfReportControlsOnTerminalChallenge:
         assert reverse("challenges:manual-lift", args=[challenge.pk]) not in content
         assert "flip-card" not in content
 
+    @pytest.mark.parametrize(
+        "status",
+        [
+            Challenge.Status.ACTIVE,
+            Challenge.Status.COMPLETED,
+            Challenge.Status.CANCELLED,
+        ],
+    )
+    def test_goals_tab_switcher_is_defined_whatever_the_status(
+        self, db, mock_sync, status
+    ):
+        """The Summary/Goals switcher is not part of self-report.
+
+        Its script once lived inside the can_self_report block, so on a
+        finished challenge the Goals button rendered with an onclick calling
+        a function that was never defined and clicking it did nothing.
+        """
+        client, challenge = self._setup(status)
+        content = client.get(
+            reverse("challenges:detail", args=[challenge.pk])
+        ).content.decode()
+        assert "onclick=\"showPersonalTab('standards')\"" in content
+        assert "function showPersonalTab(" in content
+
 
 class TestRepTargetSelfReportControlsOnTerminalChallenge:
     """The REP_TARGET sibling of the class above."""

@@ -373,6 +373,32 @@
         {% endif %}
       </div>
     </section>
+    <script>
+      // Deliberately OUTSIDE the can_self_report gate below: the Summary /
+      // Goals tab switcher belongs to the section above, which renders for
+      // every challenge. Sitting inside the gate left the Goals tab button
+      // on a COMPLETED/CANCELLED challenge calling a function that was never
+      // defined, so clicking it did nothing (#113 follow-up).
+      function showPersonalTab(tab) {
+        const summary = document.getElementById("tab-summary");
+        const standards = document.getElementById("tab-standards");
+        const summaryBtn = document.getElementById("tab-summary-btn");
+        const standardsBtn = document.getElementById("tab-standards-btn");
+        const active = "bg-accent text-accent-on";
+        const inactive = "bg-surface-card text-content-body";
+        if (tab === "standards") {
+          summary.classList.add("hidden");
+          standards.classList.remove("hidden");
+          standardsBtn.className = "px-4 py-2 font-medium " + active;
+          summaryBtn.className = "px-4 py-2 font-medium " + inactive;
+        } else {
+          standards.classList.add("hidden");
+          summary.classList.remove("hidden");
+          summaryBtn.className = "px-4 py-2 font-medium " + active;
+          standardsBtn.className = "px-4 py-2 font-medium " + inactive;
+        }
+      }
+    </script>
     {% if can_self_report %}
     <style>
       /* Self-report flip card (TASK-25). Front/back are both always in the
@@ -421,27 +447,6 @@
       .flip-card.is-flipped .flip-card-front { visibility: hidden; }
       .flip-card.is-flipped .flip-card-back { visibility: visible; }
     </style>
-    <script>
-      function showPersonalTab(tab) {
-        const summary = document.getElementById("tab-summary");
-        const standards = document.getElementById("tab-standards");
-        const summaryBtn = document.getElementById("tab-summary-btn");
-        const standardsBtn = document.getElementById("tab-standards-btn");
-        const active = "bg-accent text-accent-on";
-        const inactive = "bg-surface-card text-content-body";
-        if (tab === "standards") {
-          summary.classList.add("hidden");
-          standards.classList.remove("hidden");
-          standardsBtn.className = "px-4 py-2 font-medium " + active;
-          summaryBtn.className = "px-4 py-2 font-medium " + inactive;
-        } else {
-          standards.classList.add("hidden");
-          summary.classList.remove("hidden");
-          summaryBtn.className = "px-4 py-2 font-medium " + active;
-          standardsBtn.className = "px-4 py-2 font-medium " + inactive;
-        }
-      }
-    </script>
     <script>
       // Self-report flip card (TASK-25), shared verbatim by both Classic's
       // and REP_TARGET's summary cards (issue #85 follow-up) -- Rep Target's
