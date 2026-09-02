@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+## 2026.9.0 — 2026-09-01
+
+### Added
+- Challenge Settings now has an activity log showing who joined, left, was removed, locked in a goal or scored, plus renames, ownership changes and the challenge being closed or cancelled
+
+### Changed
+- The goal-setup wizard's "no history yet" screen now offers connecting Liftosaur, Wger, or Hevy, uploading a CSV export, or building your chart manually, instead of only asking for a Liftosaur key.
+- Goal setup marks bodyweight-added lifts (Pull-up, Chin-up, Dip) with a "BW +" affix on the weight field, so it is clear the target is added weight and 0 means bodyweight alone — and Rep Target opens those rows at 0
+- Both goal-setup grids now pin the lift name while you scroll sideways, show each cell's unit and rep count beside the value, and fit a phone screen; Rep Target's "suggest" moves above the grid alongside an explanation of what it does
+- The goal name field is no longer prefilled with "My Goal" — it prompts for a descriptive one, and saving without a name is rejected with a clear message instead of silently defaulting
+- Classic goal grid shows the rep target in the column header ("10 RM") again, leaving just the unit beside each cell
+- The Compute explainer now leads with how to use the grid; the formula attribution moved to fine print at the bottom of the page
+- Goal setup no longer asks you to name your goal — a manually built or pasted-JSON goal is labeled "Custom Goal", and a strength-standards or history-suggested goal keeps its existing descriptive name
+- Deleting your account now removes you from the challenges you were in — your name no longer appears on their leaderboards, charts or activity feeds under a placeholder, and the people still playing are re-ranked without you
+
+### Fixed
+- The goal-setup Compute grid no longer fills a row with invalid numbers when computing rep-max estimates for assisted bodyweight lifts (e.g. assisted Dips) with a negative anchor weight.
+- A tracker that's connected but has synced zero lifts now gets its own explanation on that screen instead of silently falling through to a blank chart.
+- Completed and cancelled challenges are now fully read-only — the manual "log a set" control is gone from the detail page, and the endpoint behind it refuses the request instead of recording a workout that scores nothing
+- Cancelled challenges can no longer be bailed out of, or closed into a "completed" state that fires end-of-challenge notifications
+- Notifications are no longer created for deleted accounts, which can never sign in to read them
+
+### Removed
+- The goal name field from Classic and Rep Target goal setup
+
 ## 2026.8.15 — 2026-08-28
 
 ### Added
