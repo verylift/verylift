@@ -78,6 +78,15 @@ class TestAcceptPageContent:
             invite_status=InviteStatus.ACCEPTED,
             is_bailed=True,
         )
+        # nor a deleted account -- it is absent from the leaderboard rendered
+        # right below this count, so counting it would advertise more lifters
+        # than the page then lists.
+        ChallengeParticipantFactory(
+            challenge=challenge,
+            user=UserFactory(is_active=False),
+            invite_status=InviteStatus.ACCEPTED,
+            joined_at=timezone.now(),
+        )
 
         visitor = UserFactory()
         c = Client()

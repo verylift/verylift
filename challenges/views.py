@@ -83,6 +83,7 @@ from challenges.services import (
     sync_and_score,
     transfer_ownership,
     update_invite_link,
+    visible_participant_count,
 )
 from challenges.standards import covered_lift_names
 from core.http import is_htmx
@@ -689,19 +690,13 @@ def invite_link_view(request, token):
             "challenges/invite_link_ended.html",
             {
                 "challenge": challenge,
-                "participant_count": challenge.participants.filter(
-                    invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
-                    is_bailed=False,
-                ).count(),
+                "participant_count": visible_participant_count(challenge),
             },
         )
 
     if not request.user.is_authenticated:
         request.session["invite_token"] = token
-        participant_count = challenge.participants.filter(
-            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
-            is_bailed=False,
-        ).count()
+        participant_count = visible_participant_count(challenge)
         return render(
             request,
             "challenges/invite_link_preview.html",
@@ -809,10 +804,7 @@ def _render_invite_accept(request, challenge, link):
     "state changed since page load" fallback (TASK-303) -- both need the same
     challenge preview, not a full guard-ladder rewrite.
     """
-    participant_count = challenge.participants.filter(
-        invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
-        is_bailed=False,
-    ).count()
+    participant_count = visible_participant_count(challenge)
 
     leaderboard = rank_participants(challenge, include_unscored=True)
     leader_points = leaderboard[0]["total_points"] if leaderboard else 0
@@ -1748,10 +1740,17 @@ def challenge_detail_view(request, pk):
     # who is synced separately above it in participants_to_score) and the
     # leaderboard's chart_url lookup below — a single query rather than one
     # queryset for "others" and a second per-row lookup for the map.
+    # user__is_active=True keeps deactivated (self-serve-deleted) accounts out
+    # of the page's whole notion of "who is in this challenge", matching
+    # rank_participants and the chart builders. It also spares the sync loop
+    # below a pointless pass over them: anonymize_account cleared their tracker
+    # credentials, so the pull is a no-op, and rescoring a pool nothing renders
+    # any more only writes hidden PointEarnEvent rows.
     accepted_participants = list(
         challenge.participants.filter(
             invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
             is_bailed=False,
+            user__is_active=True,
         ).select_related("user")
     )
     others = [p for p in accepted_participants if p.user_id != request.user.id]
@@ -1815,24 +1814,24 @@ def challenge_detail_view(request, pk):
     # means every dense rank is a meaningless tie, so it renders as "-".
     show_ranks = any(entry["total_points"] > 0 for entry in ranked_entries)
 
+    # Every entry here is an active account: rank_participants filters
+    # deactivated (self-serve-deleted) users out, so there is no longer an
+    # is_active branch to take. That filter is also what makes the chart link
+    # below unconditional -- participant_chart_view requires
+    # user__is_active=True, so a deleted account could only ever have been
+    # linked to a 404.
     leaderboard = []
     for entry in ranked_entries:
         entry_user = entry["user"]
         is_self = entry_user.pk == request.user.pk
         chart_url = None
         name = entry_user.effective_display_name
-        if entry_user.is_active:
-            entry_participant = participant_by_user_id.get(entry_user.pk)
-            if entry_participant is not None and not is_self:
-                chart_url = reverse(
-                    "challenges:participant-chart",
-                    args=[challenge.pk, entry_participant.pk],
-                )
-        # else: no chart_url -- participant_chart_view itself requires
-        # user__is_active=True, so a link here would just 404. Deactivated
-        # (self-serve-deleted) users already show under their generated
-        # pseudonym with a "(deleted)" suffix (name computed above via
-        # effective_display_name); there's no separate identity left to mask.
+        entry_participant = participant_by_user_id.get(entry_user.pk)
+        if entry_participant is not None and not is_self:
+            chart_url = reverse(
+                "challenges:participant-chart",
+                args=[challenge.pk, entry_participant.pk],
+            )
         leaderboard.append(
             {
                 "rank": entry["rank"] if show_ranks else "-",
@@ -2344,8 +2343,12 @@ def _participants_section_context(challenge):
     rows can still appear (nothing creates them any more, but old rows survive),
     which is why this builds its own list rather than reusing the detail view's
     accepted-only ``others`` queryset. Deactivated (self-serve-deleted) users
-    show under their generated pseudonym with a "(deleted)" suffix
-    (User.effective_display_name), matching the leaderboard.
+    are still listed here, under their generated pseudonym with a "(deleted)"
+    suffix (User.effective_display_name) -- deliberately NOT matching the
+    leaderboard, which drops them entirely. This is a creator-only moderation
+    surface: the owner still has a row to act on (remove, or rule out as an
+    ownership-transfer target), and a row that vanished while its participation
+    persisted would be worse than a labelled one.
 
     ``can_remove``/``can_become_owner`` gate the accepted-participant actions.
 

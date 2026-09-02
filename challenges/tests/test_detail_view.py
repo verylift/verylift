@@ -451,9 +451,15 @@ class TestLeaderboard:
         assert len(self_rows) == 1
         assert "(you)" in resp.content.decode()
 
-    def test_deactivated_user_shows_deleted_suffix(
+    def test_deactivated_user_excluded_and_ranks_recompute(
         self, authed_client, participant, challenge, user, mock_sync
     ):
+        """A deleted account occupies no leaderboard row, exactly like a bailed
+        participant -- and its pseudonym must not be reachable in the rendered
+        page under any name. The rank assertion is the load-bearing half: it
+        proves the row was dropped before dense-ranking rather than merely
+        hidden in the template, which is what lets the survivors close up
+        over it."""
         gone = UserFactory(display_name="Gone User", is_active=False)
         ChallengeParticipantFactory(
             challenge=challenge,
@@ -461,21 +467,27 @@ class TestLeaderboard:
             invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
         )
         PointEarnEventFactory(
-            user=gone, challenge=challenge, lift="Squat", points_earned=7
+            user=gone, challenge=challenge, lift="Squat", points_earned=20
+        )
+        PointEarnEventFactory(
+            user=user, challenge=challenge, lift="Squat", points_earned=5
         )
         url = reverse("challenges:detail", args=[challenge.pk])
         resp = authed_client.get(url)
         content = resp.content.decode()
-        assert "Gone User (deleted)" in content
+        names = {row["name"] for row in resp.context["leaderboard"]}
+        assert "Gone User" not in names
+        assert "Gone User" not in content
+        survivor = next(r for r in resp.context["leaderboard"] if r["is_self"])
+        assert survivor["rank"] == 1
 
-    def test_anonymized_account_shows_placeholder(
+    def test_anonymized_account_not_shown_under_its_pseudonym(
         self, authed_client, participant, challenge, user, mock_sync
     ):
-        """Regression for TASK-308 (#46): accounts.services.anonymize_account
-        must make the "(deleted)" convention true at the data level
-        (is_active=False plus a scrubbed display_name), not rely on a second
-        display-time mechanism -- see test_deactivated_user_shows_placeholder
-        above for the same assertion driven by a manually-set is_active=False.
+        """Driven through the real anonymize_account rather than a hand-set
+        is_active=False, so the exclusion is pinned to what account deletion
+        actually writes. The pseudonym is a plausible human name, so the
+        assertion is that this specific generated one never reaches the page.
         """
         gone = UserFactory(display_name="Gone User")
         ChallengeParticipantFactory(
@@ -491,7 +503,8 @@ class TestLeaderboard:
         url = reverse("challenges:detail", args=[challenge.pk])
         resp = authed_client.get(url)
         content = resp.content.decode()
-        assert f"{gone.display_name} (deleted)" in content
+        assert gone.display_name not in content
+        assert "(deleted)" not in content
 
     def test_bailed_participant_excluded_and_ranks_recompute(
         self, authed_client, participant, challenge, user, mock_sync

@@ -168,27 +168,29 @@ class TestBuildPointsByLift:
         assert "Gone" not in labels
         assert labels == {"Alice"}
 
-    def test_deactivated_user_labelled_with_deleted_suffix(self, challenge):
+    def test_deactivated_user_excluded(self, challenge):
+        """A deleted account contributes no bar series, same as a bailed one."""
+        alice = UserFactory(display_name="Alice")
         former = UserFactory(display_name="PseudonymName", is_active=False)
+        _accept(challenge, alice)
         _accept(challenge, former)
-        PointEarnEventFactory(
-            user=former,
-            challenge=challenge,
-            lift="Squat",
-            points_earned=5,
-            is_current_best=True,
-        )
+        for user, points in ((alice, 5), (former, 9)):
+            PointEarnEventFactory(
+                user=user,
+                challenge=challenge,
+                lift="Squat",
+                points_earned=points,
+                is_current_best=True,
+            )
 
         data = build_points_by_lift(challenge)
 
-        assert data["datasets"][0]["label"] == "PseudonymName (deleted)"
+        assert {ds["label"] for ds in data["datasets"]} == {"Alice"}
 
-    def test_anonymized_account_labelled_with_deleted_suffix(self, challenge):
-        """Regression for TASK-308 (#46): accounts.services.anonymize_account
-        must make this convention true at the data level (is_active=False plus
-        a scrubbed display_name), not rely on a second display-time mechanism
-        -- see test_deactivated_user_labelled_with_deleted_suffix above for the
-        same assertion driven by a manually-set is_active=False.
+    def test_anonymized_account_excluded(self, challenge):
+        """Driven through the real anonymize_account rather than a hand-set
+        is_active=False, pinning the exclusion to what account deletion
+        actually writes.
         """
         former = UserFactory(display_name="Former")
         _accept(challenge, former)
@@ -204,4 +206,4 @@ class TestBuildPointsByLift:
 
         data = build_points_by_lift(challenge)
 
-        assert data["datasets"][0]["label"] == f"{former.display_name} (deleted)"
+        assert data["datasets"] == []

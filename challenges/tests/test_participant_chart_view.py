@@ -408,9 +408,13 @@ class TestDetailPageLink:
         expected_url = chart_url(challenge, subject_participant)
         assert f'hx-get="{expected_url}"' in body
 
-    def test_deactivated_participant_row_has_no_link(
+    def test_deactivated_participant_has_no_row_and_no_link(
         self, viewer_client, challenge, subject, subject_participant
     ):
+        """A deleted account is gone from the leaderboard entirely, so there is
+        no row left to hang a chart link on. The link assertion still matters
+        independently: participant_chart_view requires user__is_active=True, so
+        a link rendered here could only ever 404."""
         PointEarnEventFactory(
             user=subject,
             challenge=challenge,
@@ -424,7 +428,7 @@ class TestDetailPageLink:
         subject.save(update_fields=["is_active"])
         resp = viewer_client.get(reverse("challenges:detail", args=[challenge.pk]))
         body = resp.content.decode()
-        assert subject.effective_display_name in body
+        assert subject.display_name not in body
         assert chart_url(challenge, subject_participant) not in body
 
     def test_own_row_has_no_chart_link(

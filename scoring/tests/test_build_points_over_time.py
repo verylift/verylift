@@ -293,7 +293,12 @@ class TestBuildPointsOverTime:
         assert data["labels"] == []
         assert data["datasets"] == [{"label": "Alice", "data": []}]
 
-    def test_deactivated_user_label(self, challenge):
+    def test_deactivated_user_excluded(self, challenge):
+        """A deleted account plots no line, same as a bailed participant. Its
+        event dates do still reach the shared label axis -- that is existing
+        behaviour for every excluded participant (the axis is built from all of
+        the challenge's events, see the docstring), and pinning it here records
+        that dropping the dataset deliberately did not change it."""
         gone = UserFactory(display_name="Gone User", is_active=False)
         _accept(challenge, gone)
         PointEarnEventFactory(
@@ -307,9 +312,8 @@ class TestBuildPointsOverTime:
 
         data = build_points_over_time(challenge)
 
-        labels = [ds["label"] for ds in data["datasets"]]
-        assert "Gone User (deleted)" in labels
-        assert "Gone User" not in labels
+        assert data["datasets"] == []
+        assert data["labels"] == ["2024-01-01"]
 
     def test_rejoined_participant_keeps_pre_bail_progress(self, challenge):
         """A participant scored before bailing still shows that progress after

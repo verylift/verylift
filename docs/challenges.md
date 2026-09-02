@@ -197,6 +197,17 @@ frozen where they stand and their past entries stay on the leaderboard.
 Removal is **permanent** — a removed participant can't rejoin, and the
 challenge's invite link won't let them back in either.
 
+## Deleted accounts
+
+If someone deletes their very lift account, they disappear from every
+challenge they were in: no leaderboard row, no line on the points chart, no
+bars in points-by-lift, and nothing in recent activity. Everyone still
+playing is re-ranked without them, so a runner-up can move up a place.
+
+Their scoring history isn't erased from the database — it just isn't shown to
+anyone any more. See [Leaving a challenge](#leaving-a-challenge) for the
+milder version of this, where you stay listed but stop scoring.
+
 ## Closing a challenge
 
 The creator can close an active challenge early, or it closes

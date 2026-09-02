@@ -13,6 +13,7 @@ from decimal import Decimal
 import pytest
 from django.utils import timezone
 
+from accounts.services import anonymize_account
 from accounts.tests.factories import UserFactory
 from challenges.models import ChallengeParticipant
 from challenges.tests.factories import (
@@ -23,7 +24,7 @@ from challenges.tests.factories import (
 )
 from scoring.domain.calculator import tier_thresholds
 from scoring.models import PointEarnEvent
-from scoring.services import process_scored_set, rank_participants
+from scoring.services import get_leader, process_scored_set, rank_participants
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -650,6 +651,82 @@ class TestRankParticipants:
         assert board[0]["user"] == survivor
         assert board[0]["rank"] == 1  # gap left by bailer closed
 
+    def test_deactivated_participant_excluded_and_ranks_recompute(self):
+        """A self-serve-deleted account drops off the board on the same footing
+        as a bailed one, and the gap closes. rank_participants is the single
+        seam every derived surface reads (get_user_standing,
+        compute_ranking_deltas, build_career_stats' win count), so this is the
+        assertion that carries the rule to all of them.
+        """
+        challenge = make_custom_challenge(lifts=[LIFT])
+        targets = targets_from_multiplier(Decimal("1.0000"), Decimal("100.00"))
+
+        # deleted account: 10 pts (1RM) -- the higher scorer, then deletes
+        gone = UserFactory()
+        _add_participant_with_goal(challenge, gone, {LIFT: targets})
+        process_scored_set(
+            user=gone,
+            challenge=challenge,
+            lift=LIFT,
+            performed_at=PERFORMED_AT,
+            reps=1,
+            weight=Decimal("100.00"),
+            synced_at=SYNCED_AT,
+        )
+
+        # survivor: 6 pts (5RM)
+        survivor = UserFactory()
+        _add_participant_with_goal(challenge, survivor, {LIFT: targets})
+        process_scored_set(
+            user=survivor,
+            challenge=challenge,
+            lift=LIFT,
+            performed_at=PERFORMED_AT,
+            reps=5,
+            weight=Decimal("87.00"),
+            synced_at=SYNCED_AT,
+        )
+
+        anonymize_account(gone)
+
+        board = rank_participants(challenge)
+        assert [row["user"] for row in board] == [survivor]
+        assert board[0]["rank"] == 1
+
+    def test_deactivated_account_is_never_the_leader(self):
+        """get_leader runs its own top-1 aggregate rather than going through
+        rank_participants, so it needs the exclusion in its own right -- the
+        find-challenges page would otherwise headline a deleted account."""
+        challenge = make_custom_challenge(lifts=[LIFT])
+        targets = targets_from_multiplier(Decimal("1.0000"), Decimal("100.00"))
+
+        gone = UserFactory()
+        _add_participant_with_goal(challenge, gone, {LIFT: targets})
+        process_scored_set(
+            user=gone,
+            challenge=challenge,
+            lift=LIFT,
+            performed_at=PERFORMED_AT,
+            reps=1,
+            weight=Decimal("100.00"),
+            synced_at=SYNCED_AT,
+        )
+        runner_up = UserFactory()
+        _add_participant_with_goal(challenge, runner_up, {LIFT: targets})
+        process_scored_set(
+            user=runner_up,
+            challenge=challenge,
+            lift=LIFT,
+            performed_at=PERFORMED_AT,
+            reps=5,
+            weight=Decimal("87.00"),
+            synced_at=SYNCED_AT,
+        )
+
+        anonymize_account(gone)
+
+        assert get_leader(challenge)["user"] == runner_up
+
     def test_dense_ranking_gap_after_tie(self):
         """After a two-way tie at rank 1, the next distinct score is rank 2."""
         challenge = make_custom_challenge(lifts=[LIFT])
@@ -761,6 +838,17 @@ class TestRankParticipantsIncludeUnscored:
 
         board = rank_participants(challenge, include_unscored=True)
         assert board == []
+
+    def test_deactivated_unscored_participant_excluded(self):
+        """The include_unscored branch runs a second, separate participant
+        query, so it needs the exclusion of its own -- a deleted account that
+        never scored would otherwise reappear as a zero-point row."""
+        challenge = make_custom_challenge(lifts=[LIFT])
+        targets = targets_from_multiplier(Decimal("1.0000"), Decimal("100.00"))
+        gone = UserFactory(is_active=False)
+        _add_participant_with_goal(challenge, gone, {LIFT: targets})
+
+        assert rank_participants(challenge, include_unscored=True) == []
 
     def test_no_participants_returns_empty(self):
         challenge = make_custom_challenge(lifts=[LIFT])

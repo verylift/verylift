@@ -417,6 +417,25 @@ def order_by_effective_name(queryset):
     ).order_by(Lower("effective_name"))
 
 
+def visible_participant_count(challenge) -> int:
+    """How many people a participant-facing surface should say are in a challenge.
+
+    One definition of "is in this challenge", shared by every surface that
+    prints a headcount (the invite-link landing pages and the accept/decline
+    preview), so none of them can drift from the leaderboard's own membership
+    rule: accepted, not bailed, and not a deactivated (self-serve-deleted)
+    account. The last clause is the one that is easy to forget and the reason
+    this is a function -- ``scoring.services.rank_participants`` and the chart
+    builders drop deleted accounts, so a count that kept them would advertise
+    more lifters than the leaderboard below it lists.
+    """
+    return challenge.participants.filter(
+        invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        is_bailed=False,
+        user__is_active=True,
+    ).count()
+
+
 def get_co_participants(user):
     """Other users sharing an accepted, played challenge with ``user``.
 
