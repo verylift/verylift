@@ -337,8 +337,22 @@ def score_pooled_history(*, user, challenge) -> ScoringSummary:
 
     Returns a ScoringSummary of how many pooled sets were evaluated and how many
     new PointEarnEvents were created.
+
+    A COMPLETED/CANCELLED challenge returns an empty summary without touching
+    the pool. process_scored_set's own ledger lock already makes every set a
+    no-op, but reaching it row by row is not free: a terminal challenge's
+    unscored rows never get an audit row either, so they stay unscored
+    forever and the loop re-snapshots the leaderboard on every detail-page
+    open, for a ledger that cannot change. close_challenge deliberately runs
+    its final sync/score BEFORE flipping the status, so nothing is lost here.
     """
     summary = ScoringSummary()
+
+    if challenge.status in (
+        Challenge.Status.COMPLETED,
+        Challenge.Status.CANCELLED,
+    ):
+        return summary
 
     participant = ChallengeParticipant.objects.filter(
         user=user, challenge=challenge
@@ -486,12 +500,11 @@ def build_points_over_time(challenge, *, top_n: int | None = None) -> dict:
     at their observation-window start so their first scored event renders as a
     rising slope from zero. Participants with no events produce a flat zero series.
 
-    Deactivated (self-serve-deleted) users show under their generated
-    pseudonym with a "(deleted)" suffix (User.effective_display_name) --
-    anonymize_account already replaced their real username/display_name
-    with the pseudonym, and the suffix marks that clearly instead of
-    leaving a departed member looking like an unexplained stranger next
-    to real names on the same chart.
+    Deactivated (self-serve-deleted) users are excluded outright, the same way
+    bailed participants are: a deleted account has no ongoing participation to
+    plot, and the pseudonym anonymize_account leaves behind reads as an
+    unexplained stranger on a chart of real names. Their PointEarnEvent rows
+    stay in the database, just unplotted.
 
     ``top_n``, when given, keeps only the ``top_n`` datasets with the highest
     final cumulative value (the shared label axis is unaffected) -- used by the
@@ -505,6 +518,7 @@ def build_points_over_time(challenge, *, top_n: int | None = None) -> dict:
             challenge=challenge,
             invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
             is_bailed=False,
+            user__is_active=True,
         )
         .select_related("user")
         .order_by("joined_at", "created_at")
@@ -590,9 +604,8 @@ def build_points_by_lift(challenge) -> dict:
     0 for a lift they have not scored. Because the same current-best rows back the
     leaderboard total, a lifter's per-lift bars sum to their leaderboard total.
 
-    Deactivated (self-serve-deleted) users show under their generated
-    pseudonym with a "(deleted)" suffix (User.effective_display_name),
-    matching build_points_over_time and the detail-page leaderboard.
+    Deactivated (self-serve-deleted) users are excluded outright, matching
+    build_points_over_time and the detail-page leaderboard.
 
     Shape: {"labels": [lift, ...], "datasets": [{"label": str, "data": [int]}, ...]}
     """
@@ -603,6 +616,7 @@ def build_points_by_lift(challenge) -> dict:
             challenge=challenge,
             invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
             is_bailed=False,
+            user__is_active=True,
         )
         .select_related("user")
         .order_by("joined_at", "created_at")
@@ -635,13 +649,79 @@ def build_points_by_lift(challenge) -> dict:
     return {"labels": lifts, "datasets": datasets}
 
 
+def iter_scoring_sessions(challenge, *, include_departed: bool):
+    """Every lifting session in a challenge that actually raised someone's total.
+
+    Yields ``(PointEarnEvent, points_delta)`` newest-first, where the event is
+    the best-scoring set of that (lifter, lift, day) session and ``points_delta``
+    is what the session did to the lifter's total: its points minus the best
+    they already held in that lift from any *earlier* day. Sessions worth zero
+    or less are dropped -- a lifter's total never falls, so a set that failed to
+    beat what they already held changed nothing and is not an achievement.
+
+    Shared by two callers that want the same "what moved" rule but a different
+    cast. ``include_departed=False`` (the detail page's Recent Activity feed)
+    hides bailed participants and deleted accounts, matching the leaderboard
+    beside it. ``include_departed=True`` (the owner's Settings activity log)
+    keeps them: that surface is a history of what happened, and a lifter's
+    scoring should not vanish from it retroactively because they later left.
+
+    Sessions are collapsed per (lifter, lift, day) because a session often has
+    several sets on the same lift as the lifter works up, and only the
+    best-scoring one is the achievement. Zero-point rows (sub-threshold audit
+    rows from _persist_no_points) are dropped in SQL -- they can never raise a
+    total, so they can never qualify anyway.
+    """
+    events = PointEarnEvent.objects.filter(challenge=challenge).exclude(points_earned=0)
+    if not include_departed:
+        bailed_user_ids = ChallengeParticipant.objects.filter(
+            challenge=challenge, is_bailed=True
+        ).values_list("user_id", flat=True)
+        events = events.filter(user__is_active=True).exclude(user__in=bailed_user_ids)
+    events = list(events.select_related("user").order_by("-performed_at", "-synced_at"))
+
+    scored_days_by_slot: dict[tuple, list[tuple]] = {}
+    for event in events:
+        scored_days_by_slot.setdefault((event.user_id, event.lift), []).append(
+            (event.performed_at, event.points_earned)
+        )
+
+    best_by_session: dict[tuple, PointEarnEvent] = {}
+    session_order: list[tuple] = []
+    for event in events:
+        session_key = (event.user_id, event.lift, event.performed_at)
+        best = best_by_session.get(session_key)
+        if best is None:
+            best_by_session[session_key] = event
+            session_order.append(session_key)
+        elif event.points_earned > best.points_earned:
+            best_by_session[session_key] = event
+
+    sessions = []
+    for session_key in session_order:
+        event = best_by_session[session_key]
+        prior_best = max(
+            (
+                points
+                for day, points in scored_days_by_slot[(event.user_id, event.lift)]
+                if day < event.performed_at
+            ),
+            default=0,
+        )
+        points_delta = event.points_earned - prior_best
+        if points_delta > 0:
+            sessions.append((event, points_delta))
+    return sessions
+
+
 def build_recent_scoring_activity(challenge, viewing_user, limit: int = 5) -> list:
     """Build a bounded, most-recent-first feed of the most significant scoring events.
 
     Returns up to ``limit`` display-ready rows, newest first (by performed date,
-    then sync time). Bailed participants are excluded, mirroring the leaderboard
-    and Points Over Time chart. Weights are converted to ``viewing_user``'s unit
-    preference so the feed reads consistently for whoever is looking at it.
+    then sync time). Bailed participants and deactivated accounts are excluded,
+    mirroring the leaderboard and Points Over Time chart. Weights are converted
+    to ``viewing_user``'s unit preference so the feed reads consistently for
+    whoever is looking at it.
 
     Membership is decided by ``points_delta``, not by is_current_best: a
     session appears when it actually raised that lifter's total. So the feed
@@ -665,11 +745,10 @@ def build_recent_scoring_activity(challenge, viewing_user, limit: int = 5) -> li
     progressively more points as the lifter works up, so only the best-scoring
     set from each session is kept rather than showing every intermediate set.
 
-    Deactivated (self-serve-deleted) lifters show under their generated
-    pseudonym with a "(deleted)" suffix (User.effective_display_name), same
-    as everywhere else this shows up. An empty list means the challenge has
-    no scoring activity yet, which the template renders as an explicit empty
-    state.
+    Deactivated (self-serve-deleted) lifters are excluded outright, same as
+    everywhere else a participant-facing surface lists people. An empty list
+    means the challenge has no scoring activity yet, which the template
+    renders as an explicit empty state.
 
     ``points_delta`` is what the event actually did to that lifter's total:
     its points minus the best they already held in that lift from any earlier
@@ -696,58 +775,15 @@ def build_recent_scoring_activity(challenge, viewing_user, limit: int = 5) -> li
     Dict shape: {'name': str, 'lift': str, 'weight': Decimal, 'unit': str,
     'reps': int, 'points_earned': int, 'points_delta': int, 'date': date}.
     """
-    bailed_user_ids = ChallengeParticipant.objects.filter(
-        challenge=challenge, is_bailed=True
-    ).values_list("user_id", flat=True)
-
-    events = list(
-        PointEarnEvent.objects.filter(challenge=challenge)
-        .exclude(user__in=bailed_user_ids)
-        .exclude(points_earned=0)
-        .select_related("user")
-        .order_by("-performed_at", "-synced_at")
-    )
-
-    scored_days_by_slot: dict[tuple, list[tuple]] = {}
-    for event in events:
-        scored_days_by_slot.setdefault((event.user_id, event.lift), []).append(
-            (event.performed_at, event.points_earned)
-        )
-
-    best_by_session: dict[tuple, PointEarnEvent] = {}
-    session_order: list[tuple] = []
-    for event in events:
-        session_key = (event.user_id, event.lift, event.performed_at)
-        best = best_by_session.get(session_key)
-        if best is None:
-            best_by_session[session_key] = event
-            session_order.append(session_key)
-        elif event.points_earned > best.points_earned:
-            best_by_session[session_key] = event
-
     unit = viewing_user.unit_preference
     activity = []
-    for session_key in session_order:
+    for event, points_delta in iter_scoring_sessions(challenge, include_departed=False):
         if len(activity) == limit:
             break
-        event = best_by_session[session_key]
-        prior_best = max(
-            (
-                points
-                for day, points in scored_days_by_slot[(event.user_id, event.lift)]
-                if day < event.performed_at
-            ),
-            default=0,
-        )
-        points_delta = event.points_earned - prior_best
-        if points_delta <= 0:
-            continue
-        user = event.user
-        name = user.effective_display_name
         weight, _ = to_display_weight(event.weight, unit)
         activity.append(
             {
-                "name": name,
+                "name": event.user.effective_display_name,
                 "lift": event.lift,
                 "weight": weight,
                 "unit": unit,
@@ -769,6 +805,16 @@ def rank_participants(challenge, *, include_unscored=False) -> list[dict]:
 
     Bailed participants (voluntarily left or creator-removed) are excluded so a
     frozen ledger no longer occupies a ranked row, matching build_points_over_time.
+
+    Deactivated (self-serve-deleted) accounts are excluded on the same footing:
+    a deleted account occupies no ranked row, and the ranks of everyone still
+    playing close up over it. This is the single seam that carries that rule to
+    every derived surface -- get_user_standing, compute_ranking_deltas (so a
+    deleted account can neither be notified nor be named as someone's
+    overtaker) and build_career_stats' win count all read their standings from
+    here. Note the consequence, which is the same one bail already has: a
+    runner-up whose rival deletes their account inherits rank #1, including on
+    an already-completed challenge.
 
     By default (``include_unscored=False``) only participants who have earned
     at least one point event appear -- this is the exact historical behavior
@@ -793,6 +839,7 @@ def rank_participants(challenge, *, include_unscored=False) -> list[dict]:
         PointEarnEvent.objects.filter(
             challenge=challenge,
             is_current_best=True,
+            user__is_active=True,
         )
         .exclude(user__in=bailed_user_ids)
         .values("user")
@@ -811,6 +858,7 @@ def rank_participants(challenge, *, include_unscored=False) -> list[dict]:
                 challenge=challenge,
                 invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
                 is_bailed=False,
+                user__is_active=True,
             )
             .exclude(user_id__in=scored_totals)
             .values_list("user_id", flat=True)
@@ -849,8 +897,9 @@ def get_leader(challenge) -> dict | None:
     whole leaderboard when a caller (the find-challenges list) needs nothing
     but the leader's name and points for each row.
 
-    Bailed participants are excluded so a left user is never advertised as the
-    headline leader on the find-challenges page.
+    Bailed participants and deactivated (self-serve-deleted) accounts are
+    excluded so neither a departed member nor a deleted one is ever advertised
+    as the headline leader on the find-challenges page.
 
     Dict shape: {'user': <User>, 'total_points': <int>}.
     """
@@ -864,6 +913,7 @@ def get_leader(challenge) -> dict | None:
         PointEarnEvent.objects.filter(
             challenge=challenge,
             is_current_best=True,
+            user__is_active=True,
         )
         .exclude(user__in=bailed_user_ids)
         .values("user")

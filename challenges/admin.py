@@ -2,6 +2,7 @@ from django.contrib import admin
 
 from .models import (
     Challenge,
+    ChallengeEvent,
     ChallengeInviteLink,
     ChallengeLift,
     ChallengeParticipant,
@@ -42,6 +43,24 @@ class ChallengeParticipantAdmin(admin.ModelAdmin):
     list_display = ["challenge", "user", "invite_status", "is_bailed"]
     list_filter = ["invite_status", "is_bailed"]
     search_fields = ["challenge__name", "user__username"]
+
+
+@admin.register(ChallengeEvent)
+class ChallengeEventAdmin(admin.ModelAdmin):
+    """Read-only: the activity log is append-only, and an operator editing it
+    would be rewriting the record of what happened. Add is off for the same
+    reason -- a row here should only ever come from the action it describes."""
+
+    list_display = ["challenge", "event_type", "actor", "created_at"]
+    list_filter = ["event_type"]
+    search_fields = ["challenge__name"]
+    readonly_fields = ["challenge", "event_type", "actor", "metadata", "created_at"]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(ChallengeLift)

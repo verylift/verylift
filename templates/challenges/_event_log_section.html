@@ -1,0 +1,51 @@
+{% load i18n humanize %}
+{% comment %}
+The owner's challenge activity log (Settings page). Companion to
+_participants_section.html: that list is who is in the challenge now, this is
+how it got that way.
+
+Every line is one entry from challenges.events.build_challenge_event_log,
+already merged newest-first from stored ChallengeEvent rows and scoring
+entries derived from PointEarnEvent. The actor string arrives pre-resolved
+(events.actor_label) so a deleted account reads as "a deleted account" here
+rather than under the pseudonym anonymize_account left behind -- do not
+reach past it to entry.actor's user object to re-derive a name.
+
+Context: event_log (list of {kind, actor, at, detail}), challenge.
+{% endcomment %}
+<section class="bg-surface-card border border-line-subtle rounded p-6 mb-6">
+  <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "activity" %}</h2>
+
+  {% if event_log %}
+  <ul class="divide-y divide-line-subtle">
+    {% for entry in event_log %}
+    <li class="flex items-baseline justify-between gap-3 py-2">
+      <span class="text-sm text-content-body">
+        {% if entry.kind == "joined" %}
+          {% blocktrans with who=entry.actor %}{{ who }} joined{% endblocktrans %}
+        {% elif entry.kind == "left" %}
+          {% blocktrans with who=entry.actor %}{{ who }} left{% endblocktrans %}
+        {% elif entry.kind == "removed" %}
+          {% blocktrans with who=entry.actor %}{{ who }} was removed{% endblocktrans %}
+        {% elif entry.kind == "ownership_transferred" %}
+          {% blocktrans with who=entry.actor %}{{ who }} became the owner{% endblocktrans %}
+        {% elif entry.kind == "renamed" %}
+          {% blocktrans with who=entry.actor old=entry.detail.previous_name new=entry.detail.new_name %}{{ who }} renamed this challenge from “{{ old }}” to “{{ new }}”{% endblocktrans %}
+        {% elif entry.kind == "goal_locked" %}
+          {% blocktrans with who=entry.actor %}{{ who }} locked in their goal{% endblocktrans %}
+        {% elif entry.kind == "closed" %}
+          {% trans "Challenge closed" %}
+        {% elif entry.kind == "cancelled" %}
+          {% blocktrans with who=entry.actor %}{{ who }} cancelled this challenge{% endblocktrans %}
+        {% elif entry.kind == "scored" %}
+          {% blocktrans with who=entry.actor lift=entry.detail.lift count counter=entry.detail.points %}{{ who }} scored {{ counter }} point on {{ lift }}{% plural %}{{ who }} scored {{ counter }} points on {{ lift }}{% endblocktrans %}
+        {% endif %}
+      </span>
+      <span class="text-xs text-content-muted whitespace-nowrap">{{ entry.at|naturaltime }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="text-sm text-content-muted italic">{% trans "Nothing has happened here yet." %}</p>
+  {% endif %}
+</section>

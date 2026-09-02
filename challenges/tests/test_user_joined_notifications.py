@@ -83,12 +83,17 @@ class TestJoinViaLinkNotifications:
             == 0
         )
 
-    def test_excludes_legacy_invited_and_bailed_participants(self):
+    def test_excludes_legacy_invited_bailed_and_deleted_participants(self):
+        """A deactivated account is skipped alongside the legacy INVITED and
+        bailed rows: is_active=False blocks login, so the row could never be
+        read by anyone."""
         challenge = ChallengeFactory(status=Challenge.Status.ACTIVE)
         accepted = UserFactory()
         invited = UserFactory()
         bailed = UserFactory()
+        deleted = UserFactory(is_active=False)
         _accepted(challenge, accepted)
+        _accepted(challenge, deleted)
         ChallengeParticipantFactory(
             challenge=challenge,
             user=invited,

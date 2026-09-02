@@ -71,6 +71,21 @@ class TestRemoveParticipantService:
             == 1
         )
 
+    def test_deleted_account_is_removed_but_not_notified(self, challenge, participant):
+        """The removal itself still happens for a deactivated account -- the
+        freeze and the flag are what the caller asked for -- but no
+        notification row is written, since is_active=False blocks login and
+        nobody could ever read it."""
+        participant.user.is_active = False
+        participant.user.save(update_fields=["is_active"])
+
+        remove_participant(participant)
+
+        participant.refresh_from_db()
+        assert participant.is_bailed is True
+        assert participant.removed_by_creator is True
+        assert not Notification.objects.filter(user=participant.user).exists()
+
     def test_detaches_the_active_goal_without_deleting_it(self, challenge, participant):
         goal = CustomGoalFactory(participant=participant, name="My Goal")
         participant.custom_goal = goal

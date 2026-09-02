@@ -25,6 +25,7 @@ from accounts.forms import HevyKeyForm, LiftosaurKeyForm, WgerCredentialsForm
 from accounts.ratelimit import client_ip
 from accounts.units import to_display_weight
 from challenges.custom_goals import detach_active_goal, save_custom_goal
+from challenges.events import build_challenge_event_log, record_challenge_event
 from challenges.forms import (
     CreateChallengeDatesForm,
     CreateChallengeLiftsForm,
@@ -47,6 +48,7 @@ from challenges.goal_builders import (
 )
 from challenges.models import (
     Challenge,
+    ChallengeEvent,
     ChallengeParticipant,
     CustomGoal,
     RepTargetGoal,
@@ -83,6 +85,7 @@ from challenges.services import (
     sync_and_score,
     transfer_ownership,
     update_invite_link,
+    visible_participant_count,
 )
 from challenges.standards import covered_lift_names
 from core.http import is_htmx
@@ -318,13 +321,17 @@ def _history_needed_response(
 def _notify_user_joined(challenge, joining_user):
     """Notify every other accepted, non-bailed participant that a user joined.
 
-    The joining user does not notify themselves.
+    The joining user does not notify themselves. Deactivated (self-serve-
+    deleted) accounts are skipped: ``is_active=False`` blocks login, so a row
+    written for one can never be read by anyone -- it is dead data on a table
+    every other user's unread count scans.
     """
     others = (
         ChallengeParticipant.objects.filter(
             challenge=challenge,
             invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
             is_bailed=False,
+            user__is_active=True,
         )
         .exclude(user=joining_user)
         .select_related("user")
@@ -689,19 +696,13 @@ def invite_link_view(request, token):
             "challenges/invite_link_ended.html",
             {
                 "challenge": challenge,
-                "participant_count": challenge.participants.filter(
-                    invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
-                    is_bailed=False,
-                ).count(),
+                "participant_count": visible_participant_count(challenge),
             },
         )
 
     if not request.user.is_authenticated:
         request.session["invite_token"] = token
-        participant_count = challenge.participants.filter(
-            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
-            is_bailed=False,
-        ).count()
+        participant_count = visible_participant_count(challenge)
         return render(
             request,
             "challenges/invite_link_preview.html",
@@ -788,6 +789,9 @@ def _join_challenge_via_link(request, challenge, link):
     logger.info(
         "User %s joined challenge %s via invite link", request.user.id, challenge.pk
     )
+    record_challenge_event(
+        challenge, ChallengeEvent.EventType.JOINED, actor=request.user
+    )
     _notify_user_joined(challenge, request.user)
     record_invite_link_use(link)
     request.session.pop("invite_token", None)
@@ -809,10 +813,7 @@ def _render_invite_accept(request, challenge, link):
     "state changed since page load" fallback (TASK-303) -- both need the same
     challenge preview, not a full guard-ladder rewrite.
     """
-    participant_count = challenge.participants.filter(
-        invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
-        is_bailed=False,
-    ).count()
+    participant_count = visible_participant_count(challenge)
 
     leaderboard = rank_participants(challenge, include_unscored=True)
     leader_points = leaderboard[0]["total_points"] if leaderboard else 0
@@ -1748,10 +1749,17 @@ def challenge_detail_view(request, pk):
     # who is synced separately above it in participants_to_score) and the
     # leaderboard's chart_url lookup below — a single query rather than one
     # queryset for "others" and a second per-row lookup for the map.
+    # user__is_active=True keeps deactivated (self-serve-deleted) accounts out
+    # of the page's whole notion of "who is in this challenge", matching
+    # rank_participants and the chart builders. It also spares the sync loop
+    # below a pointless pass over them: anonymize_account cleared their tracker
+    # credentials, so the pull is a no-op, and rescoring a pool nothing renders
+    # any more only writes hidden PointEarnEvent rows.
     accepted_participants = list(
         challenge.participants.filter(
             invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
             is_bailed=False,
+            user__is_active=True,
         ).select_related("user")
     )
     others = [p for p in accepted_participants if p.user_id != request.user.id]
@@ -1815,24 +1823,24 @@ def challenge_detail_view(request, pk):
     # means every dense rank is a meaningless tie, so it renders as "-".
     show_ranks = any(entry["total_points"] > 0 for entry in ranked_entries)
 
+    # Every entry here is an active account: rank_participants filters
+    # deactivated (self-serve-deleted) users out, so there is no longer an
+    # is_active branch to take. That filter is also what makes the chart link
+    # below unconditional -- participant_chart_view requires
+    # user__is_active=True, so a deleted account could only ever have been
+    # linked to a 404.
     leaderboard = []
     for entry in ranked_entries:
         entry_user = entry["user"]
         is_self = entry_user.pk == request.user.pk
         chart_url = None
         name = entry_user.effective_display_name
-        if entry_user.is_active:
-            entry_participant = participant_by_user_id.get(entry_user.pk)
-            if entry_participant is not None and not is_self:
-                chart_url = reverse(
-                    "challenges:participant-chart",
-                    args=[challenge.pk, entry_participant.pk],
-                )
-        # else: no chart_url -- participant_chart_view itself requires
-        # user__is_active=True, so a link here would just 404. Deactivated
-        # (self-serve-deleted) users already show under their generated
-        # pseudonym with a "(deleted)" suffix (name computed above via
-        # effective_display_name); there's no separate identity left to mask.
+        entry_participant = participant_by_user_id.get(entry_user.pk)
+        if entry_participant is not None and not is_self:
+            chart_url = reverse(
+                "challenges:participant-chart",
+                args=[challenge.pk, entry_participant.pk],
+            )
         leaderboard.append(
             {
                 "rank": entry["rank"] if show_ranks else "-",
@@ -1858,6 +1866,12 @@ def challenge_detail_view(request, pk):
         "recent_activity": recent_activity,
         "personal_data": personal_data,
         "is_rep_target_mode": challenge.mode == Challenge.Mode.REP_TARGET,
+        # A terminal challenge is fully read-only: the summary cards drop their
+        # self-report face and the flip affordance with it. Matches the server
+        # guard in manual_lift_view/manual_rep_target_view exactly. Bailed
+        # participants need no separate flag -- bailing detaches the goal, so
+        # build_personal_data returns None and no cards render at all.
+        "can_self_report": not is_locked,
         "last_synced_at": last_synced_at(request.user),
         "mobile_header_title": challenge.name,
     }
@@ -1932,8 +1946,25 @@ def manual_lift_view(request, pk):
     success path always means the lift's best moved. The carousel disables
     those entries anyway, so the 400 below is for a stale card or a hand-made
     request, not a route the UI can walk into.
+
+    A COMPLETED/CANCELLED challenge is read-only: the detail page stops
+    rendering the self-report card entirely (``can_self_report``), so a POST
+    here means a page that was already open when the challenge closed, or a
+    hand-made request. It is rejected before any write -- without this guard
+    the LiftHistory row was still written and then scored nothing (the ledger
+    lock in ``scoring.services.process_scored_set``), reporting a bogus
+    "Logged 0 points" back to the lifter.
     """
     challenge, participant = _require_challenge_member(request, pk)
+
+    response = _terminal_status_response(
+        request,
+        challenge,
+        gettext("This challenge has ended; no further sets can be logged."),
+        action="self-report a lift in",
+    )
+    if response is not None:
+        return response
 
     if not participant.has_goal_configured:
         raise PermissionDenied
@@ -1992,6 +2023,7 @@ def manual_lift_view(request, pk):
         "display_unit": personal_data["display_unit"],
         "challenge": challenge,
         "start_rep_count": rep_count,
+        "can_self_report": True,
         "oob_messages": True,
     }
     return render(request, "challenges/_summary_card.html", context)
@@ -2010,8 +2042,19 @@ def manual_rep_target_view(request, pk):
     difference: Rep Target's carousel varies reps, not weight, so there is no
     weight field here -- ``submit_manual_rep_target_set`` always logs at the
     goal's own fixed ``target_weight``.
+
+    Same read-only guard on a COMPLETED/CANCELLED challenge as Classic.
     """
     challenge, participant = _require_challenge_member(request, pk)
+
+    response = _terminal_status_response(
+        request,
+        challenge,
+        gettext("This challenge has ended; no further sets can be logged."),
+        action="self-report a rep target set in",
+    )
+    if response is not None:
+        return response
 
     if not participant.has_goal_configured:
         raise PermissionDenied
@@ -2072,6 +2115,7 @@ def manual_rep_target_view(request, pk):
         "display_unit": personal_data["display_unit"],
         "challenge": challenge,
         "start_rep_count": rep_count,
+        "can_self_report": True,
         "oob_messages": True,
     }
     return render(request, "challenges/_rep_target_summary_card.html", context)
@@ -2126,10 +2170,14 @@ def bail_view(request, pk):
     participant = _get_own_participant(request, pk)
     challenge = participant.challenge
 
-    if challenge.status == Challenge.Status.COMPLETED:
+    # is_terminal, not status == COMPLETED: a CANCELLED challenge is equally
+    # read-only, and bailing from one would still detach the participant's
+    # locked goal and stamp bailed_at on a dead challenge's row.
+    if challenge.is_terminal:
         logger.warning(
-            "User %s tried to bail from completed challenge %s",
+            "User %s tried to bail from %s challenge %s",
             request.user.id,
+            challenge.status,
             pk,
         )
         return HttpResponseBadRequest(gettext("This challenge has already ended."))
@@ -2155,6 +2203,9 @@ def bail_view(request, pk):
         detach_active_rep_target_goal(participant)
         participant.save(
             update_fields=["is_bailed", "bailed_at", "custom_goal", "rep_target_goal"]
+        )
+        record_challenge_event(
+            challenge, ChallengeEvent.EventType.LEFT, actor=request.user
         )
         logger.info("User %s bailed from challenge %s", request.user.id, pk)
         messages.success(request, gettext("You have left the challenge."))
@@ -2304,8 +2355,15 @@ def _participants_section_context(challenge):
     rows can still appear (nothing creates them any more, but old rows survive),
     which is why this builds its own list rather than reusing the detail view's
     accepted-only ``others`` queryset. Deactivated (self-serve-deleted) users
-    show under their generated pseudonym with a "(deleted)" suffix
-    (User.effective_display_name), matching the leaderboard.
+    are dropped too, matching every other surface -- an anonymized row was only
+    ever an "unexplained stranger" the owner could not act on usefully (its
+    only enabled action was Remove, which does nothing a deleted account has
+    not already had done to it). What became of them is in ``event_log``
+    instead, which says "a deleted account left" without naming anyone.
+
+    ``event_log`` is the merged activity log (see
+    ``challenges.events.build_challenge_event_log``) -- the roster is who is
+    here now, the log is how it got that way.
 
     ``can_remove``/``can_become_owner`` gate the accepted-participant actions.
 
@@ -2335,12 +2393,13 @@ def _participants_section_context(challenge):
             ),
         }
         for row in rows
-        if not row.is_bailed
+        if not row.is_bailed and row.user.is_active
     ]
     link = current_invite_link(challenge)
     return {
         "challenge": challenge,
         "participant_rows": participant_rows,
+        "event_log": build_challenge_event_log(challenge),
         "is_locked": challenge.is_terminal,
         "invite_link_locked": (
             challenge.is_terminal or timezone.now() >= challenge_end_instant(challenge)
@@ -2506,8 +2565,18 @@ def rename_challenge_view(request, pk):
     if request.method == "POST":
         form = RenameChallengeForm(request.POST)
         if form.is_valid():
+            # Captured before the overwrite: the log is the only place the old
+            # name survives at all.
+            previous_name = challenge.name
             challenge.name = form.cleaned_data["name"]
             challenge.save(update_fields=["name"])
+            record_challenge_event(
+                challenge,
+                ChallengeEvent.EventType.RENAMED,
+                actor=request.user,
+                previous_name=previous_name,
+                new_name=challenge.name,
+            )
             logger.info("User %s renamed challenge %s", request.user.id, pk)
             messages.success(request, gettext("Challenge name updated."))
             if not is_htmx(request):
@@ -2891,6 +2960,9 @@ def cancel_challenge_view(request, pk):
     if request.method == "POST":
         challenge.status = Challenge.Status.CANCELLED
         challenge.save(update_fields=["status"])
+        record_challenge_event(
+            challenge, ChallengeEvent.EventType.CANCELLED, actor=request.user
+        )
         logger.info("User %s cancelled challenge %s", request.user.id, pk)
         messages.success(request, gettext("Challenge cancelled."))
         return redirect("challenges:dashboard")

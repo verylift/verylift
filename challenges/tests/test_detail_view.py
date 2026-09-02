@@ -14,6 +14,7 @@ from accounts.services import anonymize_account
 from accounts.tests.factories import UserFactory
 from challenges.custom_goals import save_custom_goal
 from challenges.models import Challenge, ChallengeParticipant
+from challenges.rep_target_goals import save_rep_target_goal
 from challenges.tests.factories import (
     ChallengeFactory,
     ChallengeParticipantFactory,
@@ -450,9 +451,15 @@ class TestLeaderboard:
         assert len(self_rows) == 1
         assert "(you)" in resp.content.decode()
 
-    def test_deactivated_user_shows_deleted_suffix(
+    def test_deactivated_user_excluded_and_ranks_recompute(
         self, authed_client, participant, challenge, user, mock_sync
     ):
+        """A deleted account occupies no leaderboard row, exactly like a bailed
+        participant -- and its pseudonym must not be reachable in the rendered
+        page under any name. The rank assertion is the load-bearing half: it
+        proves the row was dropped before dense-ranking rather than merely
+        hidden in the template, which is what lets the survivors close up
+        over it."""
         gone = UserFactory(display_name="Gone User", is_active=False)
         ChallengeParticipantFactory(
             challenge=challenge,
@@ -460,21 +467,27 @@ class TestLeaderboard:
             invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
         )
         PointEarnEventFactory(
-            user=gone, challenge=challenge, lift="Squat", points_earned=7
+            user=gone, challenge=challenge, lift="Squat", points_earned=20
+        )
+        PointEarnEventFactory(
+            user=user, challenge=challenge, lift="Squat", points_earned=5
         )
         url = reverse("challenges:detail", args=[challenge.pk])
         resp = authed_client.get(url)
         content = resp.content.decode()
-        assert "Gone User (deleted)" in content
+        names = {row["name"] for row in resp.context["leaderboard"]}
+        assert "Gone User" not in names
+        assert "Gone User" not in content
+        survivor = next(r for r in resp.context["leaderboard"] if r["is_self"])
+        assert survivor["rank"] == 1
 
-    def test_anonymized_account_shows_placeholder(
+    def test_anonymized_account_not_shown_under_its_pseudonym(
         self, authed_client, participant, challenge, user, mock_sync
     ):
-        """Regression for TASK-308 (#46): accounts.services.anonymize_account
-        must make the "(deleted)" convention true at the data level
-        (is_active=False plus a scrubbed display_name), not rely on a second
-        display-time mechanism -- see test_deactivated_user_shows_placeholder
-        above for the same assertion driven by a manually-set is_active=False.
+        """Driven through the real anonymize_account rather than a hand-set
+        is_active=False, so the exclusion is pinned to what account deletion
+        actually writes. The pseudonym is a plausible human name, so the
+        assertion is that this specific generated one never reaches the page.
         """
         gone = UserFactory(display_name="Gone User")
         ChallengeParticipantFactory(
@@ -490,7 +503,8 @@ class TestLeaderboard:
         url = reverse("challenges:detail", args=[challenge.pk])
         resp = authed_client.get(url)
         content = resp.content.decode()
-        assert f"{gone.display_name} (deleted)" in content
+        assert gone.display_name not in content
+        assert "(deleted)" not in content
 
     def test_bailed_participant_excluded_and_ranks_recompute(
         self, authed_client, participant, challenge, user, mock_sync
@@ -631,29 +645,22 @@ class TestLeaveChallengeLink:
         url = reverse("challenges:detail", args=[challenge.pk])
         assert authed_client.get(url).status_code == 403
 
-    def test_completed_challenge_hides_leave_link(
-        self, authed_client, participant, challenge, mock_sync
+    @pytest.mark.parametrize(
+        "status", [Challenge.Status.COMPLETED, Challenge.Status.CANCELLED]
+    )
+    def test_terminal_challenge_hides_leave_link(
+        self, authed_client, participant, challenge, mock_sync, status
     ):
-        """Completed challenge hides leave link."""
-        challenge.status = Challenge.Status.COMPLETED
+        """Both terminal statuses hide the link, matching bail_view's guard --
+        a cancelled challenge is as read-only as a completed one, and bailing
+        from one would still detach the participant's locked goal."""
+        challenge.status = status
         challenge.save(update_fields=["status"])
         url = reverse("challenges:detail", args=[challenge.pk])
         resp = authed_client.get(url)
         assert resp.status_code == 200
         bail_url = reverse("challenges:bail", args=[challenge.pk])
         assert bail_url.encode() not in resp.content
-
-    def test_cancelled_challenge_still_shows_leave_link(
-        self, authed_client, participant, challenge, mock_sync
-    ):
-        """Cancelled challenge still shows leave link (matches bail_view's guard)."""
-        challenge.status = Challenge.Status.CANCELLED
-        challenge.save(update_fields=["status"])
-        url = reverse("challenges:detail", args=[challenge.pk])
-        resp = authed_client.get(url)
-        assert resp.status_code == 200
-        bail_url = reverse("challenges:bail", args=[challenge.pk])
-        assert bail_url.encode() in resp.content
 
 
 class TestOthersQuerySelectRelated:
@@ -814,3 +821,103 @@ class TestGoalSetupGuard:
         url = reverse("challenges:detail", args=[challenge.pk])
         resp = client.get(url)
         assert resp.status_code == 200
+
+
+class TestSelfReportControlsOnTerminalChallenge:
+    """A finished challenge's "Your Performance" cards are fully read-only.
+
+    Asserted through the self-report POST route the card wires up
+    (challenges:manual-lift) rather than through prose or button labels: a
+    rendered hx-post to that endpoint IS the control, so its presence or
+    absence is the behaviour under test. The flip-card class goes with it --
+    .flip-card-front is absolutely positioned and .flip-card is
+    overflow:hidden, so a card left carrying those classes with no back face
+    (and therefore no JS to size .flip-card-inner) renders as an empty box.
+    """
+
+    def _setup(self, status):
+        user = UserFactory()
+        challenge = make_custom_challenge(
+            lifts=["Back Squat"], creator=user, status=status
+        )
+        participant = ChallengeParticipantFactory(
+            challenge=challenge,
+            user=user,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+            joined_at=datetime.now(tz=UTC) - timedelta(days=30),
+        )
+        save_custom_goal(
+            participant,
+            "Intermediate",
+            {"Back Squat": {rep: Decimal("100.00") for rep in range(1, 11)}},
+        )
+        client = Client()
+        client.force_login(user)
+        return client, challenge
+
+    def test_active_challenge_renders_the_self_report_form(self, db, mock_sync):
+        client, challenge = self._setup(Challenge.Status.ACTIVE)
+        resp = client.get(reverse("challenges:detail", args=[challenge.pk]))
+        content = resp.content.decode()
+        assert reverse("challenges:manual-lift", args=[challenge.pk]) in content
+        assert "flip-card" in content
+
+    @pytest.mark.parametrize(
+        "status", [Challenge.Status.COMPLETED, Challenge.Status.CANCELLED]
+    )
+    def test_terminal_challenge_renders_no_self_report_form(
+        self, db, mock_sync, status
+    ):
+        client, challenge = self._setup(status)
+        resp = client.get(reverse("challenges:detail", args=[challenge.pk]))
+        content = resp.content.decode()
+        # The card itself still renders -- only its self-report half is gone.
+        assert "summary-card-back-squat" in content
+        assert reverse("challenges:manual-lift", args=[challenge.pk]) not in content
+        assert "flip-card" not in content
+
+
+class TestRepTargetSelfReportControlsOnTerminalChallenge:
+    """The REP_TARGET sibling of the class above."""
+
+    def _setup(self, status):
+        user = UserFactory()
+        challenge = make_rep_target_challenge(
+            lifts=["Push Up"], creator=user, status=status
+        )
+        participant = ChallengeParticipantFactory(
+            challenge=challenge,
+            user=user,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+            joined_at=datetime.now(tz=UTC) - timedelta(days=30),
+        )
+        save_rep_target_goal(
+            participant,
+            "Targets",
+            {"Push Up": (Decimal("0.00"), 20)},
+        )
+        client = Client()
+        client.force_login(user)
+        return client, challenge
+
+    def test_active_challenge_renders_the_self_report_form(self, db, mock_sync):
+        client, challenge = self._setup(Challenge.Status.ACTIVE)
+        resp = client.get(reverse("challenges:detail", args=[challenge.pk]))
+        content = resp.content.decode()
+        assert reverse("challenges:manual-rep-target", args=[challenge.pk]) in content
+        assert "flip-card" in content
+
+    @pytest.mark.parametrize(
+        "status", [Challenge.Status.COMPLETED, Challenge.Status.CANCELLED]
+    )
+    def test_terminal_challenge_renders_no_self_report_form(
+        self, db, mock_sync, status
+    ):
+        client, challenge = self._setup(status)
+        resp = client.get(reverse("challenges:detail", args=[challenge.pk]))
+        content = resp.content.decode()
+        assert "summary-card-push-up" in content
+        assert (
+            reverse("challenges:manual-rep-target", args=[challenge.pk]) not in content
+        )
+        assert "flip-card" not in content

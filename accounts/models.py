@@ -150,18 +150,23 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     @property
     def effective_display_name(self) -> str:
-        """The name to show this user under anywhere participant-facing.
+        """The name to show this user under, annotated if the account is gone.
 
         Deactivated accounts (self-serve deletion -- the only path that ever
         sets ``is_active=False``) already have their real username/
         display_name replaced with a random pseudonym by
-        ``accounts.services.anonymize_account``. Appending "(deleted)" marks
-        that clearly instead of leaving a departed member looking like an
-        unexplained stranger next to real names on the same leaderboard or
-        chart. Every leaderboard/chart/participant-list display site should
-        use this instead of ``__str__``/``display_name or username`` directly,
-        so a deactivated account is annotated the same way everywhere rather
-        than each call site re-deciding whether and how to flag it.
+        ``accounts.services.anonymize_account``; appending "(deleted)" marks
+        that rather than leaving a bare pseudonym reading as an unexplained
+        stranger.
+
+        Participant-facing surfaces no longer reach the suffix at all: the
+        leaderboard, both charts and the activity feed filter deactivated
+        accounts out entirely (scoring.services), so a deleted account is not
+        displayed under any name. What is left for this property is the
+        creator/admin moderation views, where the row still has to be listed
+        for the owner to act on. Keep using it rather than
+        ``display_name or username`` at those sites, so a deactivated account
+        is annotated the same way everywhere one is shown at all.
         """
         name = self.display_name or self.username
         if self.is_active:

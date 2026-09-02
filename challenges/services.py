@@ -26,8 +26,10 @@ from challenges.custom_goals import (
     detach_active_goal,
     grid_field_name,
 )
+from challenges.events import record_challenge_event
 from challenges.models import (
     Challenge,
+    ChallengeEvent,
     ChallengeInviteLink,
     ChallengeLift,
     ChallengeParticipant,
@@ -136,7 +138,22 @@ def submit_manual_lift(
     scored, for the caller to report back. Because a set that cannot raise the
     participant's score is refused above, a successful return always means the
     lift's current best moved.
+
+    Refuses outright on a COMPLETED/CANCELLED challenge. The ledger lock in
+    ``scoring.services.process_scored_set`` already stops the set from
+    scoring, but that is downstream of the ``LiftHistory`` write -- so without
+    this guard a self-report against a finished challenge still persisted a
+    row and then reported zero points earned.
     """
+    if challenge.is_terminal:
+        logger.warning(
+            "Manual lift self-report rejected for user %s: challenge %s is %s",
+            user.id,
+            challenge.pk,
+            challenge.status,
+        )
+        return None
+
     if not participant.has_goal_configured:
         logger.warning(
             "Manual lift self-report rejected for user %s: no goal configured "
@@ -278,7 +295,18 @@ def submit_manual_rep_target_set(
     stale card or a hand-made request, not a route the UI can walk into.
 
     Returns ``(history_row, points_earned)``, mirroring ``submit_manual_lift``.
+    Also refuses outright on a COMPLETED/CANCELLED challenge, for the same
+    reason ``submit_manual_lift`` does.
     """
+    if challenge.is_terminal:
+        logger.warning(
+            "Manual rep target self-report rejected for user %s: challenge %s is %s",
+            user.id,
+            challenge.pk,
+            challenge.status,
+        )
+        return None
+
     if participant.rep_target_goal_id is None:
         logger.warning(
             "Manual rep target self-report rejected for user %s: no goal "
@@ -389,6 +417,25 @@ def order_by_effective_name(queryset):
             output_field=CharField(),
         )
     ).order_by(Lower("effective_name"))
+
+
+def visible_participant_count(challenge) -> int:
+    """How many people a participant-facing surface should say are in a challenge.
+
+    One definition of "is in this challenge", shared by every surface that
+    prints a headcount (the invite-link landing pages and the accept/decline
+    preview), so none of them can drift from the leaderboard's own membership
+    rule: accepted, not bailed, and not a deactivated (self-serve-deleted)
+    account. The last clause is the one that is easy to forget and the reason
+    this is a function -- ``scoring.services.rank_participants`` and the chart
+    builders drop deleted accounts, so a count that kept them would advertise
+    more lifters than the leaderboard below it lists.
+    """
+    return challenge.participants.filter(
+        invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        is_bailed=False,
+        user__is_active=True,
+    ).count()
 
 
 def get_co_participants(user):
@@ -770,10 +817,20 @@ def remove_participant(participant) -> None:
                 "rep_target_goal",
             ]
         )
-        Notification.objects.create(
-            user=participant.user,
-            event_type=Notification.EventType.REMOVED_FROM_CHALLENGE,
-            challenge=participant.challenge,
+        # No notification for a deactivated (self-serve-deleted) account:
+        # is_active=False blocks login, so the row could never be read. The
+        # removal itself still happens -- the scoring freeze and the flag are
+        # what the caller asked for, and neither depends on anyone reading it.
+        if participant.user.is_active:
+            Notification.objects.create(
+                user=participant.user,
+                event_type=Notification.EventType.REMOVED_FROM_CHALLENGE,
+                challenge=participant.challenge,
+            )
+        record_challenge_event(
+            participant.challenge,
+            ChallengeEvent.EventType.REMOVED,
+            actor=participant.user,
         )
     logger.info(
         "Removed participant %s (user %s) from challenge %s",
@@ -801,6 +858,11 @@ def transfer_ownership(challenge, new_owner) -> None:
             user=new_owner,
             event_type=Notification.EventType.OWNERSHIP_TRANSFERRED,
             challenge=challenge,
+        )
+        record_challenge_event(
+            challenge,
+            ChallengeEvent.EventType.OWNERSHIP_TRANSFERRED,
+            actor=new_owner,
         )
     logger.info(
         "Challenge %s ownership transferred from %s to %s",
@@ -916,12 +978,19 @@ def close_challenge(challenge) -> None:
     2. Flip the challenge to completed and save — this is the ledger lock that
        makes process_scored_set() a no-op.
     3. Create a challenge_closed Notification for every accepted participant,
-       including bailed ones — they were part of the challenge.
+       including bailed ones -- they were part of the challenge. Deactivated
+       (self-serve-deleted) accounts are the one exclusion: ``is_active=False``
+       blocks login, so the row could never be read.
 
-    Idempotent: returns immediately if the challenge is already completed.
+    Idempotent: returns immediately if the challenge is already in a terminal
+    status. CANCELLED counts -- closing a cancelled challenge would otherwise
+    resurrect it as COMPLETED and fire challenge_closed notifications for a
+    challenge that was voided.
     """
-    if challenge.status == Challenge.Status.COMPLETED:
-        logger.info("close_challenge: %s already completed; no-op", challenge.id)
+    if challenge.is_terminal:
+        logger.info(
+            "close_challenge: %s already %s; no-op", challenge.id, challenge.status
+        )
         return
 
     active_participants = ChallengeParticipant.objects.filter(
@@ -942,11 +1011,13 @@ def close_challenge(challenge) -> None:
 
     challenge.status = Challenge.Status.COMPLETED
     challenge.save(update_fields=["status"])
+    record_challenge_event(challenge, ChallengeEvent.EventType.CLOSED)
     logger.info("Challenge %s closed", challenge.id)
 
     accepted_participants = ChallengeParticipant.objects.filter(
         challenge=challenge,
         invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        user__is_active=True,
     ).select_related("user")
 
     for participant in accepted_participants:

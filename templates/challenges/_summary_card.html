@@ -9,14 +9,23 @@ sub-fragment that assumes surrounding context is already in the DOM.
 
 Two faces share one card: the front is the existing read-only summary (state
 scored/no_points/no_data_before_window/no_data), the back is the self-report
-carousel. Both are always present in the DOM; only a CSS class ("is-flipped")
-on the outer wrapper picks which one shows (challenges/detail.html's flip-card
+carousel. Both are present in the DOM whenever self-report is available (see
+can_self_report below); only a CSS class ("is-flipped") on the outer wrapper
+picks which one shows (challenges/detail.html's flip-card
 CSS + initManualLiftCard()), so JS never has to fetch anything to flip.
 
 The card always renders on its front face -- there is no server-rendered
 flipped state, because a submission that would leave the lifter on the back
 (nothing gained) is refused before it gets here (challenges.services
 submit_manual_lift). Flipping is purely a client interaction.
+
+can_self_report gates the whole self-report half of the card: when false (a
+COMPLETED/CANCELLED challenge -- see challenge_detail_view) the back face,
+the flip affordance, the flip-card CSS classes and the data-* attributes that
+wire the JS are all omitted, leaving a plain static summary. The classes have
+to go with it, not just the button: .flip-card-front is absolutely positioned
+and .flip-card gets overflow:hidden, so a card whose JS never runs to size
+.flip-card-inner would collapse to zero height and render blank.
 
 Context: card (a personal_data.summary_cards entry), display_unit, challenge,
 start_rep_count (int, carousel's opening rep-count -- defaults to card.manual_default_rep_count when omitted so the
@@ -25,21 +34,23 @@ default-selection rule).
 {% endcomment %}
 {% with slug=card.lift|slugify opening_rep=start_rep_count|default:card.manual_default_rep_count %}
 <div id="summary-card-{{ slug }}"
-     class="flip-card {% if card.close_to_goal %}border-2 border-warning-light{% else %}border border-line-subtle{% endif %} rounded p-4"
-     data-lift="{{ card.lift }}"
+     class="{% if can_self_report %}flip-card {% endif %}{% if card.close_to_goal %}border-2 border-warning-light{% else %}border border-line-subtle{% endif %} rounded p-4"
+     {% if can_self_report %}data-lift="{{ card.lift }}"
      data-unit="{{ display_unit }}"
      data-bodyweight-added="{% if card.is_bodyweight_added %}1{% else %}0{% endif %}"
      data-default-rep-count="{{ opening_rep }}"
-     data-targets-id="manual-targets-{{ slug }}">
-  <div class="flip-card-inner">
+     data-targets-id="manual-targets-{{ slug }}"{% endif %}>
+  <div{% if can_self_report %} class="flip-card-inner"{% endif %}>
 
-    <div class="flip-card-front">
+    <div{% if can_self_report %} class="flip-card-front"{% endif %}>
       <div class="flex items-start justify-between gap-2 mb-2">
         <h3 class="text-sm font-semibold text-content-strong">{{ card.lift }}</h3>
+        {% if can_self_report %}
         <button type="button" class="manual-flip-open flex-shrink-0 w-6 h-6 inline-flex items-center justify-center rounded-full bg-accent text-accent-on hover:opacity-90"
                 aria-label="{% blocktrans with lift=card.lift %}Log a set for {{ lift }}{% endblocktrans %}">
           {% icon "plus" css_class="h-3.5 w-3.5" %}
         </button>
+        {% endif %}
       </div>
       {% if card.state == "scored" %}
       <p class="text-2xl font-bold text-accent font-mono">{% blocktrans with points=card.points_earned %}{{ points }} pts{% endblocktrans %}</p>
@@ -69,6 +80,7 @@ default-selection rule).
       {% endif %}
     </div>
 
+    {% if can_self_report %}
     <div class="flip-card-back">
       <div class="flex items-start justify-between gap-2 mb-3">
         <h3 class="text-sm font-semibold text-content-strong">{{ card.lift }}</h3>
@@ -116,6 +128,7 @@ default-selection rule).
         <button type="submit" class="manual-confirm w-full text-sm font-semibold px-4 py-2 rounded bg-accent text-accent-on hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"></button>
       </form>
     </div>
+    {% endif %}
 
   </div>
 </div>

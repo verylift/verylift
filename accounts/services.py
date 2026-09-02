@@ -279,24 +279,26 @@ def anonymize_account(user) -> None:
     This is the self-serve "Delete account" flow's entire effect -- there is no
     accompanying hard delete. ``ChallengeParticipant``, scoring rows, and
     ``PolicyConsent`` are untouched; only identity fields on the ``User`` row
-    itself change. Every display site that used to special-case
-    ``is_active=False`` with a separate "Former Participant" placeholder
-    (scoring/services.py, challenges/views.py) now calls
-    ``User.effective_display_name`` instead, which shows the pseudonym below
-    with a "(deleted)" suffix -- a bare pseudonym without that suffix read as
-    an unexplained stranger next to real names on the same leaderboard/chart,
-    and the two pages disagreeing with each other (one showing the pseudonym,
-    the other "Former Participant") was the actual bug report that prompted
-    unifying on a single property.
+    itself change.
+
+    Participant-facing surfaces do not display a deactivated account at all:
+    the leaderboard, both charts, the activity feed and the ranked set they
+    all derive from filter ``is_active=False`` out (scoring/services.py,
+    challenges/views.py), so a deleted account occupies no row and the ranks
+    of everyone still playing close up over it. Earlier revisions showed the
+    pseudonym below with a "(deleted)" suffix; a departed member's placeholder
+    standing on a leaderboard turned out to be the wrong call regardless of
+    how it was labelled. The pseudonym still surfaces in the creator/admin
+    moderation views, which have to list the row for the owner to act on --
+    see ``User.effective_display_name``.
 
     ``username``/``display_name`` become a random adjective-noun pseudonym
     (re-rolled on a uniqueness collision), deliberately not an obviously
-    synthetic value like ``deleted-user-8f2a1c``: a normal-looking name blends
-    into any leaderboard/challenge history it still appears in, where a
-    visibly-synthetic one still flags "this used to be someone" and invites
-    the reader to wonder who. ``email`` is derived from the same pseudonym so
-    a support/audit trail can still associate a placeholder with the row it
-    replaced, without being identifying itself.
+    synthetic value like ``deleted-user-8f2a1c``: where the row is still
+    listed at all, a normal-looking name does not flag "this used to be
+    someone" and invite the reader to wonder who. ``email`` is derived from
+    the same pseudonym so a support/audit trail can still associate a
+    placeholder with the row it replaced, without being identifying itself.
 
     ``avatar`` is deleted from storage (not just cleared from the field --
     matching AvatarForm.save's ``.delete(save=False)`` convention). ``oidc_sub``

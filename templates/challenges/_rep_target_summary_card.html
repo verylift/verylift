@@ -24,6 +24,14 @@ shared JS to word the label as "N pt target" instead of Classic's "NRM
 target"; every other field name and behaviour (paging, height sync,
 disabled-when-no-gain, confirm) is identical.
 
+can_self_report gates the whole self-report half of the card: when false (a
+COMPLETED/CANCELLED challenge -- see challenge_detail_view) the back face,
+the flip affordance, the flip-card CSS classes and the data-* attributes that
+wire the JS are all omitted, leaving a plain static summary. The classes have
+to go with it, not just the button: .flip-card-front is absolutely positioned
+and .flip-card gets overflow:hidden, so a card whose JS never runs to size
+.flip-card-inner would collapse to zero height and render blank.
+
 Context: card (a personal_data.summary_cards entry), display_unit, challenge,
 start_rep_count (int, carousel's opening rep-count -- defaults to
 card.manual_default_rep_count when omitted so the detail.html initial render
@@ -31,22 +39,24 @@ and this fragment's post-submit render share one default-selection rule).
 {% endcomment %}
 {% with slug=card.lift|slugify opening_rep=start_rep_count|default:card.manual_default_rep_count %}
 <div id="summary-card-{{ slug }}"
-     class="flip-card {% if card.close_to_goal %}border-2 border-warning-light{% else %}border border-line-subtle{% endif %} rounded p-4"
-     data-lift="{{ card.lift }}"
+     class="{% if can_self_report %}flip-card {% endif %}{% if card.close_to_goal %}border-2 border-warning-light{% else %}border border-line-subtle{% endif %} rounded p-4"
+     {% if can_self_report %}data-lift="{{ card.lift }}"
      data-unit="{{ display_unit }}"
      data-bodyweight-added="{% if card.is_bodyweight_added %}1{% else %}0{% endif %}"
      data-mode="rep_target"
      data-default-rep-count="{{ opening_rep }}"
-     data-targets-id="manual-targets-{{ slug }}">
-  <div class="flip-card-inner">
+     data-targets-id="manual-targets-{{ slug }}"{% endif %}>
+  <div{% if can_self_report %} class="flip-card-inner"{% endif %}>
 
-    <div class="flip-card-front">
+    <div{% if can_self_report %} class="flip-card-front"{% endif %}>
       <div class="flex items-start justify-between gap-2 mb-2">
         <h3 class="text-sm font-semibold text-content-strong">{{ card.lift }}</h3>
+        {% if can_self_report %}
         <button type="button" class="manual-flip-open flex-shrink-0 w-6 h-6 inline-flex items-center justify-center rounded-full bg-accent text-accent-on hover:opacity-90"
                 aria-label="{% blocktrans with lift=card.lift %}Log a set for {{ lift }}{% endblocktrans %}">
           {% icon "plus" css_class="h-3.5 w-3.5" %}
         </button>
+        {% endif %}
       </div>
       <p class="text-xs text-content-muted mb-3">
         {% blocktrans with weight=card.target_weight reps=card.target_reps %}target: <span class="font-mono">{{ weight }}</span>{% endblocktrans %}{% if card.target_weight != "BW" %} {{ display_unit }}{% endif %} × <span class="font-mono">{{ card.target_reps }}</span> {% blocktrans count counter=card.target_reps %}rep{% plural %}reps{% endblocktrans %}
@@ -83,6 +93,7 @@ and this fragment's post-submit render share one default-selection rule).
       {% endif %}
     </div>
 
+    {% if can_self_report %}
     <div class="flip-card-back">
       <div class="flex items-start justify-between gap-2 mb-3">
         <h3 class="text-sm font-semibold text-content-strong">{{ card.lift }}</h3>
@@ -130,6 +141,7 @@ and this fragment's post-submit render share one default-selection rule).
         <button type="submit" class="manual-confirm w-full text-sm font-semibold px-4 py-2 rounded bg-accent text-accent-on hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"></button>
       </form>
     </div>
+    {% endif %}
 
   </div>
 </div>

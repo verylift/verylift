@@ -96,9 +96,15 @@ class TestCloseChallenge:
         assert challenge.status == Challenge.Status.COMPLETED
 
     def test_notifications_created_for_all_accepted_including_bailed(self):
+        """Bailed participants are notified -- they were part of the challenge
+        -- but a deactivated account is not: is_active=False blocks login, so
+        the row could never be read."""
         challenge = ChallengeFactory(status=Challenge.Status.ACTIVE)
         active = _accepted(challenge)
         bailed = _accepted(challenge, is_bailed=True)
+        deleted = _accepted(challenge)
+        deleted.user.is_active = False
+        deleted.user.save(update_fields=["is_active"])
         declined = ChallengeParticipantFactory(
             challenge=challenge,
             invite_status=ChallengeParticipant.InviteStatus.DECLINED,
@@ -118,9 +124,16 @@ class TestCloseChallenge:
         )
         assert notified_users == {active.user.pk, bailed.user.pk}
         assert declined.user.pk not in notified_users
+        assert deleted.user.pk not in notified_users
 
-    def test_already_completed_is_noop(self):
-        challenge = ChallengeFactory(status=Challenge.Status.COMPLETED)
+    @pytest.mark.parametrize(
+        "status", [Challenge.Status.COMPLETED, Challenge.Status.CANCELLED]
+    )
+    def test_terminal_challenge_is_noop(self, status):
+        """A cancelled challenge must not be closable: flipping it to COMPLETED
+        would resurrect a voided challenge and fire challenge_closed
+        notifications for it."""
+        challenge = ChallengeFactory(status=status)
         _accepted(challenge)
 
         with (
@@ -132,3 +145,5 @@ class TestCloseChallenge:
         mock_sync.assert_not_called()
         mock_score.assert_not_called()
         assert Notification.objects.count() == 0
+        challenge.refresh_from_db()
+        assert challenge.status == status

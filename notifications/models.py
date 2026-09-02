@@ -6,6 +6,19 @@ from django.utils.translation import gettext_lazy as _
 
 
 class Notification(models.Model):
+    """One in-app notification for one user.
+
+    Never write a row for a user with ``is_active=False``. Deactivation is
+    self-serve account deletion (accounts.services.anonymize_account) and it
+    blocks login, so such a row can never be read by anyone -- it is dead data
+    on a table every other user's unread count scans. Every producer filters
+    its recipients accordingly: challenges.views._notify_user_joined,
+    challenges.services.close_challenge/remove_participant/transfer_ownership,
+    policies.notifications, and scoring.services.notify_ranking_changes (which
+    gets it for free -- its deltas come from rank_participants, which already
+    drops deactivated accounts).
+    """
+
     class EventType(models.TextChoices):
         CHALLENGE_CLOSED = "challenge_closed", _("Challenge Closed")
         OVERTAKEN = "overtaken", _("Overtaken")

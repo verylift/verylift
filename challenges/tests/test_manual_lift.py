@@ -15,6 +15,7 @@ from unittest.mock import patch
 import pytest
 from django.db import IntegrityError
 
+from challenges.models import Challenge
 from challenges.services import submit_manual_lift
 from liftosaur.models import LiftHistory, LiftSource
 from scoring.models import PointEarnEvent
@@ -231,3 +232,28 @@ class TestSubmitManualLift:
         )
         assert current_best.reps == 3
         assert current_best.points_earned == 8
+
+    @pytest.mark.parametrize(
+        "status", [Challenge.Status.COMPLETED, Challenge.Status.CANCELLED]
+    )
+    def test_returns_none_on_a_terminal_challenge(self, setup, status):
+        """The ledger lock in process_scored_set sits downstream of the
+        LiftHistory write, so without a guard here a self-report against a
+        finished challenge persisted the row and then scored nothing. The view
+        rejects these first; this is the service-level seam holding the same
+        line for any other caller."""
+        user, challenge, participant = setup
+        challenge.status = status
+        challenge.save(update_fields=["status"])
+
+        result = submit_manual_lift(
+            user=user,
+            challenge=challenge,
+            participant=participant,
+            lift=LIFT,
+            rep_count=8,
+            performed_at=PERFORMED_AT,
+        )
+
+        assert result is None
+        assert not LiftHistory.objects.filter(user=user, lift=LIFT).exists()

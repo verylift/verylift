@@ -44,7 +44,10 @@ before it's completed.
   nothing to show for it.
 
 Once a challenge is completed or cancelled, nothing more gets scored — the
-results are frozen.
+results are frozen. The detail page becomes fully read-only: your
+"Your Performance" cards still show where you finished, but the button for
+logging a set by hand is gone, and later workouts (from a tracker or entered
+by hand) never touch that challenge's standings again.
 
 ## Creating a challenge
 
@@ -182,7 +185,8 @@ from before they were even asked to join.
 If you need to step away from a challenge partway through, you can
 **bail** out. Doing so locks in your points as they stand — nothing further
 gets scored for you after that, and you drop off the live leaderboard and
-points chart. You can't bail from a challenge that has already completed.
+points chart. You can't bail from a challenge that has already completed or
+been cancelled — there's nothing left to freeze.
 
 ## Removing a participant
 
@@ -192,6 +196,37 @@ frozen where they stand and their past entries stay on the leaderboard.
 
 Removal is **permanent** — a removed participant can't rejoin, and the
 challenge's invite link won't let them back in either.
+
+## The activity log
+
+The **Settings** page keeps an activity log below the participant list. The
+list is who is in the challenge now; the log is how it got that way — joins,
+departures, removals, ownership handovers, renames (with the old name, which
+survives nowhere else), goals being locked in, scoring, and the challenge
+being closed or cancelled.
+
+Two things worth knowing about it:
+
+- **Scoring entries go back to the beginning**, because they are read from the
+  scoring history that already existed. Everything else — joins, departures,
+  renames — only appears from the point the log was added, since nothing was
+  recording those before. Older challenges will look thin at the bottom.
+- **Deleted accounts are never named.** Their entries read "a deleted account
+  left" rather than showing the placeholder name, so the log can explain what
+  happened without putting a stranger's name back on the page.
+
+## Deleted accounts
+
+If someone deletes their very lift account, they disappear from every
+challenge they were in: no leaderboard row, no line on the points chart, no
+bars in points-by-lift, and nothing in recent activity. Everyone still
+playing is re-ranked without them, so a runner-up can move up a place.
+
+Their scoring history isn't erased from the database — it just isn't shown to
+anyone any more. The owner's [activity log](#the-activity-log) still records
+what they did, but as "a deleted account", never under a name. See
+[Leaving a challenge](#leaving-a-challenge) for the milder version of this,
+where you stay listed but stop scoring.
 
 ## Closing a challenge
 
@@ -208,7 +243,8 @@ When a challenge closes:
 3. Everyone who was part of the challenge — including anyone who bailed
    earlier — gets notified that it's wrapped up.
 
-Closing an already-completed challenge doesn't do anything further.
+Closing a challenge that has already completed — or one that was
+cancelled — doesn't do anything further.
 
 ## Cancelling a challenge
 

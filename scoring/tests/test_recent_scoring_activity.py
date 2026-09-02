@@ -272,22 +272,25 @@ class TestBuildRecentScoringActivity:
         # 100 kg -> ~220.5 lb
         assert activity[0]["weight"] == Decimal("220.5")
 
-    def test_deactivated_user_shown_under_their_current_display_name(
-        self, challenge, viewer
-    ):
-        # Deactivated users only ever get there via anonymize_account, which
-        # already replaced their real name with a pseudonym -- there's no
-        # separate "Former Participant" masking layer on top of that anymore
-        # (it disagreed with other pages that already showed the pseudonym).
+    def test_deactivated_user_excluded_from_feed(self, challenge, viewer):
+        """A deleted account's sessions drop out of the feed, same as a bailed
+        participant's -- the feed must not name someone the leaderboard above it
+        no longer lists. The active lifter's row proves the filter is scoped to
+        the deleted account rather than emptying the feed."""
+        alice = UserFactory(display_name="Alice")
         former = UserFactory(display_name="PseudonymName", is_active=False)
+        _accept(challenge, alice)
         _accept(challenge, former)
         PointEarnEventFactory(
             user=former, challenge=challenge, lift="Squat", points_earned=5
         )
+        PointEarnEventFactory(
+            user=alice, challenge=challenge, lift="Bench", points_earned=3
+        )
 
         activity = build_recent_scoring_activity(challenge, viewer)
 
-        assert activity[0]["name"] == "PseudonymName (deleted)"
+        assert [row["name"] for row in activity] == ["Alice"]
 
     def test_repeat_at_an_already_reached_tier_excluded_from_feed(
         self, challenge, viewer

@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.tests.factories import UserFactory
-from challenges.models import ChallengeParticipant
+from challenges.models import Challenge, ChallengeParticipant
 from challenges.tests.factories import (
     ChallengeParticipantFactory,
     CustomGoalFactory,
@@ -212,4 +212,41 @@ class TestManualLiftViewSuccess:
         assert response.status_code == 400
         assert not LiftHistory.objects.filter(
             user=user, lift=LIFT, performed_at=date(2025, 6, 2)
+        ).exists()
+
+
+class TestManualLiftViewTerminalChallenge:
+    """A COMPLETED/CANCELLED challenge is read-only (issue: completed
+    challenges still accepted manual registrations).
+
+    The detail page stops rendering the card's self-report face entirely, so
+    these arrive only from a page that was open when the challenge closed, or
+    from a hand-made request. Both halves matter: the 400 AND the absence of a
+    LiftHistory row -- the ledger lock in process_scored_set sits downstream of
+    that write, so before this guard the set was persisted and then scored
+    nothing, reporting "Logged 0 points" back to the lifter.
+    """
+
+    @pytest.mark.parametrize(
+        "status", [Challenge.Status.COMPLETED, Challenge.Status.CANCELLED]
+    )
+    def test_rejected_without_writing_history(
+        self, user, challenge, participant_with_goal, status
+    ):
+        challenge.status = status
+        challenge.save(update_fields=["status"])
+        client = Client()
+        client.force_login(user)
+
+        response = _post(
+            client,
+            challenge,
+            {"lift": LIFT, "rep_count": "8", "performed_at": "2025-06-01"},
+            **HX,
+        )
+
+        assert response.status_code == 400
+        assert not LiftHistory.objects.filter(user=user, lift=LIFT).exists()
+        assert not PointEarnEvent.objects.filter(
+            user=user, challenge=challenge
         ).exists()
