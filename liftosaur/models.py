@@ -63,23 +63,23 @@ class LiftSource(models.TextChoices):
 class Lift(models.Model):
     """Reference table of known lifts and their qualities.
 
-    Replaces the hardcoded LIFTOSAUR_BUILTIN_LIFTS and BODYWEIGHT_ADDED_LIFTS
-    frozensets: rows are seeded from a fixture by the ``seed_liftosaur_lifts``
-    management command and are admin-editable, so a Liftosaur catalogue change
-    or a new bodyweight-added lift needs no code change or redeploy. Absence of
-    a row means "not built-in, not bodyweight-added" — only lifts with at least
-    one quality need a row.
+    Replaces the hardcoded BODYWEIGHT_ADDED_LIFTS frozenset: rows are seeded
+    from a fixture by the ``seed_liftosaur_lifts`` management command and are
+    admin-editable, so a new bodyweight-added lift needs no code change or
+    redeploy.
+
+    Qualities here are facts about the MOVEMENT, not about any tracker. An
+    ``is_liftosaur_builtin`` flag used to live alongside them, meant to mark
+    lifts needing a custom exercise provisioned in the user's Liftosaur
+    account; it was true on every row (the catalogue is Liftosaur-derived, so
+    the column restated this table's own membership) and had no consumer, so
+    it was removed. Should tracker-specific per-lift facts ever be needed,
+    they belong in a ``(source, lift)`` join table alongside core.LiftAlias,
+    not as columns here.
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100, unique=True)
-    is_liftosaur_builtin = models.BooleanField(
-        default=False,
-        help_text=(
-            "Liftosaur ships this exercise natively; no custom exercise needs "
-            "to be provisioned in the user's Liftosaur account."
-        ),
-    )
     is_bodyweight_added = models.BooleanField(
         default=False,
         help_text=(
@@ -95,13 +95,6 @@ class Lift(models.Model):
 
     def __str__(self):
         return self.name
-
-    @classmethod
-    def builtin_names(cls) -> frozenset[str]:
-        """Return the set of lift names Liftosaur ships natively."""
-        return frozenset(
-            cls.objects.filter(is_liftosaur_builtin=True).values_list("name", flat=True)
-        )
 
 
 class LiftHistory(models.Model):

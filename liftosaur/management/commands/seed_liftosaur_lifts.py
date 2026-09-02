@@ -14,8 +14,8 @@ FIXTURE_PATH = Path(__file__).resolve().parents[2] / "fixtures" / "liftosaur_lif
 
 class Command(BaseCommand):
     help = (
-        "Seed Lift (Liftosaur built-in / bodyweight-added qualities) and "
-        "LiftAlias rows from the fixture (idempotent)"
+        "Seed Lift (bodyweight-added quality) and LiftAlias rows from "
+        "the fixture (idempotent)"
     )
 
     def handle(self, *args, **options):
@@ -26,10 +26,7 @@ class Command(BaseCommand):
         for row in data["lifts"]:
             _, created = Lift.objects.update_or_create(
                 name=row["name"],
-                defaults={
-                    "is_liftosaur_builtin": row["is_liftosaur_builtin"],
-                    "is_bodyweight_added": row["is_bodyweight_added"],
-                },
+                defaults={"is_bodyweight_added": row["is_bodyweight_added"]},
             )
             if created:
                 lifts_created += 1

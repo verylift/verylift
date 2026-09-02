@@ -8,7 +8,7 @@ from django.core.management import call_command
 from core.models import LiftAlias, LiftAliasSource
 from liftosaur.management.commands.seed_liftosaur_lifts import FIXTURE_PATH
 from liftosaur.models import Lift
-from liftosaur.services import canonical_lift_name, liftosaur_builtin_lift_names
+from liftosaur.services import canonical_lift_name
 from scoring.domain.calculator import is_bodyweight_added_lift
 
 
@@ -17,11 +17,11 @@ def _fixture_data():
         return json.load(f)
 
 
-# The fixture carries Liftosaur's full built-in exercise catalogue
-# (liftosaur.com/exercises, ~139 lifts) — asserting against it directly (rather
+# The fixture carries the canonical lift catalogue (~139 lifts, originally
+# derived from liftosaur.com/exercises) — asserting against it directly (rather
 # than duplicating the list here) keeps these tests from drifting out of sync
 # with the fixture.
-EXPECTED_BUILTIN_LIFTS = {row["name"] for row in _fixture_data()["lifts"]}
+EXPECTED_LIFTS = {row["name"] for row in _fixture_data()["lifts"]}
 EXPECTED_ALIASES = {
     row["from_name"]: row["to_name"] for row in _fixture_data()["aliases"]
 }
@@ -32,9 +32,15 @@ EXPECTED_BODYWEIGHT_ADDED = {
 
 @pytest.mark.django_db
 class TestSeedLiftosaurLiftsCommand:
-    def test_seeds_all_builtin_lifts(self):
+    def test_seeds_exactly_the_fixture_catalogue(self):
+        """Every fixture lift becomes a row, and nothing else does.
+
+        Equality (not containment) is the point: alias raw names like
+        "Barbell Row" -> Pendlay Row must NOT be seeded as Lift rows of their
+        own, or they would shadow the canonical lift during resolution.
+        """
         call_command("seed_liftosaur_lifts")
-        assert Lift.builtin_names() == frozenset(EXPECTED_BUILTIN_LIFTS)
+        assert set(Lift.objects.values_list("name", flat=True)) == EXPECTED_LIFTS
 
     def test_seeds_all_aliases(self):
         call_command("seed_liftosaur_lifts")
@@ -57,7 +63,7 @@ class TestSeedLiftosaurLiftsCommand:
     def test_command_is_idempotent(self):
         call_command("seed_liftosaur_lifts")
         call_command("seed_liftosaur_lifts")
-        assert Lift.objects.count() == len(EXPECTED_BUILTIN_LIFTS)
+        assert Lift.objects.count() == len(EXPECTED_LIFTS)
         assert LiftAlias.objects.filter(
             source=LiftAliasSource.LIFTOSAUR
         ).count() == len(EXPECTED_ALIASES)
@@ -103,17 +109,6 @@ class TestDbBackedLookups:
             to_name="Pull-up",
         )
         assert canonical_lift_name("Weighted Pullup") == "Pull-up"
-
-    def test_builtin_membership_from_db(self):
-        builtins = liftosaur_builtin_lift_names()
-        assert "Back Squat" in builtins
-        # "Barbell Row" only exists as an alias raw name (-> Pendlay Row), never
-        # seeded as its own Lift row, so it is never itself builtin.
-        assert "Barbell Row" not in builtins
-
-    def test_builtin_membership_follows_admin_edits(self):
-        Lift.objects.create(name="Landmine Press", is_liftosaur_builtin=True)
-        assert "Landmine Press" in liftosaur_builtin_lift_names()
 
     def test_bodyweight_added_quality_from_db(self):
         assert is_bodyweight_added_lift("Pull-up")

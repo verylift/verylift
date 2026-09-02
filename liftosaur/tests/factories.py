@@ -11,7 +11,6 @@ class LiftFactory(factory.django.DjangoModelFactory):
         model = Lift
 
     name = factory.Sequence(lambda n: f"Lift {n}")
-    is_liftosaur_builtin = True
     is_bodyweight_added = False
 
 

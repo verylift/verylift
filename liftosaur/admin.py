@@ -57,7 +57,7 @@ class LiftHistoryAdmin(admin.ModelAdmin):
 
 @admin.register(Lift)
 class LiftAdmin(admin.ModelAdmin):
-    list_display = ["name", "is_liftosaur_builtin", "is_bodyweight_added"]
-    list_filter = ["is_liftosaur_builtin", "is_bodyweight_added"]
+    list_display = ["name", "is_bodyweight_added"]
+    list_filter = ["is_bodyweight_added"]
     search_fields = ["name"]
     ordering = ["name"]

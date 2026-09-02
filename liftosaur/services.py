@@ -77,15 +77,6 @@ def _build_maps():
     )
 
 
-def liftosaur_builtin_lift_names() -> frozenset[str]:
-    """Return the lift names Liftosaur ships natively, from the seeded Lift table.
-
-    Lifts absent from this set need a custom exercise provisioned in the
-    user's Liftosaur account before they can be logged.
-    """
-    return Lift.builtin_names()
-
-
 def validate_liftosaur_key(api_key: str) -> bool:
     """Validate a Liftosaur API key by calling the measurements/weight endpoint.
 

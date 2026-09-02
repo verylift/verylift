@@ -2,8 +2,8 @@
 
 These are UI filter presets, not intrinsic lift qualities: no scoring,
 validation, or Liftosaur-sync behavior depends on them, so they live as Python
-constants rather than DB flags (contrast Lift.is_bodyweight_added /
-is_liftosaur_builtin, which drive server behavior and warrant migrations).
+constants rather than DB flags (contrast Lift.is_bodyweight_added, which
+drives server behavior and warrants migrations).
 
 Every name below must match a seeded liftosaur.Lift name verbatim — the
 guard test in challenges/tests/test_lift_presets.py pins these constants to
