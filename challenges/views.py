@@ -1850,6 +1850,25 @@ def challenge_detail_view(request, pk):
             }
         )
 
+    # Retrospective header callout for a finished challenge, in place of the
+    # forward-looking signals the rest of the page drops when locked. Read off
+    # the leaderboard rows already built above rather than re-ranking: same
+    # numbers, same "-" convention when nobody scored, no extra query. None on
+    # a live challenge, where the standings are still moving.
+    final_standing = None
+    if is_locked:
+        # No "row missing" branch, for the same reason the leaderboard loop
+        # above has no is_active branch: every viewer who got past
+        # _require_challenge_member is ACCEPTED, non-bailed and (being the
+        # logged-in requester) active -- exactly rank_participants' own filter
+        # with include_unscored=True -- so a row of their own is guaranteed.
+        self_row = next(row for row in leaderboard if row["is_self"])
+        final_standing = {
+            "rank": self_row["rank"],
+            "total_points": self_row["total_points"],
+            "field_size": len(leaderboard),
+        }
+
     chart_data = build_points_over_time(challenge)
     by_lift_data = build_points_by_lift(challenge)
     recent_activity = build_recent_scoring_activity(challenge, request.user)
@@ -1871,7 +1890,13 @@ def challenge_detail_view(request, pk):
         # participants need no separate flag -- bailing detaches the goal, so
         # build_personal_data returns None and no cards render at all.
         "can_self_report": not is_locked,
-        "last_synced_at": last_synced_at(request.user),
+        "final_standing": final_standing,
+        # Suppressed on a locked challenge: the sync loop above runs with
+        # sync=False there, so this timestamp is the user's global tracker
+        # sync and has nothing to do with this challenge's frozen
+        # leaderboard -- showing it implied a live board that had just
+        # refreshed.
+        "last_synced_at": None if is_locked else last_synced_at(request.user),
         "mobile_header_title": challenge.name,
     }
 

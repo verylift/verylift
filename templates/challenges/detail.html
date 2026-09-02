@@ -55,11 +55,32 @@
         {% include "challenges/_fitnessvolt_attribution.html" with force_fitnessvolt_attribution=True snapshot_version=participant.custom_goal.source_detail.snapshot_version %}
       </div>
       {% endif %}
+
+      {# The finished challenge's payoff, replacing the forward-looking       #}
+      {# "Final stretch" banner and gap nudges the page drops once it locks.  #}
+      {# final_standing is None on a live challenge (standings are still      #}
+      {# moving) -- see challenge_detail_view. Rank falls back to "-" on the  #}
+      {# same terms the table below does: with every total at zero each dense #}
+      {# rank is a meaningless tie, so no placing is claimed, just the score. #}
+      {% if final_standing %}
+      <div class="mt-4 border border-line-subtle bg-surface-sunken rounded p-4">
+        <p class="text-xs font-medium text-content-muted uppercase tracking-wide">{% trans "Your finish" %}</p>
+        <p class="mt-1 text-content-strong">
+          {% if final_standing.rank != "-" %}
+          <span class="text-2xl font-bold font-mono text-accent">#{{ final_standing.rank }}</span>
+          <span class="text-sm text-content-muted">{% blocktrans count counter=final_standing.field_size %}of {{ counter }} lifter{% plural %}of {{ counter }} lifters{% endblocktrans %}</span>
+          <span class="text-sm text-content-muted"> · </span>
+          {% endif %}
+          <span class="text-2xl font-bold font-mono text-accent">{{ final_standing.total_points }}</span>
+          <span class="text-sm text-content-muted">{% blocktrans count counter=final_standing.total_points %}pt{% plural %}pts{% endblocktrans %}</span>
+        </p>
+      </div>
+      {% endif %}
     </header>
 
     <section class="bg-surface-card border border-line-subtle rounded p-6 mb-6">
       <div class="flex items-baseline justify-between mb-4 gap-2 flex-wrap">
-        <h2 class="text-lg font-semibold text-content-strong">{% trans "leaderboard" %}</h2>
+        <h2 class="text-lg font-semibold text-content-strong">{% if challenge.is_terminal %}{% trans "final standings" %}{% else %}{% trans "leaderboard" %}{% endif %}</h2>
         {% if last_synced_at %}
         <span class="text-xs text-content-muted">{% blocktrans with when=last_synced_at|naturaltime %}Last synced {{ when }}{% endblocktrans %}</span>
         {% endif %}
@@ -96,7 +117,7 @@
         </table>
       </div>
       {% else %}
-      <p class="text-sm text-content-muted italic">{% trans "No scores yet." %}</p>
+      <p class="text-sm text-content-muted italic">{% if challenge.is_terminal %}{% trans "Nobody scored." %}{% else %}{% trans "No scores yet." %}{% endif %}</p>
       {% endif %}
     </section>
 
@@ -192,7 +213,7 @@
             </table>
           </div>
           {% else %}
-          <p class="text-sm text-content-muted italic">{% trans "No scoring activity yet." %}</p>
+          <p class="text-sm text-content-muted italic">{% if challenge.is_terminal %}{% trans "No scoring activity." %}{% else %}{% trans "No scoring activity yet." %}{% endif %}</p>
           {% endif %}
         </section>
       </div>

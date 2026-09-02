@@ -27,6 +27,18 @@ to go with it, not just the button: .flip-card-front is absolutely positioned
 and .flip-card gets overflow:hidden, so a card whose JS never runs to size
 .flip-card-inner would collapse to zero height and render blank.
 
+challenge.is_terminal separately re-words the FRONT face: every gap line here
+("add X to reach your first point") is a nudge toward a lift the challenge
+can still score, so on a finished challenge each one is restated in the past
+tense ("finished X short of ..."). The number itself is unchanged -- only its
+framing is -- so the lifter keeps the "how close was I" context without being
+told to act on a locked challenge. It is read off `challenge` rather than
+inverting can_self_report because the two answer different questions: this
+fragment is also the htmx response of manual_lift_view, which only ever
+renders it for a live challenge but passes can_self_report explicitly.
+`close_to_goal` needs no branch here -- _flag_close_to_goal declines to set
+it at all on a terminal challenge (challenges.services).
+
 Context: card (a personal_data.summary_cards entry), display_unit, challenge,
 start_rep_count (int, carousel's opening rep-count -- defaults to card.manual_default_rep_count when omitted so the
 detail.html initial render and this fragment's post-submit render share one
@@ -67,16 +79,26 @@ default-selection rule).
       </p>
       {% if card.weight_gap is not None %}
       <p class="text-xs text-content-muted mt-1">
+        {% if challenge.is_terminal %}
+        {% blocktrans with gap=card.weight_gap unit=display_unit %}Finished <span class="font-mono">{{ gap }}</span> {{ unit }} short of your first point.{% endblocktrans %}
+        {% else %}
         {% blocktrans with gap=card.weight_gap unit=display_unit %}To reach your first point: add <span class="font-mono">{{ gap }}</span> {{ unit }}{% endblocktrans %}{% if card.reps_gap is not None %}, {% blocktrans count counter=card.reps_gap %}or do <span class="font-mono">{{ counter }}</span> more rep{% plural %}or do <span class="font-mono">{{ counter }}</span> more reps{% endblocktrans %}{% endif %}.
+        {% endif %}
       </p>
       {% endif %}
       {% elif card.state == "no_data_before_window" %}
       <p class="text-sm text-content-body">
         {% blocktrans with date=card.window_start_date|date:"M j, Y" %}No data since your challenge window opened on <span class="font-mono">{{ date }}</span>.{% endblocktrans %}
       </p>
-      <p class="text-xs text-content-muted mt-1">{% trans "You've logged this lift before, but not since then. Log a new set to get started." %}</p>
+      <p class="text-xs text-content-muted mt-1">
+        {% if challenge.is_terminal %}
+        {% trans "You'd logged this lift before the window opened, but never during the challenge." %}
+        {% else %}
+        {% trans "You've logged this lift before, but not since then. Log a new set to get started." %}
+        {% endif %}
+      </p>
       {% else %}
-      <p class="text-sm text-content-muted italic">{% trans "No data yet" %}</p>
+      <p class="text-sm text-content-muted italic">{% if challenge.is_terminal %}{% trans "No data" %}{% else %}{% trans "No data yet" %}{% endif %}</p>
       {% endif %}
     </div>
 

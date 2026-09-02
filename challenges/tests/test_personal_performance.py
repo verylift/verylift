@@ -1288,6 +1288,16 @@ def _close_card(lift, *, state="no_points", gap_fraction=None, reps_gap=None):
     }
 
 
+def _close_challenge(status=Challenge.Status.ACTIVE):
+    """Unsaved Challenge carrying the only field _flag_close_to_goal reads.
+
+    Unsaved deliberately: the flag consults nothing but ``is_terminal``, which
+    is a pure read of ``status``, so a factory write to Postgres would buy the
+    assertions nothing.
+    """
+    return Challenge(status=status)
+
+
 class TestFlagCloseToGoal:
     """Unit coverage for the close-to-goal qualification, boundary, and cap logic.
 
@@ -1312,7 +1322,7 @@ class TestFlagCloseToGoal:
             _close_card("Squat", gap_fraction=Decimal("0.10")),
             _close_card("Bench Press", gap_fraction=Decimal("0.20"), reps_gap=3),
         ]
-        _flag_close_to_goal(cards)
+        _flag_close_to_goal(cards, _close_challenge())
         assert all("close_to_goal" not in c for c in cards)
 
     def test_single_qualifier_is_flagged(self):
@@ -1320,7 +1330,7 @@ class TestFlagCloseToGoal:
             _close_card("Squat", gap_fraction=Decimal("0.03")),
             _close_card("Bench Press", gap_fraction=Decimal("0.30")),
         ]
-        _flag_close_to_goal(cards)
+        _flag_close_to_goal(cards, _close_challenge())
         assert cards[0]["close_to_goal"] is True
         assert "close_to_goal" not in cards[1]
 
@@ -1332,36 +1342,36 @@ class TestFlagCloseToGoal:
             _close_card("Row", gap_fraction=Decimal("0.02")),
             _close_card("Squat", gap_fraction=Decimal("0.03")),
         ]
-        _flag_close_to_goal(cards)
+        _flag_close_to_goal(cards, _close_challenge())
         flagged = {c["lift"] for c in cards if c.get("close_to_goal")}
         # The three smallest fractions (0.01, 0.02, 0.03), never all five.
         assert flagged == {"Deadlift", "Row", "Squat"}
 
     def test_boundary_exactly_at_threshold_qualifies(self):
         card = _close_card("Squat", gap_fraction=CLOSE_TO_GOAL_GAP_FRACTION)
-        _flag_close_to_goal([card])
+        _flag_close_to_goal([card], _close_challenge())
         assert card["close_to_goal"] is True
 
     def test_just_over_boundary_does_not_qualify(self):
         card = _close_card(
             "Squat", gap_fraction=CLOSE_TO_GOAL_GAP_FRACTION + Decimal("0.001")
         )
-        _flag_close_to_goal([card])
+        _flag_close_to_goal([card], _close_challenge())
         assert "close_to_goal" not in card
 
     def test_one_rep_away_qualifies_despite_large_weight_fraction(self):
         card = _close_card("Squat", gap_fraction=Decimal("0.40"), reps_gap=1)
-        _flag_close_to_goal([card])
+        _flag_close_to_goal([card], _close_challenge())
         assert card["close_to_goal"] is True
 
     def test_two_reps_away_qualifies_at_the_reps_boundary(self):
         card = _close_card("Squat", gap_fraction=Decimal("0.40"), reps_gap=2)
-        _flag_close_to_goal([card])
+        _flag_close_to_goal([card], _close_challenge())
         assert card["close_to_goal"] is True
 
     def test_three_reps_away_does_not_qualify(self):
         card = _close_card("Squat", gap_fraction=Decimal("0.40"), reps_gap=3)
-        _flag_close_to_goal([card])
+        _flag_close_to_goal([card], _close_challenge())
         assert "close_to_goal" not in card
 
     def test_reps_gap_threshold_is_read_from_settings(self, settings):
@@ -1371,7 +1381,7 @@ class TestFlagCloseToGoal:
         # weight path from qualifying it independently.
         settings.CHALLENGES_CLOSE_TO_GOAL_REPS_GAP = 1
         card = _close_card("Squat", gap_fraction=Decimal("0.40"), reps_gap=2)
-        _flag_close_to_goal([card])
+        _flag_close_to_goal([card], _close_challenge())
         assert "close_to_goal" not in card
 
     def test_gap_fraction_threshold_is_read_from_settings(self, settings):
@@ -1379,12 +1389,12 @@ class TestFlagCloseToGoal:
         # band, so it only qualifies when the setting is actually consulted.
         settings.CHALLENGES_CLOSE_TO_GOAL_GAP_FRACTION = 0.10
         card = _close_card("Squat", gap_fraction=Decimal("0.08"))
-        _flag_close_to_goal([card])
+        _flag_close_to_goal([card], _close_challenge())
         assert card["close_to_goal"] is True
 
     def test_scored_card_is_never_flagged(self):
         card = _close_card("Squat", state="scored", gap_fraction=Decimal("0.01"))
-        _flag_close_to_goal([card])
+        _flag_close_to_goal([card], _close_challenge())
         assert "close_to_goal" not in card
 
     def test_no_data_before_window_card_is_never_flagged(self):
@@ -1394,12 +1404,23 @@ class TestFlagCloseToGoal:
             gap_fraction=Decimal("0.01"),
             reps_gap=1,
         )
-        _flag_close_to_goal([card])
+        _flag_close_to_goal([card], _close_challenge())
+        assert "close_to_goal" not in card
+
+    @pytest.mark.parametrize(
+        "status", [Challenge.Status.COMPLETED, Challenge.Status.CANCELLED]
+    )
+    def test_terminal_challenge_flags_nothing(self, status):
+        # "Close to goal" is a nudge toward a lift the challenge can still
+        # score; a finished one can't, so the highlight is suppressed
+        # wholesale even for a card that would otherwise qualify outright.
+        card = _close_card("Squat", gap_fraction=Decimal("0.01"), reps_gap=1)
+        _flag_close_to_goal([card], _close_challenge(status))
         assert "close_to_goal" not in card
 
     def test_none_gap_fraction_is_never_flagged(self):
         card = _close_card("Squat", gap_fraction=None, reps_gap=1)
-        _flag_close_to_goal([card])
+        _flag_close_to_goal([card], _close_challenge())
         assert "close_to_goal" not in card
 
 

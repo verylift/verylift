@@ -32,6 +32,12 @@ to go with it, not just the button: .flip-card-front is absolutely positioned
 and .flip-card gets overflow:hidden, so a card whose JS never runs to size
 .flip-card-inner would collapse to zero height and render blank.
 
+challenge.is_terminal separately re-words the FRONT face's two gap lines into
+the past tense on a finished challenge, exactly as Classic's card does and
+for the same reason -- see _summary_card.html's comment for why the flag is
+read off `challenge` rather than inverted out of can_self_report, and why
+`close_to_goal` needs no branch here.
+
 Context: card (a personal_data.summary_cards entry), display_unit, challenge,
 start_rep_count (int, carousel's opening rep-count -- defaults to
 card.manual_default_rep_count when omitted so the detail.html initial render
@@ -73,7 +79,11 @@ and this fragment's post-submit render share one default-selection rule).
       </p>
       {% if card.reps_gap is not None %}
       <p class="text-xs text-content-muted mt-1">
+        {% if challenge.is_terminal %}
+        {% blocktrans count counter=card.reps_gap %}Finished {{ counter }} rep short of your next point.{% plural %}Finished {{ counter }} reps short of your next point.{% endblocktrans %}
+        {% else %}
         {% blocktrans count counter=card.reps_gap with lift=card.lift %}{{ counter }} more rep for your next point on {{ lift }}.{% plural %}{{ counter }} more reps for your next point on {{ lift }}.{% endblocktrans %}
+        {% endif %}
       </p>
       {% endif %}
       {% elif card.state == "no_points" %}
@@ -85,11 +95,15 @@ and this fragment's post-submit render share one default-selection rule).
       </p>
       {% if card.weight_gap is not None %}
       <p class="text-xs text-content-muted mt-1">
+        {% if challenge.is_terminal %}
+        {% blocktrans with gap=card.weight_gap unit=display_unit %}Finished <span class="font-mono">{{ gap }}</span> {{ unit }} short of the target weight.{% endblocktrans %}
+        {% else %}
         {% blocktrans with gap=card.weight_gap unit=display_unit lift=card.lift %}Add <span class="font-mono">{{ gap }}</span> {{ unit }} to start scoring on {{ lift }}.{% endblocktrans %}
+        {% endif %}
       </p>
       {% endif %}
       {% else %}
-      <p class="text-sm text-content-muted italic">{% trans "No data yet" %}</p>
+      <p class="text-sm text-content-muted italic">{% if challenge.is_terminal %}{% trans "No data" %}{% else %}{% trans "No data yet" %}{% endif %}</p>
       {% endif %}
     </div>
 

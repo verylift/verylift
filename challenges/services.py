@@ -1542,7 +1542,7 @@ def _standards_row_for_lift(lift, params, *, threshold_at, current_best, rep_col
     }
 
 
-def _flag_close_to_goal(summary_cards):
+def _flag_close_to_goal(summary_cards, challenge):
     """Set ``close_to_goal`` on the unscored cards nearest their first point.
 
     A card qualifies when it is an unscored ``no_points`` card with a known gap
@@ -1558,7 +1558,15 @@ def _flag_close_to_goal(summary_cards):
     solely to enforce that cap — it is never surfaced, so this stays a passive
     binary flag, not a ranking or recommendation of which lift to train next
     (TASK-202). Non-qualifying cards get no key; the template reads truthiness.
+
+    Nothing is flagged on a terminal (COMPLETED/CANCELLED) challenge, for the
+    same reason ``_within_endgame_window`` excludes one: "Close to goal" is a
+    forward-looking nudge, and there is no longer anything the lifter can do
+    about the gap. The summary cards restate that gap in the past tense
+    instead (see the templates' ``challenge.is_terminal`` branches).
     """
+    if challenge.is_terminal:
+        return
     gap_fraction_threshold = Decimal(
         str(settings.CHALLENGES_CLOSE_TO_GOAL_GAP_FRACTION)
     )
@@ -1986,7 +1994,7 @@ def build_rep_target_personal_data(user, challenge, participant):
         )
         summary_cards.append(card)
 
-    _flag_close_to_goal(summary_cards)
+    _flag_close_to_goal(summary_cards, challenge)
     _flag_endgame_suggestion(summary_cards, challenge)
 
     for card in summary_cards:
@@ -2103,7 +2111,7 @@ def build_personal_data(user, challenge, participant):
             )
         )
 
-    _flag_close_to_goal(summary_cards)
+    _flag_close_to_goal(summary_cards, challenge)
     _flag_endgame_suggestion(summary_cards, challenge)
 
     for card in summary_cards:
