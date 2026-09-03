@@ -89,11 +89,10 @@ from challenges.services import (
 )
 from challenges.standards import covered_lift_names
 from core.http import is_htmx
-from core.models import SiteSettings
+from core.models import LiftHistory, SiteSettings
 from fitnessvolt.services import standards_method_available
 from hevy_api.services import sync_user_lifts as sync_hevy_lifts
 from hevy_api.services import validate_hevy_key
-from liftosaur.models import LiftHistory
 from liftosaur.services import (
     last_synced_at,
     sync_user_lifts,

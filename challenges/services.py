@@ -42,8 +42,8 @@ from challenges.rep_target_goals import (
     rep_target_field_names,
 )
 from challenges.standards import covered_lift_names
+from core.models import LiftHistory, LiftSource
 from hevy_api.services import sync_user_lifts as sync_hevy_lifts
-from liftosaur.models import LiftHistory, LiftSource
 from liftosaur.services import sync_user_lifts
 from notifications.models import Notification
 from scoring.domain.calculator import (

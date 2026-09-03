@@ -5,7 +5,7 @@ from django.core.management import call_command
 
 from challenges.models import Challenge, ChallengeParticipant
 from core.management.commands.seed_all import SEED_COMMANDS
-from liftosaur.models import LiftHistory
+from core.models import LiftHistory
 from scoring.models import PointEarnEvent
 
 

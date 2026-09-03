@@ -25,8 +25,8 @@ from challenges.goal_builders import (
 )
 from challenges.models import CustomGoal, RepTargetGoal
 from challenges.tests.factories import make_custom_challenge
+from core.tests.factories import LiftHistoryFactory
 from fitnessvolt.tests.factories import FitnessVoltStandardCacheFactory
-from liftosaur.tests.factories import LiftHistoryFactory
 from scoring.domain.calculator import estimated_one_rm, threshold_for_reps
 
 pytestmark = pytest.mark.django_db

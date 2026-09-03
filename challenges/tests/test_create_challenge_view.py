@@ -23,7 +23,7 @@ from accounts.tests.factories import UserFactory
 from challenges.models import Challenge, ChallengeLift, ChallengeParticipant
 from challenges.services import create_challenge
 from challenges.tests.factories import ChallengeFactory  # noqa: F401
-from liftosaur.models import Lift
+from core.models import Lift
 from notifications.models import Notification
 
 

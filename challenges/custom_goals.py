@@ -21,7 +21,7 @@ A stray "name" key is tolerated and ignored — goals are no longer named by
 the participant (see :func:`challenges.goal_builders.default_goal_name`).
 
 For bodyweight-added lifts (Chin-up/Pull-up/Dip — flagged via
-``liftosaur.Lift.is_bodyweight_added``) the target is the ADDED weight
+``core.Lift.is_bodyweight_added``) the target is the ADDED weight
 relative to bodyweight, not the absolute load: 0 means bodyweight-only and a
 negative value means leverage-machine assistance. Zero/negative targets are
 therefore accepted for those lifts and rejected for every other lift.
@@ -38,7 +38,7 @@ from accounts.units import KG, LB, from_display_weight
 from challenges.events import record_challenge_event
 from challenges.models import ChallengeEvent, CustomGoal, CustomGoalTarget
 from challenges.standards import covered_lift_names
-from liftosaur.models import Lift
+from core.models import Lift
 
 logger = logging.getLogger(__name__)
 

@@ -21,7 +21,7 @@ from challenges.services import (
     close_challenge,
     create_challenge,
 )
-from liftosaur.models import LiftHistory
+from core.models import LiftHistory
 from scoring.domain.calculator import is_bodyweight_added_lift, tier_thresholds
 from scoring.services import score_pooled_history
 

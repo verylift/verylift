@@ -15,20 +15,15 @@ from django.db import OperationalError, transaction
 from django.db.models import Max
 from django.utils import timezone
 
+from accounts.units import LB_TO_KG
 from core.lift_resolution import (
     LiftNameResolver,
     build_lift_alias_maps,
     resolve_lift_name,
 )
-from core.models import LiftAliasSource
+from core.models import Lift, LiftAliasSource, LiftHistory, LiftSource
 from liftosaur.client import LiftosaurAPIError, LiftosaurClient
-from liftosaur.models import (
-    LB_TO_KG,
-    Lift,
-    LiftHistory,
-    LiftosaurSyncLog,
-    LiftSource,
-)
+from liftosaur.models import LiftosaurSyncLog
 
 logger = logging.getLogger(__name__)
 
@@ -75,15 +70,6 @@ def _build_maps():
     return build_lift_alias_maps(
         LiftAliasSource.LIFTOSAUR, Lift.objects.values_list("name", flat=True)
     )
-
-
-def liftosaur_builtin_lift_names() -> frozenset[str]:
-    """Return the lift names Liftosaur ships natively, from the seeded Lift table.
-
-    Lifts absent from this set need a custom exercise provisioned in the
-    user's Liftosaur account before they can be logged.
-    """
-    return Lift.builtin_names()
 
 
 def validate_liftosaur_key(api_key: str) -> bool:

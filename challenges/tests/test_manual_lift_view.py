@@ -16,7 +16,7 @@ from challenges.tests.factories import (
     CustomGoalTargetFactory,
     make_custom_challenge,
 )
-from liftosaur.models import LiftHistory, LiftSource
+from core.models import LiftHistory, LiftSource
 from scoring.models import PointEarnEvent
 
 pytestmark = pytest.mark.django_db

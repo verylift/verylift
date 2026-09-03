@@ -3,7 +3,7 @@ from decimal import Decimal
 
 import pytest
 
-from liftosaur.tests.factories import LiftAliasFactory
+from core.tests.factories import LiftAliasFactory
 from workout_imports.importers.liftosaur import LiftosaurImporter
 
 HEADER = (

@@ -2,7 +2,7 @@ import io
 
 import pytest
 
-from liftosaur.models import LiftSource
+from core.models import LiftSource
 from workout_imports.importers import (
     REGISTRY,
     UnrecognizedCsvFormatError,

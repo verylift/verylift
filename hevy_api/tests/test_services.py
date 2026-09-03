@@ -11,6 +11,7 @@ import pytest
 from django.db import OperationalError
 
 from accounts.tests.factories import UserFactory
+from core.models import LiftHistory, LiftSource
 from hevy_api.client import HevyAPIError
 from hevy_api.models import HevySyncLog
 from hevy_api.services import (
@@ -31,7 +32,6 @@ from hevy_api.services import (
     validate_hevy_key,
     validate_hevy_key_status,
 )
-from liftosaur.models import LiftHistory, LiftSource
 from workout_imports.tests.factories import HevyLiftAliasFactory
 
 

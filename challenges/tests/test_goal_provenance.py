@@ -26,8 +26,8 @@ from challenges.tests.factories import (
     ChallengeParticipantFactory,
     make_custom_challenge,
 )
+from core.tests.factories import LiftHistoryFactory
 from fitnessvolt.tests.factories import FitnessVoltStandardCacheFactory
-from liftosaur.tests.factories import LiftHistoryFactory
 
 pytestmark = pytest.mark.django_db
 
@@ -274,7 +274,7 @@ class TestNoBodyweightPersistenceOutsideProvenance:
     # bodyweight value) and a strength-standards *population cohort* label
     # (not a specific user's sex). Both are reference data, never personal.
     _ALLOWED_REFERENCE_FIELDS = {
-        "liftosaur.Lift.is_bodyweight_added",
+        "core.Lift.is_bodyweight_added",
         "fitnessvolt.FitnessVoltStandardCache.sex",
     }
 

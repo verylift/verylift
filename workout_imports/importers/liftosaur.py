@@ -17,8 +17,7 @@ from decimal import Decimal, InvalidOperation
 
 from accounts.units import LB_TO_KG
 from core.lift_resolution import LiftNameResolver, build_lift_alias_maps
-from core.models import LiftAliasSource
-from liftosaur.models import Lift, LiftSource
+from core.models import Lift, LiftAliasSource, LiftSource
 from workout_imports.importers.base import ParsedSet, decode_csv_text
 
 logger = logging.getLogger(__name__)

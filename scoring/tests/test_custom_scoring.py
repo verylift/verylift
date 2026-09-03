@@ -17,7 +17,7 @@ from challenges.tests.factories import (
     ChallengeParticipantFactory,
     make_custom_challenge,
 )
-from liftosaur.tests.factories import LiftHistoryFactory
+from core.tests.factories import LiftHistoryFactory
 from scoring.models import PointEarnEvent
 from scoring.services import _GoalTargets, process_scored_set, score_pooled_history
 from scoring.tests.factories import make_custom_scoring_setup

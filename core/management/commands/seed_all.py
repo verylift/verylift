@@ -6,7 +6,10 @@ from django.core.management.base import BaseCommand
 logger = logging.getLogger(__name__)
 
 SEED_COMMANDS = (
-    "seed_liftosaur_lifts",
+    # The canonical register first: every alias command below maps a
+    # tracker's raw names onto lift names this one seeds.
+    "seed_lifts",
+    "seed_liftosaur_lift_aliases",
     "seed_fitnessvolt_lifts",
     "seed_hevy_lift_aliases",
     "seed_strong_lift_aliases",
@@ -15,8 +18,8 @@ SEED_COMMANDS = (
 
 class Command(BaseCommand):
     help = (
-        "Run every idempotent seed command (Liftosaur lifts, FitnessVolt lift "
-        "aliases, Hevy lift aliases, Strong lift aliases) so the DB matches "
+        "Run every idempotent seed command (the lift register, then the "
+        "Liftosaur/FitnessVolt/Hevy/Strong lift aliases) so the DB matches "
         "the fixtures shipped in the image. Safe to run on every deploy."
     )
 

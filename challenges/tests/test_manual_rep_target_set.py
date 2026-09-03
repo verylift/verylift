@@ -19,8 +19,8 @@ from django.db import IntegrityError
 
 from challenges.models import Challenge
 from challenges.services import submit_manual_rep_target_set
-from liftosaur.models import LiftHistory, LiftSource
-from liftosaur.tests.factories import LiftHistoryFactory
+from core.models import LiftHistory, LiftSource
+from core.tests.factories import LiftHistoryFactory
 from scoring.models import PointEarnEvent
 from scoring.services import score_pooled_history
 from scoring.tests.factories import make_rep_target_scoring_setup
@@ -153,7 +153,7 @@ class TestSubmitManualRepTargetSet:
         )
 
         with patch(
-            "liftosaur.models.LiftHistory.objects.get_or_create",
+            "core.models.LiftHistory.objects.get_or_create",
             side_effect=IntegrityError,
         ):
             result = submit_manual_rep_target_set(

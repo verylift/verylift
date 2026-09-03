@@ -3,7 +3,7 @@ import io
 import pytest
 
 from accounts.tests.factories import UserFactory
-from liftosaur.models import LiftHistory, LiftSource
+from core.models import LiftHistory, LiftSource
 from workout_imports.importers import UnrecognizedCsvFormatError
 from workout_imports.services import import_workout_csv, last_imported_at
 

@@ -10,7 +10,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Protocol
 
-from liftosaur.models import LiftSource
+from core.models import LiftSource
 
 
 class UnrecognizedCsvFormatError(Exception):

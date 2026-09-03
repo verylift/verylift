@@ -85,7 +85,7 @@ def _build_maps() -> LiftNameMaps:
     every other source rather than the single-stage exact lookup this used to
     be — see core.lift_resolution for the chain itself.
     """
-    from liftosaur.models import Lift
+    from core.models import Lift
 
     return build_lift_alias_maps(
         LiftAliasSource.FITNESSVOLT, Lift.objects.values_list("name", flat=True)

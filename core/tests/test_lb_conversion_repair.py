@@ -4,7 +4,7 @@ from decimal import Decimal
 
 import pytest
 
-from liftosaur.lb_conversion_repair import corrected_weight_kg
+from core.lb_conversion_repair import corrected_weight_kg
 
 
 class TestCorrectedWeightKg:

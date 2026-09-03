@@ -11,7 +11,7 @@ from django.test import Client
 from django.urls import reverse
 
 from accounts.tests.factories import UserFactory
-from liftosaur.models import LiftHistory
+from core.models import LiftHistory
 
 User = get_user_model()
 

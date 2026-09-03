@@ -7,10 +7,10 @@ import pytest
 from django.core.management import call_command
 
 from core.lift_resolution import normalize_lift_name, normalize_lift_name_strict
-from core.models import LiftAlias, LiftAliasSource
-from liftosaur.management.commands.seed_liftosaur_lifts import (
+from core.management.commands.seed_lifts import (
     FIXTURE_PATH as LIFTOSAUR_FIXTURE_PATH,
 )
+from core.models import LiftAlias, LiftAliasSource
 from workout_imports.management.commands.seed_strong_lift_aliases import FIXTURE_PATH
 
 

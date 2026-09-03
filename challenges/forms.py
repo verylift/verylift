@@ -20,9 +20,9 @@ from challenges.custom_goals import (
 from challenges.lift_presets import CALISTHENICS_LIFT_NAMES, CLASSIC_LIFT_NAMES
 from challenges.models import Challenge, CustomGoal
 from challenges.services import challenge_display_end_of_day
+from core.models import Lift
 from fitnessvolt import services as fitnessvolt_services
 from fitnessvolt.models import FitnessVoltStandardCache
-from liftosaur.models import Lift
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +109,7 @@ class CreateChallengeModeForm(forms.Form):
 class CreateChallengeLiftsForm(forms.Form):
     """Step 4 of the create wizard: which lifts count.
 
-    One flat list of every lift in the canonical liftosaur.Lift catalogue
+    One flat list of every lift in the canonical core.Lift catalogue
     (picking from it, rather than free text, guarantees every chosen name
     matches a participant's actual Liftosaur history), rendered alphabetically
     (Lift.Meta.ordering). Nothing is pre-checked: the template's "Popular" and

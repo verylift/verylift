@@ -23,8 +23,8 @@ from challenges.tests.factories import (
     make_custom_challenge,
     make_rep_target_challenge,
 )
+from core.tests.factories import LiftHistoryFactory
 from liftosaur.models import LiftosaurSyncLog
-from liftosaur.tests.factories import LiftHistoryFactory
 from scoring.models import PointEarnEvent
 from scoring.tests.factories import PointEarnEventFactory
 

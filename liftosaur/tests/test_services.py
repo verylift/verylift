@@ -13,8 +13,11 @@ from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from accounts.tests.factories import UserFactory
+from accounts.units import LB_TO_KG
+from core.models import LiftHistory, LiftSource
+from core.tests.factories import LiftHistoryFactory
 from liftosaur.client import LiftosaurAPIError
-from liftosaur.models import LB_TO_KG, LiftHistory, LiftosaurSyncLog, LiftSource
+from liftosaur.models import LiftosaurSyncLog
 from liftosaur.services import (
     HISTORY_BACKFILL_DAYS,
     POOL_WRITE_RETRY_DELAYS,
@@ -29,7 +32,7 @@ from liftosaur.services import (
     trigger_lift_history_backfill,
     validate_liftosaur_key,
 )
-from liftosaur.tests.factories import LiftHistoryFactory, LiftosaurSyncLogFactory
+from liftosaur.tests.factories import LiftosaurSyncLogFactory
 
 
 def _make_response(status, body):

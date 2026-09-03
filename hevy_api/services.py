@@ -8,9 +8,9 @@ lookups and the same warmup-set exclusion the existing Hevy CSV importer
 (workout_imports.importers.hevy) already applies.
 
 Exercise names are canonicalized via the shared core.lift_resolution chain
-against core.models.LiftAlias (source="hevy"), not liftosaur.models.LiftAlias
+against core.models.LiftAlias with source="hevy", never source="liftosaur"
 -- Hevy's own exercise titles (e.g. "Bench Press (Barbell)") don't match
-Liftosaur's alias table, and the Hevy-sourced aliases already exist precisely
+Liftosaur's alias vocabulary, and the Hevy-sourced aliases already exist precisely
 to bridge Hevy's naming to the canonical standard-lift names. This is the
 same alias data the CSV importer resolves against, since both are the same
 underlying Hevy exercise catalogue.
@@ -59,10 +59,9 @@ from django.utils import timezone
 
 from accounts.timezones import local_day, user_zoneinfo
 from core.lift_resolution import LiftNameResolver, build_lift_alias_maps
-from core.models import LiftAliasSource
+from core.models import Lift, LiftAliasSource, LiftHistory, LiftSource
 from hevy_api.client import HevyAPIError, HevyClient
 from hevy_api.models import HevySyncLog
-from liftosaur.models import Lift, LiftHistory, LiftSource
 
 logger = logging.getLogger(__name__)
 

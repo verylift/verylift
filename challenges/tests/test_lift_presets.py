@@ -22,7 +22,7 @@ BASE_DIR = Path(settings.BASE_DIR)
 
 
 def _liftosaur_lift_names():
-    path = BASE_DIR / "liftosaur" / "fixtures" / "liftosaur_lifts.json"
+    path = BASE_DIR / "core" / "fixtures" / "lifts.json"
     data = json.loads(path.read_text())
     return {lift["name"] for lift in data["lifts"]}
 

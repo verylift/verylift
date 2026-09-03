@@ -40,8 +40,7 @@ from core.lift_resolution import (
     build_lift_alias_maps,
     resolve_lift_name,
 )
-from core.models import LiftAliasSource
-from liftosaur.models import Lift, LiftHistory, LiftSource
+from core.models import Lift, LiftAliasSource, LiftHistory, LiftSource
 from wger.client import WgerAPIError, WgerClient
 from wger.models import WgerSyncLog
 
