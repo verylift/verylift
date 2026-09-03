@@ -17,7 +17,7 @@
           </div>
         </div>
         {% else %}
-        <div class="bg-surface-card rounded-lg shadow-sm border border-line-subtle p-6 min-h-64 flex flex-col items-center justify-center text-center gap-3">
+        <div class="card-elevated min-h-64 flex flex-col items-center justify-center text-center gap-3">
           {% include "components/_avatar.html" with avatar_user=request.user size_classes="w-20 h-20 text-3xl" %}
           <div class="min-w-0">
             <h1 class="text-xl font-bold text-content-strong truncate">{{ request.user.display_name|default:request.user.username }}</h1>
@@ -25,7 +25,7 @@
         </div>
         {% endif %}
 
-        <div class="bg-surface-card rounded-lg shadow-sm border border-line-subtle p-6">
+        <div class="card-elevated">
           <h2 class="text-xs font-medium text-content-muted uppercase tracking-wide">{% trans "Career stats" %}</h2>
           <dl class="mt-3 grid grid-cols-2 gap-4">
             <div class="bg-surface-sunken rounded p-4">
@@ -52,13 +52,13 @@
     </section>
 
     <section aria-label="{% trans 'Notifications' %}">
-      <div class="bg-surface-card rounded-lg shadow-sm border border-line-subtle p-6">
+      <div class="card-elevated">
         {% include "notifications/_notification_list.html" %}
       </div>
     </section>
 
     <section aria-label="{% trans 'Challenges' %}">
-      <div class="bg-surface-card rounded-lg shadow-sm border border-line-subtle p-6">
+      <div class="card-elevated">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-lg font-semibold text-content-strong">{% trans "challenges" %}</h2>
           {% if active_cards|length > 1 %}
@@ -216,7 +216,7 @@
     {% endif %}
 
     <section aria-label="{% trans 'First scored point vs latest' %}">
-      <div class="bg-surface-card rounded-lg shadow-sm border border-line-subtle p-6">
+      <div class="card-elevated">
         <h2 class="text-xs font-medium text-content-muted uppercase tracking-wide">{% trans "First scored point vs latest" %}</h2>
         {% if career.lifts %}
         <ul class="mt-3 divide-y divide-line-subtle">

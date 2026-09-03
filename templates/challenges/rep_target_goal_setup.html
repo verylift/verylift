@@ -154,7 +154,7 @@
           {% trans "clear all" %}
         </button>
         <button type="submit" name="action" value="save"
-                class="bg-accent text-accent-on text-sm font-medium px-6 py-2 rounded hover:bg-accent-hover">
+                class="btn-primary px-6">
           {% trans "confirm goal" %}
         </button>
         <a href="{% url 'challenges:goal-setup' challenge.pk %}?cancel=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "cancel" %}</a>

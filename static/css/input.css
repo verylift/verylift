@@ -151,6 +151,44 @@
 }
 
 /* ===========================================================================
+   Shared component recipes — the visual patterns repeated across templates.
+   Consolidated here (TASK-341) so a brand refresh is a handful of rules
+   rather than a find-and-replace across 88 templates.
+   =========================================================================== */
+@layer components {
+  /* The two visual recipes the app repeats most. Before this, the primary
+     button was 47 hand-maintained copies of one class string (differing only
+     in px-/py-/w-full spacing) and the surface card another 55 -- roughly a
+     hundred copies of two recipes, with no way to verify a brand refresh had
+     caught them all.
+
+     These live in @layer components on purpose: Tailwind emits utilities
+     after components, so a call site keeps overriding spacing and width the
+     way it always did -- `class="btn-primary px-6 w-full"` still wins over
+     the px-4 baked in here. That is what let the size variants collapse into
+     one definition instead of one class per size.
+
+     Only brand tokens (accent/surface/content/line) appear here; the default
+     Tailwind palette is deliberately absent from tailwind.config.js, so a
+     raw colour would not resolve anyway. */
+  .btn-primary {
+    @apply bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover;
+  }
+
+  .card {
+    @apply bg-surface-card border border-line-subtle rounded p-6;
+  }
+
+  /* The dashboard's shadowed, larger-radius variant. Kept separate rather
+     than folded into .card with overrides: the two differ in intent (raised
+     vs flat), not just in a spacing value. */
+  .card-elevated {
+    @apply bg-surface-card border border-line-subtle rounded-lg shadow-sm p-6;
+  }
+
+}
+
+/* ===========================================================================
    User guide markdown rendering (guide app) — maps server-rendered markdown
    elements onto the existing design tokens instead of Tailwind Typography
    (not installed; its default palette wouldn't match this system).

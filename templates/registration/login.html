@@ -10,7 +10,7 @@
       <span class="text-accent font-bold text-2xl">very lift</span>
     </div>
 
-    <section class="bg-surface-card border border-line-subtle rounded p-6">
+    <section class="card">
       <h1 class="text-lg font-semibold text-content-strong mb-4">{% trans "sign in" %}</h1>
 
       {% if form.errors %}
@@ -54,7 +54,7 @@
 
         <button
           type="submit"
-          class="w-full bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
+          class="w-full btn-primary">
           {% trans "sign in" %}
         </button>
       </form>
