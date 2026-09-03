@@ -24,7 +24,7 @@
     {% if step == "name" %}
     <h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "name your challenge" %}</h1>
     <p class="text-sm text-content-muted mb-6">{% trans "Pick something your group will recognize." %}</p>
-    <form method="post" class="bg-surface-card border border-line-subtle rounded p-6">
+    <form method="post" class="card">
       {% csrf_token %}
       <div class="mb-6">
         <label for="id_name" class="block text-sm font-medium text-content-body mb-1">
@@ -36,7 +36,7 @@
         {% endif %}
       </div>
       <div class="flex items-center gap-4">
-        <button type="submit" class="bg-accent text-accent-on text-sm font-medium px-6 py-2 rounded hover:bg-accent-hover">
+        <button type="submit" class="btn-primary px-6">
           {% trans "continue" %}
         </button>
         <a href="{% url 'challenges:create' %}?cancel=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "cancel" %}</a>
@@ -48,7 +48,7 @@
     <p class="text-sm text-content-muted mb-6">
       {% trans "Scoring can apply retroactively from the start date — a participant's existing Liftosaur history on or after that date counts once they join." %}
     </p>
-    <form method="post" class="bg-surface-card border border-line-subtle rounded p-6">
+    <form method="post" class="card">
       {% csrf_token %}
       <div class="mb-4">
         <label for="id_start_date" class="block text-sm font-medium text-content-body mb-1">
@@ -70,7 +70,7 @@
       </div>
       <div class="flex items-center gap-4">
         <a href="{% url 'challenges:create' %}?back=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "back" %}</a>
-        <button type="submit" class="bg-accent text-accent-on text-sm font-medium px-6 py-2 rounded hover:bg-accent-hover">
+        <button type="submit" class="btn-primary px-6">
           {% trans "continue" %}
         </button>
         <a href="{% url 'challenges:create' %}?cancel=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "cancel" %}</a>
@@ -82,7 +82,7 @@
     <p class="text-sm text-content-muted mb-6">
       {% trans "This applies to the whole challenge and can't be changed once you continue." %}
     </p>
-    <form method="post" class="bg-surface-card border border-line-subtle rounded p-6">
+    <form method="post" class="card">
       {% csrf_token %}
       <div class="space-y-3 mb-6">
         {% for radio in form.mode %}
@@ -108,7 +108,7 @@
       {% endif %}
       <div class="flex items-center gap-4">
         <a href="{% url 'challenges:create' %}?back=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "back" %}</a>
-        <button type="submit" class="bg-accent text-accent-on text-sm font-medium px-6 py-2 rounded hover:bg-accent-hover">
+        <button type="submit" class="btn-primary px-6">
           {% trans "continue" %}
         </button>
         <a href="{% url 'challenges:create' %}?cancel=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "cancel" %}</a>
@@ -124,7 +124,7 @@
       {# fails. Literal quotes inside blocktrans extract fine.                #}
       {% blocktrans %}This lift list applies to every participant for the whole challenge. Each person's goal chart will cover exactly these lifts. "All Lifts" holds everything; "Popular" and "Calisthenics" are curated shortcuts into the same list.{% endblocktrans %}
     </p>
-    <form method="post" class="bg-surface-card border border-line-subtle rounded p-6">
+    <form method="post" class="card">
       {% csrf_token %}
       <div class="mb-4">
         <input
@@ -183,7 +183,7 @@
 
       <div class="flex items-center gap-4">
         <a href="{% url 'challenges:create' %}?back=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "back" %}</a>
-        <button type="submit" class="bg-accent text-accent-on text-sm font-medium px-6 py-2 rounded hover:bg-accent-hover">
+        <button type="submit" class="btn-primary px-6">
           {% trans "create challenge" %}
         </button>
         <a href="{% url 'challenges:create' %}?cancel=1" class="text-sm text-content-muted hover:text-content-strong">{% trans "cancel" %}</a>

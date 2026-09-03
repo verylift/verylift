@@ -7,9 +7,12 @@ duplicate the clipboard JS.
 
 Usage: {% include "components/_copy_code.html" with code="VERYLIFT" %}
 
-Scoped via the data-copy-code attribute rather than an id -- an id would
-collide if this partial (or a component that includes it) ever rendered
-more than once on the same page.
+Pure markup: the click handler is a single delegated listener in
+base/base.html, keyed off data-copy-text, so this partial ships no script of
+its own however many times it renders (TASK-341). The data-copy-code wrapper
+attribute stays as the component's scope marker -- an id would collide if
+this partial (or a component that includes it) rendered more than once on
+the same page.
 {% endcomment %}
 <span class="inline-flex items-center gap-1.5" data-copy-code>
   <span class="font-mono font-semibold text-accent">{{ code }}</span>
@@ -24,41 +27,4 @@ more than once on the same page.
     <span data-copy-icon>{% icon "copy" css_class="h-3.5 w-3.5" %}</span>
     <span data-copied-icon class="hidden">{% icon "check" css_class="h-3.5 w-3.5" %}</span>
   </button>
-  <script>
-    (function () {
-      var container = document.currentScript.closest('[data-copy-code]');
-      var button = container.querySelector('[data-copy-text]');
-      if (!button) return;
-      var copyIcon = button.querySelector('[data-copy-icon]');
-      var copiedIcon = button.querySelector('[data-copied-icon]');
-      button.addEventListener('click', function () {
-        var text = button.getAttribute('data-copy-text');
-        var done = function () {
-          button.title = button.getAttribute('data-copied-label');
-          button.setAttribute('aria-label', button.getAttribute('data-copied-label'));
-          button.classList.add('text-accent');
-          copyIcon.classList.add('hidden');
-          copiedIcon.classList.remove('hidden');
-          setTimeout(function () {
-            button.title = button.getAttribute('data-copy-label');
-            button.setAttribute('aria-label', button.getAttribute('data-copy-label'));
-            button.classList.remove('text-accent');
-            copyIcon.classList.remove('hidden');
-            copiedIcon.classList.add('hidden');
-          }, 1500);
-        };
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(text).then(done, done);
-        } else {
-          var tmp = document.createElement('textarea');
-          tmp.value = text;
-          document.body.appendChild(tmp);
-          tmp.select();
-          document.execCommand('copy');
-          document.body.removeChild(tmp);
-          done();
-        }
-      });
-    })();
-  </script>
 </span>

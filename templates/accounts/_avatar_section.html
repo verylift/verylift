@@ -1,6 +1,6 @@
 {% load i18n %}
 <!-- Avatar section -->
-<section class="bg-surface-card border border-line-subtle rounded p-6 mb-6">
+<section class="card mb-6">
   <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "profile photo" %}</h2>
   {% if avatar_error %}
   <p class="mb-4 text-sm text-danger">{{ avatar_error }}</p>
@@ -51,7 +51,7 @@
         <div class="flex items-center gap-3">
           <button
             type="submit"
-            class="bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
+            class="btn-primary">
             {% trans "save photo" %}
           </button>
           {% if user.avatar %}
@@ -104,7 +104,7 @@
           <button
             type="button"
             id="avatar-crop-confirm"
-            class="bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
+            class="btn-primary">
             {% trans "set profile photo" %}
           </button>
           <button

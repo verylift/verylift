@@ -1,6 +1,6 @@
 {% load i18n %}
 <!-- Hevy API key section -->
-<section class="bg-surface-card border border-line-subtle rounded p-6 mb-6" id="hevy-section">
+<section class="card mb-6" id="hevy-section">
   <h2 class="text-lg font-semibold text-content-strong mb-2">{% trans "Hevy API key" %}</h2>
   <p class="text-sm text-content-muted mb-4">
     {% trans "Connect your Hevy account to import your exercise data. Requires an active Hevy Pro subscription." %}
@@ -133,7 +133,7 @@
     <button
       type="submit"
       id="btn-save-hevy-key"
-      class="bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
+      class="btn-primary">
       {% trans "save key" %}
     </button>
   </form>

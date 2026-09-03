@@ -603,6 +603,62 @@ body {
   }
 }
 
+/* The two visual recipes the app repeats most. Before this, the primary
+     button was 47 hand-maintained copies of one class string (differing only
+     in px-/py-/w-full spacing) and the surface card another 55 -- roughly a
+     hundred copies of two recipes, with no way to verify a brand refresh had
+     caught them all.
+
+     These live in @layer components on purpose: Tailwind emits utilities
+     after components, so a call site keeps overriding spacing and width the
+     way it always did -- `class="btn-primary px-6 w-full"` still wins over
+     the px-4 baked in here. That is what let the size variants collapse into
+     one definition instead of one class per size.
+
+     Only brand tokens (accent/surface/content/line) appear here; the default
+     Tailwind palette is deliberately absent from tailwind.config.js, so a
+     raw colour would not resolve anyway. */
+
+.btn-primary {
+  border-radius: 0.25rem;
+  background-color: var(--accent);
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  color: var(--text-on-brand);
+}
+
+.btn-primary:hover {
+  background-color: var(--accent-hover);
+}
+
+.card {
+  border-radius: 0.25rem;
+  border-width: 1px;
+  border-color: var(--border-subtle);
+  background-color: var(--surface-card);
+  padding: 1.5rem;
+}
+
+/* The dashboard's shadowed, larger-radius variant. Kept separate rather
+     than folded into .card with overrides: the two differ in intent (raised
+     vs flat), not just in a spacing value. */
+
+.card-elevated {
+  border-radius: 0.5rem;
+  border-width: 1px;
+  border-color: var(--border-subtle);
+  background-color: var(--surface-card);
+  padding: 1.5rem;
+  --tw-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --tw-shadow-colored: 0 1px 2px 0 var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+
 /* Number inputs whose spinner arrows cost more than they are worth: the
      goal-setup grids are tight enough on a phone that the ~16px of interior
      the arrows occupy is the difference between fitting and scrolling, and
@@ -2428,6 +2484,12 @@ body {
   --accent-active: #93dcb4;
   --accent-subtle: #13241d;
 }
+
+/* ===========================================================================
+   Shared component recipes — the visual patterns repeated across templates.
+   Consolidated here (TASK-341) so a brand refresh is a handful of rules
+   rather than a find-and-replace across 88 templates.
+   =========================================================================== */
 
 /* ===========================================================================
    User guide markdown rendering (guide app) — maps server-rendered markdown
