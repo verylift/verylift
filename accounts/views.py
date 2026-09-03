@@ -77,11 +77,17 @@ from liftosaur.services import (
     trigger_lift_history_backfill,
     validate_liftosaur_key,
 )
+from liftosaur.services import (
+    latest_sync_failure as liftosaur_latest_sync_failure,
+)
 from policies.models import Policy, PolicyConsent, PolicyVersion
 from policies.services import record_consent
 from scoring.services import score_pooled_history
 from wger.services import (
     last_synced_at as wger_last_synced_at,
+)
+from wger.services import (
+    latest_sync_failure as wger_latest_sync_failure,
 )
 from wger.services import (
     sync_wger_lifts,
@@ -933,6 +939,7 @@ def settings_view(request):
         "hevy_key_error": hevy_key_error,
         "avatar_error": avatar_error,
         "last_synced_at": last_synced_at(user),
+        "liftosaur_sync_error": liftosaur_latest_sync_failure(user),
         "hevy_last_synced_at": hevy_last_synced_at(user),
         "hevy_sync_error": hevy_latest_sync_failure(user),
         "workout_import_error": workout_import_error,
@@ -941,6 +948,7 @@ def settings_view(request):
         "wger_instance_url": user.wger_instance_url,
         "masked_wger_token": mask_api_key(user.wger_api_token),
         "last_wger_synced_at": wger_last_synced_at(user),
+        "wger_sync_error": wger_latest_sync_failure(user),
     }
 
     if request.method == "POST" and is_htmx(request):
@@ -1079,10 +1087,28 @@ def sync_now_view(request):
         )
         return _sync_now_response(request, user)
 
-    messages.success(
-        request,
-        gettext("Sync triggered for %(count)s challenge(s).") % {"count": count},
-    )
+    # force=True always logs an attempt (bypassing the cooldown short-circuit
+    # that would skip logging entirely), so the log this call just wrote is
+    # what latest_sync_failure reads back here. sync_user_lifts swallows
+    # API/network/DB-contention failures and returns 0 -- the same value it
+    # returns for "nothing new" -- so the log, not the return value, is what
+    # tells "Sync triggered" from an actual failure apart.
+    sync_failure = liftosaur_latest_sync_failure(user)
+    if sync_failure is not None:
+        logger.warning(
+            "Liftosaur sync for user %s reported failure: %s",
+            user.id,
+            sync_failure.error_detail,
+        )
+        messages.error(
+            request,
+            gettext("Couldn't sync right now. Please try again in a moment."),
+        )
+    else:
+        messages.success(
+            request,
+            gettext("Sync triggered for %(count)s challenge(s).") % {"count": count},
+        )
     return _sync_now_response(request, user)
 
 
@@ -1091,7 +1117,11 @@ def _sync_now_response(request, user):
         return render(
             request,
             "accounts/_liftosaur_sync_status.html",
-            {"last_synced_at": last_synced_at(user), "oob_messages": True},
+            {
+                "last_synced_at": last_synced_at(user),
+                "liftosaur_sync_error": liftosaur_latest_sync_failure(user),
+                "oob_messages": True,
+            },
         )
     return redirect("accounts:settings")
 
@@ -1126,10 +1156,28 @@ def wger_sync_now_view(request):
         )
         return _wger_sync_now_response(request, user)
 
-    messages.success(
-        request,
-        gettext("Sync triggered for %(count)s challenge(s).") % {"count": count},
-    )
+    # force=True always logs an attempt (bypassing the cooldown short-circuit
+    # that would skip logging entirely), so the log this call just wrote is
+    # what latest_sync_failure reads back here. sync_wger_lifts swallows
+    # API/network/DB-contention failures and returns 0 -- the same value it
+    # returns for "nothing new" -- so the log, not the return value, is what
+    # tells "Sync triggered" from an actual failure apart.
+    sync_failure = wger_latest_sync_failure(user)
+    if sync_failure is not None:
+        logger.warning(
+            "Wger sync for user %s reported failure: %s",
+            user.id,
+            sync_failure.error_detail,
+        )
+        messages.error(
+            request,
+            gettext("Couldn't sync right now. Please try again in a moment."),
+        )
+    else:
+        messages.success(
+            request,
+            gettext("Sync triggered for %(count)s challenge(s).") % {"count": count},
+        )
     return _wger_sync_now_response(request, user)
 
 
@@ -1138,7 +1186,11 @@ def _wger_sync_now_response(request, user):
         return render(
             request,
             "accounts/_wger_sync_status.html",
-            {"last_wger_synced_at": wger_last_synced_at(user), "oob_messages": True},
+            {
+                "last_wger_synced_at": wger_last_synced_at(user),
+                "wger_sync_error": wger_latest_sync_failure(user),
+                "oob_messages": True,
+            },
         )
     return redirect("accounts:settings")
 
