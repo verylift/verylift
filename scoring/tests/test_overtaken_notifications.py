@@ -12,7 +12,7 @@ from challenges.tests.factories import (
     ChallengeParticipantFactory,
     make_custom_challenge,
 )
-from liftosaur.tests.factories import LiftHistoryFactory
+from core.tests.factories import LiftHistoryFactory
 from notifications.models import Notification
 from scoring.services import (
     compute_ranking_deltas,

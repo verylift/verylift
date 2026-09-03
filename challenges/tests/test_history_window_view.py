@@ -130,7 +130,7 @@ class TestWizardCreatedChallengeDefaultsWindow:
         creator = UserFactory()
         c = Client()
         c.force_login(creator)
-        from liftosaur.models import Lift
+        from core.models import Lift
 
         bench = Lift.objects.get(name="Bench Press")
         url = reverse("challenges:create")

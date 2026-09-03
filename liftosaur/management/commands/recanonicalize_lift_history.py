@@ -27,8 +27,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from challenges.models import Challenge, ChallengeParticipant
-from core.models import LiftAlias, LiftAliasSource
-from liftosaur.models import LiftHistory
+from core.models import LiftAlias, LiftAliasSource, LiftHistory
 from scoring.services import score_pooled_history
 
 logger = logging.getLogger(__name__)

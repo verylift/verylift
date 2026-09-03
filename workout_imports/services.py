@@ -13,7 +13,7 @@ from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
 
-from liftosaur.models import LiftHistory, LiftSource
+from core.models import LiftHistory, LiftSource
 from workout_imports.importers import REGISTRY, detect_importer
 
 logger = logging.getLogger(__name__)

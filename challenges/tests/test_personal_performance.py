@@ -38,7 +38,7 @@ from challenges.tests.factories import (
     CustomGoalTargetFactory,
     make_custom_challenge,
 )
-from liftosaur.tests.factories import LiftHistoryFactory
+from core.tests.factories import LiftHistoryFactory
 from scoring.domain.calculator import threshold_for_reps, tier_thresholds
 from scoring.tests.factories import PointEarnEventFactory
 

@@ -26,9 +26,9 @@ from challenges.tests.factories import (
     ChallengeParticipantFactory,
     make_custom_challenge,
 )
+from core.models import LiftHistory, LiftSource
+from core.tests.factories import LiftHistoryFactory
 from fitnessvolt.tests.factories import FitnessVoltStandardCacheFactory
-from liftosaur.models import LiftHistory, LiftSource
-from liftosaur.tests.factories import LiftHistoryFactory
 from scoring.models import PointEarnEvent
 
 _HEVY_CSV_HEADER = (

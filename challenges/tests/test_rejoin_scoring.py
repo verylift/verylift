@@ -16,7 +16,7 @@ from django.urls import reverse
 
 from challenges.models import Challenge
 from challenges.tests.factories import ChallengeInviteLinkFactory
-from liftosaur.tests.factories import LiftHistoryFactory
+from core.tests.factories import LiftHistoryFactory
 from scoring.models import PointEarnEvent
 from scoring.services import score_pooled_history
 from scoring.tests.factories import make_custom_scoring_setup

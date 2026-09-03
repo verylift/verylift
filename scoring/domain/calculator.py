@@ -1,7 +1,7 @@
 """Scoring calculation domain logic.
 
 Pure calculation functions, with one exception: is_bodyweight_added_lift reads
-the seeded Lift reference table (liftosaur.models.Lift) so the
+the seeded Lift reference table (core.models.Lift) so the
 bodyweight-added quality is admin-editable data, not code.
 
 Every challenge authors flat, static rep-max targets (TASK-248 plan §3): there
@@ -27,10 +27,10 @@ def is_bodyweight_added_lift(lift: str) -> bool:
     For these lifts the multiplier × bodyweight threshold already includes the
     lifter's own weight, so the stored weight is the total load; the meaningful
     number to show a lifter is the added weight = total load − bodyweight.
-    Backed by the Lift reference table seeded via seed_liftosaur_lifts
+    Backed by the Lift reference table seeded via seed_lifts
     (deferred import keeps the rest of this module importable without Django).
     """
-    from liftosaur.models import Lift
+    from core.models import Lift
 
     return Lift.objects.filter(name=lift, is_bodyweight_added=True).exists()
 

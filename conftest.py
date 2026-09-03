@@ -144,11 +144,12 @@ def django_db_setup(django_db_setup, django_db_blocker):
 
     Lift qualities (Liftosaur built-in, bodyweight-added) and name aliases live
     in seeded DB rows rather than code constants; production seeds them with
-    the seed_liftosaur_lifts management command. Seeding here mirrors that so
+    the seed_lifts management command. Seeding here mirrors that so
     tests exercise the same reference data a deployed instance has.
     """
     with django_db_blocker.unblock():
-        call_command("seed_liftosaur_lifts")
+        call_command("seed_lifts")
+        call_command("seed_liftosaur_lift_aliases")
         call_command("seed_fitnessvolt_lifts")
 
 

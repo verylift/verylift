@@ -10,7 +10,7 @@ from challenges.tests.factories import (
     ChallengeParticipantFactory,
     make_rep_target_challenge,
 )
-from liftosaur.tests.factories import LiftHistoryFactory
+from core.tests.factories import LiftHistoryFactory
 from scoring.models import PointEarnEvent
 from scoring.services import (
     _RepTargetGoalTargets,

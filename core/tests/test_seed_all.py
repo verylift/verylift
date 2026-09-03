@@ -5,8 +5,7 @@ import pytest
 from django.core.management import call_command
 
 from core.management.commands.seed_all import SEED_COMMANDS
-from core.models import LiftAlias, LiftAliasSource
-from liftosaur.models import Lift
+from core.models import Lift, LiftAlias, LiftAliasSource
 
 
 @pytest.mark.django_db
@@ -47,7 +46,7 @@ def test_seed_all_propagates_and_logs_failure(caplog):
     boom = RuntimeError("seed exploded")
 
     def fake_call_command(name, *args, **kwargs):
-        if name == "seed_liftosaur_lifts":
+        if name == "seed_lifts":
             raise boom
 
     with (
@@ -60,4 +59,4 @@ def test_seed_all_propagates_and_logs_failure(caplog):
     ):
         call_command("seed_all")
 
-    assert "seed_liftosaur_lifts failed" in caplog.text
+    assert "seed_lifts failed" in caplog.text

@@ -17,7 +17,7 @@ from django.db import IntegrityError
 
 from challenges.models import Challenge
 from challenges.services import submit_manual_lift
-from liftosaur.models import LiftHistory, LiftSource
+from core.models import LiftHistory, LiftSource
 from scoring.models import PointEarnEvent
 from scoring.tests.factories import make_custom_scoring_setup
 
@@ -183,7 +183,7 @@ class TestSubmitManualLift:
         )
 
         with patch(
-            "liftosaur.models.LiftHistory.objects.get_or_create",
+            "core.models.LiftHistory.objects.get_or_create",
             side_effect=IntegrityError,
         ):
             result = submit_manual_lift(

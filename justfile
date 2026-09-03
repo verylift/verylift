@@ -95,9 +95,13 @@ manage command +args="":
 seed:
     uv run python manage.py seed_all
 
-# Seed Liftosaur built-in lift / alias / lift-quality fixture data (idempotent)
-seed-liftosaur-lifts:
-    uv run python manage.py seed_liftosaur_lifts
+# Seed the canonical lift register and its qualities (idempotent)
+seed-lifts:
+    uv run python manage.py seed_lifts
+
+# Seed Liftosaur raw exercise name -> canonical lift name aliases (idempotent)
+seed-liftosaur-lift-aliases:
+    uv run python manage.py seed_liftosaur_lift_aliases
 
 # Seed FitnessVolt lift slug -> canonical lift name aliases (idempotent)
 seed-fitnessvolt-lifts:

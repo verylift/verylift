@@ -19,8 +19,8 @@ from accounts.units import from_display_weight, to_display_weight
 from challenges.models import CustomGoal, RepTargetGoal
 from challenges.rep_target_goals import MAX_TARGET_REPS
 from challenges.standards import covered_lift_names
+from core.models import LiftHistory
 from fitnessvolt import services as fitnessvolt_services
-from liftosaur.models import LiftHistory
 from scoring.domain.calculator import (
     estimated_one_rm,
     is_assisted_equipment,

@@ -97,7 +97,7 @@ def _before_state(request):
 
 def _seed_legacy_rows(apps):
     # Names deliberately don't collide with the real fixture-seeded aliases
-    # (django_db_setup's session-scoped seed_liftosaur_lifts call, whose 9
+    # (django_db_setup's session-scoped seed_liftosaur_lift_aliases call, whose 9
     # rows core.0004's own reverse function restores into
     # liftosaur_liftalias as part of getting the schema down to _BEFORE) --
     # a from_name this test also uses would hit the real unique constraint

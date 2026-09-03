@@ -15,7 +15,7 @@ import pytest
 
 from accounts.tests.factories import UserFactory
 from challenges.models import Challenge
-from liftosaur.tests.factories import LiftHistoryFactory
+from core.tests.factories import LiftHistoryFactory
 from scoring.models import PointEarnEvent
 from scoring.services import ScoringSummary, score_pooled_history
 from scoring.tests.factories import make_custom_scoring_setup

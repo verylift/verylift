@@ -9,7 +9,7 @@ those behaviors are exercised.
 import pytest
 
 from challenges.forms import CreateChallengeLiftsForm
-from liftosaur.models import Lift
+from core.models import Lift
 
 pytestmark = pytest.mark.django_db
 

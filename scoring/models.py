@@ -3,7 +3,7 @@ import uuid
 from django.conf import settings
 from django.db import models
 
-from liftosaur.models import LiftSource
+from core.models import LiftSource
 
 
 class PointEarnEvent(models.Model):

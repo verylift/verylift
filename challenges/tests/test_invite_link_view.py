@@ -158,7 +158,7 @@ class TestLinkPreviewCrawlerAndPrivacy:
         assert response.status_code == 200
 
     def test_no_participant_identity_or_lift_data_leaks(self, challenge, link):
-        from liftosaur.tests.factories import LiftHistoryFactory
+        from core.tests.factories import LiftHistoryFactory
 
         secret_lift_weight = "313.37"
         participants = [

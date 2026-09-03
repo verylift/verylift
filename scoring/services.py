@@ -12,7 +12,7 @@ from django.db import transaction
 from accounts.units import to_display_weight
 from challenges.models import Challenge, ChallengeParticipant
 from challenges.standards import covered_lift_names
-from liftosaur.models import Lift, LiftHistory, LiftSource
+from core.models import Lift, LiftHistory, LiftSource
 from notifications.models import Notification
 from scoring.domain.calculator import (
     best_score_for_rep_target,

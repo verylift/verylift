@@ -6,8 +6,8 @@ from django.db import IntegrityError
 from django.utils import timezone
 
 from accounts.tests.factories import UserFactory
-from liftosaur.models import LiftHistory, LiftSource
-from liftosaur.tests.factories import LiftHistoryFactory
+from core.models import LiftHistory, LiftSource
+from core.tests.factories import LiftHistoryFactory
 
 
 @pytest.mark.django_db

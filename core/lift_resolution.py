@@ -119,10 +119,14 @@ def build_lift_alias_maps(source: str, canonical_names) -> LiftNameMaps:
     """Convenience wrapper: fetch this source's alias pairs from ``core.LiftAlias``
     and build ``LiftNameMaps`` against them and the given canonical catalogue.
 
-    ``canonical_names`` stays a caller-supplied iterable (rather than this
-    module querying ``liftosaur.models.Lift`` itself) so core never imports
-    from an app that depends on core -- see ``core.models.LiftAliasSource``
-    for the same reasoning applied to the source discriminator.
+    ``canonical_names`` is a caller-supplied iterable. It originally had to be:
+    the catalogue lived in ``liftosaur.models.Lift``, and querying it here
+    would have made core import from an app that depends on core. TASK-347
+    moved ``Lift`` into core, so that constraint is gone -- every production
+    caller now passes the identical ``Lift.objects.values_list("name",
+    flat=True)``, and this could default to it. Left explicit for now to keep
+    that move mechanical; the parameter must stay overridable regardless,
+    since tests build maps against a small ad-hoc catalogue.
     """
     from core.models import LiftAlias
 

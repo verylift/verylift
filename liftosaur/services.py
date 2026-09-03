@@ -15,20 +15,15 @@ from django.db import OperationalError, transaction
 from django.db.models import Max
 from django.utils import timezone
 
+from accounts.units import LB_TO_KG
 from core.lift_resolution import (
     LiftNameResolver,
     build_lift_alias_maps,
     resolve_lift_name,
 )
-from core.models import LiftAliasSource
+from core.models import Lift, LiftAliasSource, LiftHistory, LiftSource
 from liftosaur.client import LiftosaurAPIError, LiftosaurClient
-from liftosaur.models import (
-    LB_TO_KG,
-    Lift,
-    LiftHistory,
-    LiftosaurSyncLog,
-    LiftSource,
-)
+from liftosaur.models import LiftosaurSyncLog
 
 logger = logging.getLogger(__name__)
 

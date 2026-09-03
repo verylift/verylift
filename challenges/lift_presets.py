@@ -5,7 +5,7 @@ validation, or Liftosaur-sync behavior depends on them, so they live as Python
 constants rather than DB flags (contrast Lift.is_bodyweight_added, which
 drives server behavior and warrants migrations).
 
-Every name below must match a seeded liftosaur.Lift name verbatim — the
+Every name below must match a seeded core.Lift name verbatim — the
 guard test in challenges/tests/test_lift_presets.py pins these constants to
 the seeded catalogue so a rename in the fixtures fails CI.
 """

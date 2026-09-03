@@ -13,8 +13,8 @@ from challenges.tests.factories import (
     ChallengeParticipantFactory,
     make_custom_challenge,
 )
-from liftosaur.models import LiftHistory, LiftSource
-from liftosaur.tests.factories import LiftHistoryFactory
+from core.models import LiftHistory, LiftSource
+from core.tests.factories import LiftHistoryFactory
 from scoring.models import PointEarnEvent
 
 PERFORMED_AT = date(2025, 6, 20)

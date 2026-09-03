@@ -10,7 +10,7 @@ weight_kg) identity means a row already pooled under the old factor no
 longer matches the SAME physical set arriving again through a source that
 now converts with the exact factor -- a CSV re-import, or a Hevy API sync of
 a set previously imported from Hevy's CSV export -- producing a second row
-instead of an upsert. See liftosaur/lb_conversion_repair.py for the full
+instead of an upsert. See core/lb_conversion_repair.py for the full
 reasoning on which rows this can and can't identify.
 
 Only sources that ever run a weight through LB_TO_KG are candidates:
@@ -50,8 +50,8 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from challenges.models import Challenge, ChallengeParticipant
-from liftosaur.lb_conversion_repair import corrected_weight_kg
-from liftosaur.models import LiftHistory, LiftSource
+from core.lb_conversion_repair import corrected_weight_kg
+from core.models import LiftHistory, LiftSource
 from scoring.services import score_pooled_history
 
 logger = logging.getLogger(__name__)

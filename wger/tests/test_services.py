@@ -13,7 +13,7 @@ from wger_api_client.models.workout_log import WorkoutLog
 from wger_api_client.types import UNSET
 
 from accounts.tests.factories import UserFactory
-from liftosaur.models import LiftHistory, LiftSource
+from core.models import LiftHistory, LiftSource
 from wger.client import WgerAPIError
 from wger.services import (
     MAX_LOG_PAGES_PER_INLINE_RUN,

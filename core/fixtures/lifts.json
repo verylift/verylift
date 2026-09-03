@@ -139,16 +139,5 @@
     {"name": "Superman", "is_bodyweight_added": true},
     {"name": "Reverse Fly", "is_bodyweight_added": false},
     {"name": "Elliptical Machine", "is_bodyweight_added": false}
-  ],
-  "aliases": [
-    {"from_name": "Squat", "to_name": "Back Squat"},
-    {"from_name": "Pull Up", "to_name": "Pull-up"},
-    {"from_name": "Pullup", "to_name": "Pull-up"},
-    {"from_name": "Chin Up", "to_name": "Chin-up"},
-    {"from_name": "Chinup", "to_name": "Chin-up"},
-    {"from_name": "Barbell Row", "to_name": "Pendlay Row"},
-    {"from_name": "Clean", "to_name": "Power Clean"},
-    {"from_name": "Chest Dip", "to_name": "Dip"},
-    {"from_name": "Behind the Neck Press", "to_name": "Snatch Press"}
   ]
 }
