@@ -5,16 +5,21 @@
 ## 2026.9.1 — 2026-09-03
 
 ### Added
-- Finished challenges show your final placing and points in a "Your finish" callout, with the leaderboard retitled "final standings"
+- Finished challenges show your final placing and points in a "Your finish" callout
 
 ### Changed
-- A finished challenge's summary cards now read as a result rather than a coaching prompt: gap distances are restated in the past tense, and the "Close to goal" highlight and "log a new set" prompts no longer appear
+- The leaderboard on a finished challenge is retitled "final standings"
+- Lift and pooled-history admin pages moved from `/admin/liftosaur/` to `/admin/core/` — existing bookmarks need updating
 
 ### Fixed
 - The Goals tab on a completed or cancelled challenge opens again, so you can still see your locked goal chart after a challenge ends
-- Planks, the crunch family, glute bridges, and pull-up/dip variants are now recognised as bodyweight exercises, so their goal targets are set relative to bodyweight instead of requiring a positive external load
+- A finished challenge's summary cards now read as a result rather than a coaching prompt: gap distances are restated in the past tense, and the "Close to goal" highlight and the "log a new set" call-to-action text no longer appear
+- Planks, side planks, supermans, the crunch and glute-bridge families, ab wheel, back extensions, and the Wide Pull Up / Bench Dip / Triceps Dip variants are now recognised as bodyweight exercises, so their goal targets are set relative to bodyweight instead of requiring a positive external load
 - The "Last synced" timestamp no longer appears on a finished challenge, where nothing about that challenge is being synced
 - Several strings on the Spanish account-deletion, custom-goal setup and challenge detail pages that were still showing in English
+
+### Removed
+- The `seed_liftosaur_lifts` command, split into `seed_lifts` (the lift register) and `seed_liftosaur_lift_aliases` (Liftosaur's exercise names); `seed_all` runs both and is unchanged
 
 ## 2026.9.0 — 2026-09-01
 
