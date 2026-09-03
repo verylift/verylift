@@ -80,13 +80,37 @@ class TestHevyImporterParse:
         parsed = HevyImporter().parse(csv_file(rows))
         assert len(parsed) == 1
 
-    def test_non_numeric_reps_row_is_skipped_not_fatal(self):
-        rows = 'Leg day,"01 Jan 2024, 09:15",,,Squat (Barbell),,,1,normal,225,,,,\n'
+    @pytest.mark.parametrize(
+        "reps_cell",
+        [pytest.param("", id="blank"), pytest.param("eight", id="non_numeric")],
+    )
+    def test_unusable_reps_row_is_skipped_not_fatal(self, reps_cell):
+        rows = (
+            'Leg day,"01 Jan 2024, 09:15",,,Squat (Barbell),,,'
+            f"1,normal,225,{reps_cell},,,\n"
+        )
         parsed = HevyImporter().parse(csv_file(rows))
         assert parsed == []
 
-    def test_unparseable_start_time_row_is_skipped_not_fatal(self):
-        rows = "Leg day,not-a-date,,,Squat (Barbell),,,1,normal,225,5,,,\n"
+    def test_decimal_formatted_reps_are_parsed_not_dropped(self):
+        """Hevy has been observed exporting reps as "8.0" for some export
+        variants, which int() rejects outright. Dropping the fallback would
+        silently discard every set in one of those files -- and an import that
+        succeeds with nothing in it looks identical to an empty export.
+        """
+        rows = 'Leg day,"01 Jan 2024, 09:15",,,Squat (Barbell),,,1,normal,225,8.0,,,\n'
+
+        parsed = HevyImporter().parse(csv_file(rows))
+
+        assert len(parsed) == 1
+        assert parsed[0].reps == 8
+
+    @pytest.mark.parametrize(
+        "start_time",
+        [pytest.param("not-a-date", id="unparseable"), pytest.param("", id="blank")],
+    )
+    def test_row_without_a_usable_start_time_is_skipped_not_fatal(self, start_time):
+        rows = f"Leg day,{start_time},,,Squat (Barbell),,,1,normal,225,5,,,\n"
         parsed = HevyImporter().parse(csv_file(rows))
         assert parsed == []
 
