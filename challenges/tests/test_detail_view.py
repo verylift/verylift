@@ -620,6 +620,30 @@ class TestLastSyncedStamp:
         assert resp.status_code == 200
         assert b"Last synced" not in resp.content
 
+    @pytest.mark.parametrize(
+        "status", [Challenge.Status.COMPLETED, Challenge.Status.CANCELLED]
+    )
+    def test_no_stamp_on_a_terminal_challenge(
+        self, authed_client, participant, challenge, user, mock_sync, status
+    ):
+        """A locked challenge suppresses the stamp even with a fresh sync.
+
+        challenge_detail_view runs its sync loop with sync=False once locked,
+        so the timestamp reflects the user's global tracker sync, not this
+        challenge -- rendering it beside a frozen leaderboard advertised a
+        refresh that never touched this page's numbers.
+        """
+        from django.utils import timezone
+
+        from liftosaur.tests.factories import LiftosaurSyncLogFactory
+
+        LiftosaurSyncLogFactory(user=user, success=True, started_at=timezone.now())
+        challenge.status = status
+        challenge.save(update_fields=["status"])
+        resp = authed_client.get(reverse("challenges:detail", args=[challenge.pk]))
+        assert resp.status_code == 200
+        assert b"Last synced" not in resp.content
+
 
 class TestLeaveChallengeLink:
     """Leave-challenge link renders for eligible participants (TASK-151)."""
@@ -945,3 +969,181 @@ class TestRepTargetSelfReportControlsOnTerminalChallenge:
             reverse("challenges:manual-rep-target", args=[challenge.pk]) not in content
         )
         assert "flip-card" not in content
+
+
+class TestFinalStandingCallout:
+    """A finished challenge reports the viewer's own finish (rank + points).
+
+    Read off the leaderboard rows the page already builds, so it agrees with
+    the table below it by construction; the tests here pin the gating (live
+    challenge, bailed viewer) and the "-" rank convention rather than the
+    arithmetic, which TestLeaderboard already owns.
+    """
+
+    def _setup(self, status, *, points=7):
+        user = UserFactory()
+        rival = UserFactory()
+        challenge = ChallengeFactory(creator=user, status=status)
+        participant = ChallengeParticipantFactory(
+            challenge=challenge,
+            user=user,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        )
+        participant.custom_goal = CustomGoalFactory(participant=participant)
+        participant.save(update_fields=["custom_goal"])
+        rival_participant = ChallengeParticipantFactory(
+            challenge=challenge,
+            user=rival,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+        )
+        rival_participant.custom_goal = CustomGoalFactory(participant=rival_participant)
+        rival_participant.save(update_fields=["custom_goal"])
+        if points:
+            PointEarnEventFactory(
+                user=user,
+                challenge=challenge,
+                points_earned=points,
+                is_current_best=True,
+            )
+        client = Client()
+        client.force_login(user)
+        return client, challenge, participant
+
+    def test_terminal_challenge_reports_rank_points_and_field_size(self, db, mock_sync):
+        client, challenge, _ = self._setup(Challenge.Status.COMPLETED)
+        resp = client.get(reverse("challenges:detail", args=[challenge.pk]))
+        assert resp.context["final_standing"] == {
+            "rank": 1,
+            "total_points": 7,
+            "field_size": 2,
+        }
+
+    def test_live_challenge_reports_nothing(self, db, mock_sync):
+        client, challenge, _ = self._setup(Challenge.Status.ACTIVE)
+        resp = client.get(reverse("challenges:detail", args=[challenge.pk]))
+        assert resp.context["final_standing"] is None
+
+    def test_rank_is_a_dash_when_nobody_scored(self, db, mock_sync):
+        # Mirrors the leaderboard's own convention: with every total at zero
+        # each dense rank is a meaningless tie, so no placing is claimed.
+        client, challenge, _ = self._setup(Challenge.Status.COMPLETED, points=0)
+        resp = client.get(reverse("challenges:detail", args=[challenge.pk]))
+        assert resp.context["final_standing"]["rank"] == "-"
+        assert resp.context["final_standing"]["total_points"] == 0
+
+
+class TestRetrospectiveSummaryCopy:
+    """Summary cards drop their forward-looking nudges once a challenge ends.
+
+    The gap NUMBER survives (the lifter still wants "how close was I"); only
+    its framing changes, so these assert on the imperative half of each
+    string -- the part that tells a lifter to go do something on a challenge
+    that can no longer score it.
+    """
+
+    def _setup(self, status, *, mode="classic"):
+        user = UserFactory()
+        if mode == "rep_target":
+            challenge = make_rep_target_challenge(
+                lifts=["Back Squat"], creator=user, status=status
+            )
+        else:
+            challenge = make_custom_challenge(
+                lifts=["Back Squat"], creator=user, status=status
+            )
+        participant = ChallengeParticipantFactory(
+            challenge=challenge,
+            user=user,
+            invite_status=ChallengeParticipant.InviteStatus.ACCEPTED,
+            joined_at=datetime.now(tz=UTC) - timedelta(days=30),
+        )
+        if mode == "rep_target":
+            save_rep_target_goal(
+                participant, "Targets", {"Back Squat": (Decimal("100.00"), 20)}
+            )
+        else:
+            save_custom_goal(
+                participant,
+                "Intermediate",
+                {"Back Squat": {rep: Decimal("100.00") for rep in range(1, 11)}},
+            )
+        # One logged set well under the threshold: enough for a no_points card
+        # carrying a real weight_gap, which is what the copy branches on.
+        LiftHistoryFactory(
+            user=user,
+            lift="Back Squat",
+            weight_kg=Decimal("90.00"),
+            reps=5,
+            performed_at=datetime.now(tz=UTC).date() - timedelta(days=2),
+        )
+        client = Client()
+        client.force_login(user)
+        return client, challenge
+
+    @pytest.mark.parametrize("mode", ["classic", "rep_target"])
+    def test_live_challenge_still_nudges(self, db, mock_sync, mode):
+        client, challenge = self._setup(Challenge.Status.ACTIVE, mode=mode)
+        content = client.get(
+            reverse("challenges:detail", args=[challenge.pk])
+        ).content.decode()
+        assert "Finished" not in content
+        assert ("to start scoring" if mode == "rep_target" else "To reach") in content
+
+    @pytest.mark.parametrize("mode", ["classic", "rep_target"])
+    @pytest.mark.parametrize(
+        "status", [Challenge.Status.COMPLETED, Challenge.Status.CANCELLED]
+    )
+    def test_terminal_challenge_restates_the_gap_in_the_past_tense(
+        self, db, mock_sync, mode, status
+    ):
+        client, challenge = self._setup(status, mode=mode)
+        content = client.get(
+            reverse("challenges:detail", args=[challenge.pk])
+        ).content.decode()
+        assert "Finished" in content
+        assert "To reach your first point" not in content
+        assert "to start scoring on" not in content
+
+    @pytest.mark.parametrize(
+        "status", [Challenge.Status.COMPLETED, Challenge.Status.CANCELLED]
+    )
+    def test_terminal_challenge_drops_the_close_to_goal_highlight(
+        self, db, mock_sync, status, settings
+    ):
+        # A 10% band puts the 90/100 card comfortably inside close-to-goal on
+        # a live challenge, so its absence here is the terminal gate, not the
+        # threshold.
+        settings.CHALLENGES_CLOSE_TO_GOAL_GAP_FRACTION = 0.10
+        client, challenge = self._setup(Challenge.Status.ACTIVE)
+        live = client.get(
+            reverse("challenges:detail", args=[challenge.pk])
+        ).content.decode()
+        assert "Close to goal" in live
+
+        challenge.status = status
+        challenge.save(update_fields=["status"])
+        finished = client.get(
+            reverse("challenges:detail", args=[challenge.pk])
+        ).content.decode()
+        assert "Close to goal" not in finished
+
+    @pytest.mark.parametrize(
+        "status", [Challenge.Status.COMPLETED, Challenge.Status.CANCELLED]
+    )
+    def test_terminal_challenge_does_not_tell_you_to_log_a_set(
+        self, db, mock_sync, status
+    ):
+        # no_data_before_window: history exists, but all of it predates the
+        # window, so the card's second line is the "log a new set" CTA.
+        client, challenge = self._setup(status)
+        LiftHistoryFactory(
+            user=challenge.creator,
+            lift="Back Squat",
+            weight_kg=Decimal("90.00"),
+            reps=5,
+            performed_at=challenge.start_date - timedelta(days=400),
+        )
+        content = client.get(
+            reverse("challenges:detail", args=[challenge.pk])
+        ).content.decode()
+        assert "Log a new set to get started" not in content
