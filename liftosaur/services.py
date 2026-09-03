@@ -22,6 +22,7 @@ from core.lift_resolution import (
     resolve_lift_name,
 )
 from core.models import Lift, LiftAliasSource, LiftHistory, LiftSource
+from core.sync_status import latest_sync_failure as shared_latest_sync_failure
 from liftosaur.client import LiftosaurAPIError, LiftosaurClient
 from liftosaur.models import LiftosaurSyncLog
 
@@ -409,6 +410,16 @@ def last_synced_at(user):
         .first()
     )
     return latest
+
+
+def latest_sync_failure(user) -> LiftosaurSyncLog | None:
+    """Return the user's most recent Liftosaur sync log, if that attempt failed.
+
+    Thin wrapper over core.sync_status.latest_sync_failure, which carries the
+    semantics; see there for why the log and not sync_user_lifts' return value
+    is the failure signal.
+    """
+    return shared_latest_sync_failure(LiftosaurSyncLog, user)
 
 
 def pull_history_into_pool(

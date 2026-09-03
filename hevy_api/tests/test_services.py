@@ -25,7 +25,6 @@ from hevy_api.services import (
     _parse_workout,
     _run_backfill_in_thread,
     last_synced_at,
-    latest_sync_failure,
     sync_user_lifts,
     trigger_hevy_event_catchup,
     trigger_hevy_lift_history_backfill,
@@ -847,48 +846,6 @@ class TestLastSyncedAt:
         HevySyncLog.objects.create(user=user, started_at=older, success=True)
         HevySyncLog.objects.create(user=user, started_at=newer, success=True)
         assert last_synced_at(user) == newer
-
-
-# ---------------------------------------------------------------------------
-# latest_sync_failure
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.django_db
-class TestLatestSyncFailure:
-    def test_returns_none_when_no_sync_ever_ran(self):
-        user = UserFactory(hevy_api_key="key")
-        assert latest_sync_failure(user) is None
-
-    def test_returns_none_when_most_recent_sync_succeeded(self):
-        user = UserFactory(hevy_api_key="key")
-        older = datetime.now(tz=UTC) - timedelta(days=1)
-        newer = datetime.now(tz=UTC)
-        HevySyncLog.objects.create(user=user, started_at=older, success=False)
-        HevySyncLog.objects.create(user=user, started_at=newer, success=True)
-        assert latest_sync_failure(user) is None
-
-    def test_returns_none_when_most_recent_sync_still_in_progress(self):
-        user = UserFactory(hevy_api_key="key")
-        HevySyncLog.objects.create(
-            user=user, started_at=datetime.now(tz=UTC), success=None
-        )
-        assert latest_sync_failure(user) is None
-
-    def test_returns_log_when_most_recent_sync_failed(self):
-        user = UserFactory(hevy_api_key="key")
-        older = datetime.now(tz=UTC) - timedelta(days=1)
-        newer = datetime.now(tz=UTC)
-        HevySyncLog.objects.create(user=user, started_at=older, success=True)
-        failed = HevySyncLog.objects.create(
-            user=user,
-            started_at=newer,
-            success=False,
-            error_detail="Hevy API error 401: Unauthorized",
-        )
-        result = latest_sync_failure(user)
-        assert result.id == failed.id
-        assert result.error_detail == "Hevy API error 401: Unauthorized"
 
 
 # ---------------------------------------------------------------------------

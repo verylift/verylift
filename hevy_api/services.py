@@ -60,6 +60,7 @@ from django.utils import timezone
 from accounts.timezones import local_day, user_zoneinfo
 from core.lift_resolution import LiftNameResolver, build_lift_alias_maps
 from core.models import Lift, LiftAliasSource, LiftHistory, LiftSource
+from core.sync_status import latest_sync_failure as shared_latest_sync_failure
 from hevy_api.client import HevyAPIError, HevyClient
 from hevy_api.models import HevySyncLog
 
@@ -408,19 +409,11 @@ def last_synced_at(user):
 def latest_sync_failure(user) -> HevySyncLog | None:
     """Return the user's most recent Hevy sync log, if that attempt failed.
 
-    None when the most recent attempt succeeded, is still in progress
-    (success=None), or none has ever run. This is the "did the last sync
-    actually work" signal -- distinct from last_synced_at, which only tracks
-    successes and would silently omit a run that failed outright:
-    sync_user_lifts swallows HevyAPIError/network/DB-contention failures
-    internally and returns 0, the same value it returns for "nothing new to
-    pull", so callers that want to tell those two apart for the user need to
-    check the log rather than the return value.
+    Thin wrapper over core.sync_status.latest_sync_failure, which carries the
+    semantics; see there for why the log and not sync_user_lifts' return value
+    is the failure signal.
     """
-    log = HevySyncLog.objects.filter(user=user).order_by("-started_at").first()
-    if log is not None and log.success is False:
-        return log
-    return None
+    return shared_latest_sync_failure(HevySyncLog, user)
 
 
 def pull_events_into_pool(
