@@ -123,6 +123,55 @@
       // #app-messages toast) actually lands in the DOM, so wire on that instead.
       document.body.addEventListener('htmx:oobAfterSwap', wireMessages);
 
+      // Copy-to-clipboard chips (components/_copy_code.html). Delegated from
+      // body rather than emitted as a per-render inline script inside the
+      // partial: that script needed document.currentScript.closest() to scope
+      // itself, because the partial can render more than once on a page and an
+      // id would collide. One delegated listener has no such problem, ships
+      // the handler once instead of per chip, and survives htmx swaps for
+      // free -- the exact re-wiring problem wireMessages above needs
+      // htmx:oobAfterSwap to work around.
+      var COPIED_FEEDBACK_MS = 1500;
+      var copyResetTimers = new WeakMap();
+      function showCopied(button) {
+        var copyIcon = button.querySelector('[data-copy-icon]');
+        var copiedIcon = button.querySelector('[data-copied-icon]');
+        button.title = button.getAttribute('data-copied-label');
+        button.setAttribute('aria-label', button.getAttribute('data-copied-label'));
+        button.classList.add('text-accent');
+        if (copyIcon) copyIcon.classList.add('hidden');
+        if (copiedIcon) copiedIcon.classList.remove('hidden');
+        // A second click before the first reset lands would otherwise revert
+        // the chip early, mid-feedback, on the older timer.
+        clearTimeout(copyResetTimers.get(button));
+        copyResetTimers.set(button, setTimeout(function () {
+          button.title = button.getAttribute('data-copy-label');
+          button.setAttribute('aria-label', button.getAttribute('data-copy-label'));
+          button.classList.remove('text-accent');
+          if (copyIcon) copyIcon.classList.remove('hidden');
+          if (copiedIcon) copiedIcon.classList.add('hidden');
+        }, COPIED_FEEDBACK_MS));
+      }
+      document.body.addEventListener('click', function (e) {
+        var button = e.target.closest('[data-copy-text]');
+        if (!button) return;
+        var text = button.getAttribute('data-copy-text');
+        var done = function () { showCopied(button); };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          // Reports copied either way: a rejected write is nothing the user
+          // can act on, and the original inline handler behaved the same.
+          navigator.clipboard.writeText(text).then(done, done);
+        } else {
+          var tmp = document.createElement('textarea');
+          tmp.value = text;
+          document.body.appendChild(tmp);
+          tmp.select();
+          document.execCommand('copy');
+          document.body.removeChild(tmp);
+          done();
+        }
+      });
+
       // Drive the TASK-141 loading overlay from htmx requests when it exists.
       // Guarded so htmx conversions work standalone before TASK-141 lands.
       var pendingProcessingMessage = null;

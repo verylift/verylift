@@ -78,7 +78,7 @@
       {% endif %}
     </header>
 
-    <section class="bg-surface-card border border-line-subtle rounded p-6 mb-6">
+    <section class="card mb-6">
       <div class="flex items-baseline justify-between mb-4 gap-2 flex-wrap">
         <h2 class="text-lg font-semibold text-content-strong">{% if challenge.is_terminal %}{% trans "final standings" %}{% else %}{% trans "leaderboard" %}{% endif %}</h2>
         {% if last_synced_at %}
@@ -162,7 +162,7 @@
         {# on all three sections if TASK-237 concludes snapping wasn't the cause. #}
         <section class="snap-start shrink-0 basis-full md:basis-auto md:shrink
                         h-[22rem] md:h-auto overflow-hidden
-                        bg-surface-card border border-line-subtle rounded p-6">
+                        card">
           <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "points over time" %}</h2>
           <div class="relative h-64 md:h-80">
             <canvas id="points-over-time-chart"></canvas>
@@ -171,7 +171,7 @@
 
         <section class="snap-start shrink-0 basis-full md:basis-auto md:shrink
                         h-[22rem] md:h-auto overflow-hidden
-                        bg-surface-card border border-line-subtle rounded p-6">
+                        card">
           <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "points by lift" %}</h2>
           <div class="h-64 md:h-auto overflow-y-auto md:overflow-visible overflow-x-hidden
                       [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
@@ -183,7 +183,7 @@
 
         <section class="snap-start shrink-0 basis-full md:basis-auto md:shrink
                         h-[22rem] md:h-auto overflow-hidden
-                        bg-surface-card border border-line-subtle rounded p-6">
+                        card">
           <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "recent activity" %}</h2>
           {% if recent_activity %}
           <div class="h-64 md:h-auto overflow-y-auto overflow-x-auto
@@ -332,7 +332,7 @@
     </script>
 
     {% if personal_data %}
-    <section class="bg-surface-card border border-line-subtle rounded p-6 mb-6">
+    <section class="card mb-6">
       <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
         <h2 class="text-lg font-semibold text-content-strong">{% trans "your performance" %}</h2>
         <div class="inline-flex rounded border border-line-subtle overflow-hidden text-sm">
@@ -623,7 +623,7 @@
     {% endif %}{# can_self_report: no flip card, no flip CSS/JS #}
     {% endif %}{# personal_data #}
 
-    <section class="bg-surface-card border border-line-subtle rounded p-6 mb-6">
+    <section class="card mb-6">
       <div class="flex flex-col items-start gap-3">
         {% if challenge.creator_id == request.user.id or request.user.is_staff %}
         <a

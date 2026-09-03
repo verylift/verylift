@@ -16,7 +16,7 @@
 <h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "do you use a tracking app?" %}</h1>
 <p class="text-sm text-content-muted mb-6">{% trans "You can change this anytime from Settings." %}</p>
 
-<form method="post" class="bg-surface-card border border-line-subtle rounded p-6">
+<form method="post" class="card">
   {% csrf_token %}
   <div class="mb-4">
     <label for="id_tracking_app" class="block text-sm font-medium text-content-body mb-1">{% trans "tracking app" %}</label>
@@ -40,7 +40,7 @@
   <div class="flex gap-2">
     <button
       type="submit"
-      class="flex-1 bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
+      class="flex-1 btn-primary">
       {% trans "continue" %}
     </button>
     <button

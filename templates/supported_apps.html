@@ -47,7 +47,7 @@ aren't translated, only the surrounding prose is.
           {% trans "recommended" %}
         </span>
       </div>
-      <div class="bg-surface-card border border-line-subtle rounded p-6">
+      <div class="card">
         <h2 class="text-2xl font-bold text-content-strong">Liftosaur</h2>
         <p class="mt-2 text-sm text-content-body">
           {% blocktrans %}Automatically syncs every lift you log, or upload a CSV export if you'd rather not connect the API.{% endblocktrans %}
@@ -72,7 +72,7 @@ aren't translated, only the surrounding prose is.
           href="https://www.liftosaur.com"
           target="_blank"
           rel="noopener noreferrer"
-          class="mt-4 inline-block bg-accent text-accent-on text-sm font-medium px-6 py-3 rounded hover:bg-accent-hover">
+          class="mt-4 inline-block btn-primary px-6 py-3">
           {% trans "get started" %}
         </a>
         <p class="mt-3 text-xs text-content-subtle">
@@ -84,7 +84,7 @@ aren't translated, only the surrounding prose is.
     <section class="max-w-4xl mx-auto px-4 pt-10 pb-12">
       <h2 class="text-2xl font-bold text-content-strong text-center mb-6">{% trans "you can also use these" %}</h2>
       <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div class="bg-surface-card border border-line-subtle rounded p-6 flex flex-col">
+        <div class="card flex flex-col">
           <h3 class="text-lg font-semibold text-content-strong">Hevy</h3>
           <p class="mt-2 text-sm text-content-body flex-1">
             {% blocktrans %}Connect your Hevy account for automatic sync, or upload a CSV export instead.{% endblocktrans %}
@@ -105,7 +105,7 @@ aren't translated, only the surrounding prose is.
             {% trans "learn more" %}
           </a>
         </div>
-        <div class="bg-surface-card border border-line-subtle rounded p-6 flex flex-col">
+        <div class="card flex flex-col">
           <h3 class="text-lg font-semibold text-content-strong">Wger</h3>
           <p class="mt-2 text-sm text-content-body flex-1">
             {% blocktrans %}Self-hosted and open source. Connect your own Wger instance with an API token.{% endblocktrans %}
@@ -123,7 +123,7 @@ aren't translated, only the surrounding prose is.
             {% trans "learn more" %}
           </a>
         </div>
-        <div class="bg-surface-card border border-line-subtle rounded p-6 flex flex-col">
+        <div class="card flex flex-col">
           <h3 class="text-lg font-semibold text-content-strong">Strong</h3>
           <p class="mt-2 text-sm text-content-body flex-1">
             {% blocktrans %}Export your history from Strong and upload the file — we'll do the rest.{% endblocktrans %}

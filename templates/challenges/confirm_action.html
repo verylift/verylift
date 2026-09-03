@@ -6,7 +6,7 @@
 {% block main %}
     <h1 class="text-2xl font-bold text-content-strong mb-8">{{ confirm_title }}</h1>
 
-    <section class="bg-surface-card border border-line-subtle rounded p-6 max-w-lg">
+    <section class="card max-w-lg">
       <p class="text-sm text-content-body mb-2">
         {% blocktrans with verb=confirm_verb name=challenge.name suffix=confirm_prompt_suffix %}Are you sure you want to {{ verb }} <strong>{{ name }}</strong>{{ suffix }}?{% endblocktrans %}
       </p>
