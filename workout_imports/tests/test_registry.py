@@ -9,6 +9,7 @@ from workout_imports.importers import (
     detect_importer,
     get_importer_for_header,
 )
+from workout_imports.importers.base import decode_csv_text
 from workout_imports.importers.hevy import REQUIRED_HEADERS, HevyImporter
 from workout_imports.importers.liftosaur import (
     REQUIRED_HEADERS as LIFTOSAUR_REQUIRED_HEADERS,
@@ -194,3 +195,12 @@ class TestDetectImporter:
 
     def test_registry_is_not_empty(self):
         assert len(REGISTRY) >= 1
+
+
+def test_decode_csv_text_accepts_an_already_decoded_file_object():
+    """The bytes path is what a Django upload takes; this is the other half of
+    the isinstance check, which nothing else exercises. Keeping it live means
+    a caller handing over a text-mode file (a management command reading from
+    disk, a test fixture) doesn't hit an AttributeError on .decode.
+    """
+    assert decode_csv_text(io.StringIO("a,b\n1,2\n")) == "a,b\n1,2\n"

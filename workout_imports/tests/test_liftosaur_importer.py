@@ -83,8 +83,22 @@ class TestLiftosaurImporterParse:
         parsed = LiftosaurImporter().parse(csv_file(rows))
         assert parsed == []
 
-    def test_unparseable_workout_datetime_row_is_skipped_not_fatal(self):
-        rows = row(workout_datetime="not-a-date")
+    @pytest.mark.parametrize(
+        "workout_datetime",
+        [pytest.param("not-a-date", id="unparseable"), pytest.param("", id="blank")],
+    )
+    def test_row_without_a_usable_workout_datetime_is_skipped_not_fatal(
+        self, workout_datetime
+    ):
+        rows = row(workout_datetime=workout_datetime)
+        parsed = LiftosaurImporter().parse(csv_file(rows))
+        assert parsed == []
+
+    def test_blank_weight_row_is_skipped_not_fatal(self):
+        """A blank cell is not a 0kg lift: an exercise logged without a weight
+        (or a row a partial export truncated) must drop out rather than pool
+        as bodyweight and score."""
+        rows = row(completed_weight_value="")
         parsed = LiftosaurImporter().parse(csv_file(rows))
         assert parsed == []
 
