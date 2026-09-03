@@ -10,6 +10,9 @@ from django.urls import reverse
 from accounts.tests.factories import UserFactory
 from challenges.models import Challenge, ChallengeParticipant
 from challenges.tests.factories import ChallengeFactory, ChallengeParticipantFactory
+from wger.tests.factories import WgerSyncLogFactory
+
+HX = {"HTTP_HX_REQUEST": "true"}
 
 
 @pytest.fixture
@@ -211,3 +214,91 @@ class TestWgerSyncNowEndpoint:
         assert response.status_code == 200
         messages = list(response.context["messages"])
         assert any("try again" in str(m) for m in messages)
+
+
+@pytest.mark.django_db
+class TestWgerSyncFailureSurfacing:
+    """TASK-337: a failed Wger sync is reported, as Hevy's already was."""
+
+    def wger_user(self):
+        return UserFactory(
+            wger_instance_url="https://my-wger.example.com", wger_api_token="tok"
+        )
+
+    def test_failure_persists_past_the_flash_message(self):
+        """The failure must outlive the one-time flash message -- a user who
+        syncs, navigates away and comes back should still be told.
+
+        Asserts on the context value the template branches on rather than the
+        rendered copy: reworded banner text is not a regression, a lost signal
+        is.
+        """
+        user = self.wger_user()
+        failed = WgerSyncLogFactory(user=user, success=False, error_detail="boom")
+        c = Client()
+        c.force_login(user)
+
+        response = c.get(reverse("accounts:settings"))
+
+        assert response.context["wger_sync_error"] == failed
+
+    def test_a_failed_pull_is_not_reported_as_a_triggered_sync(self):
+        """sync_wger_lifts swallows API/network failures and returns 0 -- the
+        same value it returns for "nothing new" -- so the view must read the
+        log it wrote, or a dead instance URL reads as success.
+        """
+        user = self.wger_user()
+        c = Client()
+        c.force_login(user)
+
+        def fake_sync(user, force=False):
+            WgerSyncLogFactory(user=user, success=False, error_detail="401")
+            return 0
+
+        with (
+            patch("accounts.views.sync_wger_lifts", side_effect=fake_sync),
+            patch("accounts.views.score_pooled_history"),
+        ):
+            response = c.post(reverse("accounts:wger_sync_now"), follow=True)
+
+        messages = [str(m) for m in response.context["messages"]]
+        assert not any("Sync triggered" in m for m in messages)
+        assert any("try again" in m for m in messages)
+
+    def test_a_successful_pull_still_reports_a_triggered_sync(self):
+        user = self.wger_user()
+        c = Client()
+        c.force_login(user)
+
+        def fake_sync(user, force=False):
+            WgerSyncLogFactory(user=user, success=True)
+            return 3
+
+        with (
+            patch("accounts.views.sync_wger_lifts", side_effect=fake_sync),
+            patch("accounts.views.score_pooled_history"),
+        ):
+            response = c.post(reverse("accounts:wger_sync_now"), follow=True)
+
+        messages = [str(m) for m in response.context["messages"]]
+        assert any("Sync triggered" in m for m in messages)
+
+    def test_htmx_partial_carries_the_failure(self):
+        """The swapped-in status partial reads the same context key as a full
+        page render, so an htmx "sync now" doesn't lose the signal."""
+        user = self.wger_user()
+        c = Client()
+        c.force_login(user)
+
+        def fake_sync(user, force=False):
+            WgerSyncLogFactory(user=user, success=False, error_detail="401")
+            return 0
+
+        with (
+            patch("accounts.views.sync_wger_lifts", side_effect=fake_sync),
+            patch("accounts.views.score_pooled_history"),
+        ):
+            response = c.post(reverse("accounts:wger_sync_now"), **HX)
+
+        assert response.status_code == 200
+        assert response.context["wger_sync_error"] is not None
