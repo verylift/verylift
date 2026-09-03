@@ -1569,6 +1569,8 @@ msgid ""
 "By default, each goes to whoever has been in it the longest. Open this to "
 "pick someone else."
 msgstr ""
+"De forma predeterminada, cada uno pasa a quien lleve más tiempo en él. "
+"Abre esto para elegir a otra persona."
 
 #: templates/accounts/delete_account.html:59
 msgid ""
@@ -1984,7 +1986,7 @@ msgstr "Ejercicio"
 #: templates/challenges/detail.html:372
 #, python-format
 msgid "%(reps)s RM"
-msgstr ""
+msgstr "%(reps)s RM"
 
 #: templates/challenges/_participant_chart.html:76
 #: templates/challenges/_rep_target_goal_table.html:33
@@ -2448,6 +2450,11 @@ msgid ""
 "              already typed is left alone.\n"
 "              "
 msgstr ""
+"\n"
+"              Ingresa al menos un peso en una fila, elige un redondeo y\n"
+"              pulsa calcular para rellenar las celdas vacías de esa fila. Lo\n"
+"              que ya hayas escrito se deja intacto.\n"
+"              "
 
 #: templates/challenges/custom_goal_setup.html:155
 msgid ""
@@ -2711,10 +2718,8 @@ msgid " pt target"
 msgstr " pt objetivo"
 
 #: templates/challenges/detail.html:549
-#, fuzzy
-#| msgid "RM target"
 msgid " RM target"
-msgstr "Objetivo RM"
+msgstr " RM objetivo"
 
 #: templates/challenges/detail.html:558 templates/dashboard.html:209
 msgid "pts"
