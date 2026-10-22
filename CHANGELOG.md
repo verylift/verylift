@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 2026.10.1 — 2026-10-22
+
+### Security
+- Outbound connections (login, Liftosaur, FitnessVolt, Hevy, email and error reporting) trust only certifi's CA list, which excludes CAs that browsers distrust
+
 ## 2026.10.0 — 2026-10-22
 
 ### Security
