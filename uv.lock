@@ -975,7 +975,7 @@ requires-dist = [
     { name = "gunicorn", specifier = ">=23.0" },
     { name = "markdown", specifier = ">=3.10.2" },
     { name = "mozilla-django-oidc", specifier = ">=5.0.2" },
-    { name = "pillow", specifier = ">=12.3.0" },
+    { name = "pillow", specifier = ">=13.0.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
     { name = "qrcode", specifier = ">=8.2" },
     { name = "sentry-sdk", specifier = ">=2.35" },

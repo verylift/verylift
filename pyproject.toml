@@ -13,7 +13,7 @@ dependencies = [
     "whitenoise>=6.7",
     "markdown>=3.10.2",
     "django-ratelimit>=4.1",
-    "pillow>=12.3.0",
+    "pillow>=13.0.0",
     # zoneinfo otherwise reads the host's tz database. Without this, the set
     # of pinnable timezones (TASK-273) would differ between a dev box and the
     # python:3.12-slim production image, and a zone pinned in dev could
