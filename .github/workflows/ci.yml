@@ -31,7 +31,7 @@ jobs:
           enable-cache: true
 
       - name: Set up Python
-        run: uv python install
+        run: uv python install 3.14
 
       - name: Install dependencies
         run: uv sync --frozen
@@ -81,7 +81,7 @@ jobs:
           enable-cache: true
 
       - name: Set up Python
-        run: uv python install
+        run: uv python install 3.14
 
       - name: Install dependencies
         run: uv sync --frozen
@@ -131,7 +131,7 @@ jobs:
           enable-cache: true
 
       - name: Set up Python
-        run: uv python install
+        run: uv python install 3.14
 
       - name: Install dependencies
         run: uv sync --frozen

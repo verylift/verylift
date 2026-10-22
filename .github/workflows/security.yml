@@ -33,7 +33,7 @@ jobs:
           enable-cache: true
 
       - name: Set up Python
-        run: uv python install
+        run: uv python install 3.14
 
       # Export the full locked set (including the dev group — dev deps run in CI
       # and on dev machines, so they are in scope) to a requirements file that

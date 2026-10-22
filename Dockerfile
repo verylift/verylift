@@ -1,7 +1,19 @@
 # Build stage: uv is only used here, never in the final image.
 FROM python:3.12-slim AS builder
 
-RUN pip install "uv>=0.11,<0.12" --no-cache-dir
+# Hash-pinned because the base image's pip trusts its own vendored certifi on
+# top of the system store, and so still trusted the CAs compromised in October
+# 2026 (eMudhra) until pip 26.2.2: the hashes keep a tampered download out
+# whatever pip's TLS trusts. Hashes are PyPI's for the linux x86_64/aarch64
+# wheels. Keep the version in step with [tool.uv] required-version in
+# pyproject.toml.
+RUN printf '%s\n' 'uv==0.13.5 \' \
+      '--hash=sha256:fa8d26e08e34c29c0c4e820cf3181757086d547240b4f4d31ff1d8bd810ca946 \' \
+      '--hash=sha256:2386c2dc9b59fc1d39b1c500e4319d71d3268232eb3b38e29cd6775d6269e8d4 \' \
+      '--hash=sha256:91e58e304b63b6c91bac5561459ab0c3ea24f17bc01ea9359d69fed72142978f' \
+      > /tmp/uv-requirements.txt \
+ && pip install --require-hashes --no-cache-dir -r /tmp/uv-requirements.txt \
+ && rm /tmp/uv-requirements.txt
 
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
