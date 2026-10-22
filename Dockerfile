@@ -56,6 +56,16 @@ RUN mkdir -p /app/staticfiles /app/media /app/data \
 
 ENV PATH="/opt/venv/bin:$PATH"
 
+# requests, httpx and sentry-sdk otherwise trust certifi's bundle in /opt/venv
+# while urllib and SMTP use the base image's system CA bundle, so a CA distrust
+# (e.g. the October 2026 eMudhra key compromise) only fully landed once both
+# were updated. Pointing everything at the system bundle leaves one store, kept
+# current by the `apt-get upgrade` above on every rebuild. This is the image's
+# own bundle, not the host's: a container never reads the host's CA store, so
+# every deployment trusts the same roots whatever OS it runs on.
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+
 USER nonroot
 WORKDIR /app
 
