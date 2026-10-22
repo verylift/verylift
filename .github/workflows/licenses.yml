@@ -17,6 +17,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# uv 0.13 made 3.15 the default for a bare `uv python install`; this keeps CI
+# on the interpreter it already tested with. Applies to every uv command here.
+env:
+  UV_PYTHON: "3.14"
+
 jobs:
   pip-licenses:
     name: Dependency license check (pip-licenses)
@@ -30,7 +35,7 @@ jobs:
           enable-cache: true
 
       - name: Set up Python
-        run: uv python install 3.14
+        run: uv python install
 
       - name: Install dependencies
         run: uv sync --frozen
