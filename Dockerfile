@@ -17,10 +17,13 @@ ENV UV_COMPILE_BYTECODE=1 \
 
 WORKDIR /app
 
+# The ln gives certifi's CA bundle a stable name across Python upgrades (see
+# the final stage's SSL_CERT_FILE); COPY --from=builder carries the symlink.
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --frozen --no-install-project
+    uv sync --frozen --no-install-project \
+ && ln -s "$(/opt/venv/bin/python -m certifi)" /opt/venv/cacert.pem
 
 COPY . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -56,15 +59,14 @@ RUN mkdir -p /app/staticfiles /app/media /app/data \
 
 ENV PATH="/opt/venv/bin:$PATH"
 
-# requests, httpx and sentry-sdk otherwise trust certifi's bundle in /opt/venv
-# while urllib and SMTP use the base image's system CA bundle, so a CA distrust
-# (e.g. the October 2026 eMudhra key compromise) only fully landed once both
-# were updated. Pointing everything at the system bundle leaves one store, kept
-# current by the `apt-get upgrade` above on every rebuild. This is the image's
-# own bundle, not the host's: a container never reads the host's CA store, so
-# every deployment trusts the same roots whatever OS it runs on.
-ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
-    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+# Every outbound TLS client (requests, httpx, sentry-sdk, urllib, SMTP) trusts
+# one CA store: certifi's, in /opt/venv. It tracks Mozilla's root removals,
+# which Debian's bundle lags (Debian's still carries roots browsers distrust),
+# and an outdated certifi fails the weekly pip-audit run. SSL_CERT_DIR names an
+# empty path so OpenSSL stops also reading Debian's /etc/ssl/certs. This is the
+# image's own store, not the host's, whatever OS a deployment runs on.
+ENV SSL_CERT_FILE=/opt/venv/cacert.pem \
+    SSL_CERT_DIR=/nonexistent
 
 USER nonroot
 WORKDIR /app

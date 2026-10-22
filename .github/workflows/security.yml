@@ -65,6 +65,11 @@ jobs:
       - name: Build production image
         run: docker build -t root:scan .
 
+      # A broken SSL_CERT_FILE symlink loads zero CAs silently; every outbound
+      # TLS call (OIDC login, Liftosaur, email) would then fail.
+      - name: CA bundle loads inside the image
+        run: docker run --rm root:scan python -c "import ssl; assert ssl.create_default_context().cert_store_stats()['x509_ca'] > 100"
+
       - name: Scan image with Trivy
         uses: aquasecurity/trivy-action@v0.36.0
         with:
