@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 2026.10.0 — 2026-10-22
+
+### Security
+- Upgrade Pillow, PyJWT and urllib3 to versions that fix published security advisories
+- Stop trusting the compromised eMudhra intermediate CAs: the image now uses one up-to-date system CA bundle for all outbound HTTPS and SMTP connections
+
 ## 2026.9.1 — 2026-09-03
 
 ### Added
