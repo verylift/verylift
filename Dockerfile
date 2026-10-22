@@ -49,6 +49,14 @@ RUN mkdir -p /app/staticfiles /app/media /app/data \
 
 ENV PATH="/opt/venv/bin:$PATH"
 
+# requests, httpx and sentry-sdk otherwise trust certifi's bundle in /opt/venv
+# while urllib and SMTP use Debian's, so a CA distrust (e.g. the October 2026
+# eMudhra key compromise) only fully landed once both were updated. Pointing
+# everything at Debian's bundle leaves one store, kept current by the
+# `apt-get upgrade` above on every rebuild.
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+
 USER nonroot
 WORKDIR /app
 
