@@ -41,7 +41,7 @@ a language, generate its `.po` file, and submit a translation.
 
 ## Requirements
 
-- Python 3.13+, Docker, [uv](https://docs.astral.sh/uv/)
+- Python 3.13+, Docker, [uv](https://docs.astral.sh/uv/) 0.13.4+ (`uv self update`)
 - [just](https://github.com/casey/just) task runner
 - (Optional) An account with one of the [supported trackers](#supported-trackers)
 
