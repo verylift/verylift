@@ -1,7 +1,14 @@
 # Build stage: uv is only used here, never in the final image.
 FROM python:3.12-slim AS builder
 
-RUN pip install "uv>=0.11,<0.12" --no-cache-dir
+# Hash-pinned (PyPI's linux x86_64/aarch64 wheel hashes) because the base
+# image's pip can trust compromised CAs via its vendored certifi. Keep the
+# version in step with [tool.uv] required-version in pyproject.toml.
+RUN echo 'uv==0.13.5' \
+      '--hash=sha256:fa8d26e08e34c29c0c4e820cf3181757086d547240b4f4d31ff1d8bd810ca946' \
+      '--hash=sha256:2386c2dc9b59fc1d39b1c500e4319d71d3268232eb3b38e29cd6775d6269e8d4' \
+      '--hash=sha256:91e58e304b63b6c91bac5561459ab0c3ea24f17bc01ea9359d69fed72142978f' \
+    | pip install --require-hashes --no-cache-dir -r /dev/stdin
 
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
