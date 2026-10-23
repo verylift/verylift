@@ -1,0 +1,36 @@
+# Security updates (separate PRs per advisory) are switched on in the repo
+# settings; this file adds weekly version updates on top. Updates are grouped
+# into one PR per ecosystem to keep the review load down.
+version: 2
+updates:
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      python:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # Tailwind 4 is a config/CSS migration, not a drop-in bump.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    ignore:
+      - dependency-name: tailwindcss
+        update-types: [version-update:semver-major]
+
+# Not covered here: the python:3.12-slim base image (Trivy scans it weekly, and
+# moving off 3.12 is a deliberate change) and the hash-pinned uv in the
+# Dockerfile's builder stage, which has to be bumped by hand with its hashes.
