@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 2026.10.2 — 2026-10-23
+
+### Changed
+- Upgrade psycopg (the PostgreSQL driver) to 3.3.6
+- Upgrade Django to 6.1, along with gunicorn, cryptography, the Sentry SDK, Markdown, tzdata and the Wger API client
+
 ## 2026.10.1 — 2026-10-22
 
 ### Security
