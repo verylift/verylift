@@ -41,6 +41,7 @@ from core.lift_resolution import (
     resolve_lift_name,
 )
 from core.models import Lift, LiftAliasSource, LiftHistory, LiftSource
+from core.sync_status import latest_sync_failure as shared_latest_sync_failure
 from wger.client import WgerAPIError, WgerClient
 from wger.models import WgerSyncLog
 
@@ -293,6 +294,16 @@ def last_synced_at(user):
         .values_list("started_at", flat=True)
         .first()
     )
+
+
+def latest_sync_failure(user) -> WgerSyncLog | None:
+    """Return the user's most recent Wger sync log, if that attempt failed.
+
+    Thin wrapper over core.sync_status.latest_sync_failure, which carries the
+    semantics; see there for why the log and not sync_wger_lifts' return value
+    is the failure signal.
+    """
+    return shared_latest_sync_failure(WgerSyncLog, user)
 
 
 def pull_workout_logs_into_pool(

@@ -19,6 +19,7 @@ from challenges.tests.factories import (
     ChallengeFactory,
     ChallengeParticipantFactory,
 )
+from liftosaur.tests.factories import LiftosaurSyncLogFactory
 
 
 @pytest.fixture
@@ -484,12 +485,93 @@ class TestSyncNowEndpoint:
 
 
 @pytest.mark.django_db
+class TestLiftosaurSyncFailureSurfacing:
+    """TASK-337: a failed Liftosaur sync is reported, as Hevy's already was."""
+
+    def test_failure_persists_past_the_flash_message(self):
+        """The failure must outlive the one-time flash message -- a user who
+        syncs, navigates away and comes back should still be told.
+
+        Asserts on the context value the template branches on rather than the
+        rendered copy: reworded banner text is not a regression, a lost signal
+        is.
+        """
+        user = UserFactory(liftosaur_api_key="key")
+        failed = LiftosaurSyncLogFactory(user=user, success=False, error_detail="boom")
+        c = Client()
+        c.force_login(user)
+
+        response = c.get(reverse("accounts:settings"))
+
+        assert response.context["liftosaur_sync_error"] == failed
+
+    def test_a_failed_pull_is_not_reported_as_a_triggered_sync(self):
+        """sync_user_lifts swallows API/network failures and returns 0 -- the
+        same value it returns for "nothing new" -- so the view must read the
+        log it wrote, or a broken key reads as success.
+        """
+        user = UserFactory(liftosaur_api_key="key")
+        c = Client()
+        c.force_login(user)
+
+        def fake_sync(user, force=False):
+            LiftosaurSyncLogFactory(user=user, success=False, error_detail="401")
+            return 0
+
+        with (
+            patch("accounts.views.sync_user_lifts", side_effect=fake_sync),
+            patch("accounts.views.score_pooled_history"),
+        ):
+            response = c.post(reverse("accounts:sync_now"), follow=True)
+
+        messages = [str(m) for m in response.context["messages"]]
+        assert not any("Sync triggered" in m for m in messages)
+        assert any("try again" in m for m in messages)
+
+    def test_a_successful_pull_still_reports_a_triggered_sync(self):
+        user = UserFactory(liftosaur_api_key="key")
+        c = Client()
+        c.force_login(user)
+
+        def fake_sync(user, force=False):
+            LiftosaurSyncLogFactory(user=user, success=True)
+            return 3
+
+        with (
+            patch("accounts.views.sync_user_lifts", side_effect=fake_sync),
+            patch("accounts.views.score_pooled_history"),
+        ):
+            response = c.post(reverse("accounts:sync_now"), follow=True)
+
+        messages = [str(m) for m in response.context["messages"]]
+        assert any("Sync triggered" in m for m in messages)
+
+    def test_htmx_partial_carries_the_failure(self):
+        """The swapped-in status partial reads the same context key as a full
+        page render, so an htmx "sync now" doesn't lose the signal."""
+        user = UserFactory(liftosaur_api_key="key")
+        c = Client()
+        c.force_login(user)
+
+        def fake_sync(user, force=False):
+            LiftosaurSyncLogFactory(user=user, success=False, error_detail="401")
+            return 0
+
+        with (
+            patch("accounts.views.sync_user_lifts", side_effect=fake_sync),
+            patch("accounts.views.score_pooled_history"),
+        ):
+            response = c.post(reverse("accounts:sync_now"), **HX)
+
+        assert response.status_code == 200
+        assert response.context["liftosaur_sync_error"] is not None
+
+
+@pytest.mark.django_db
 class TestSettingsLastSyncedStamp:
     """Settings page surfaces when Liftosaur data was last synced (TASK-144)."""
 
     def test_stamp_rendered_when_successful_sync_exists(self):
-        from liftosaur.tests.factories import LiftosaurSyncLogFactory
-
         user = UserFactory(liftosaur_api_key="test-key")
         LiftosaurSyncLogFactory(user=user, success=True)
         c = Client()
