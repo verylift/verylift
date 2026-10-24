@@ -6,7 +6,7 @@
 {% block content %}
 <div class="min-h-full flex items-center justify-center py-12 px-4">
   <div class="w-full max-w-2xl">
-    <section class="bg-surface-card border border-line-subtle rounded p-6">
+    <section class="card">
       <h1 class="text-lg font-semibold text-content-strong mb-2">{% trans "Policy Update — Action Required" %}</h1>
       <p class="text-sm text-content-subtle mb-6">{% trans "Please review and accept the following updated policies to continue using very lift." %}</p>
 
@@ -57,7 +57,7 @@
           {% if form.agreed.errors %}<p class="mt-1 text-xs text-danger-dark">{{ form.agreed.errors.0 }}</p>{% endif %}
         </div>
 
-        <button type="submit" class="w-full bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
+        <button type="submit" class="w-full btn-primary">
           {% trans "I Agree" %}
         </button>
       </form>

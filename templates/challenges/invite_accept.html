@@ -42,7 +42,7 @@
       <div class="hidden md:flex mt-6 items-center justify-center gap-3">
         <form method="post" action="{{ accept_url }}">
           {% csrf_token %}
-          <button type="submit" class="bg-accent text-accent-on text-sm font-medium px-6 py-3 rounded hover:bg-accent-hover">
+          <button type="submit" class="btn-primary px-6 py-3">
             {% trans "accept & join" %}
           </button>
         </form>
@@ -91,7 +91,7 @@
     </div>
 
     <div class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6 md:min-h-[20rem]">
-      <section class="bg-surface-card border border-line-subtle rounded p-6 min-w-0 flex flex-col md:h-full">
+      <section class="card min-w-0 flex flex-col md:h-full">
         <div class="flex items-baseline justify-between mb-4 gap-2 flex-wrap">
           <h2 class="text-lg font-semibold text-content-strong">{% trans "top challengers" %}</h2>
           <span class="text-xs text-content-muted">
@@ -138,7 +138,7 @@
         </ul>
       </section>
 
-      <section class="bg-surface-card border border-line-subtle rounded p-6 min-w-0">
+      <section class="card min-w-0">
         <h2 class="text-lg font-semibold text-content-strong mb-4">{% trans "points over time" %}</h2>
         <div class="relative w-full h-64 block md:hidden">
           <canvas id="points-over-time-chart-mobile"></canvas>
@@ -172,7 +172,7 @@
     <div class="flex gap-3">
       <form method="post" action="{{ accept_url }}" class="flex-1">
         {% csrf_token %}
-        <button type="submit" class="w-full bg-accent text-accent-on text-sm font-medium px-4 py-3 rounded hover:bg-accent-hover">
+        <button type="submit" class="w-full btn-primary py-3">
           {% trans "accept & join" %}
         </button>
       </form>

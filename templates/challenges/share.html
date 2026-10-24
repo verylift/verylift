@@ -17,7 +17,7 @@
     {% include "challenges/_invite_link_section.html" %}
 
     <a href="{% url 'challenges:goal-setup' challenge.pk %}"
-      class="inline-flex items-center justify-center bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover"
+      class="inline-flex items-center justify-center btn-primary"
       data-loading-message="{% trans 'Loading challenge…' %}">
       {% trans "continue to your chart" %}
     </a>
