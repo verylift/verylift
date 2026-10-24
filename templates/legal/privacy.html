@@ -20,7 +20,7 @@
           </tr>
           <tr>
             <td class="pr-4 py-0.5 font-medium text-content-subtle">Version</td>
-            <td class="py-0.5">1.2</td>
+            <td class="py-0.5">1.3</td>
           </tr>
           <tr>
             <td class="pr-4 py-0.5 font-medium text-content-subtle">Effective date</td>
@@ -28,7 +28,7 @@
           </tr>
           <tr>
             <td class="pr-4 py-0.5 font-medium text-content-subtle">Last updated</td>
-            <td class="py-0.5">2026-08-19</td>
+            <td class="py-0.5">2026-08-29</td>
           </tr>
         </tbody>
       </table>
@@ -41,7 +41,8 @@
         connected fitness-tracking service (currently Liftosaur), and the workout data it
         syncs so we can compute your scores and run challenges. Your display name, lift
         performance, and scores are visible to other users through leaderboards and user
-        pages. Your data is never sold, and there are no ads. Every page load requests
+        pages. If you give us your bodyweight, we keep one current figure and nothing else
+        &mdash; no history of it, and it is never shown to anyone but you. Your data is never sold, and there are no ads. Every page load requests
         fonts from Google Fonts (see <a href="#s6" class="text-accent hover:underline">Cookies
         &amp; tracking</a>); beyond that, outbound requests today go to your connected
         fitness-tracking service (using the credentials you provide), our mail relay when
@@ -141,11 +142,24 @@
             <strong>Challenge participation</strong> — the challenges you are invited to or
             join, the goal chart you set for each one, and your join or leave status. If you
             build a goal chart from published strength standards, the Service also records
-            alongside that chart the sex and the single bodyweight figure you entered at the
-            time, because the suggested targets were calculated from them. That is a one-time
-            record attached to that one goal: the Service does not track your bodyweight over
-            time, does not keep a bodyweight history, and does not store a bodyweight for
-            goals you set manually or from your lift history.
+            alongside that chart the sex and the bodyweight figure used at the time, because
+            the suggested targets were calculated from them. That is a one-time record
+            attached to that one goal, frozen as it was when the chart was created; it is
+            separate from the current bodyweight described below, and changing or clearing
+            that current figure does not alter it. Goals you set manually or from your lift
+            history record no sex or bodyweight.
+          </li>
+          <li>
+            <strong>Your bodyweight</strong> &mdash; a single current figure, if you choose
+            to give us one. It is used to suggest targets for lifts scored on the weight you
+            add to your own, such as pull-ups, chin-ups and dips, where a target is
+            meaningless without knowing what you already carry. You can enter it during
+            signup or in Settings, and where a connected fitness-tracking service records
+            your weight we will read the most recent figure from it. Only that one figure is
+            stored: a newer value replaces the old one, and no history of your weight is
+            kept. It is never displayed to other users, never used to score anything, and you
+            can change or clear it in Settings at any time. Providing it is optional, and the
+            Service works without it.
           </li>
           <li>
             <strong>Server logs</strong> — routine technical logs generated when you use the
@@ -157,11 +171,11 @@
           </li>
         </ul>
         <p>
-          <strong>Sensitive information:</strong> the sex and bodyweight figure described
-          above under Challenge participation is health-adjacent information. We don't treat
-          it differently from your other fitness data, but we're calling it out explicitly
-          rather than claiming we collect no sensitive information, since that wouldn't be
-          accurate.
+          <strong>Sensitive information:</strong> your bodyweight, and the sex and bodyweight
+          figure described above under Challenge participation, are health-adjacent
+          information. We don't treat them differently from your other fitness data, but
+          we're calling them out explicitly rather than claiming we collect no sensitive
+          information, since that wouldn't be accurate.
         </p>
       </section>
 
@@ -277,6 +291,8 @@
           <a href="#s3" class="text-accent hover:underline">Information we collect</a>) is
           kept for as long as that goal chart exists, since it is the record of how those
           targets were calculated; it is removed when your account and its data are deleted.
+          Your current bodyweight is held only until you change or clear it, and is erased
+          when your account is deleted.
         </p>
       </section>
 

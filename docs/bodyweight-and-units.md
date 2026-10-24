@@ -1,8 +1,8 @@
-# Units & added-weight lifts
+# Units, bodyweight & added-weight lifts
 
 Your unit preference and how weighted bodyweight exercises like pull-ups are
 shown and scored both matter for reading your numbers correctly. This page
-covers both.
+covers both, plus the one bodyweight figure the app keeps.
 
 ## Choosing kg or lb
 
@@ -26,6 +26,22 @@ to your bodyweight rather than as a raw total:
 
 Every other lift is shown as the plain weight you lifted, in your preferred
 unit.
+
+## Your bodyweight
+
+You can store one current bodyweight, either during signup or from your
+account settings. Where your connected tracker records weigh-ins, we read the
+most recent one and keep your figure up to date automatically.
+
+It has exactly one job: suggesting targets for chin-ups, pull-ups and dips.
+Because a target for those is an *added* weight, a suggestion can't be
+calculated without knowing what you already carry, and the goal-setup
+Compute button uses the same figure for the same reason. It is never used to
+score a set, and never shown to anyone else.
+
+Only the one current number is kept, never a history of it, and it is
+entirely optional. Skip it and you'll simply be asked once, in the moment, if
+a challenge with a bodyweight-added lift comes up.
 
 ## How added-weight lifts are scored
 

@@ -1,0 +1,60 @@
+{% extends "base/onboarding.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Bodyweight" %} — very lift{% endblock %}
+
+{% block wizard_body %}
+<div class="mb-6">
+  <p class="text-sm text-content-muted mb-2">
+    {% blocktrans %}Step 4 of 4{% endblocktrans %}
+  </p>
+  <div class="h-1.5 w-full bg-surface-sunken rounded-full overflow-hidden">
+    <div class="h-full bg-accent" style="width: 100%"></div>
+  </div>
+</div>
+
+<h1 class="text-2xl font-bold text-content-strong mb-1">{% trans "what do you weigh?" %}</h1>
+<p class="text-sm text-content-muted mb-2">
+  {% trans "Pull-ups, chin-ups and dips are scored on the weight you add to your own, so suggesting targets for them needs a rough idea of what you're already lifting." %}
+</p>
+<p class="text-sm text-content-muted mb-6">
+  {% trans "We keep this one number and update it when your tracker has something newer. There's no weight history, it never affects your score, and you can change or clear it in Settings. Skip it and we'll ask again only if a challenge needs it." %}
+</p>
+
+<form method="post" class="bg-surface-card border border-line-subtle rounded p-6">
+  {% csrf_token %}
+  <div class="mb-6">
+    <label for="id_bodyweight" class="block text-sm font-medium text-content-body mb-1">
+      {% trans "bodyweight" %}
+    </label>
+    <div class="flex items-center gap-2">
+      <input type="number" id="id_bodyweight" name="bodyweight" step="0.1" min="0"
+             value="{{ bodyweight }}"
+             placeholder="{% trans 'e.g. 80' %}"
+             class="flex-1 bg-surface-card text-content-body border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-accent">
+      <span class="text-sm text-content-muted">{{ unit_preference }}</span>
+    </div>
+    {% if prefilled_from_tracker %}
+    <p class="mt-1 text-xs text-content-subtle">
+      {% trans "Pulled from the tracker you just connected. Change it if it's out of date." %}
+    </p>
+    {% endif %}
+    {% if bodyweight_error %}
+    <p class="mt-1 text-xs text-danger">{{ bodyweight_error }}</p>
+    {% endif %}
+  </div>
+
+  <button
+    type="submit"
+    class="w-full bg-accent text-accent-on text-sm font-medium px-4 py-2 rounded hover:bg-accent-hover">
+    {% trans "continue" %}
+  </button>
+  <button
+    type="submit"
+    name="skip"
+    value="1"
+    class="w-full mt-3 border border-line text-content-body text-sm font-medium px-4 py-2 rounded hover:bg-surface-hover">
+    {% trans "skip for now" %}
+  </button>
+</form>
+{% endblock %}

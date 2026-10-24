@@ -5,10 +5,14 @@
 
 {% block wizard_body %}
     <h1 class="text-2xl font-bold text-content-strong mb-1">
-      {% if method == "standards" %}{% trans "a few details for your standards" %}{% else %}{% trans "a couple of quick details" %}{% endif %}
+      {% if method == "standards" %}{% trans "a few details for your standards" %}{% elif method == "custom" %}{% trans "one quick detail" %}{% else %}{% trans "a couple of quick details" %}{% endif %}
     </h1>
     <p class="text-sm text-content-muted mb-6">
-      {% trans "This is used to compute the numbers below and is kept with this chart as a record of how its targets were calculated — it is not tracked over time or used anywhere else." %}
+      {% if form.needs_bodyweight %}
+      {% trans "These are used to compute the numbers below. Your bodyweight is saved to your account so we don't ask again, and a copy is kept with this chart as the record of how its targets were calculated. It never affects your score, and you can change or clear it in Settings." %}
+      {% else %}
+      {% trans "These are used to compute the numbers below and are kept with this chart as the record of how its targets were calculated." %}
+      {% endif %}
     </p>
 
     {% if form.non_field_errors %}
@@ -37,10 +41,10 @@
         </div>
         <p class="mt-1 text-xs text-content-muted">
           {% blocktrans with unit=form.unit %}In {{ unit }}, matching your settings.{% endblocktrans %}
-          {% if method == "history" %}
-          {% trans "Needed only to estimate targets for your bodyweight-added lifts (Pull-up, Chin-up, Dip) — Liftosaur records just the added weight for these, so your bodyweight fills in the rest of the load." %}
-          {% else %}
+          {% if method == "standards" %}
           {% trans "Needed to look up the right FitnessVolt weight class for your standards." %}
+          {% else %}
+          {% trans "Needed to estimate targets for your bodyweight-added lifts (Pull-up, Chin-up, Dip). Trackers record only the added weight for these, so your bodyweight fills in the rest of the load." %}
           {% endif %}
         </p>
         {% if form.bodyweight.errors %}

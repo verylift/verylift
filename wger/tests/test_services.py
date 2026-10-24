@@ -1,8 +1,9 @@
 """Tests for wger.services (TASK-311)."""
 
 import logging
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import httpx
@@ -18,6 +19,7 @@ from wger.client import WgerAPIError
 from wger.services import (
     MAX_LOG_PAGES_PER_INLINE_RUN,
     canonical_wger_lift_name,
+    fetch_latest_bodyweight,
     history_watermark,
     last_synced_at,
     sync_wger_lifts,
@@ -541,3 +543,51 @@ class TestSyncWgerLifts:
         assert pooled == len(pages)
         # A walk that reached the end of the feed needs no catch-up pass.
         mock_catchup.assert_not_called()
+
+
+class TestFetchLatestBodyweight:
+    def _client(self, *, entry, unit="kg"):
+        client = MagicMock()
+        client.get_latest_body_weight_entry.return_value = entry
+        client.get_body_weight_unit.return_value = unit
+        return client
+
+    def _entry(self, weight, *, when=datetime(2026, 8, 1, tzinfo=UTC)):
+        return SimpleNamespace(id=1, weight=weight, date=when, user=1)
+
+    def _fetch(self, client):
+        with patch("wger.services.WgerClient", return_value=client):
+            return fetch_latest_bodyweight("https://example.com", "tok")
+
+    def test_kg_profile_returns_the_entry_weight_verbatim(self):
+        reading = self._fetch(self._client(entry=self._entry("82.5")))
+        assert reading.weight_kg == Decimal("82.50")
+        assert reading.measured_at == datetime(2026, 8, 1, tzinfo=UTC)
+
+    def test_lb_profile_is_converted_to_kg(self):
+        # The whole point of the second profile call: 180 stored under an lb
+        # profile is 81.65 kg, not 180 kg.
+        reading = self._fetch(self._client(entry=self._entry("180"), unit="lb"))
+        assert reading.weight_kg == Decimal("81.65")
+
+    def test_naive_entry_date_is_read_as_utc(self):
+        # Wger's date field can arrive without a zone; leaving it naive would
+        # blow up the comparison against a stored aware timestamp.
+        entry = self._entry("80", when=datetime(2026, 8, 1))
+        assert self._fetch(self._client(entry=entry)).measured_at.tzinfo is not None
+
+    def test_no_entries_skips_the_profile_call_entirely(self):
+        client = self._client(entry=None)
+        assert self._fetch(client) is None
+        client.get_body_weight_unit.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "error", [WgerAPIError(401, "Unauthorized"), httpx.ConnectError("down")]
+    )
+    def test_api_and_network_failures_return_none(self, error):
+        client = MagicMock()
+        client.get_latest_body_weight_entry.side_effect = error
+        assert self._fetch(client) is None
+
+    def test_unparsable_weight_returns_none(self):
+        assert self._fetch(self._client(entry=self._entry("heavy"))) is None
