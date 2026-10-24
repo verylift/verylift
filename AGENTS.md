@@ -76,6 +76,7 @@ Every service module and view must include a module-level logger:
 
 ```python
 import logging
+
 logger = logging.getLogger(__name__)
 ```
 
