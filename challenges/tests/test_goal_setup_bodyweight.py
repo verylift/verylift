@@ -22,7 +22,7 @@ from challenges.tests.factories import (
     ChallengeParticipantFactory,
     make_custom_challenge,
 )
-from liftosaur.tests.factories import LiftHistoryFactory
+from core.tests.factories import LiftHistoryFactory
 
 pytestmark = pytest.mark.django_db
 

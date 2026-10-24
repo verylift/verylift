@@ -410,6 +410,10 @@ class TestCustomMethodFullFlow:
         bodyweight alone), which the page said nowhere: build_custom_goal_context
         has always carried is_bodyweight_added and the template ignored it, so
         a Chin-up row looked exactly like a Back Squat row."""
+        # Without a stored bodyweight a Chin-up challenge stops at the
+        # bodyweight question before the grid.
+        user.bodyweight_kg = Decimal("80")
+        user.save(update_fields=["bodyweight_kg"])
         challenge = make_custom_challenge(
             lifts=["Chin-up", "Back Squat"], creator=user, status=Challenge.Status.DRAFT
         )
