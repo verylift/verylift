@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import httpx
 import pytest
+from django.db import OperationalError
 from django.utils import timezone
 from wger_api_client.models.repetition_unit import RepetitionUnit
 from wger_api_client.models.workout_log import WorkoutLog
@@ -15,12 +16,16 @@ from wger_api_client.types import UNSET
 from accounts.tests.factories import UserFactory
 from core.models import LiftHistory, LiftSource
 from wger.client import WgerAPIError
+from wger.models import WgerSyncLog
 from wger.services import (
     MAX_LOG_PAGES_PER_INLINE_RUN,
+    POOL_WRITE_RETRY_DELAYS,
+    _write_history_batch,
     canonical_wger_lift_name,
     history_watermark,
     last_synced_at,
     sync_wger_lifts,
+    trigger_wger_lift_history_catchup,
     validate_wger_credentials,
 )
 from wger.tests.factories import WgerLiftAliasFactory, WgerSyncLogFactory
@@ -60,6 +65,22 @@ def _log_entry(
     )
 
 
+def _save_that_refuses_updates():
+    """A WgerSyncLog.save that lets the initial create through and then fails.
+
+    The failure path under test updates the log row it created, so blanket-
+    patching save would break the setup instead of the branch.
+    """
+    original = WgerSyncLog.save
+
+    def save(self, *args, **kwargs):
+        if kwargs.get("update_fields"):
+            raise OperationalError("still locked")
+        return original(self, *args, **kwargs)
+
+    return save
+
+
 def _patch_units(weight_units, repetition_units):
     return (
         patch("wger.services.WgerClient.get_weight_units", return_value=weight_units),
@@ -79,19 +100,33 @@ class TestValidateWgerCredentials:
         ):
             assert validate_wger_credentials("https://example.com", "tok") is True
 
-    def test_api_error_returns_false(self):
-        with patch(
-            "wger.services.WgerClient.get_workout_logs",
-            side_effect=WgerAPIError(401, "Unauthorized"),
-        ):
-            assert validate_wger_credentials("https://example.com", "bad") is False
+    @pytest.mark.parametrize(
+        ("exc", "expect_traceback"),
+        [
+            pytest.param(WgerAPIError(401, "Unauthorized"), False, id="rejected_token"),
+            pytest.param(httpx.ConnectError("unreachable"), False, id="network_error"),
+            pytest.param(TypeError("client contract changed"), True, id="unexpected"),
+        ],
+    )
+    def test_a_probe_that_cannot_confirm_the_credentials_returns_false(
+        self, exc, expect_traceback, caplog
+    ):
+        """Never let a probe failure read as valid: this gates saving a key and
+        creating an account, so a False negative costs a retry while a False
+        positive stores credentials that will never sync.
 
-    def test_network_error_returns_false(self):
-        with patch(
-            "wger.services.WgerClient.get_workout_logs",
-            side_effect=httpx.ConnectError("unreachable"),
+        The catch-all branch is the one worth keeping: an unexpected error must
+        still be logged with a traceback rather than silently returning False,
+        or a client-library contract change becomes an invisible "your
+        credentials are wrong".
+        """
+        with (
+            patch("wger.services.WgerClient.get_workout_logs", side_effect=exc),
+            caplog.at_level(logging.WARNING, logger="wger.services"),
         ):
-            assert validate_wger_credentials("https://bad-host", "tok") is False
+            assert validate_wger_credentials("https://example.com", "tok") is False
+
+        assert any(r.exc_info for r in caplog.records) is expect_traceback
 
 
 @pytest.mark.django_db
@@ -541,3 +576,154 @@ class TestSyncWgerLifts:
         assert pooled == len(pages)
         # A walk that reached the end of the feed needs no catch-up pass.
         mock_catchup.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "entry_kwargs",
+        [
+            pytest.param({"weight": None}, id="weight_absent"),
+            pytest.param({"weight": ""}, id="weight_empty_string"),
+            pytest.param({"weight": "heavy"}, id="weight_not_a_number"),
+            pytest.param({"repetitions": "many"}, id="reps_not_a_number"),
+            pytest.param({"repetitions": None}, id="reps_absent"),
+            pytest.param({"exercise": UNSET}, id="exercise_absent"),
+            pytest.param({"date": None}, id="date_absent"),
+        ],
+    )
+    def test_incomplete_entry_is_skipped_rather_than_pooled(self, entry_kwargs):
+        """A WorkoutLog missing (or garbling) any field the pool row needs must
+        be dropped, not coerced. Wger's own API marks every one of these
+        optional, and a self-hosted instance or a partially-filled log will
+        serve them -- pooling a 0kg/0-rep row would score as a real lift.
+        """
+        user = self._user()
+        entries = [_log_entry(**entry_kwargs)]
+        p1, p2 = _patch_units(STANDARD_WEIGHT_UNITS, STANDARD_REPETITION_UNITS)
+        with (
+            p1,
+            p2,
+            patch(
+                "wger.services.WgerClient.get_workout_logs",
+                return_value=(entries, False, 100),
+            ),
+            patch("wger.services.WgerClient.get_exercise_name", return_value="Squat"),
+        ):
+            pooled = sync_wger_lifts(user, force=True)
+
+        assert pooled == 0
+        assert not LiftHistory.objects.filter(user=user).exists()
+        # A skipped row is not a failed sync: the run still succeeded.
+        assert user.wger_sync_logs.get().success is True
+
+    def test_db_contention_is_retried_before_giving_up(self):
+        """A lost write-lock race is retried rather than surfaced: two failures
+        then a real write still pools the page and logs success. Mirrors the
+        Liftosaur pull's backoff (liftosaur/tests/test_services.py)."""
+        user = self._user()
+        entries = [_log_entry()]
+        attempts = []
+
+        def flaky(rows):
+            attempts.append(rows)
+            if len(attempts) <= 2:
+                raise OperationalError("database is locked")
+            _write_history_batch(rows)
+
+        p1, p2 = _patch_units(STANDARD_WEIGHT_UNITS, STANDARD_REPETITION_UNITS)
+        with (
+            p1,
+            p2,
+            patch(
+                "wger.services.WgerClient.get_workout_logs",
+                return_value=(entries, False, 100),
+            ),
+            patch("wger.services.WgerClient.get_exercise_name", return_value="Squat"),
+            patch("wger.services._write_history_batch", side_effect=flaky),
+            patch("wger.services.time.sleep") as mock_sleep,
+        ):
+            pooled = sync_wger_lifts(user, force=True)
+
+        assert pooled == 1
+        assert LiftHistory.objects.filter(user=user).count() == 1
+        assert mock_sleep.call_args_list == [
+            ((POOL_WRITE_RETRY_DELAYS[0],),),
+            ((POOL_WRITE_RETRY_DELAYS[1],),),
+        ]
+        assert user.wger_sync_logs.get().success is True
+
+    def test_exhausted_retries_degrade_without_raising(self, caplog):
+        """Once the backoff schedule is spent the sync degrades exactly like a
+        network failure -- returns 0, marks the log failed, logs the cause --
+        instead of letting OperationalError escape as a 500 on the challenge
+        detail page, which syncs every participant inline."""
+        user = self._user()
+        entries = [_log_entry()]
+        p1, p2 = _patch_units(STANDARD_WEIGHT_UNITS, STANDARD_REPETITION_UNITS)
+        with (
+            p1,
+            p2,
+            patch(
+                "wger.services.WgerClient.get_workout_logs",
+                return_value=(entries, False, 100),
+            ),
+            patch("wger.services.WgerClient.get_exercise_name", return_value="Squat"),
+            patch(
+                "wger.services._write_history_batch",
+                side_effect=OperationalError("database is locked"),
+            ),
+            patch("wger.services.time.sleep") as mock_sleep,
+            caplog.at_level(logging.ERROR, logger="wger.services"),
+        ):
+            pooled = sync_wger_lifts(user, force=True)
+
+        assert pooled == 0
+        assert not LiftHistory.objects.filter(user=user).exists()
+        assert mock_sleep.call_count == len(POOL_WRITE_RETRY_DELAYS)
+        log = user.wger_sync_logs.get()
+        assert log.success is False
+        assert "DB contention" in log.error_detail
+        assert "database is locked" in log.error_detail
+        logged = [r.message for r in caplog.records if r.exc_info]
+        assert any("aborted by DB contention" in m for m in logged)
+
+    def test_a_database_still_refusing_writes_cannot_break_the_failure_path(
+        self, caplog
+    ):
+        """The failure path itself writes to the DB, so the contention that
+        caused the failure can also break the record of it. That must be
+        logged and swallowed -- re-raising here would turn a degraded sync
+        back into the 500 the whole branch exists to avoid.
+        """
+        user = self._user()
+        p1, p2 = _patch_units(STANDARD_WEIGHT_UNITS, STANDARD_REPETITION_UNITS)
+        with (
+            p1,
+            p2,
+            patch(
+                "wger.services.WgerClient.get_workout_logs",
+                side_effect=OperationalError("database is locked"),
+            ),
+            patch.object(WgerSyncLog, "save", _save_that_refuses_updates()),
+            caplog.at_level(logging.ERROR, logger="wger.services"),
+        ):
+            pooled = sync_wger_lifts(user, force=True)
+
+        assert pooled == 0
+        assert any(
+            "Could not record the failed Wger sync log" in r.message
+            for r in caplog.records
+        )
+
+    def test_catchup_resumes_off_thread_with_force_set(self):
+        """force=True is the whole point of the catch-up pass: the inline walk
+        that truncated has just written a successful sync log, so an unforced
+        resume would land inside the cooldown window and be a no-op.
+        """
+        user = self._user()
+        with patch("wger.services.threading.Thread") as mock_thread:
+            trigger_wger_lift_history_catchup(user)
+
+        kwargs = mock_thread.call_args.kwargs
+        assert kwargs["args"] == (user,)
+        assert kwargs["kwargs"] == {"force": True}
+        assert kwargs["daemon"] is True
+        mock_thread.return_value.start.assert_called_once()
